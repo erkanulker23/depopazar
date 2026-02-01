@@ -11,42 +11,48 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Uploads klasörü kontrolü ve oluşturulması
   const uploadsDir = join(process.cwd(), 'uploads');
   if (!existsSync(uploadsDir)) {
     await mkdir(uploadsDir, { recursive: true });
   }
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/api/uploads/' });
+  
+  // Statik dosyaların (resimler vb.) dışarı açılması
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { 
+    prefix: '/api/uploads/',
+    // Sunucu tarafında erişim kolaylığı için
+  });
 
-  // Global exception filter
+  // Global hata yakalayıcı
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Global validation pipe
+  // Global doğrulama (Validation) ayarları
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: false, // Changed to false to allow extra properties
+      forbidNonWhitelisted: false, 
       transform: true,
     }),
   );
 
-  // CORS
+  // CORS Ayarları - Tarayıcı hatalarını önlemek için kritik
   app.enableCors({
     origin: [
-      process.env.FRONTEND_URL || 'http://depotakip-v1.test',
-      'http://depotakip-v1.test',
-      'https://depotakip-v1.test',
-      'http://localhost:3180',
+      'https://depo.awapanel.com',      // Canlı frontend adresin
+      'http://depo.awapanel.com',       // HTTP versiyonu (opsiyonel)
+      'http://localhost:3180',          // Yerel geliştirme portun
       'http://127.0.0.1:3180',
+      'http://localhost:5173',          // Standart Vite portu (ihtiyacın olabilir)
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
-  // API prefix
+  // Tüm API endpointleri /api ile başlasın
   app.setGlobalPrefix('api');
 
-  // Swagger documentation
+  // Swagger (API Dökümantasyonu) Ayarları
   const config = new DocumentBuilder()
     .setTitle('DepoPazar API')
     .setDescription('Eşya Depolama Firmaları için SaaS Tabanlı Depo Takip & CRM Sistemi API')
@@ -56,8 +62,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  // Port ayarı (Forge'da 4100 kullanıyoruz)
   const port = process.env.PORT || 4100;
   await app.listen(port);
+
   console.log(`🚀 Application is running on: http://localhost:${port}`);
   console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
 }
