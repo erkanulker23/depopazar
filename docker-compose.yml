@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: depopazar-postgres
+    environment:
+      POSTGRES_USER: depopazar
+      POSTGRES_PASSWORD: depopazar123
+      POSTGRES_DB: depopazar
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - depopazar-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U depopazar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: depopazar-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - depopazar-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: depopazar-backend
+    ports:
+      - "4100:4100"
+    environment:
+      NODE_ENV: development
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: depopazar
+      DATABASE_PASSWORD: depopazar123
+      DATABASE_NAME: depopazar
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRES_IN: 1d
+      JWT_REFRESH_SECRET: your-super-secret-refresh-key-change-in-production
+      JWT_REFRESH_EXPIRES_IN: 7d
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - depopazar-network
+    command: npm run start:dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: depopazar-frontend
+    ports:
+      - "3180:3180"
+    environment:
+      VITE_API_URL: /api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - depopazar-network
+    command: npm run dev
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  depopazar-network:
+    driver: bridge
