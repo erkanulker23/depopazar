@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition, RadioGroup } from '@headlessui/react';
-import { XMarkIcon, PaperAirplaneIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PaperAirplaneIcon, ChatBubbleBottomCenterTextIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { contractsApi } from '../../services/api/contractsApi';
 import toast from 'react-hot-toast';
 

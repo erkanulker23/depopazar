@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../stores/authStore';
 import { useCompanyStore } from '../stores/companyStore';
 import { useState, useEffect } from 'react';
@@ -9,12 +10,10 @@ import {
   UsersIcon,
   DocumentTextIcon,
   CreditCardIcon,
-  ArrowRightOnRectangleIcon,
   PlusCircleIcon,
   UserGroupIcon,
   BanknotesIcon,
   Bars3Icon,
-  XMarkIcon,
   Cog6ToothIcon,
   BellIcon,
   ChartBarIcon,

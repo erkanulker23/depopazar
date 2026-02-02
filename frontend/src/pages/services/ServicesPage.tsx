@@ -65,9 +65,6 @@ export function ServicesPage() {
     items: services.filter(s => s.category_id === cat.id)
   }));
 
-  // Services without category (shouldn't happen with current logic but good to handle)
-  const uncategorizedServices = services.filter(s => !categories.find(c => c.id === s.category_id));
-
   if (loading) return <div className="p-4">Yükleniyor...</div>;
 
   return (

@@ -34,7 +34,7 @@ export function CreateProposalPage() {
         customersApi.getAll(),
         servicesApi.getServices(),
       ]);
-      setCustomers(custs);
+      setCustomers(custs.data);
       setServices(srvs);
     } catch (error) {
       console.error(error);

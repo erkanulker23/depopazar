@@ -72,4 +72,8 @@ export const contractsApi = {
     const response = await apiClient.get(`/contracts/${id}/payment-consistency`);
     return response.data;
   },
+  sendContract: async (id: string, email: string) => {
+    const response = await apiClient.post(`/contracts/${id}/send`, { email });
+    return response.data;
+  },
 };
