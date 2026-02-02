@@ -6,7 +6,7 @@ export class InitialFix1769965820508 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`SET FOREIGN_KEY_CHECKS = 0`);
 
-        // 1. Tüm Foreign Key'leri dinamik olarak bul ve sil
+        // 1. Dinamik FK Temizliği
         const foreignKeys = await queryRunner.query(`
             SELECT TABLE_NAME, CONSTRAINT_NAME 
             FROM information_schema.KEY_COLUMN_USAGE 
@@ -21,16 +21,7 @@ export class InitialFix1769965820508 implements MigrationInterface {
         }
 
         // 2. Yardımcı Fonksiyonlar
-        const safeAddIndex = async (table: string, indexName: string, column: string, unique: boolean = false) => {
-            const result = await queryRunner.query(`
-                SELECT INDEX_NAME FROM information_schema.STATISTICS 
-                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${table}' AND INDEX_NAME = '${indexName}'
-            `);
-            if (result.length === 0) {
-                const type = unique ? 'UNIQUE INDEX' : 'INDEX';
-                await queryRunner.query(`ALTER TABLE \`${table}\` ADD ${type} \`${indexName}\` (\`${column}\`)`);
-            }
-        };
+        const UUID_TYPE = "varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
 
         const safeAddConstraint = async (table: string, constraintName: string, query: string) => {
             const result = await queryRunner.query(`
@@ -38,55 +29,77 @@ export class InitialFix1769965820508 implements MigrationInterface {
                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${table}' AND CONSTRAINT_NAME = '${constraintName}'
             `);
             if (result.length === 0) {
-                await queryRunner.query(query);
+                try {
+                    await queryRunner.query(query);
+                } catch (e) {
+                    console.error(`Failed to add constraint ${constraintName} on ${table}:`, e.message);
+                }
             }
         };
 
-        const safeDropPK = async (table: string) => {
+        const safeModifyColumn = async (table: string, column: string, type: string, nullable: boolean = false) => {
             try {
-                const result = await queryRunner.query(`
+                await queryRunner.query(`ALTER TABLE \`${table}\` MODIFY \`${column}\` ${type} ${nullable ? 'NULL' : 'NOT NULL'}`);
+            } catch (e) {
+                // Eğer MODIFY başarısız olursa (kolon yoksa), ADD yapalım
+                try {
+                    await queryRunner.query(`ALTER TABLE \`${table}\` ADD \`${column}\` ${type} ${nullable ? 'NULL' : 'NOT NULL'}`);
+                } catch (addError) {}
+            }
+        };
+
+        const processTableIds = async (table: string) => {
+            // Önce primary key'i düşür
+            try {
+                const pkResult = await queryRunner.query(`
                     SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS 
                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${table}' AND CONSTRAINT_TYPE = 'PRIMARY KEY'
                 `);
-                if (result.length > 0) await queryRunner.query(`ALTER TABLE \`${table}\` DROP PRIMARY KEY`);
+                if (pkResult.length > 0) {
+                    await queryRunner.query(`ALTER TABLE \`${table}\` DROP PRIMARY KEY`);
+                }
             } catch (e) {}
-        };
 
-        const safeDropColumn = async (table: string, column: string) => {
-            try {
-                const result = await queryRunner.query(`
-                    SELECT COLUMN_NAME FROM information_schema.COLUMNS 
-                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${table}' AND COLUMN_NAME = '${column}'
-                `);
-                if (result.length > 0) await queryRunner.query(`ALTER TABLE \`${table}\` DROP COLUMN \`${column}\``);
-            } catch (e) {}
-        };
-
-        const processTable = async (table: string, idType: string = "varchar(36)") => {
-            await safeDropPK(table);
-            await safeDropColumn(table, 'id');
-            await queryRunner.query(`ALTER TABLE \`${table}\` ADD \`id\` ${idType} NOT NULL`);
-            await queryRunner.query(`UPDATE \`${table}\` SET \`id\` = UUID()`);
+            // ID kolonunu UUID tipine modify et
+            await safeModifyColumn(table, 'id', UUID_TYPE, false);
+            
+            // Verileri UUID yap (Eğer boşsa veya format hatalıysa)
+            await queryRunner.query(`UPDATE \`${table}\` SET \`id\` = UUID() WHERE \`id\` IS NULL OR LENGTH(\`id\`) < 36`);
+            
+            // Tekrar PK yap
             await queryRunner.query(`ALTER TABLE \`${table}\` ADD PRIMARY KEY (\`id\`)`);
         };
 
-        // 3. Tabloların ID'lerini UUID (varchar 36) yap
-        const tablesToProcess = [
+        // 3. SMS Settings tablosunu garantiye al
+        await queryRunner.query(`CREATE TABLE IF NOT EXISTS \`company_sms_settings\` (
+            \`id\` ${UUID_TYPE} NOT NULL, 
+            \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), 
+            \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), 
+            \`deleted_at\` datetime(6) NULL, 
+            \`company_id\` ${UUID_TYPE} NOT NULL, 
+            \`username\` varchar(255) NULL, 
+            \`password\` varchar(255) NULL, 
+            \`sender_id\` varchar(50) NULL, 
+            \`api_url\` varchar(255) NULL, 
+            \`is_active\` tinyint NOT NULL DEFAULT 0, 
+            \`test_mode\` tinyint NOT NULL DEFAULT 0, 
+            PRIMARY KEY (\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+        // 4. Tüm tabloların ID'lerini işle
+        const tables = [
             'users', 'bank_accounts', 'companies', 'customers', 'payments', 
             'contract_monthly_prices', 'contract_staff', 'contracts', 'items', 
             'rooms', 'warehouses', 'transportation_job_staff', 'transportation_jobs', 
             'notifications', 'company_paytr_settings', 'company_mail_settings', 'company_sms_settings'
         ];
 
-        // Önce SMS tablosu yoksa oluştur, sonra tüm listeyi işle
-        await queryRunner.query(`CREATE TABLE IF NOT EXISTS \`company_sms_settings\` (\`id\` varchar(36) NOT NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`deleted_at\` datetime(6) NULL, \`company_id\` varchar(36) NOT NULL, \`username\` varchar(255) NULL, \`password\` varchar(255) NULL, \`sender_id\` varchar(50) NULL, \`api_url\` varchar(255) NULL, \`is_active\` tinyint NOT NULL DEFAULT 0, \`test_mode\` tinyint NOT NULL DEFAULT 0, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
-
-        for (const table of tablesToProcess) {
-            await processTable(table);
+        for (const table of tables) {
+            await processTableIds(table);
         }
 
-        // 4. Referans Kolonlarını (Foreign Key) varchar(36) olarak uyuştur
-        const refColumns: {table: string, column: string, nullable: boolean}[] = [
+        // 5. Referans Kolonlarını (Foreign Key) uyuştur
+        const refColumns = [
             {table: 'users', column: 'company_id', nullable: true},
             {table: 'bank_accounts', column: 'company_id', nullable: false},
             {table: 'customers', column: 'user_id', nullable: true},
@@ -115,11 +128,10 @@ export class InitialFix1769965820508 implements MigrationInterface {
         ];
 
         for (const ref of refColumns) {
-            await safeDropColumn(ref.table, ref.column);
-            await queryRunner.query(`ALTER TABLE \`${ref.table}\` ADD \`${ref.column}\` varchar(36) ${ref.nullable ? 'NULL' : 'NOT NULL'}`);
+            await safeModifyColumn(ref.table, ref.column, UUID_TYPE, ref.nullable);
         }
 
-        // 5. Kısıtlamaları (Foreign Key) tekrar ekle
+        // 6. Kısıtlamaları (Foreign Key) tekrar ekle
         const constraints = [
             {table: 'users', name: 'FK_7ae6334059289559722437bcc1c', query: `ALTER TABLE \`users\` ADD CONSTRAINT \`FK_7ae6334059289559722437bcc1c\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\`(\`id\`)`},
             {table: 'bank_accounts', name: 'FK_869d5463de72be0afa52f0859e8', query: `ALTER TABLE \`bank_accounts\` ADD CONSTRAINT \`FK_869d5463de72be0afa52f0859e8\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\`(\`id\`)`},
