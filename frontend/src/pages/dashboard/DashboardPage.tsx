@@ -182,16 +182,66 @@ export function DashboardPage() {
     fetchStats();
   }, []);
 
-      return (
+  const renderMobileList = (items: any[], type: 'payment' | 'contract') => (
+    <div className="grid grid-cols-1 gap-3 md:hidden">
+      {items.map((item: any) => (
+        <div key={item.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          {type === 'payment' ? (
+            <>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                  {item.contract?.customer?.first_name} {item.contract?.customer?.last_name}
+                </span>
+                <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                  {formatTurkishCurrency(Number(item.amount))}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Vade: {new Date(item.due_date).toLocaleDateString('tr-TR')}
+                </span>
+                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                  item.daysLeft <= 1 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {item.daysLeft} GÜN KALDI
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                  {item.contract_number}
+                </span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Oda: {item.room?.room_number || '-'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate mr-2">
+                  {item.customer?.first_name} {item.customer?.last_name}
+                </span>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  {new Date(item.end_date).toLocaleDateString('tr-TR')}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
     <div>
       <div className="mb-8">
-        <h1 className="text-4xl font-bold gradient-text mb-2">Dashboard</h1>
+        <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">Dashboard</h1>
         <p className="text-gray-600 dark:text-gray-400">Sistem özeti ve istatistikler</p>
       </div>
 
       {/* Ana İstatistikler - Modern Design */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <div className="modern-card-gradient p-6 group hover:scale-105 transition-transform duration-300">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="modern-card-gradient p-6 group hover:scale-[1.02] transition-transform duration-300">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
@@ -207,7 +257,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="modern-card-gradient p-6 group hover:scale-105 transition-transform duration-300">
+        <div className="modern-card-gradient p-6 group hover:scale-[1.02] transition-transform duration-300">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
@@ -226,7 +276,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="modern-card-gradient p-6 group hover:scale-105 transition-transform duration-300">
+        <div className="modern-card-gradient p-6 group hover:scale-[1.02] transition-transform duration-300">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
@@ -245,7 +295,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="modern-card-gradient p-6 group hover:scale-105 transition-transform duration-300">
+        <div className="modern-card-gradient p-6 group hover:scale-[1.02] transition-transform duration-300">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
@@ -263,17 +313,10 @@ export function DashboardPage() {
       </div>
 
       {/* Ödeme Durumları - Modern Design */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
         <button
           onClick={() => navigate('/payments?status=pending')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              navigate('/payments?status=pending');
-            }
-          }}
-          className="modern-card-gradient p-6 border-l-4 border-yellow-500 group hover:scale-105 transition-transform duration-300 cursor-pointer w-full text-left"
-          aria-label="Bekleyen ödemeleri görüntüle"
+          className="modern-card-gradient p-6 border-l-4 border-yellow-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left"
         >
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -292,14 +335,7 @@ export function DashboardPage() {
 
         <button
           onClick={() => navigate('/payments?status=overdue')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              navigate('/payments?status=overdue');
-            }
-          }}
-          className="modern-card-gradient p-6 border-l-4 border-red-500 group hover:scale-105 transition-transform duration-300 cursor-pointer w-full text-left"
-          aria-label="Geciken ödemeleri görüntüle"
+          className="modern-card-gradient p-6 border-l-4 border-red-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left"
         >
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -318,14 +354,7 @@ export function DashboardPage() {
 
         <button
           onClick={() => navigate('/payments?status=unpaid')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              navigate('/payments?status=unpaid');
-            }
-          }}
-          className="modern-card-gradient p-6 border-l-4 border-red-500 group hover:scale-105 transition-transform duration-300 cursor-pointer w-full text-left"
-          aria-label="Toplam borcu görüntüle"
+          className="modern-card-gradient p-6 border-l-4 border-red-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left sm:col-span-2 lg:col-span-1"
         >
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -350,24 +379,17 @@ export function DashboardPage() {
             <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg mr-3">
               <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
             </div>
-            Acil Ödemeler (5 Gün İçinde) - <span className="ml-2 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-base">{stats.paymentsIn5Days.length} Ödeme</span>
+            Acil Ödemeler (5 Gün İçinde)
           </h2>
-          <div className="overflow-x-auto">
+          {renderMobileList(stats.paymentsIn5Days, 'payment')}
+          <div className="hidden md:block overflow-x-auto">
             <table className="table-modern">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Müşteri
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Tutar
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Vade Tarihi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Kalan Gün
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Müşteri</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tutar</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Vade Tarihi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kalan Gün</th>
                 </tr>
               </thead>
               <tbody>
@@ -384,9 +406,7 @@ export function DashboardPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        payment.daysLeft <= 1
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                        payment.daysLeft <= 1 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
                       }`}>
                         {payment.daysLeft} Gün
                       </span>
@@ -399,247 +419,47 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* 10 Gün İçinde Kalan Ödemeler - Modern Design */}
-      {stats.paymentsIn10Days.length > 0 && (
-        <div className="modern-card-gradient p-6 mb-6 border-l-4 border-orange-500 animate-fade-in">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg mr-3">
-              <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            Yaklaşan Ödemeler (6-10 Gün Arası) - <span className="ml-2 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-base">{stats.paymentsIn10Days.length} Ödeme</span>
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="table-modern">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Müşteri
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Tutar
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Vade Tarihi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Kalan Gün
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.paymentsIn10Days.map((payment: any) => (
-                  <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {payment.contract?.customer?.first_name} {payment.contract?.customer?.last_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {formatTurkishCurrency(Number(payment.amount))}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(payment.due_date).toLocaleDateString('tr-TR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                        {payment.daysLeft} Gün
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Yaklaşan Ödemeler (7 Gün İçinde - Eski) */}
-      {stats.upcomingPayments.length > 0 && (
-        <div className="modern-card-gradient p-6 mb-6 animate-fade-in">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg mr-3">
-              <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-            </div>
-            Diğer Yaklaşan Ödemeler (7 Gün İçinde)
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="table-modern">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Ödeme No
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Müşteri
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Tutar
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Vade Tarihi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Kalan Gün
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.upcomingPayments.map((payment: any) => {
-                  const dueDate = new Date(payment.due_date);
-                  const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                  return (
-                    <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {payment.payment_number}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {payment.contract?.customer?.first_name} {payment.contract?.customer?.last_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {formatTurkishCurrency(Number(payment.amount))}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {dueDate.toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          daysLeft <= 3
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                        }`}>
-                          {daysLeft} Gün
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* Bitiş Tarihi Yaklaşan Sözleşmeler */}
       {stats.expiringContracts.length > 0 && (
-        <div className="modern-card-gradient p-6 mb-6 animate-fade-in">
+        <div className="modern-card-gradient p-6 mb-6 animate-fade-in border-l-4 border-orange-500">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
             <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg mr-3">
               <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 dark:text-orange-400" />
             </div>
             Bitiş Tarihi Yaklaşan Sözleşmeler (30 Gün İçinde)
           </h2>
-          <div className="overflow-x-auto">
+          {renderMobileList(stats.expiringContracts, 'contract')}
+          <div className="hidden md:block overflow-x-auto">
             <table className="table-modern">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Sözleşme No
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Müşteri
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Oda
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Bitiş Tarihi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Kalan Gün
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Sözleşme No</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Müşteri</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Oda</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Bitiş Tarihi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kalan Gün</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.expiringContracts.map((contract: any) => {
                   const endDate = new Date(contract.end_date);
-                  const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                   return (
                     <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {contract.contract_number}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {contract.customer?.first_name} {contract.customer?.last_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {contract.room?.room_number || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {endDate.toLocaleDateString('tr-TR')}
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{contract.contract_number}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{contract.customer?.first_name} {contract.customer?.last_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{contract.room?.room_number || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{endDate.toLocaleDateString('tr-TR')}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          daysLeft <= 7
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                            : daysLeft <= 15
-                            ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                        }`}>
-                          {daysLeft} Gün
-                        </span>
+                          daysLeft <= 7 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : daysLeft <= 15 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                        }`}>{daysLeft} Gün</span>
                       </td>
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Sözleşme Süreleri */}
-      {stats.contractsByMonth.length > 0 && (
-        <div className="modern-card-gradient p-6 mb-6 animate-fade-in">
-          <h2 className="text-xl font-bold gradient-text mb-6">
-            Aktif Sözleşmeler - Süre Bilgileri
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="table-modern">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Sözleşme No
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Müşteri
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Oda
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Süre
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Başlangıç
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Bitiş
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.contractsByMonth.map(({ contract, months }) => (
-                  <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {contract.contract_number}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {contract.customer?.first_name} {contract.customer?.last_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {contract.room?.room_number || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        {months} Ay
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(contract.start_date).toLocaleDateString('tr-TR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(contract.end_date).toLocaleDateString('tr-TR')}
-                    </td>
-                  </tr>
-                ))}
               </tbody>
             </table>
           </div>

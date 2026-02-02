@@ -87,14 +87,14 @@ export function ContractsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold gradient-text mb-2">Tüm Girişler</h1>
           <p className="text-gray-600 dark:text-gray-400">Sözleşme ve ödeme yönetimi</p>
         </div>
         <button
           onClick={() => setIsNewSaleModalOpen(true)}
-          className="btn-primary inline-flex items-center px-6 py-3 cursor-pointer relative z-10"
+          className="btn-primary w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 cursor-pointer relative z-10"
         >
           <PlusIcon className="h-5 w-5 mr-2" />
           Yeni Satış Gir
@@ -516,10 +516,10 @@ export function ContractsPage() {
                   const transport = Number(contract.transportation_fee || 0);
                   const discount = Number(contract.discount || 0);
                   const paid = contract.payments?.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
-                  const totalDebt = monthlyTotal + transport - discount;
-                  const remainingDebt = totalDebt - paid;
+                  const total = monthlyTotal + transport - discount;
+                  const remaining = total - paid;
                   
-                  if (remainingDebt > 0) {
+                  if (remaining > 0) {
                     hasDebt = true;
                     debtContracts.push(contract.contract_number);
                   }
@@ -554,247 +554,358 @@ export function ContractsPage() {
           </div>
         </div>
       )}
+
       {loading ? (
         <div className="modern-card p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
         </div>
       ) : contracts.length === 0 ? (
         <div className="modern-card p-8 text-center">
+          <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Henüz sözleşme bulunmamaktadır.</p>
         </div>
       ) : (
-        <div className="modern-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="table-modern">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-12">
-                    <input
-                      type="checkbox"
-                      checked={selectedContracts.size === contracts.length && contracts.length > 0}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedContracts(new Set(contracts.map((c) => c.id)));
-                        } else {
-                          setSelectedContracts(new Set());
-                        }
-                      }}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Sözleşme No
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Müşteri
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Oda
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Başlangıç
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Bitiş
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Durum
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Aylık Fiyat
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Nakliye
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Toplam Borç
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Personel
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    İşlemler
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {contracts.map((contract) => (
-                  <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+        <>
+          {/* Mobile View - Cards */}
+          <div className="grid grid-cols-1 gap-4 md:hidden">
+            {contracts.map((contract) => {
+              const monthlyTotal = contract.monthly_prices?.reduce((sum: number, mp: any) => sum + Number(mp.price), 0) || 0;
+              const transport = Number(contract.transportation_fee || 0);
+              const discount = Number(contract.discount || 0);
+              const paid = contract.payments?.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+              const total = monthlyTotal + transport - discount;
+              const remaining = Math.max(0, total - paid);
+
+              return (
+                <div key={contract.id} className="modern-card p-4 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3 overflow-hidden">
+                      <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <DocumentTextIcon className="h-6 w-6 text-primary-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                          {contract.contract_number}
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {contract.customer?.first_name} {contract.customer?.last_name}
+                        </p>
+                      </div>
+                    </div>
+                    {contract.is_active ? (
+                      <span className="px-2 py-1 text-[10px] font-bold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 flex-shrink-0">
+                        AKTİF
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 text-[10px] font-bold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 flex-shrink-0">
+                        SONLANDI
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Oda</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{contract.room?.room_number || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Başlangıç</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{new Date(contract.start_date).toLocaleDateString('tr-TR')}</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Kalan Borç</p>
+                      <p className={`text-base font-bold ${remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                        {formatTurkishCurrency(remaining)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedContract(contract);
+                          setShowPaymentModal(true);
+                        }}
+                        className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                        title="Ödeme Al"
+                      >
+                        <CreditCardIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setTerminateError('');
+                          try {
+                            const { totalDebt, remainingDebt } = await contractsApi.getTotalDebt(contract.id);
+                            setTerminateDebtInfo({
+                              totalDebt,
+                              remainingDebt,
+                              contractNumber: contract.contract_number,
+                            });
+                            setTerminateTarget(contract);
+                          } catch {
+                            setTerminateDebtInfo(null);
+                            setTerminateTarget(contract);
+                          }
+                        }}
+                        className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
+                        title="Sonlandır"
+                      >
+                        <StopIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteError('');
+                          setDeleteTarget(contract);
+                        }}
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Sil"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block modern-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="table-modern">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-12">
                       <input
                         type="checkbox"
-                        checked={selectedContracts.has(contract.id)}
+                        checked={selectedContracts.size === contracts.length && contracts.length > 0}
                         onChange={(e) => {
-                          const newSelected = new Set(selectedContracts);
                           if (e.target.checked) {
-                            newSelected.add(contract.id);
+                            setSelectedContracts(new Set(contracts.map((c) => c.id)));
                           } else {
-                            newSelected.delete(contract.id);
+                            setSelectedContracts(new Set());
                           }
-                          setSelectedContracts(newSelected);
                         }}
                         className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         onClick={(e) => e.stopPropagation()}
                       />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <DocumentTextIcon className="h-5 w-5 text-primary-500 mr-2" />
-                        <button
-                          onClick={() => window.location.href = `/contracts/${contract.id}`}
-                          className="text-sm font-medium text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
-                        >
-                          {contract.contract_number}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {contract.customer?.first_name} {contract.customer?.last_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {contract.room?.room_number || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(contract.start_date).toLocaleDateString('tr-TR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(contract.end_date).toLocaleDateString('tr-TR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {contract.is_active ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                          Aktif
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                          Sonlandırıldı
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {formatTurkishCurrency(Number(contract.monthly_price))}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {formatTurkishCurrency(Number(contract.transportation_fee || 0))}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {(() => {
-                        const monthlyTotal = contract.monthly_prices?.reduce((sum: number, mp: any) => sum + Number(mp.price), 0) || 0;
-                        const transport = Number(contract.transportation_fee || 0);
-                        const discount = Number(contract.discount || 0);
-                        const paid = contract.payments?.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
-                        const total = monthlyTotal + transport - discount;
-                        const remaining = Math.max(0, total - paid);
-                        return (
-                          <div>
-                            <div className={`font-semibold ${remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                              {formatTurkishCurrency(remaining)}
-                            </div>
-                            <div className="text-xs text-gray-500">Toplam: {formatTurkishCurrency(total)} | Ödenen: {formatTurkishCurrency(paid)}</div>
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {contract.contract_staff && contract.contract_staff.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {contract.contract_staff.map((cs: any) => (
-                            <span
-                              key={cs.id}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            >
-                              {cs.user?.first_name} {cs.user?.last_name}
-                            </span>
-                          ))}
-                        </div>
-                      ) : contract.sold_by_user ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                          {contract.sold_by_user.first_name} {contract.sold_by_user.last_name}
-                        </span>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedContract(contract);
-                            setShowPaymentModal(true);
-                          }}
-                          className="btn-success inline-flex items-center px-3 py-1.5 text-xs cursor-pointer relative z-10"
-                        >
-                          <CreditCardIcon className="h-4 w-4 mr-1" />
-                          Ödeme Al
-                        </button>
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            setTerminateError('');
-                            // Borç bilgisini hesapla
-                            try {
-                              const { totalDebt, remainingDebt } = await contractsApi.getTotalDebt(contract.id);
-                              setTerminateDebtInfo({
-                                totalDebt,
-                                remainingDebt,
-                                contractNumber: contract.contract_number,
-                              });
-                              setTerminateTarget(contract);
-                            } catch {
-                              setTerminateDebtInfo(null);
-                              setTerminateTarget(contract);
-                            }
-                          }}
-                          className="px-3 py-1.5 text-xs text-white bg-orange-600 hover:bg-orange-700 rounded inline-flex items-center"
-                          title="Depolamayı Sonlandır"
-                        >
-                          <StopIcon className="h-4 w-4 mr-1" />
-                          Sonlandır
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteError('');
-                            setDeleteTarget(contract);
-                          }}
-                          className="px-3 py-1.5 text-xs text-white bg-red-600 hover:bg-red-700 rounded inline-flex items-center"
-                          title="Sil"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Sözleşme No
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Müşteri
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Oda
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Başlangıç
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Bitiş
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Durum
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Aylık Fiyat
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Nakliye
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Toplam Borç
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Personel
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      İşlemler
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  Önceki
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  Sonraki
-                </button>
-              </div>
+                </thead>
+                <tbody>
+                  {contracts.map((contract) => (
+                    <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedContracts.has(contract.id)}
+                          onChange={(e) => {
+                            const newSelected = new Set(selectedContracts);
+                            if (e.target.checked) {
+                              newSelected.add(contract.id);
+                            } else {
+                              newSelected.delete(contract.id);
+                            }
+                            setSelectedContracts(newSelected);
+                          }}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <DocumentTextIcon className="h-5 w-5 text-primary-500 mr-2" />
+                          <button
+                            onClick={() => window.location.href = `/contracts/${contract.id}`}
+                            className="text-sm font-medium text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
+                          >
+                            {contract.contract_number}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {contract.customer?.first_name} {contract.customer?.last_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {contract.room?.room_number || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {new Date(contract.start_date).toLocaleDateString('tr-TR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {new Date(contract.end_date).toLocaleDateString('tr-TR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {contract.is_active ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            Aktif
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            Sonlandırıldı
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {formatTurkishCurrency(Number(contract.monthly_price))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {formatTurkishCurrency(Number(contract.transportation_fee || 0))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {(() => {
+                          const monthlyTotal = contract.monthly_prices?.reduce((sum: number, mp: any) => sum + Number(mp.price), 0) || 0;
+                          const transport = Number(contract.transportation_fee || 0);
+                          const discount = Number(contract.discount || 0);
+                          const paid = contract.payments?.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+                          const total = monthlyTotal + transport - discount;
+                          const remaining = Math.max(0, total - paid);
+                          return (
+                            <div>
+                              <div className={`font-semibold ${remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                {formatTurkishCurrency(remaining)}
+                              </div>
+                              <div className="text-xs text-gray-500">Toplam: {formatTurkishCurrency(total)} | Ödenen: {formatTurkishCurrency(paid)}</div>
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {contract.contract_staff && contract.contract_staff.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {contract.contract_staff.map((cs: any) => (
+                              <span
+                                key={cs.id}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                              >
+                                {cs.user?.first_name} {cs.user?.last_name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : contract.sold_by_user ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                            {contract.sold_by_user.first_name} {contract.sold_by_user.last_name}
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedContract(contract);
+                              setShowPaymentModal(true);
+                            }}
+                            className="btn-success inline-flex items-center px-3 py-1.5 text-xs cursor-pointer relative z-10"
+                          >
+                            <CreditCardIcon className="h-4 w-4 mr-1" />
+                            Ödeme Al
+                          </button>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setTerminateError('');
+                              // Borç bilgisini hesapla
+                              try {
+                                const { totalDebt, remainingDebt } = await contractsApi.getTotalDebt(contract.id);
+                                setTerminateDebtInfo({
+                                  totalDebt,
+                                  remainingDebt,
+                                  contractNumber: contract.contract_number,
+                                });
+                                setTerminateTarget(contract);
+                              } catch {
+                                setTerminateDebtInfo(null);
+                                setTerminateTarget(contract);
+                              }
+                            }}
+                            className="px-3 py-1.5 text-xs text-white bg-orange-600 hover:bg-orange-700 rounded inline-flex items-center"
+                            title="Depolamayı Sonlandır"
+                          >
+                            <StopIcon className="h-4 w-4 mr-1" />
+                            Sonlandır
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteError('');
+                              setDeleteTarget(contract);
+                            }}
+                            className="px-3 py-1.5 text-xs text-white bg-red-600 hover:bg-red-700 rounded inline-flex items-center"
+                            title="Sil"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
+        </>
+      )}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-3 mt-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            >
+              Önceki
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            >
+              Sonraki
+            </button>
+          </div>
         </div>
       )}
 

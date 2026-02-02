@@ -6,9 +6,12 @@ import {
   CreditCardIcon,
   ArrowRightOnRectangleIcon,
   BellIcon,
+  SunIcon,
+  MoonIcon,
 } from '@heroicons/react/24/outline';
 import { notificationsApi } from '../services/api/notificationsApi';
 import { useState, useEffect } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 const customerNavigation = [
   { name: 'Ana Sayfa', href: '/customer/dashboard', icon: HomeIcon },
@@ -18,6 +21,7 @@ const customerNavigation = [
 
 export function CustomerLayout() {
   const { user, logout } = useAuthStore();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -134,7 +138,19 @@ export function CustomerLayout() {
         <div className="flex flex-col flex-1 overflow-hidden md:ml-0">
           {/* Header */}
           <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-end px-4 sm:px-6 md:px-8 h-16">
+            <div className="flex items-center justify-end px-4 sm:px-6 md:px-8 h-16 space-x-4">
+              <button
+                onClick={toggleTheme}
+                className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title={theme === 'light' ? 'Koyu Moda Geç' : 'Açık Moda Geç'}
+              >
+                {theme === 'light' ? (
+                  <MoonIcon className="h-6 w-6" />
+                ) : (
+                  <SunIcon className="h-6 w-6" />
+                )}
+              </button>
+
               <div className="relative">
                 <button
                   onClick={() => setNotificationsOpen(!notificationsOpen)}

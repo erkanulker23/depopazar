@@ -30,21 +30,21 @@ export class AuthController {
   async register(@Body() registerDto: RegisterDto, @CurrentUser() user?: any) {
     // Güvenlik: Client'tan gelen company_id'yi ignore et, sadece authenticated user'dan al
     const dto: any = { ...registerDto };
-    const isStaffOrOwner =
-      dto.role === UserRole.COMPANY_STAFF || dto.role === UserRole.COMPANY_OWNER;
+    const isInternalUser =
+      [UserRole.COMPANY_STAFF, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING].includes(dto.role as UserRole);
 
-    // Personel/Depo sahibi eklerken: giriş yapılmış olmalı ve şirket bilgisi olmalı
-    if (isStaffOrOwner) {
+    // Personel/Depo sahibi/Veri giriş/Muhasebe eklerken: giriş yapılmış olmalı ve şirket bilgisi olmalı
+    if (isInternalUser) {
       if (!user) {
         throw new BadRequestException(
-          'Personel eklemek için oturum açmanız gerekiyor. Lütfen sayfayı yenileyip tekrar deneyin.',
+          'Kullanıcı eklemek için oturum açmanız gerekiyor. Lütfen sayfayı yenileyip tekrar deneyin.',
         );
       }
       if (user.role === UserRole.SUPER_ADMIN) {
         // SUPER_ADMIN şirket kullanıcısı eklerken body'den company_id alabilir
         if (!registerDto.company_id) {
           throw new BadRequestException(
-            'Personel veya şirket yöneticisi eklerken şirket seçmelisiniz. Lütfen şirket ID\'sini belirtin.',
+            'Kullanıcı eklerken şirket seçmelisiniz. Lütfen şirket ID\'sini belirtin.',
           );
         }
         dto.company_id = registerDto.company_id;
@@ -55,7 +55,7 @@ export class AuthController {
           'Şirket bilgisi bulunamadı. Bu işlem için şirket hesabıyla giriş yapmalısınız.',
         );
       }
-    } else if (user?.company_id) {
+    } else if (user?.company_id && dto.role !== UserRole.SUPER_ADMIN) {
       dto.company_id = user.company_id;
     }
 

@@ -714,7 +714,7 @@ export function ContractDetailPage() {
                 {contract.monthly_prices?.map((mp: any, index: number) => {
                   const monthPayment = contract.payments?.find((p: any) => {
                     const paymentMonth = new Date(p.due_date).toISOString().slice(0, 7);
-                    return paymentMonth === mp.month;
+                    return paymentMonth === mp.month && (p.type === 'warehouse' || !p.type);
                   });
                   const isPaid = monthPayment?.status === 'paid';
                   
@@ -813,20 +813,25 @@ export function ContractDetailPage() {
                   {contract.payments
                     .sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
                     .map((payment: any) => {
-                      // Bu ödemenin bir aylık fiyatlandırmaya ait olup olmadığını kontrol et
-                      const isMonthlyPayment = contract.monthly_prices?.some((mp: any) => {
+                      const isMonthlyPayment = payment.type === 'warehouse' || (!payment.type && contract.monthly_prices?.some((mp: any) => {
                         const paymentMonth = new Date(payment.due_date).toISOString().slice(0, 7);
                         return paymentMonth === mp.month;
-                      });
-                      const isIntermediatePayment = !isMonthlyPayment;
+                      }));
+                      const isTransportationPayment = payment.type === 'transportation';
+                      const isIntermediatePayment = !isMonthlyPayment && !isTransportationPayment;
                       
                       return (
-                        <tr key={payment.id} className={isIntermediatePayment ? 'bg-blue-50 dark:bg-blue-900/20' : ''}>
+                        <tr key={payment.id} className={isIntermediatePayment ? 'bg-blue-50 dark:bg-blue-900/20' : isTransportationPayment ? 'bg-amber-50 dark:bg-amber-900/20' : ''}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             {payment.payment_number}
                             {isIntermediatePayment && (
                               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                 Ara Ödeme
+                              </span>
+                            )}
+                            {isTransportationPayment && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                Nakliye
                               </span>
                             )}
                           </td>

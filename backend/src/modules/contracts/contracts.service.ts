@@ -8,6 +8,7 @@ import { RoomsService } from '../rooms/rooms.service';
 import { RoomStatus } from '../../common/enums/room-status.enum';
 import { Payment } from '../payments/entities/payment.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
+import { PaymentType } from '../../common/enums/payment-type.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 import { NotificationType } from '../../common/enums/notification-type.enum';
@@ -511,8 +512,42 @@ export class ContractsService {
     const processedMonths = new Set<string>(); // Aynı ay için tekrar ödeme oluşturmayı engellemek için
     
     // Mevcut ödeme sayısını al (benzersiz numara için)
-    const allPayments = await this.paymentsRepository.find();
-    let paymentCounter = allPayments.length + 1;
+    const allPaymentsCount = await this.paymentsRepository.count();
+    let paymentCounter = allPaymentsCount + 1;
+
+    // 1. Nakliye ödemesini oluştur (eğer varsa)
+    if (contract.transportation_fee && Number(contract.transportation_fee) > 0) {
+      let paymentNumber = `PAY-${currentYear}-TR-${String(paymentCounter).padStart(4, '0')}`;
+      
+      // Benzersizlik kontrolü
+      let existingPayment = await this.paymentsRepository.findOne({
+        where: { payment_number: paymentNumber },
+      });
+      
+      while (existingPayment) {
+        paymentCounter++;
+        paymentNumber = `PAY-${currentYear}-TR-${String(paymentCounter).padStart(4, '0')}`;
+        existingPayment = await this.paymentsRepository.findOne({
+          where: { payment_number: paymentNumber },
+        });
+      }
+
+      const transportationPayment = this.paymentsRepository.create({
+        payment_number: paymentNumber,
+        contract_id: contract.id,
+        amount: Number(contract.transportation_fee),
+        status: PaymentStatus.PENDING,
+        type: PaymentType.TRANSPORTATION,
+        due_date: new Date(contract.start_date), // Nakliye ödemesi sözleşme başlangıcında
+        paid_at: null,
+        notes: 'Nakliye Ücreti',
+      });
+      payments.push(transportationPayment);
+      paymentCounter++;
+    }
+
+    // 2. Aylık kira ödemelerini oluştur
+    let remainingDiscount = Number(contract.discount || 0);
 
     for (const mp of monthlyPrices) {
       // Month formatı: "YYYY-MM"
@@ -555,17 +590,31 @@ export class ContractsService {
         daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       }
 
+      let amount = Number(mp.price);
+      
+      // İndirimi aylık ödemelere uygula
+      if (remainingDiscount > 0) {
+        if (amount >= remainingDiscount) {
+          amount -= remainingDiscount;
+          remainingDiscount = 0;
+        } else {
+          remainingDiscount -= amount;
+          amount = 0;
+        }
+      }
+
       const payment = this.paymentsRepository.create({
         payment_number: paymentNumber,
         contract_id: contract.id,
-        amount: mp.price,
-        status: status,
+        amount: amount,
+        status: amount === 0 ? PaymentStatus.PAID : status,
+        type: PaymentType.WAREHOUSE,
         due_date: dueDate,
-        paid_at: null,
-        payment_method: null,
+        paid_at: amount === 0 ? new Date() : null,
+        payment_method: amount === 0 ? 'discount' : null,
         transaction_id: null,
         notes: mp.notes || null,
-        days_overdue: daysOverdue,
+        days_overdue: status === PaymentStatus.OVERDUE ? daysOverdue : 0,
       });
 
       payments.push(payment);
@@ -587,9 +636,21 @@ export class ContractsService {
       const contractWithPayments = await this.findOne(contract.id);
       const payments = contractWithPayments.payments || [];
       
-      // Bekleyen veya gecikmiş ödemeleri bul
+      // Bekleyen veya gecikmiş ödemeleri bul (Sadece 3 gün kala veya geçmiş olanlar)
+      const now = new Date();
+      const threeDaysLater = new Date();
+      threeDaysLater.setDate(now.getDate() + 3);
+
       const pendingPayments = payments.filter(
-        (p) => p.status === PaymentStatus.PENDING || p.status === PaymentStatus.OVERDUE
+        (p) => {
+          if (p.status === PaymentStatus.OVERDUE) return true;
+          if (p.status === PaymentStatus.PENDING) {
+            const dueDate = new Date(p.due_date);
+            // Vadeye 3 gün veya daha az kalmışsa hatırla
+            return dueDate <= threeDaysLater;
+          }
+          return false;
+        }
       );
 
       // Eğer ödeme yoksa işlemi sonlandır
@@ -615,17 +676,15 @@ export class ContractsService {
       // Mail ayarlarını kontrol et
       const mailSettings = await this.mailSettingsService.findByCompanyId(companyId);
       if (!mailSettings || !mailSettings.is_active || !mailSettings.smtp_host || !mailSettings.smtp_port) {
-        throw new BadRequestException(
-          'Mail ayarları yapılandırılmamış veya aktif değil. Lütfen mail ayarlarını kontrol edin.'
-        );
+        console.warn(`[ContractsService] Mail settings not configured for company ${companyId}`);
+        return;
       }
 
       // SMS ayarlarını kontrol et
       const smsSettings = await this.smsSettingsService.findByCompanyId(companyId);
       if (!smsSettings || !smsSettings.is_active || !smsSettings.username || !smsSettings.password || !smsSettings.sender_id) {
-        throw new BadRequestException(
-          'SMS ayarları yapılandırılmamış veya aktif değil. Lütfen SMS ayarlarını kontrol edin.'
-        );
+        console.warn(`[ContractsService] SMS settings not configured for company ${companyId}`);
+        return;
       }
 
       // Toplam borç tutarını hesapla

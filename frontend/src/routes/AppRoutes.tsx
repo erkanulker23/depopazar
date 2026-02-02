@@ -15,6 +15,7 @@ import { PaymentsPage } from '../pages/payments/PaymentsPage';
 import { PaymentSuccessPage } from '../pages/payments/PaymentSuccessPage';
 import { PaymentFailPage } from '../pages/payments/PaymentFailPage';
 import { StaffPage } from '../pages/staff/StaffPage';
+import { PermissionsPage } from '../pages/permissions/PermissionsPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
 import { ReportsPage } from '../pages/reports/ReportsPage';
 import { BankAccountPaymentsPage } from '../pages/reports/BankAccountPaymentsPage';
@@ -78,7 +79,7 @@ export function AppRoutes() {
       <Route
         path="/"
         element={
-          <ProtectedRoute allowedRoles={['super_admin', 'company_owner', 'company_staff']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'company_owner', 'company_staff', 'data_entry', 'accounting']}>
             <DashboardLayout />
           </ProtectedRoute>
         }
@@ -96,6 +97,7 @@ export function AppRoutes() {
         <Route path="payments/success" element={<PaymentSuccessPage />} />
         <Route path="payments/fail" element={<PaymentFailPage />} />
         <Route path="staff" element={<StaffPage />} />
+        <Route path="permissions" element={<PermissionsPage />} />
         <Route path="transportation-jobs" element={<TransportationJobsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reports/bank-accounts" element={<BankAccountPaymentsPage />} />

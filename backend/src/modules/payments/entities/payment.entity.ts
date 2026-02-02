@@ -1,6 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { PaymentStatus } from '../../../common/enums/payment-status.enum';
+import { PaymentType } from '../../../common/enums/payment-type.enum';
 import { Contract } from '../../contracts/entities/contract.entity';
 import { BankAccount } from '../../companies/entities/bank-account.entity';
 
@@ -25,6 +26,13 @@ export class Payment extends BaseEntity {
     default: PaymentStatus.PENDING,
   })
   status: PaymentStatus;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentType,
+    default: PaymentType.WAREHOUSE,
+  })
+  type: PaymentType;
 
   @Column({ type: 'datetime' })
   due_date: Date;

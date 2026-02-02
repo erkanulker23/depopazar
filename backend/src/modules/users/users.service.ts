@@ -37,8 +37,9 @@ export class UsersService {
     // Bildirim oluştur: Personel eklendiğinde (sadece COMPANY_STAFF için)
     try {
       console.log(`[UsersService] Creating user - role: ${savedUser.role}, company_id: ${savedUser.company_id}`);
-      if (savedUser.role === UserRole.COMPANY_STAFF && savedUser.company_id) {
-        console.log(`[UsersService] Staff created, fetching company users for company_id: ${savedUser.company_id}`);
+      const staffRoles = [UserRole.COMPANY_STAFF, UserRole.DATA_ENTRY, UserRole.ACCOUNTING];
+      if (staffRoles.includes(savedUser.role) && savedUser.company_id) {
+        console.log(`[UsersService] Staff/Internal user created, fetching company users for company_id: ${savedUser.company_id}`);
         const usersToNotify: any[] = [];
         
         // Şirket kullanıcılarına bildirim gönder
@@ -185,8 +186,9 @@ export class UsersService {
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id);
     
-    // Bildirim oluştur: Personel silindiğinde (sadece COMPANY_STAFF için)
-    if (user.role === UserRole.COMPANY_STAFF && user.company_id) {
+    // Bildirim oluştur: Personel silindiğinde
+    const staffRoles = [UserRole.COMPANY_STAFF, UserRole.DATA_ENTRY, UserRole.ACCOUNTING];
+    if (staffRoles.includes(user.role) && user.company_id) {
       const usersToNotify: any[] = [];
       
       // Şirket kullanıcılarına bildirim gönder

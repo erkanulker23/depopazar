@@ -5,6 +5,9 @@ import { AddStaffModal } from '../../components/modals/AddStaffModal';
 import { EditStaffModal } from '../../components/modals/EditStaffModal';
 
 export function StaffPage() {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'super_admin' || user?.role === 'company_owner';
+  
   const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -17,9 +20,9 @@ export function StaffPage() {
   const fetchStaff = async () => {
     try {
       const response = await apiClient.get('/users');
-      // Sadece personel ve sahip rolündeki kullanıcıları göster
+      // Sadece sistem kullanıcılarını göster (müşteriler hariç)
       const staffUsers = (response.data || []).filter(
-        (user: any) => user.role === 'company_staff' || user.role === 'company_owner'
+        (user: any) => user.role !== 'customer'
       );
       setStaff(staffUsers);
     } catch (error) {
@@ -38,16 +41,18 @@ export function StaffPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Personel Listesi</h1>
-          <p className="text-gray-600 dark:text-gray-400">Personel yönetimi ve yetkilendirme</p>
+          <h1 className="text-3xl font-bold gradient-text mb-2">Kullanıcı Listesi</h1>
+          <p className="text-gray-600 dark:text-gray-400">Sistem kullanıcıları yönetimi ve yetkilendirme</p>
         </div>
-        <button
-          onClick={() => setAddModalOpen(true)}
-          className="btn-primary inline-flex items-center px-6 py-3"
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Personel Ekle
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="btn-primary inline-flex items-center px-6 py-3"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Kullanıcı Ekle
+          </button>
+        )}
       </div>
 
       <AddStaffModal
@@ -83,7 +88,7 @@ export function StaffPage() {
               <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                    Personeli Sil
+                    Kullanıcıyı Sil
                   </h3>
                   <button
                     onClick={() => {
@@ -106,7 +111,7 @@ export function StaffPage() {
                   <strong className="text-gray-900 dark:text-white">
                     {deleteTarget.first_name} {deleteTarget.last_name}
                   </strong>{' '}
-                  personelini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                  kullanıcısını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
                 </p>
                 <div className="flex justify-end space-x-3">
                   <button
@@ -183,9 +188,11 @@ export function StaffPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Eklenme Tarihi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    İşlemler
-                  </th>
+                  {isAdmin && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      İşlemler
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -208,12 +215,26 @@ export function StaffPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          person.role === 'company_owner'
+                          person.role === 'super_admin'
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            : person.role === 'company_owner'
                             ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                            : person.role === 'accounting'
+                            ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                            : person.role === 'data_entry'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                         }`}
                       >
-                        {person.role === 'company_owner' ? 'Depo Sahibi' : 'Personel'}
+                        {person.role === 'super_admin'
+                          ? 'Süper Admin'
+                          : person.role === 'company_owner'
+                          ? 'Depo Sahibi'
+                          : person.role === 'accounting'
+                          ? 'Muhasebe'
+                          : person.role === 'data_entry'
+                          ? 'Veri Girişi'
+                          : 'Personel'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -236,30 +257,32 @@ export function StaffPage() {
                           })
                         : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-3">
-                        <button
-                          onClick={() => {
-                            setSelectedStaff(person);
-                            setEditModalOpen(true);
-                          }}
-                          className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
-                          title="Düzenle"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setDeleteError('');
-                            setDeleteTarget(person);
-                          }}
-                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                          title="Sil"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => {
+                              setSelectedStaff(person);
+                              setEditModalOpen(true);
+                            }}
+                            className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
+                            title="Düzenle"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeleteError('');
+                              setDeleteTarget(person);
+                            }}
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                            title="Sil"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

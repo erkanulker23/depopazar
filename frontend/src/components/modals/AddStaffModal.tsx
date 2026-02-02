@@ -105,7 +105,7 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
           <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
-                Yeni Personel Ekle
+                Yeni Kullanıcı Ekle
               </h3>
               <button
                 onClick={onClose}
@@ -256,6 +256,9 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
                 >
                   <option value="company_staff">Personel</option>
                   <option value="company_owner">Depo Sahibi</option>
+                  <option value="data_entry">Veri Girişi</option>
+                  <option value="accounting">Muhasebe</option>
+                  {isSuperAdmin && <option value="super_admin">Süper Admin</option>}
                 </select>
               </div>
 
@@ -272,7 +275,7 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
                   disabled={loading}
                   className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                 >
-                  {loading ? 'Kaydediliyor...' : 'Personel Ekle'}
+                  {loading ? 'Kaydediliyor...' : 'Kullanıcı Ekle'}
                 </button>
               </div>
             </form>
