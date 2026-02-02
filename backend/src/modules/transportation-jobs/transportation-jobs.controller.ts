@@ -19,6 +19,8 @@ import { TransportationJobsService } from './transportation-jobs.service';
 import { CompaniesService } from '../companies/companies.service';
 import { CustomersService } from '../customers/customers.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { parsePagination } from '../../common/utils/pagination';
@@ -26,7 +28,7 @@ import { validatePdfFile, savePdf, removePdfFile } from './pdf-upload.helper';
 
 @ApiTags('Transportation Jobs')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('transportation-jobs')
 export class TransportationJobsController {
   constructor(
@@ -45,6 +47,7 @@ export class TransportationJobsController {
   }
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Create a new transportation job' })
   async create(@Body() createTransportationJobDto: any, @CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -74,6 +77,7 @@ export class TransportationJobsController {
   }
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get all transportation jobs' })
   async findAll(
     @CurrentUser() user: any,
@@ -120,6 +124,7 @@ export class TransportationJobsController {
   }
 
   @Get('customer/:customerId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get transportation jobs by customer ID' })
   async findByCustomerId(@Param('customerId') customerId: string, @CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -135,6 +140,7 @@ export class TransportationJobsController {
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get transportation job by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     await this.ensureJobAccess(id, user);
@@ -142,6 +148,7 @@ export class TransportationJobsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Update transportation job' })
   async update(
     @Param('id') id: string,
@@ -153,6 +160,7 @@ export class TransportationJobsController {
   }
 
   @Post(':id/upload-pdf')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload PDF contract for transportation job' })
@@ -187,6 +195,7 @@ export class TransportationJobsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Delete transportation job' })
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     await this.ensureJobAccess(id, user);
