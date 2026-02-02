@@ -1,5 +1,21 @@
 import { apiClient } from './apiClient';
 
+export interface Customer {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  identity_number?: string;
+  notes?: string;
+  is_active: boolean;
+  company_id: string;
+  created_at: string;
+  contracts?: any[];
+  [key: string]: any;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -14,15 +30,15 @@ export const customersApi = {
     if (params?.page != null) sp.set('page', String(params.page));
     if (params?.limit != null) sp.set('limit', String(params.limit));
     const q = sp.toString();
-    const response = await apiClient.get<PaginatedResponse<any>>('/customers' + (q ? `?${q}` : ''));
+    const response = await apiClient.get<PaginatedResponse<Customer>>('/customers' + (q ? `?${q}` : ''));
     return response.data;
   },
-  getById: async (id: string) => {
-    const response = await apiClient.get(`/customers/${id}`);
+  getById: async (id: string): Promise<Customer> => {
+    const response = await apiClient.get<Customer>(`/customers/${id}`);
     return response.data;
   },
-  create: async (data: any) => {
-    const response = await apiClient.post('/customers', data);
+  create: async (data: Partial<Customer>) => {
+    const response = await apiClient.post<Customer>('/customers', data);
     return response.data;
   },
   getDebtInfo: async (id: string) => {

@@ -28,6 +28,7 @@ export interface TransportationJob {
   notes?: string | null;
   status: string;
   job_date?: string | null;
+  job_type?: string | null;
   is_paid: boolean;
   created_at: string;
   updated_at: string;
