@@ -35,15 +35,20 @@ async function bootstrap() {
     }),
   );
 
-  // CORS Ayarları - Tarayıcı hatalarını önlemek için kritik
+  // CORS: Domain/subdomain env'den; hardcoded origin yok (çoklu kurulum kuralı)
+  let corsOrigins: string[] = [];
+  if (process.env.CORS_ORIGINS) {
+    corsOrigins = process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean);
+  } else if (process.env.FRONTEND_URL) {
+    corsOrigins = [process.env.FRONTEND_URL];
+  } else if (process.env.NODE_ENV !== 'production') {
+    corsOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3180', 'http://127.0.0.1:3180'];
+  }
+  if (process.env.NODE_ENV === 'production' && corsOrigins.length === 0) {
+    throw new Error('Production için CORS_ORIGINS veya FRONTEND_URL tanımlanmalı.');
+  }
   app.enableCors({
-    origin: [
-      'https://depo.awapanel.com',      // Canlı frontend adresin
-      'http://depo.awapanel.com',       // HTTP versiyonu (opsiyonel)
-      'http://localhost:3180',          // Yerel geliştirme portun
-      'http://127.0.0.1:3180',
-      'http://localhost:5173',          // Standart Vite portu (ihtiyacın olabilir)
-    ],
+    origin: corsOrigins.length > 0 ? corsOrigins : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

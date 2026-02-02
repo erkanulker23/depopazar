@@ -42,8 +42,9 @@ Thumbs.db
 # Uploads (logo, etc.)
 backend/uploads/
 
-# Logs
+# Logs (backend PM2 izolasyonu: backend/logs/depopazar-*-*.log)
 logs/
+backend/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*

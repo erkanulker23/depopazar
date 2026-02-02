@@ -14,6 +14,7 @@ import { ContractDetailPage } from '../pages/contracts/ContractDetailPage';
 import { PaymentsPage } from '../pages/payments/PaymentsPage';
 import { PaymentSuccessPage } from '../pages/payments/PaymentSuccessPage';
 import { PaymentFailPage } from '../pages/payments/PaymentFailPage';
+import { StaffPage } from '../pages/staff/StaffPage';
 import { StaffDetailPage } from '../pages/staff/StaffDetailPage';
 import { PermissionsPage } from '../pages/permissions/PermissionsPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';

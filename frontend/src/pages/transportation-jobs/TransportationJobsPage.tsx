@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { transportationJobsApi, TransportationJob } from '../../services/api/transportationJobsApi';
 import { customersApi } from '../../services/api/customersApi';
+import { servicesApi } from '../../services/api/servicesApi';
 import { apiClient } from '../../services/api/apiClient';
 import {
   TruckIcon,
@@ -56,6 +57,7 @@ export function TransportationJobsPage() {
   const [selectedYear, setSelectedYear] = useState<number | ''>('');
   const [selectedMonth, setSelectedMonth] = useState<number | ''>('');
   const [customers, setCustomers] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<TransportationJob | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -87,6 +89,7 @@ export function TransportationJobsPage() {
   useEffect(() => {
     fetchJobs();
     fetchCustomers();
+    fetchServices();
     fetchStaff();
   }, []);
 
@@ -139,9 +142,18 @@ export function TransportationJobsPage() {
   const fetchCustomers = async () => {
     try {
       const res = await customersApi.getAll({ limit: 100 });
-      setCustomers(res.data);
+      setCustomers(Array.isArray(res?.data) ? res.data : []);
     } catch (error) {
       console.error('Error fetching customers:', error);
+    }
+  };
+
+  const fetchServices = async () => {
+    try {
+      const res = await servicesApi.getServices();
+      setServices(Array.isArray(res) ? res : []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
     }
   };
 
@@ -796,7 +808,7 @@ export function TransportationJobsPage() {
                     </div>
                   </div>
 
-                  {/* Hizmet Seçimi */}
+                  {/* Hizmet Seçimi - Veritabanından */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Hizmet Türü <span className="text-red-500">*</span>
@@ -808,10 +820,12 @@ export function TransportationJobsPage() {
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                     >
                       <option value="">Hizmet seçin</option>
-                      <option value="Evden Eve Nakliyat">Evden Eve Nakliyat</option>
-                      <option value="Şehirlerarası Nakliyat">Şehirlerarası Nakliyat</option>
-                      <option value="Ofis Taşımacılığı">Ofis Taşımacılığı</option>
-                      <option value="Uluslararası Nakliyat">Uluslararası Nakliyat</option>
+                      {services.map((s) => (
+                        <option key={s.id} value={s.name}>{s.name}</option>
+                      ))}
+                      {services.length === 0 && (
+                        <option value="" disabled>Önce Hizmetler sayfasından hizmet ekleyin</option>
+                      )}
                     </select>
                   </div>
 

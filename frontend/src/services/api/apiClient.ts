@@ -1,7 +1,10 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../../stores/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+// Domain bazlı: build’te VITE_API_URL set edilir; yoksa çalışılan origin + /api (aynı domain)
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api');
 
 export const apiClient = axios.create({
   baseURL: API_URL,

@@ -30,6 +30,19 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [creatingBackup, setCreatingBackup] = useState(false);
+  const [showBackupOptionsModal, setShowBackupOptionsModal] = useState(false);
+  const [backupOptions, setBackupOptions] = useState({
+    full: true,
+    companies: true,
+    customers: true,
+    contracts: true,
+    payments: true,
+    transportationJobs: true,
+    proposals: true,
+    services: true,
+    warehouses: true,
+    rooms: true,
+  });
   const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
   const [backups, setBackups] = useState<string[]>([]);
@@ -62,6 +75,64 @@ export function SettingsPage() {
     trade_registry_number: '',
     tax_office: '',
   });
+
+  // Mail şablonu varsayılan örnekleri
+  const MAIL_TEMPLATE_DEFAULTS = {
+    contract_created: `Merhaba {{customer_name}},
+
+{{company_name}} ile depolama sözleşmeniz oluşturulmuştur.
+
+Sözleşme No: {{contract_number}}
+Oda: {{room_number}}
+Aylık Ücret: {{monthly_price}} ₺
+Başlangıç: {{start_date}}
+Bitiş: {{end_date}}
+
+Sorularınız için bizimle iletişime geçebilirsiniz.`,
+    payment_received: `Merhaba {{customer_name}},
+
+{{payment_number}} numaralı ödemeniz alınmıştır.
+
+Tutar: {{amount}} ₺
+Tarih: {{payment_date}}
+
+{{company_name}}`,
+    payment_reminder: `Merhaba {{customer_name}},
+
+Vadesi geçmiş ödemeniz bulunmaktadır.
+
+Tahsilat No: {{payment_number}}
+Tutar: {{amount}} ₺
+Vade Tarihi: {{due_date}}
+
+Lütfen en kısa sürede ödemenizi gerçekleştirin.
+{{company_name}}`,
+    contract_expiring: `Merhaba {{customer_name}},
+
+{{contract_number}} numaralı sözleşmenizin süresi {{end_date}} tarihinde dolacaktır.
+
+Yenilemek veya bilgi almak için bizimle iletişime geçebilirsiniz.
+{{company_name}}`,
+    welcome: `Merhaba {{customer_name}},
+
+{{company_name}} ailesine hoş geldiniz!
+
+Size en iyi hizmeti sunmak için buradayız.
+Sorularınız için her zaman ulaşabilirsiniz.`,
+    admin_contract_created: `Yeni sözleşme oluşturuldu.
+
+Müşteri: {{customer_name}}
+Sözleşme No: {{contract_number}}
+Oda: {{room_number}}
+Aylık: {{monthly_price}} ₺
+Tarih: {{date}}`,
+    admin_payment_received: `Ödeme alındı.
+
+Müşteri: {{customer_name}}
+Tahsilat No: {{payment_number}}
+Tutar: {{amount}} ₺
+Tarih: {{payment_date}}`,
+  };
 
   // Mail settings form state
   const [mailForm, setMailForm] = useState({
@@ -136,9 +207,14 @@ export function SettingsPage() {
     }
   };
 
-  const handleCreateBackup = async () => {
+  const handleCreateBackup = () => {
+    setShowBackupOptionsModal(true);
+  };
+
+  const confirmCreateBackup = async () => {
     try {
       setCreatingBackup(true);
+      setShowBackupOptionsModal(false);
       await backupApi.create();
       toast.success('Yedekleme başarıyla oluşturuldu');
       loadBackups();
@@ -223,18 +299,18 @@ export function SettingsPage() {
           smtp_password: '', // Don't show password
           from_email: mailData.from_email || '',
           from_name: mailData.from_name || '',
-          contract_created_template: mailData.contract_created_template || '',
-          payment_received_template: mailData.payment_received_template || '',
-          contract_expiring_template: mailData.contract_expiring_template || '',
-          payment_reminder_template: mailData.payment_reminder_template || '',
-          welcome_template: mailData.welcome_template || '',
+          contract_created_template: mailData.contract_created_template || MAIL_TEMPLATE_DEFAULTS.contract_created,
+          payment_received_template: mailData.payment_received_template || MAIL_TEMPLATE_DEFAULTS.payment_received,
+          contract_expiring_template: mailData.contract_expiring_template || MAIL_TEMPLATE_DEFAULTS.contract_expiring,
+          payment_reminder_template: mailData.payment_reminder_template || MAIL_TEMPLATE_DEFAULTS.payment_reminder,
+          welcome_template: mailData.welcome_template || MAIL_TEMPLATE_DEFAULTS.welcome,
           notify_customer_on_contract: mailData.notify_customer_on_contract !== undefined ? mailData.notify_customer_on_contract : true,
           notify_customer_on_payment: mailData.notify_customer_on_payment !== undefined ? mailData.notify_customer_on_payment : true,
           notify_customer_on_overdue: mailData.notify_customer_on_overdue !== undefined ? mailData.notify_customer_on_overdue : true,
           notify_admin_on_contract: mailData.notify_admin_on_contract !== undefined ? mailData.notify_admin_on_contract : true,
           notify_admin_on_payment: mailData.notify_admin_on_payment !== undefined ? mailData.notify_admin_on_payment : true,
-          admin_contract_created_template: mailData.admin_contract_created_template || '',
-          admin_payment_received_template: mailData.admin_payment_received_template || '',
+          admin_contract_created_template: mailData.admin_contract_created_template || MAIL_TEMPLATE_DEFAULTS.admin_contract_created,
+          admin_payment_received_template: mailData.admin_payment_received_template || MAIL_TEMPLATE_DEFAULTS.admin_payment_received,
           is_active: mailData.is_active || false,
         });
       } catch (error: any) {
@@ -2042,7 +2118,7 @@ export function SettingsPage() {
                 </p>
               </div>
               <button
-                onClick={handleCreateBackup}
+                onClick={() => setShowBackupOptionsModal(true)}
                 disabled={creatingBackup}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm flex items-center space-x-2"
               >
@@ -2110,6 +2186,133 @@ export function SettingsPage() {
               )}
             </div>
           </div>
+
+          {/* Yedek Seçenekleri Modal */}
+          {showBackupOptionsModal && (
+            <div className="fixed inset-0 z-50 overflow-y-auto">
+              <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowBackupOptionsModal(false)} />
+                <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                  <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                      Nelerin yedeği alınsın?
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                      Yedeklenecek verileri seçin. Tüm veritabanı seçeneği tüm tabloları içerir.
+                    </p>
+                    <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.full}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, full: e.target.checked })}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Tüm veritabanı (önerilen)</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.companies}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, companies: e.target.checked })}
+                          disabled={backupOptions.full}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Şirketler</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.customers}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, customers: e.target.checked })}
+                          disabled={backupOptions.full}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Müşteriler</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.contracts}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, contracts: e.target.checked })}
+                          disabled={backupOptions.full}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Sözleşmeler</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.payments}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, payments: e.target.checked })}
+                          disabled={backupOptions.full}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Ödemeler</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.transportationJobs}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, transportationJobs: e.target.checked })}
+                          disabled={backupOptions.full}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Nakliye işleri</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.proposals}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, proposals: e.target.checked })}
+                          disabled={backupOptions.full}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Teklifler</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.services}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, services: e.target.checked })}
+                          disabled={backupOptions.full}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Hizmetler</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={backupOptions.warehouses}
+                          onChange={(e) => setBackupOptions({ ...backupOptions, warehouses: e.target.checked })}
+                          disabled={backupOptions.full}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Depolar ve odalar</span>
+                      </label>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowBackupOptionsModal(false)}
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        İptal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={confirmCreateBackup}
+                        disabled={creatingBackup}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                      >
+                        {creatingBackup ? 'Oluşturuluyor...' : 'Yedek Oluştur'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Delete Backup Modal */}
           {deletingBackup && (

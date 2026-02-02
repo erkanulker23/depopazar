@@ -27,6 +27,12 @@ DB_DATABASE=depopazar_canli
 
 ## Önemli Notlar
 
-- `.env` dosyası proje kökünde olmalıdır (backend ve frontend ile aynı seviyede).
+- Backend kendi `.env` dosyasını `backend/` dizininde kullanır; çoklu domain kurulumunda her kurulumun ayrı `backend/.env` dosyası olur (bkz. docs/DEPLOYMENT-MULTI-DOMAIN.md).
 - Bir ortamda yapılan değişiklik diğerini etkilemez; veritabanları farklı olduğu sürece veriler karışmaz.
 - Canlı ortamda `NODE_ENV=production` ve `SWAGGER_ENABLED=false` kullanın.
+
+## Çoklu Domain / Subdomain ve Kesintisiz Deploy
+
+Birden fazla domain veya subdomain (her biri ayrı veri tabanı) ve PM2 ile kesintisiz deploy kuralları için:
+
+- **[docs/DEPLOYMENT-MULTI-DOMAIN.md](docs/DEPLOYMENT-MULTI-DOMAIN.md)** – Çoklu domain izolasyonu, .env zorunlulukları, PM2, zero-downtime deploy ve test senaryoları.

@@ -90,6 +90,10 @@ async function runSeeds() {
       await companyOwner.hashPassword();
       await userRepo.save(companyOwner);
       console.log('✅ Company Owner created');
+    } else if (companyOwner.company_id !== demoCompany.id) {
+      companyOwner.company_id = demoCompany.id;
+      await userRepo.save(companyOwner);
+      console.log('✅ Company Owner company_id synced to demo company');
     }
 
     // 4. Company Staff
@@ -110,6 +114,10 @@ async function runSeeds() {
       await staff.hashPassword();
       await userRepo.save(staff);
       console.log('✅ Company Staff created');
+    } else if (staff.company_id !== demoCompany.id) {
+      staff.company_id = demoCompany.id;
+      await userRepo.save(staff);
+      console.log('✅ Company Staff company_id synced to demo company');
     }
 
     // 5. Warehouses

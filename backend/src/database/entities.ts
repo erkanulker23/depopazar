@@ -16,6 +16,10 @@ import { CompanySmsSettings } from '../modules/companies/entities/company-sms-se
 import { BankAccount } from '../modules/companies/entities/bank-account.entity';
 import { TransportationJob } from '../modules/transportation-jobs/entities/transportation-job.entity';
 import { TransportationJobStaff } from '../modules/transportation-jobs/entities/transportation-job-staff.entity';
+import { ServiceCategory } from '../modules/services/entities/service-category.entity';
+import { Service } from '../modules/services/entities/service.entity';
+import { Proposal } from '../modules/proposals/entities/proposal.entity';
+import { ProposalItem } from '../modules/proposals/entities/proposal-item.entity';
 
 export const entities = [
   Company,
@@ -35,4 +39,8 @@ export const entities = [
   BankAccount,
   TransportationJob,
   TransportationJobStaff,
+  ServiceCategory,
+  Service,
+  Proposal,
+  ProposalItem,
 ];
