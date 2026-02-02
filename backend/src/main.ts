@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
@@ -10,6 +11,13 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const config = app.get(ConfigService);
+  // Hangi .env kullanıldığını doğrulamak için (şifre yok)
+  console.log(
+    '[env] NODE_ENV=%s DB_DATABASE=%s (degistiriyorsaniz deploy sonrasi pm2 restart gerekir)',
+    config.get('NODE_ENV'),
+    config.get('DB_DATABASE'),
+  );
 
   // Uploads klasörü kontrolü ve oluşturulması
   const uploadsDir = join(process.cwd(), 'uploads');

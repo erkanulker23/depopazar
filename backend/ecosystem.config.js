@@ -1,10 +1,9 @@
 /**
  * PM2 ecosystem – DepoPazar backend
- * Her domain/subdomain için ayrı process, ayrı log (izolasyon).
- * Çalıştırmadan önce ilgili .env yüklenmeli (deploy script veya export APP_DOMAIN).
+ * Tek .env: proje kökü (backend/ üst dizini). Bu dosya backend/ içinde olduğu için ../.env kullanılır.
  */
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const appName = process.env.APP_NAME || 'DepoPazar';
 const appDomain = process.env.APP_DOMAIN || 'default';

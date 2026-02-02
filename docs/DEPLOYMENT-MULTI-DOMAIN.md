@@ -20,12 +20,57 @@ Her kurulum yalnızca kendi `.env` içindeki `DB_DATABASE` ile tek bir veri taba
 
 Backend için `backend/.env` her domain/subdomain için ayrı oluşturulmalıdır. Şablon: `backend/.env.example`.
 
+**Önemli:** `NODE_ENV=production` **olmalı**. `NODE_ENV=development` iken uygulama DB bilgisi .env’de olmasa bile **varsayılan değerlerle** (127.0.0.1, 3307, depopazar vb.) bağlanır; bu yüzden .env’i değiştirseniz veya DB satırlarını silseniz bile proje çalışmaya devam edebilir. Canlıda mutlaka `NODE_ENV=production` ve tüm `DB_*` değişkenlerini tanımlayın.
+
 Zorunlu alanlar (production):
 
+- `NODE_ENV=production`
 - `APP_NAME`, `APP_ENV`, `APP_DOMAIN`, `APP_URL`
 - `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
 - `JWT_SECRET`, `JWT_REFRESH_SECRET`
 - `FRONTEND_URL` veya `CORS_ORIGINS` (CORS izinleri)
+
+### Laravel Forge – Tek .env ve Root directory
+
+Proje **tek bir .env** kullanır: **proje kökü** (backend ve frontend klasörlerinin bulunduğu dizin), örn. `/home/forge/general.awapanel.com/.env`.
+
+- **Forge → Settings → General**
+  - **Root directory:** `backend` değil, **boş bırakın** (veya `/`) — site kökü = proje kökü.
+  - **Web directory (public):** `frontend/dist` — Nginx React build’i buradan sunar; **backend veya backend/public olmamalı.**
+- **Background process (Supervisor):** Komut `node backend/dist/main.js`, çalışma dizini proje kökü (örn. `/home/forge/general.awapanel.com`).
+- **Environment:** Proje kökündeki tek .env buradan düzenlenir.
+
+Canlıda **mutlaka** şunları ekleyin; aksi halde uygulama `NODE_ENV=development` sayılıp varsayılan DB ile çalışır:
+
+- `NODE_ENV=production`
+- `DB_HOST=...`, `DB_PORT=3306`, `DB_DATABASE=...`, `DB_USERNAME=...`, `DB_PASSWORD=...`
+
+Örnek (general.awapanel.com):
+
+```env
+APP_NAME=GeneralDepo
+APP_ENV=production
+APP_DOMAIN=general.awapanel.com
+APP_URL=https://general.awapanel.com
+NODE_ENV=production
+PORT=4100
+FRONTEND_URL=https://general.awapanel.com
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=general
+DB_USERNAME=forge
+DB_PASSWORD=...
+
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
+JWT_EXPIRES_IN=1d
+JWT_REFRESH_EXPIRES_IN=7d
+
+SWAGGER_ENABLED=false
+```
+
+**Not:** .env değiştirdikten sonra değişikliğin uygulanması için **deploy tekrar çalıştırılmalı** veya sunucuda `pm2 restart all` yapılmalıdır. Uygulama açılışında logda `[env] NODE_ENV=... DB_DATABASE=...` satırı görünür; hangi değerlerin yüklendiğini buradan kontrol edebilirsiniz.
 
 ## 4. Backend (NestJS) Özeti
 

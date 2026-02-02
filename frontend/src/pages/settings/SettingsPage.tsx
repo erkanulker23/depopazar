@@ -2118,7 +2118,7 @@ Tarih: {{payment_date}}`,
                 </p>
               </div>
               <button
-                onClick={() => setShowBackupOptionsModal(true)}
+                onClick={handleCreateBackup}
                 disabled={creatingBackup}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm flex items-center space-x-2"
               >

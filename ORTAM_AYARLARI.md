@@ -27,7 +27,7 @@ DB_DATABASE=depopazar_canli
 
 ## Önemli Notlar
 
-- Backend kendi `.env` dosyasını `backend/` dizininde kullanır; çoklu domain kurulumunda her kurulumun ayrı `backend/.env` dosyası olur (bkz. docs/DEPLOYMENT-MULTI-DOMAIN.md).
+- Proje **tek bir .env** kullanır: **proje kökü** (backend ve frontend’in üst dizini). Backend ve migration bu dosyayı okur. Forge’da Root directory’yi proje köküne alın; bkz. docs/ENV-TEK-DOSYA.md.
 - Bir ortamda yapılan değişiklik diğerini etkilemez; veritabanları farklı olduğu sürece veriler karışmaz.
 - Canlı ortamda `NODE_ENV=production` ve `SWAGGER_ENABLED=false` kullanın.
 

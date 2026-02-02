@@ -1,7 +1,10 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
+import { join } from 'path';
 
-config();
+// Tek .env: proje kökü (backend/ üst dizini)
+const projectRoot = process.cwd().endsWith('backend') ? join(process.cwd(), '..') : process.cwd();
+config({ path: join(projectRoot, '.env') });
 
 export default new DataSource({
   type: 'mysql',

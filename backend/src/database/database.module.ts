@@ -13,6 +13,7 @@ function requireEnv(configService: ConfigService, key: string): string {
 }
 
 function getDbConfig(configService: ConfigService) {
+  // NODE_ENV=production ise DB_* .env'de zorunlu; NODE_ENV=development ise default kullanılır (127.0.0.1, 3307, depopazar vb.)
   const isProd = configService.get('NODE_ENV') === 'production';
   return {
     type: 'mysql' as const,
