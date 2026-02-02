@@ -57,7 +57,7 @@ async function runSeeds() {
       console.log('✅ Super Admin şifre sıfırlandı (email: %s, şifre: %s)', superAdminEmail, superAdminPlainPassword);
     }
 
-    // 2. Demo Company
+    // 2. Demo Company (önce firma oluşturulur; super_admin buna atanacak)
     let demoCompany = await companyRepo.findOne({
       where: { slug: 'demo-depo' },
     });
@@ -77,6 +77,13 @@ async function runSeeds() {
       });
       await companyRepo.save(demoCompany);
       console.log('✅ Demo Company created');
+    }
+
+    // Super Admin'a demo firmayı ata (Ayarlar sayfası 404 vermesin)
+    if (!superAdmin.company_id || superAdmin.company_id !== demoCompany.id) {
+      superAdmin.company_id = demoCompany.id;
+      await userRepo.save(superAdmin);
+      console.log('✅ Super Admin demo firmaya atandı');
     }
 
     // 3. Company Owner

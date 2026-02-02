@@ -106,12 +106,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
 
-    // Log error in development
+    // Log error (development: full; production: one line so Forge/PM2 process log shows it)
     if (process.env.NODE_ENV === 'development') {
       console.error('Exception:', exception);
       if (exception instanceof Error) {
         console.error('Stack:', exception.stack);
       }
+    } else {
+      const msg = exception instanceof Error ? exception.message : String(exception);
+      console.error(`[${request.method} ${request.url}] ${status} ${msg}`);
     }
 
     response.status(status).json({

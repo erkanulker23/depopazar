@@ -278,8 +278,14 @@ Tarih: {{payment_date}}`,
           });
         }
       } catch (error: any) {
+        const status = error.response?.status;
         const errorMessage = error.response?.data?.message || error.message;
-        if (errorMessage?.includes('User has no company') || errorMessage?.includes('no company')) {
+        const isNoCompany =
+          status === 404 ||
+          errorMessage?.includes('User has no company') ||
+          errorMessage?.includes('no company') ||
+          errorMessage?.includes('Şirket bulunamadı');
+        if (isNoCompany) {
           setError('Bu kullanıcının bir firması bulunmamaktadır. Lütfen bir firmaya atanmanız gerekmektedir.');
           setLoading(false);
           return;
@@ -380,8 +386,14 @@ Tarih: {{payment_date}}`,
       }
     } catch (error: any) {
       console.error('Failed to load settings:', error);
+      const status = error.response?.status;
       const errorMessage = error.response?.data?.message || error.message;
-      if (errorMessage?.includes('User has no company') || errorMessage?.includes('no company')) {
+      const isNoCompany =
+        status === 404 ||
+        errorMessage?.includes('User has no company') ||
+        errorMessage?.includes('no company') ||
+        errorMessage?.includes('Şirket bulunamadı');
+      if (isNoCompany) {
         setError('Bu kullanıcının bir firması bulunmamaktadır. Lütfen bir firmaya atanmanız gerekmektedir.');
       } else {
         setError('Ayarlar yüklenirken bir hata oluştu: ' + errorMessage);
