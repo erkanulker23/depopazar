@@ -12,7 +12,7 @@ export class EnforceRoomWarehouseId1770000004000 implements MigrationInterface {
       'warehouse_id',
       new TableColumn({
         name: 'warehouse_id',
-        type: 'char',
+        type: 'varchar',
         length: '36',
         isNullable: false,
       }),
@@ -25,7 +25,7 @@ export class EnforceRoomWarehouseId1770000004000 implements MigrationInterface {
       'warehouse_id',
       new TableColumn({
         name: 'warehouse_id',
-        type: 'char',
+        type: 'varchar',
         length: '36',
         isNullable: true,
       }),

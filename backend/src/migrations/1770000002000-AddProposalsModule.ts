@@ -9,19 +9,19 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             isPrimary: true,
             default: '(UUID())',
           },
           {
             name: 'company_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
           },
           {
             name: 'customer_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             isNullable: true,
           },
@@ -108,19 +108,19 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             isPrimary: true,
             default: '(UUID())',
           },
           {
             name: 'proposal_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
           },
           {
             name: 'service_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             isNullable: true,
           },
