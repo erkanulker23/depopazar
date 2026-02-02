@@ -13,9 +13,12 @@ import {
   ChevronUpIcon,
   CreditCardIcon,
   CalendarIcon,
+  QrCodeIcon,
 } from '@heroicons/react/24/outline';
 import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
 import { CollectPaymentModal } from '../../components/modals/CollectPaymentModal';
+import { itemsApi } from '../../services/api/itemsApi';
+import { generateCustomerBarcodePDF } from '../../utils/pdfUtils';
 import { exportCustomersToExcel, importCustomersFromExcel } from '../../utils/excelUtils';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
 import toast from 'react-hot-toast';
@@ -41,6 +44,21 @@ export function CustomersPage() {
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [pdfLoading, setPdfLoading] = useState<string | null>(null);
+
+  const handleGenerateBarcode = async (customer: any) => {
+    setPdfLoading(customer.id);
+    try {
+      const items = await itemsApi.getByCustomerId(customer.id);
+      await generateCustomerBarcodePDF(customer, items);
+      toast.success('Barkod PDF oluşturuldu.');
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error('PDF oluşturulurken bir hata oluştu.');
+    } finally {
+      setPdfLoading(null);
+    }
+  };
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -78,23 +96,23 @@ export function CustomersPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Müşteriler</h1>
-          <p className="text-gray-600 dark:text-gray-400">Müşteri yönetimi ve takibi</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">Müşteriler</h1>
+          <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-widest font-bold">Müşteri yönetimi</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <button
             onClick={() => {
               exportCustomersToExcel(customers);
             }}
-            className="hidden sm:inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+            className="hidden sm:inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-[#27272a] rounded-lg shadow-sm text-xs font-bold text-gray-700 dark:text-zinc-300 bg-white dark:bg-[#121214] hover:bg-gray-50 dark:hover:bg-[#18181b] transition-all"
           >
-            <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+            <ArrowDownTrayIcon className="h-4 w-4 mr-1.5 text-emerald-600 dark:text-emerald-500" />
             Excel'e Aktar
           </button>
-          <label className="hidden sm:inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer">
-            <ArrowUpTrayIcon className="h-5 w-5 mr-2" />
+          <label className="hidden sm:inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-[#27272a] rounded-lg shadow-sm text-xs font-bold text-gray-700 dark:text-zinc-300 bg-white dark:bg-[#121214] hover:bg-gray-50 dark:hover:bg-[#18181b] cursor-pointer transition-all">
+            <ArrowUpTrayIcon className="h-4 w-4 mr-1.5 text-emerald-600 dark:text-emerald-500" />
             İçe Aktar
             <input
               type="file"
@@ -135,26 +153,26 @@ export function CustomersPage() {
           </label>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-1.5 border border-transparent rounded-lg shadow-lg shadow-emerald-500/10 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all"
           >
-            <PlusIcon className="h-5 w-5 mr-2" />
+            <PlusIcon className="h-4 w-4 mr-1.5" />
             Yeni Müşteri
           </button>
         </div>
       </div>
 
       {/* Filtreleme */}
-      <div className="mb-4">
+      <div className="mb-6">
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 dark:text-zinc-500" />
           </div>
           <input
             type="text"
             placeholder="Müşteri ara (ad, soyad, e-posta, telefon)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-[#27272a] rounded-xl leading-5 bg-white dark:bg-[#121214] text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 sm:text-sm transition-all"
           />
         </div>
       </div>
@@ -336,20 +354,32 @@ export function CustomersPage() {
                 <div key={customer.id} className="modern-card p-4 relative group">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-3 overflow-hidden">
-                      <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/20 rounded-full flex-shrink-0 flex items-center justify-center">
-                        <UsersIcon className="h-6 w-6 text-primary-500" />
+                      <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/10 rounded-full flex-shrink-0 flex items-center justify-center">
+                        <UsersIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100 truncate">
                           {customer.first_name} {customer.last_name}
                         </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{customer.email}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-zinc-500 truncate">{customer.email}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleGenerateBarcode(customer)}
+                        disabled={pdfLoading === customer.id}
+                        className="p-2 text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors disabled:opacity-50"
+                        title="Barkod Oluştur"
+                      >
+                        {pdfLoading === customer.id ? (
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                        ) : (
+                          <QrCodeIcon className="h-5 w-5" />
+                        )}
+                      </button>
                       <button
                         onClick={() => navigate(`/customers/${customer.id}`)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="p-2 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors"
                       >
                         <UsersIcon className="h-5 w-5" />
                       </button>
@@ -358,32 +388,32 @@ export function CustomersPage() {
                           setDeleteError('');
                           setDeleteTarget(customer);
                         }}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-2 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
                       >
                         <TrashIcon className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                  <div className="grid grid-cols-2 gap-4 py-3.5 border-t border-gray-100 dark:border-zinc-800">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Telefon</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{customer.phone || '-'}</p>
+                      <p className="text-[9px] uppercase tracking-widest font-bold text-gray-400 dark:text-zinc-500 mb-1">Telefon</p>
+                      <p className="text-xs text-gray-700 dark:text-zinc-300 font-bold">{customer.phone || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Sözleşme</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{activeContracts.length} Aktif</p>
+                      <p className="text-[9px] uppercase tracking-widest font-bold text-gray-400 dark:text-zinc-500 mb-1">Sözleşme</p>
+                      <p className="text-xs text-gray-700 dark:text-zinc-300 font-bold">{activeContracts.length} Aktif</p>
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500">Borç Durumu</span>
+                  <div className="pt-3.5 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
+                    <span className="text-[9px] uppercase tracking-widest font-bold text-gray-400 dark:text-zinc-500">Borç Durumu</span>
                     {totalDebt > 0 ? (
-                      <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                      <span className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
                         {formatTurkishCurrency(totalDebt)}
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      <span className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                         Borç Yok
                       </span>
                     )}
@@ -398,7 +428,7 @@ export function CustomersPage() {
               <table className="table-modern">
                 <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-12">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest w-12">
                       <input
                         type="checkbox"
                         checked={selectedCustomers.size === filteredCustomers.length && filteredCustomers.length > 0}
@@ -409,31 +439,25 @@ export function CustomersPage() {
                             setSelectedCustomers(new Set());
                           }
                         }}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-transparent"
                         onClick={(e) => e.stopPropagation()}
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
                       Müşteri
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      E-posta
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                      İletişim
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Telefon
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                      Durum
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Sözleşme
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Borç Durumu
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest text-right">
                       İşlemler
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                   {filteredCustomers.map((customer) => {
                     const activeContracts = customer.contracts?.filter((c: any) => c.is_active) || [];
                     const totalDebt = activeContracts.reduce((sum: number, contract: any) => {
@@ -484,7 +508,7 @@ export function CustomersPage() {
 
                     return (
                       <React.Fragment key={customer.id}>
-                        <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <tr className="hover:bg-gray-50/50 dark:hover:bg-zinc-900/50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
@@ -498,7 +522,7 @@ export function CustomersPage() {
                                 }
                                 setSelectedCustomers(newSelected);
                               }}
-                              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-transparent"
                               onClick={(e) => e.stopPropagation()}
                             />
                           </td>
@@ -516,77 +540,59 @@ export function CustomersPage() {
                           >
                             <div className="flex items-center">
                               {isExpanded ? (
-                                <ChevronUpIcon className="h-4 w-4 text-gray-400 mr-2" />
+                                <ChevronUpIcon className="h-3.5 w-3.5 text-gray-400 mr-2.5" />
                               ) : (
-                                <ChevronDownIcon className="h-4 w-4 text-gray-400 mr-2" />
+                                <ChevronDownIcon className="h-3.5 w-3.5 text-gray-400 mr-2.5" />
                               )}
-                              <UsersIcon className="h-5 w-5 text-primary-500 mr-2" />
-                              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                {customer.first_name} {customer.last_name}
-                              </span>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-bold text-gray-900 dark:text-zinc-100">
+                                  {customer.first_name} {customer.last_name}
+                                </span>
+                                <span className="text-[10px] text-gray-500 dark:text-zinc-500 font-medium">{activeContracts.length} Aktif Sözleşme</span>
+                              </div>
                             </div>
                           </td>
                           <td 
-                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 cursor-pointer"
-                            onClick={() => {
-                              if (isExpanded) {
-                                setExpandedCustomer(null);
-                              } else {
-                                setExpandedCustomer(customer.id);
-                              }
-                            }}
-                          >
-                            {customer.email}
-                          </td>
-                          <td 
-                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 cursor-pointer"
-                            onClick={() => {
-                              if (isExpanded) {
-                                setExpandedCustomer(null);
-                              } else {
-                                setExpandedCustomer(customer.id);
-                              }
-                            }}
-                          >
-                            {customer.phone || '-'}
-                          </td>
-                          <td 
-                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 cursor-pointer"
-                            onClick={() => {
-                              if (isExpanded) {
-                                setExpandedCustomer(null);
-                              } else {
-                                setExpandedCustomer(customer.id);
-                              }
-                            }}
-                          >
-                            {activeContracts.length} Aktif
-                          </td>
-                          <td 
                             className="px-6 py-4 whitespace-nowrap cursor-pointer"
-                            onClick={() => {
-                              if (isExpanded) {
-                                setExpandedCustomer(null);
-                              } else {
-                                setExpandedCustomer(customer.id);
-                              }
-                            }}
+                            onClick={() => setExpandedCustomer(isExpanded ? null : customer.id)}
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-700 dark:text-zinc-300 font-medium">{customer.email}</span>
+                              <span className="text-[10px] text-gray-500 dark:text-zinc-500">{customer.phone || '-'}</span>
+                            </div>
+                          </td>
+                          <td 
+                            className="px-6 py-4 whitespace-nowrap cursor-pointer text-center"
+                            onClick={() => setExpandedCustomer(isExpanded ? null : customer.id)}
                           >
                             {totalDebt > 0 ? (
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                {formatTurkishCurrency(totalDebt)}
+                              <span className="px-2 py-0.5 inline-flex text-[10px] font-bold rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20">
+                                {formatTurkishCurrency(totalDebt)} Borç
                               </span>
                             ) : (
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              <span className="px-2 py-0.5 inline-flex text-[10px] font-bold rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
                                 Borç Yok
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-2">
+                          <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleGenerateBarcode(customer)}
+                                disabled={pdfLoading === customer.id}
+                                className="p-1.5 text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1"
+                                title="Barkod Oluştur"
+                              >
+                                {pdfLoading === customer.id ? (
+                                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                                ) : (
+                                  <QrCodeIcon className="h-5 w-5" />
+                                )}
+                                <span className="text-[10px] font-bold">Barkod</span>
+                              </button>
                               <button
                                 onClick={() => navigate(`/customers/${customer.id}`)}
-                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                className="p-1.5 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors"
                                 title="Detayları Görüntüle"
                               >
                                 <UsersIcon className="h-5 w-5" />
@@ -596,7 +602,7 @@ export function CustomersPage() {
                                   setDeleteError('');
                                   setDeleteTarget(customer);
                                 }}
-                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                className="p-1.5 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
                                 title="Sil"
                               >
                                 <TrashIcon className="h-5 w-5" />

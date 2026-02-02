@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { contractsApi, type ContractStatusFilter, type ContractPaymentFilter, type ContractDebtFilter } from '../../services/api/contractsApi';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import { customersApi } from '../../services/api/customersApi';
-import { DocumentTextIcon, PlusIcon, CreditCardIcon, TrashIcon, XMarkIcon, StopIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, PlusIcon, CreditCardIcon, TrashIcon, XMarkIcon, StopIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { NewSaleModal } from '../../components/modals/NewSaleModal';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
 import toast from 'react-hot-toast';
@@ -87,54 +87,57 @@ export function ContractsPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Tüm Girişler</h1>
-          <p className="text-gray-600 dark:text-gray-400">Sözleşme ve ödeme yönetimi</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">Tüm Girişler</h1>
+          <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-widest font-bold">Sözleşme ve ödeme yönetimi</p>
         </div>
         <button
           onClick={() => setIsNewSaleModalOpen(true)}
-          className="btn-primary w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 cursor-pointer relative z-10"
+          className="btn-primary w-full sm:w-auto inline-flex items-center justify-center px-4 py-1.5 cursor-pointer relative z-10 text-xs font-bold"
         >
-          <PlusIcon className="h-5 w-5 mr-2" />
+          <PlusIcon className="h-4 w-4 mr-1.5" />
           Yeni Satış Gir
         </button>
       </div>
 
       {/* Filtreler */}
       <div className="modern-card mb-6 p-4">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Filtrele</h3>
+        <div className="flex items-center space-x-2 mb-4">
+          <FunnelIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+          <h3 className="text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wider">Filtrele</h3>
+        </div>
         <div className="flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Durum</label>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">Durum</label>
             <select
               value={statusFilter}
               onChange={(e) => setFilter('status', e.target.value)}
-              className="w-full min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-[#27272a] rounded-xl shadow-sm text-xs bg-white dark:bg-[#121214] text-gray-900 dark:text-zinc-100 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             >
               <option value="all">Tümü</option>
               <option value="active">Aktif</option>
               <option value="terminated">Sonlandırılanlar</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Ödeme</label>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">Ödeme</label>
             <select
               value={paymentFilter}
               onChange={(e) => setFilter('payment', e.target.value)}
-              className="w-full min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-[#27272a] rounded-xl shadow-sm text-xs bg-white dark:bg-[#121214] text-gray-900 dark:text-zinc-100 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             >
               <option value="all">Tümü</option>
               <option value="has_payment">Ödeme yapanlar</option>
               <option value="no_payment">Ödeme yapmayanlar</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Borç</label>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">Borç</label>
             <select
               value={debtFilter}
               onChange={(e) => setFilter('debt', e.target.value)}
-              className="w-full min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-[#27272a] rounded-xl shadow-sm text-xs bg-white dark:bg-[#121214] text-gray-900 dark:text-zinc-100 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             >
               <option value="all">Tümü</option>
               <option value="has_debt">Borcu olanlar</option>
@@ -150,9 +153,9 @@ export function ContractsPage() {
                 setPaymentFilter('all');
                 setDebtFilter('all');
               }}
-              className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="px-4 py-2 text-xs font-bold text-gray-500 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
             >
-              Filtreleri temizle
+              Temizle
             </button>
           )}
         </div>
@@ -556,19 +559,19 @@ export function ContractsPage() {
       )}
 
       {loading ? (
-        <div className="modern-card p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
+        <div className="modern-card p-6 text-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mx-auto mb-3"></div>
+          <p className="text-sm text-gray-600 dark:text-emerald-500/60">Yükleniyor...</p>
         </div>
       ) : contracts.length === 0 ? (
-        <div className="modern-card p-8 text-center">
-          <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Henüz sözleşme bulunmamaktadır.</p>
+        <div className="modern-card p-6 text-center">
+          <DocumentTextIcon className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+          <p className="text-sm text-gray-600 dark:text-emerald-500/60">Henüz sözleşme bulunmamaktadır.</p>
         </div>
       ) : (
         <>
           {/* Mobile View - Cards */}
-          <div className="grid grid-cols-1 gap-4 md:hidden">
+          <div className="grid grid-cols-1 gap-3 md:hidden">
             {contracts.map((contract) => {
               const monthlyTotal = contract.monthly_prices?.reduce((sum: number, mp: any) => sum + Number(mp.price), 0) || 0;
               const transport = Number(contract.transportation_fee || 0);
@@ -581,57 +584,57 @@ export function ContractsPage() {
                 <div key={contract.id} className="modern-card p-4 space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3 overflow-hidden">
-                      <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center flex-shrink-0">
-                        <DocumentTextIcon className="h-6 w-6 text-primary-500" />
+                      <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                        <DocumentTextIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100 truncate">
                           {contract.contract_number}
                         </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <p className="text-[10px] text-gray-500 dark:text-zinc-500 truncate">
                           {contract.customer?.first_name} {contract.customer?.last_name}
                         </p>
                       </div>
                     </div>
                     {contract.is_active ? (
-                      <span className="px-2 py-1 text-[10px] font-bold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 flex-shrink-0">
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
                         AKTİF
                       </span>
                     ) : (
-                      <span className="px-2 py-1 text-[10px] font-bold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 flex-shrink-0">
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-50 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 border border-gray-100 dark:border-zinc-700">
                         SONLANDI
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                  <div className="grid grid-cols-2 gap-4 py-3 border-t border-gray-100 dark:border-zinc-800">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Oda</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{contract.room?.room_number || '-'}</p>
+                      <p className="text-[9px] uppercase tracking-widest font-bold text-gray-400 dark:text-zinc-500 mb-1">Oda</p>
+                      <p className="text-xs text-gray-700 dark:text-zinc-300 font-bold">{contract.room?.room_number || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Başlangıç</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{new Date(contract.start_date).toLocaleDateString('tr-TR')}</p>
+                      <p className="text-[9px] uppercase tracking-widest font-bold text-gray-400 dark:text-zinc-500 mb-1">Başlangıç</p>
+                      <p className="text-xs text-gray-700 dark:text-zinc-300 font-bold">{new Date(contract.start_date).toLocaleDateString('tr-TR')}</p>
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                  <div className="pt-3.5 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Kalan Borç</p>
-                      <p className={`text-base font-bold ${remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                      <p className="text-[9px] uppercase tracking-widest font-bold text-gray-400 dark:text-zinc-500 mb-1">Kalan Borç</p>
+                      <p className={`text-base font-bold ${remaining > 0 ? 'text-red-600' : 'text-emerald-600 dark:text-emerald-500'}`}>
                         {formatTurkishCurrency(remaining)}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <button
                         onClick={() => {
                           setSelectedContract(contract);
                           setShowPaymentModal(true);
                         }}
-                        className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                        className="p-2 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors"
                         title="Ödeme Al"
                       >
-                        <CreditCardIcon className="h-5 w-5" />
+                        <CreditCardIcon className="h-4.5 w-4.5" />
                       </button>
                       <button
                         onClick={async (e) => {
@@ -650,10 +653,10 @@ export function ContractsPage() {
                             setTerminateTarget(contract);
                           }
                         }}
-                        className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
+                        className="p-2 text-orange-600 dark:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg transition-colors"
                         title="Sonlandır"
                       >
-                        <StopIcon className="h-5 w-5" />
+                        <StopIcon className="h-4.5 w-4.5" />
                       </button>
                       <button
                         onClick={(e) => {
@@ -661,10 +664,10 @@ export function ContractsPage() {
                           setDeleteError('');
                           setDeleteTarget(contract);
                         }}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-2 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
                         title="Sil"
                       >
-                        <TrashIcon className="h-5 w-5" />
+                        <TrashIcon className="h-4.5 w-4.5" />
                       </button>
                     </div>
                   </div>
@@ -678,7 +681,7 @@ export function ContractsPage() {
               <table className="table-modern">
                 <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-12">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest w-12">
                       <input
                         type="checkbox"
                         checked={selectedContracts.size === contracts.length && contracts.length > 0}
@@ -689,194 +692,147 @@ export function ContractsPage() {
                             setSelectedContracts(new Set());
                           }
                         }}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-transparent"
                         onClick={(e) => e.stopPropagation()}
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Sözleşme No
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                      Sözleşme
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
                       Müşteri
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Oda
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                      Detaylar
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Başlangıç
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Bitiş
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
                       Durum
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Aylık Fiyat
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                      Finansal
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Nakliye
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Toplam Borç
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Personel
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest text-right">
                       İşlemler
                     </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {contracts.map((contract) => (
-                    <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedContracts.has(contract.id)}
-                          onChange={(e) => {
-                            const newSelected = new Set(selectedContracts);
-                            if (e.target.checked) {
-                              newSelected.add(contract.id);
-                            } else {
-                              newSelected.delete(contract.id);
-                            }
-                            setSelectedContracts(newSelected);
-                          }}
-                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <DocumentTextIcon className="h-5 w-5 text-primary-500 mr-2" />
-                          <button
-                            onClick={() => window.location.href = `/contracts/${contract.id}`}
-                            className="text-sm font-medium text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
-                          >
-                            {contract.contract_number}
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {contract.customer?.first_name} {contract.customer?.last_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {contract.room?.room_number || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(contract.start_date).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(contract.end_date).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {contract.is_active ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                            Aktif
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                            Sonlandırıldı
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {formatTurkishCurrency(Number(contract.monthly_price))}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {formatTurkishCurrency(Number(contract.transportation_fee || 0))}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {(() => {
-                          const monthlyTotal = contract.monthly_prices?.reduce((sum: number, mp: any) => sum + Number(mp.price), 0) || 0;
-                          const transport = Number(contract.transportation_fee || 0);
-                          const discount = Number(contract.discount || 0);
-                          const paid = contract.payments?.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
-                          const total = monthlyTotal + transport - discount;
-                          const remaining = Math.max(0, total - paid);
-                          return (
-                            <div>
-                              <div className={`font-semibold ${remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                                {formatTurkishCurrency(remaining)}
-                              </div>
-                              <div className="text-xs text-gray-500">Toplam: {formatTurkishCurrency(total)} | Ödenen: {formatTurkishCurrency(paid)}</div>
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {contract.contract_staff && contract.contract_staff.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {contract.contract_staff.map((cs: any) => (
-                              <span
-                                key={cs.id}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                              >
-                                {cs.user?.first_name} {cs.user?.last_name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : contract.sold_by_user ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                            {contract.sold_by_user.first_name} {contract.sold_by_user.last_name}
-                          </span>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedContract(contract);
-                              setShowPaymentModal(true);
-                            }}
-                            className="btn-success inline-flex items-center px-3 py-1.5 text-xs cursor-pointer relative z-10"
-                          >
-                            <CreditCardIcon className="h-4 w-4 mr-1" />
-                            Ödeme Al
-                          </button>
-                          <button
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              setTerminateError('');
-                              // Borç bilgisini hesapla
-                              try {
-                                const { totalDebt, remainingDebt } = await contractsApi.getTotalDebt(contract.id);
-                                setTerminateDebtInfo({
-                                  totalDebt,
-                                  remainingDebt,
-                                  contractNumber: contract.contract_number,
-                                });
-                                setTerminateTarget(contract);
-                              } catch {
-                                setTerminateDebtInfo(null);
-                                setTerminateTarget(contract);
+                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                  {contracts.map((contract) => {
+                    const monthlyTotal = contract.monthly_prices?.reduce((sum: number, mp: any) => sum + Number(mp.price), 0) || 0;
+                    const transport = Number(contract.transportation_fee || 0);
+                    const discount = Number(contract.discount || 0);
+                    const paid = contract.payments?.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+                    const total = monthlyTotal + transport - discount;
+                    const remaining = Math.max(0, total - paid);
+
+                    return (
+                      <tr key={contract.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-900/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedContracts.has(contract.id)}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedContracts);
+                              if (e.target.checked) {
+                                newSelected.add(contract.id);
+                              } else {
+                                newSelected.delete(contract.id);
                               }
+                              setSelectedContracts(newSelected);
                             }}
-                            className="px-3 py-1.5 text-xs text-white bg-orange-600 hover:bg-orange-700 rounded inline-flex items-center"
-                            title="Depolamayı Sonlandır"
-                          >
-                            <StopIcon className="h-4 w-4 mr-1" />
-                            Sonlandır
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteError('');
-                              setDeleteTarget(contract);
-                            }}
-                            className="px-3 py-1.5 text-xs text-white bg-red-600 hover:bg-red-700 rounded inline-flex items-center"
-                            title="Sil"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-transparent"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <DocumentTextIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-500 mr-2.5" />
+                            <button
+                              onClick={() => window.location.href = `/contracts/${contract.id}`}
+                              className="text-sm font-bold text-gray-900 dark:text-zinc-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            >
+                              {contract.contract_number}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-700 dark:text-zinc-300">
+                          {contract.customer?.first_name} {contract.customer?.last_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-700 dark:text-zinc-300 font-bold">Oda: {contract.room?.room_number || '-'}</span>
+                            <span className="text-[10px] text-gray-500 dark:text-zinc-500">{new Date(contract.start_date).toLocaleDateString('tr-TR')} - {new Date(contract.end_date).toLocaleDateString('tr-TR')}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {contract.is_active ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
+                              Aktif
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-50 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 border border-gray-100 dark:border-zinc-700">
+                              Sonlandırıldı
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <div className={`text-xs font-bold ${remaining > 0 ? 'text-red-600' : 'text-emerald-600 dark:text-emerald-500'}`}>
+                              {formatTurkishCurrency(remaining)} Kalan
+                            </div>
+                            <div className="text-[9px] text-gray-400 dark:text-zinc-500 font-medium">Toplam: {formatTurkishCurrency(total)}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedContract(contract);
+                                setShowPaymentModal(true);
+                              }}
+                              className="p-1.5 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors"
+                              title="Ödeme Al"
+                            >
+                              <CreditCardIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                setTerminateError('');
+                                try {
+                                  const { totalDebt, remainingDebt } = await contractsApi.getTotalDebt(contract.id);
+                                  setTerminateDebtInfo({
+                                    totalDebt,
+                                    remainingDebt,
+                                    contractNumber: contract.contract_number,
+                                  });
+                                  setTerminateTarget(contract);
+                                } catch {
+                                  setTerminateDebtInfo(null);
+                                  setTerminateTarget(contract);
+                                }
+                              }}
+                              className="p-1.5 text-orange-600 dark:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg transition-colors"
+                              title="Sonlandır"
+                            >
+                              <StopIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteError('');
+                                setDeleteTarget(contract);
+                              }}
+                              className="p-1.5 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                              title="Sil"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

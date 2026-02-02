@@ -5,18 +5,15 @@ import { contractsApi } from '../../services/api/contractsApi';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import {
   DocumentTextIcon,
-  CreditCardIcon,
   CalendarIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
-import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export function CustomerContractsPage() {
   const { user } = useAuthStore();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [customerData, setCustomerData] = useState<any>(null);
   const [contracts, setContracts] = useState<any[]>([]);
@@ -56,7 +53,7 @@ export function CustomerContractsPage() {
     fetchData();
   }, [user]);
 
-  const handlePayment = async (paymentId: string, amount: number) => {
+  const handlePayment = async (paymentId: string, _amount: number) => {
     try {
       await paymentsApi.markAsPaid(paymentId, 'online', undefined, 'Müşteri tarafından online ödeme');
       toast.success('Ödeme başarıyla tamamlandı');
@@ -101,7 +98,6 @@ export function CustomerContractsPage() {
             const unpaidPayments = contractPayments.filter(
               (p: any) => p.status === 'pending' || p.status === 'overdue'
             );
-            const paidPayments = contractPayments.filter((p: any) => p.status === 'paid');
             const contractDebt = unpaidPayments.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
             const isExpanded = expandedContract === contract.id;
 
@@ -196,7 +192,6 @@ export function CustomerContractsPage() {
                                   const dueDate = new Date(payment.due_date);
                                   const isOverdue = payment.status === 'overdue';
                                   const isPaid = payment.status === 'paid';
-                                  const isPending = payment.status === 'pending';
 
                                   return (
                                     <div

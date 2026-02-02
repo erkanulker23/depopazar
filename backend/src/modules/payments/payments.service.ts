@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, In } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -57,6 +57,9 @@ export class PaymentsService {
     const payment = await this.findOne(id);
 
     if (updateData.status === PaymentStatus.PAID && payment.status !== PaymentStatus.PAID) {
+      // Ödeme sırasını kontrol et
+      await this.validatePaymentOrder(payment);
+
       updateData.paid_at = updateData.paid_at ? new Date(updateData.paid_at) : new Date();
       updateData.days_overdue = 0;
 
@@ -68,14 +71,74 @@ export class PaymentsService {
   }
 
   /**
+   * Ödeme sırasını kontrol eder:
+   * 1. Önceki aylara ait ödenmemiş (pending veya overdue) ödeme olmamalıdır.
+   * 2. Ödeme ayı gelmeden ileri tarihli ödeme alınamaz.
+   */
+  async validatePaymentOrder(payment: Payment): Promise<void> {
+    if (!payment.contract_id) {
+      const p = await this.findOne(payment.id);
+      payment.contract_id = p.contract_id;
+    }
+
+    // 1. Önceki ödenmemiş borçları kontrol et
+    const unpaidPreviousPayments = await this.paymentsRepository.find({
+      where: {
+        contract_id: payment.contract_id,
+        status: In([PaymentStatus.PENDING, PaymentStatus.OVERDUE]),
+      },
+      order: {
+        due_date: 'ASC',
+      },
+    });
+
+    const paymentDate = new Date(payment.due_date);
+    const paymentYear = paymentDate.getFullYear();
+    const paymentMonth = paymentDate.getMonth();
+
+    const actualPreviousUnpaid = unpaidPreviousPayments.filter(p => {
+      if (p.id === payment.id) return false;
+      
+      const pDate = new Date(p.due_date);
+      const pYear = pDate.getFullYear();
+      const pMonth = pDate.getMonth();
+      
+      // Eğer ödemenin yılı daha küçükse VEYA yılı aynı ama ayı daha küçükse geçmiş ödemedir
+      return pYear < paymentYear || (pYear === paymentYear && pMonth < paymentMonth);
+    });
+
+    if (actualPreviousUnpaid.length > 0) {
+      const firstUnpaid = actualPreviousUnpaid[0];
+      const fDate = new Date(firstUnpaid.due_date);
+      throw new BadRequestException(
+        `Önce geçmiş borç ödemesi alınmalı. ${fDate.getMonth() + 1}/${fDate.getFullYear()} dönemine ait ödenmemiş borç bulunmaktadır.`,
+      );
+    }
+
+    // 2. Gelecek ay kontrolü
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    if (paymentYear > currentYear || (paymentYear === currentYear && paymentMonth > currentMonth)) {
+      throw new BadRequestException(
+        `Ödeme ayı gelmeden ileri tarihli ödeme alınamaz. Şu anki dönem: ${currentMonth + 1}/${currentYear}, Ödenmek istenen dönem: ${paymentMonth + 1}/${paymentYear}`,
+      );
+    }
+  }
+
+  /**
    * Ödeme yapıldığında çağrılır
    */
   async markAsPaid(id: string, paymentMethod?: string, transactionId?: string, notes?: string, bankAccountId?: string): Promise<Payment> {
     const payment = await this.findOne(id);
     
     if (payment.status === PaymentStatus.PAID) {
-      throw new Error('Bu ödeme zaten yapılmış');
+      throw new BadRequestException('Bu ödeme zaten yapılmış');
     }
+
+    // Ödeme sırasını kontrol et
+    await this.validatePaymentOrder(payment);
 
     const updateData: any = {
       status: PaymentStatus.PAID,

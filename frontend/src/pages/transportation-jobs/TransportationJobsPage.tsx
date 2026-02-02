@@ -205,6 +205,7 @@ export function TransportationJobsPage() {
         notes: '',
         job_date: '',
         status: 'pending',
+        is_paid: false,
       });
     }
     setIsModalOpen(true);

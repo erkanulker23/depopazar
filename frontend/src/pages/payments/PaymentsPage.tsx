@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
-import { CreditCardIcon, UsersIcon, MagnifyingGlassIcon, FunnelIcon, BanknotesIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CreditCardIcon, MagnifyingGlassIcon, FunnelIcon, BanknotesIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { CollectPaymentModal } from '../../components/modals/CollectPaymentModal';
 
 export function PaymentsPage() {
@@ -140,17 +140,17 @@ export function PaymentsPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Ödemeler</h1>
-          <p className="text-gray-600 dark:text-gray-400">Tüm ödeme kayıtları ve durumları</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">Ödemeler</h1>
+          <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-widest font-bold">Ödeme kayıtları</p>
         </div>
         <button
           type="button"
           onClick={() => setIsPaymentModalOpen(true)}
-          className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2 shadow-lg hover:shadow-xl font-medium text-base"
+          className="w-full sm:w-auto px-4 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-500/10 font-bold text-sm"
         >
-          <BanknotesIcon className="h-6 w-6" />
+          <BanknotesIcon className="h-4 w-4" />
           <span>Ödeme Al</span>
         </button>
       </div>
@@ -167,7 +167,7 @@ export function PaymentsPage() {
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <button
               type="button"
-              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 cursor-default"
+              className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm cursor-default"
               onClick={() => {
                 if (!deleteLoading) {
                   setDeleteTarget(null);
@@ -183,10 +183,10 @@ export function PaymentsPage() {
               aria-label="Modal'ı kapat"
               disabled={deleteLoading}
             ></button>
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div className="inline-block align-bottom bg-white dark:bg-[#121214] rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100 dark:border-[#27272a]">
+              <div className="bg-white dark:bg-[#121214] px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/20 sm:mx-0 sm:h-10 sm:w-10">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-50 dark:bg-red-900/20 sm:mx-0 sm:h-10 sm:w-10">
                     <TrashIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
@@ -216,14 +216,14 @@ export function PaymentsPage() {
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <div className="bg-gray-50 dark:bg-[#050807] px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={deleteLoading}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                  className="w-full sm:w-auto inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-sm font-bold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-all"
                 >
-                  {deleteLoading ? 'Siliniyor...' : 'Sil'}
+                  {deleteLoading ? 'Siliniyor...' : 'Evet, Sil'}
                 </button>
                 <button
                   type="button"
@@ -234,7 +234,7 @@ export function PaymentsPage() {
                     }
                   }}
                   disabled={deleteLoading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                  className="mt-3 sm:mt-0 w-full sm:w-auto inline-flex justify-center rounded-xl border border-gray-300 dark:border-[#27272a] shadow-sm px-4 py-2 bg-white dark:bg-[#18181b] text-sm font-bold text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-[#27272a] focus:outline-none transition-all"
                 >
                   İptal
                 </button>
@@ -246,14 +246,14 @@ export function PaymentsPage() {
 
       {/* Toplu İşlemler Toolbar */}
       {selectedPayments.size > 0 && (
-        <div className="mb-4 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg flex items-center justify-between">
-          <span className="text-sm font-medium text-primary-900 dark:text-primary-200">
+        <div className="mb-4 p-3.5 bg-emerald-50 dark:bg-emerald-500/5 rounded-xl flex items-center justify-between border border-emerald-100 dark:border-emerald-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+          <span className="text-xs font-bold text-emerald-900 dark:text-emerald-400">
             {selectedPayments.size} ödeme seçildi
           </span>
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedPayments(new Set())}
-              className="px-3 py-1 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              className="px-3 py-1 text-[10px] font-bold text-gray-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 rounded-lg transition-all"
             >
               Seçimi Temizle
             </button>
@@ -262,9 +262,9 @@ export function PaymentsPage() {
                 setDeleteError('');
                 setDeleteTarget('bulk');
               }}
-              className="px-3 py-1 text-sm text-white bg-red-600 hover:bg-red-700 rounded inline-flex items-center"
+              className="px-3 py-1 text-[10px] font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg inline-flex items-center transition-all shadow-lg shadow-red-500/20"
             >
-              <TrashIcon className="h-4 w-4 mr-1" />
+              <TrashIcon className="h-3.5 w-3.5 mr-1" />
               Seçilenleri Sil
             </button>
           </div>
@@ -272,22 +272,22 @@ export function PaymentsPage() {
       )}
 
       {/* Filtreleme ve Arama */}
-      <div className="mb-4 space-y-4">
+      <div className="mb-6 space-y-4">
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 dark:text-zinc-500" />
           </div>
           <input
             type="text"
             placeholder="Ödeme ara (ödeme no, müşteri, sözleşme, tutar)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-[#27272a] rounded-xl leading-5 bg-white dark:bg-[#121214] text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 sm:text-sm transition-all"
           />
         </div>
-        <div className="flex gap-4 flex-wrap">
+        <div className="flex gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <FunnelIcon className="h-5 w-5 text-gray-400" />
+            <FunnelIcon className="h-4 w-4 text-gray-400 dark:text-zinc-500" />
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -300,13 +300,13 @@ export function PaymentsPage() {
                 }
                 setSearchParams(searchParams, { replace: true });
               }}
-              className="block px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="block px-3 py-1.5 border border-gray-200 dark:border-[#27272a] rounded-lg bg-white dark:bg-[#121214] text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 sm:text-xs transition-all"
             >
               <option value="all">Tüm Durumlar</option>
               <option value="paid">Ödendi</option>
               <option value="pending">Beklemede</option>
               <option value="overdue">Gecikmiş</option>
-              <option value="unpaid">Ödenmemiş (Beklemede + Gecikmiş)</option>
+              <option value="unpaid">Ödenmemiş</option>
               <option value="cancelled">İptal</option>
             </select>
           </div>
@@ -314,13 +314,15 @@ export function PaymentsPage() {
       </div>
 
       {loading && (
-        <div className="modern-card p-8 text-center">
-          <p className="text-gray-600 dark:text-gray-400">Yükleniyor...</p>
+        <div className="modern-card p-12 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500 dark:text-zinc-500 font-medium">Yükleniyor...</p>
         </div>
       )}
       {!loading && filteredPayments.length === 0 && (
-        <div className="modern-card p-8 text-center">
-          <p className="text-gray-600 dark:text-gray-400">
+        <div className="modern-card p-12 text-center">
+          <CreditCardIcon className="h-12 w-12 text-gray-300 dark:text-zinc-700 mx-auto mb-4" />
+          <p className="text-sm text-gray-500 dark:text-zinc-500 font-medium">
             {payments.length === 0
               ? 'Henüz ödeme bulunmamaktadır.'
               : 'Arama kriterlerinize uygun ödeme bulunamadı.'}
@@ -333,7 +335,7 @@ export function PaymentsPage() {
             <table className="table-modern">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-12">
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest w-12">
                     <input
                       type="checkbox"
                       checked={selectedPayments.size === filteredPayments.length && filteredPayments.length > 0}
@@ -344,35 +346,29 @@ export function PaymentsPage() {
                           setSelectedPayments(new Set());
                         }
                       }}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-transparent"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Ödeme No
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                    Ödeme Bilgisi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Müşteri
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                    Müşteri & Sözleşme
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Sözleşme
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                    Finansal
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Tutar
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Vade Tarihi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
                     Durum
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
                     İşlemler
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
                 {filteredPayments.map((payment) => (
-                  <tr key={payment.id} className={selectedPayments.has(payment.id) ? 'bg-primary-50 dark:bg-primary-900/10' : ''}>
+                  <tr key={payment.id} className={`${selectedPayments.has(payment.id) ? 'bg-emerald-50/30 dark:bg-emerald-500/5' : ''} hover:bg-gray-50/50 dark:hover:bg-zinc-900/50 transition-colors`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
@@ -386,83 +382,67 @@ export function PaymentsPage() {
                           }
                           setSelectedPayments(newSelected);
                         }}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-transparent"
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <CreditCardIcon className="h-5 w-5 text-primary-500 mr-2" />
-                        {payment.contract_id ? (
+                        <CreditCardIcon className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-500 mr-2.5" />
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-gray-900 dark:text-zinc-100">{payment.payment_number}</span>
+                          <span className="text-[10px] text-gray-500 dark:text-zinc-500 font-medium">Vade: {new Date(payment.due_date).toLocaleDateString('tr-TR')}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        {payment.contract?.customer?.id ? (
                           <Link 
-                            to={`/contracts/${payment.contract_id}`}
-                            className="text-sm font-medium text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
+                            to={`/customers/${payment.contract.customer.id}`}
+                            className="text-xs font-bold text-gray-900 dark:text-zinc-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                           >
-                            {payment.payment_number}
+                            {payment.contract.customer.first_name} {payment.contract.customer.last_name}
                           </Link>
                         ) : (
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            {payment.payment_number}
-                          </span>
+                          <span className="text-xs font-bold text-gray-900 dark:text-zinc-100">{payment.contract?.customer?.first_name} {payment.contract?.customer?.last_name}</span>
+                        )}
+                        {payment.contract_id && (
+                          <Link 
+                            to={`/contracts/${payment.contract_id}`}
+                            className="text-[10px] text-emerald-600 dark:text-emerald-50 font-bold hover:underline"
+                          >
+                            Sözleşme: {payment.contract?.contract_number || '-'}
+                          </Link>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {payment.contract?.customer?.id ? (
-                        <Link 
-                          to={`/customers/${payment.contract.customer.id}`}
-                          className="flex items-center hover:text-primary-600 transition-colors"
-                        >
-                          <UsersIcon className="h-4 w-4 mr-1 text-gray-400" />
-                          {payment.contract.customer.first_name} {payment.contract.customer.last_name}
-                        </Link>
-                      ) : (
-                        <div className="flex items-center">
-                          <UsersIcon className="h-4 w-4 mr-1 text-gray-400" />
-                          {payment.contract?.customer?.first_name} {payment.contract?.customer?.last_name}
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {payment.contract?.customer?.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {payment.contract_id ? (
-                        <Link 
-                          to={`/contracts/${payment.contract_id}`}
-                          className="hover:text-primary-600 transition-colors"
-                        >
-                          {payment.contract?.contract_number || '-'}
-                        </Link>
-                      ) : (
-                        payment.contract?.contract_number || '-'
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-900 dark:text-zinc-100">
                       {formatTurkishCurrency(Number(payment.amount))}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(payment.due_date).toLocaleDateString('tr-TR')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+                        className={`px-2 py-0.5 inline-flex text-[10px] font-bold rounded-full border ${getStatusColor(
                           payment.status,
-                        )}`}
+                        )} ${
+                          payment.status === 'paid' ? 'border-emerald-100 dark:border-emerald-500/20' :
+                          payment.status === 'pending' ? 'border-yellow-100 dark:border-yellow-500/20' :
+                          'border-red-100 dark:border-red-500/20'
+                        }`}
                       >
                         {getStatusText(payment.status)}
                         {payment.days_overdue > 0 && ` (${payment.days_overdue} gün)`}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
                       <button
                         onClick={() => {
                           setDeleteError('');
                           setDeleteTarget(payment);
                         }}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 inline-flex items-center"
+                        className="p-1.5 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                        title="Sil"
                       >
-                        <TrashIcon className="h-4 w-4 mr-1" />
-                        Sil
+                        <TrashIcon className="h-4.5 w-4.5" />
                       </button>
                     </td>
                   </tr>

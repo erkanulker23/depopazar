@@ -61,7 +61,7 @@ export function CustomerPaymentsPage() {
           });
           
           // Tarihe göre sırala (en yeni önce)
-          paymentsWithContract.sort((a, b) => {
+          paymentsWithContract.sort((a: any, b: any) => {
             const dateA = new Date(a.due_date).getTime();
             const dateB = new Date(b.due_date).getTime();
             return dateB - dateA;
@@ -336,7 +336,6 @@ export function CustomerPaymentsPage() {
                   const dueDate = new Date(payment.due_date);
                   const isOverdue = payment.status === 'overdue';
                   const isPaid = payment.status === 'paid';
-                  const isPending = payment.status === 'pending';
 
                   return (
                     <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">

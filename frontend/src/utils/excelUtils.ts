@@ -107,7 +107,6 @@ export function exportBankAccountReportToExcel(reportData: {
     const branch = ba.bank_account?.branch_name ?? '';
 
     for (const cust of ba.customers) {
-      const customerName = cust.customer ? `${cust.customer.first_name ?? ''} ${cust.customer.last_name ?? ''}`.trim() : '';
       const customerFirstName = cust.customer?.first_name ?? '';
       const customerLastName = cust.customer?.last_name ?? '';
       const customerEmail = cust.customer?.email ?? '';

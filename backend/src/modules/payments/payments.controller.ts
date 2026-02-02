@@ -184,6 +184,9 @@ export class PaymentsController {
       throw new BadRequestException('Ödeme bulunamadı');
     }
 
+    // Ödeme sırasını kontrol et
+    await this.paymentsService.validatePaymentOrder(payment);
+
     const customer = await this.customersService.findOne(body.customer_id);
     if (!customer) {
       throw new BadRequestException('Müşteri bulunamadı');
