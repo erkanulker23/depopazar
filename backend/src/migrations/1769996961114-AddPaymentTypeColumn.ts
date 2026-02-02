@@ -4,10 +4,8 @@ export class AddPaymentTypeColumn1769996961114 implements MigrationInterface {
     name = 'AddPaymentTypeColumn1769996961114'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. Foreign key kontrollerini geçici olarak devre dışı bırak
         await queryRunner.query(`SET FOREIGN_KEY_CHECKS = 0`);
 
-        // 2. Dinamik olarak TÜM foreign key'leri bul ve sil
         const foreignKeys = await queryRunner.query(`
             SELECT TABLE_NAME, CONSTRAINT_NAME 
             FROM information_schema.KEY_COLUMN_USAGE 
@@ -21,7 +19,6 @@ export class AddPaymentTypeColumn1769996961114 implements MigrationInterface {
             } catch (e) {}
         }
 
-        // 3. Yardımcı Fonksiyonlar
         const safeDropIndex = async (table: string, index: string) => {
             try {
                 const result = await queryRunner.query(`
@@ -52,13 +49,7 @@ export class AddPaymentTypeColumn1769996961114 implements MigrationInterface {
             } catch (e) {}
         };
 
-        // 4. İlgili kolonun eklenmesi (Bu migrasyonun asıl amacı)
-        const hasPaymentType = await queryRunner.query(`SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' AND COLUMN_NAME = 'type'`);
-        if (hasPaymentType.length === 0) {
-            await queryRunner.query(`ALTER TABLE \`payments\` ADD \`type\` enum ('warehouse', 'transportation', 'other') NOT NULL DEFAULT 'warehouse'`);
-        }
-
-        // 5. Tablo yapılarını standart hale getir (InitialFix ile uyumluluk için)
+        // Standard ID resets to ensure everything is varchar(36)
         const processTable = async (table: string, idType: string = "varchar(36)") => {
             await safeDropPK(table);
             await safeDropColumn(table, 'id');
@@ -78,9 +69,63 @@ export class AddPaymentTypeColumn1769996961114 implements MigrationInterface {
             await processTable(table);
         }
 
-        // 6. Foreign Key'leri ve İndeksleri Yeniden Oluştur (InitialFix ile aynı)
-        // (Burada kısıtlamaları tekrar ekliyoruz ki her iki migrasyon da sistemi tutarlı bir duruma getirsin)
-        
+        // Fix ALL reference columns to varchar(36)
+        await safeDropColumn('users', 'company_id');
+        await queryRunner.query(`ALTER TABLE \`users\` ADD \`company_id\` varchar(36) NULL`);
+        await safeDropColumn('bank_accounts', 'company_id');
+        await queryRunner.query(`ALTER TABLE \`bank_accounts\` ADD \`company_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('customers', 'user_id');
+        await queryRunner.query(`ALTER TABLE \`customers\` ADD \`user_id\` varchar(36) NULL`);
+        await safeDropColumn('customers', 'company_id');
+        await queryRunner.query(`ALTER TABLE \`customers\` ADD \`company_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('payments', 'contract_id');
+        await queryRunner.query(`ALTER TABLE \`payments\` ADD \`contract_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('payments', 'bank_account_id');
+        await queryRunner.query(`ALTER TABLE \`payments\` ADD \`bank_account_id\` varchar(36) NULL`);
+        await safeDropColumn('contract_monthly_prices', 'contract_id');
+        await queryRunner.query(`ALTER TABLE \`contract_monthly_prices\` ADD \`contract_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('contract_staff', 'contract_id');
+        await queryRunner.query(`ALTER TABLE \`contract_staff\` ADD \`contract_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('contract_staff', 'user_id');
+        await queryRunner.query(`ALTER TABLE \`contract_staff\` ADD \`user_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('contracts', 'customer_id');
+        await queryRunner.query(`ALTER TABLE \`contracts\` ADD \`customer_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('contracts', 'room_id');
+        await queryRunner.query(`ALTER TABLE \`contracts\` ADD \`room_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('contracts', 'sold_by_user_id');
+        await queryRunner.query(`ALTER TABLE \`contracts\` ADD \`sold_by_user_id\` varchar(36) NULL`);
+        await safeDropColumn('items', 'room_id');
+        await queryRunner.query(`ALTER TABLE \`items\` ADD \`room_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('items', 'contract_id');
+        await queryRunner.query(`ALTER TABLE \`items\` ADD \`contract_id\` varchar(36) NULL`);
+        await safeDropColumn('rooms', 'warehouse_id');
+        await queryRunner.query(`ALTER TABLE \`rooms\` ADD \`warehouse_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('warehouses', 'company_id');
+        await queryRunner.query(`ALTER TABLE \`warehouses\` ADD \`company_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('transportation_job_staff', 'transportation_job_id');
+        await queryRunner.query(`ALTER TABLE \`transportation_job_staff\` ADD \`transportation_job_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('transportation_job_staff', 'user_id');
+        await queryRunner.query(`ALTER TABLE \`transportation_job_staff\` ADD \`user_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('transportation_jobs', 'company_id');
+        await queryRunner.query(`ALTER TABLE \`transportation_jobs\` ADD \`company_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('transportation_jobs', 'customer_id');
+        await queryRunner.query(`ALTER TABLE \`transportation_jobs\` ADD \`customer_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('notifications', 'user_id');
+        await queryRunner.query(`ALTER TABLE \`notifications\` ADD \`user_id\` varchar(36) NULL`);
+        await safeDropColumn('notifications', 'customer_id');
+        await queryRunner.query(`ALTER TABLE \`notifications\` ADD \`customer_id\` varchar(36) NULL`);
+        await safeDropColumn('company_paytr_settings', 'company_id');
+        await queryRunner.query(`ALTER TABLE \`company_paytr_settings\` ADD \`company_id\` varchar(36) NOT NULL`);
+        await safeDropColumn('company_mail_settings', 'company_id');
+        await queryRunner.query(`ALTER TABLE \`company_mail_settings\` ADD \`company_id\` varchar(36) NOT NULL`);
+
+        // Specific fix for this migration
+        const hasPaymentType = await queryRunner.query(`SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' AND COLUMN_NAME = 'type'`);
+        if (hasPaymentType.length === 0) {
+            await queryRunner.query(`ALTER TABLE \`payments\` ADD \`type\` enum ('warehouse', 'transportation', 'other') NOT NULL DEFAULT 'warehouse'`);
+        }
+
+        // Re-add indices and constraints
         await queryRunner.query(`ALTER TABLE \`users\` ADD CONSTRAINT \`FK_7ae6334059289559722437bcc1c\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`bank_accounts\` ADD CONSTRAINT \`FK_869d5463de72be0afa52f0859e8\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`customers\` ADD CONSTRAINT \`FK_11d81cd7be87b6f8865b0cf7661\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
@@ -105,7 +150,6 @@ export class AddPaymentTypeColumn1769996961114 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE \`company_paytr_settings\` ADD CONSTRAINT \`FK_edf59737da13f03e9faa4197433\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`company_mail_settings\` ADD CONSTRAINT \`FK_eb8bc07a81caea2c83e486a25f3\` FOREIGN KEY (\`company_id\`) REFERENCES \`companies\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
 
-        // 7. Foreign key kontrollerini tekrar aç
         await queryRunner.query(`SET FOREIGN_KEY_CHECKS = 1`);
     }
 
