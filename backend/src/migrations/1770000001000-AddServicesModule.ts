@@ -9,20 +9,23 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
             isPrimary: true,
             default: '(UUID())',
           },
           {
             name: 'company_id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'name',
             type: 'varchar',
             length: '255',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'description',
@@ -41,6 +44,7 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
             onUpdate: 'CURRENT_TIMESTAMP',
           },
         ],
+        engine: 'InnoDB',
       }),
       true,
     );
@@ -62,25 +66,29 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
             isPrimary: true,
             default: '(UUID())',
           },
           {
             name: 'company_id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'category_id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'name',
             type: 'varchar',
             length: '255',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'description',
@@ -112,6 +120,7 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
             onUpdate: 'CURRENT_TIMESTAMP',
           },
         ],
+        engine: 'InnoDB',
       }),
       true,
     );

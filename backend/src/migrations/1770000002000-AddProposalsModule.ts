@@ -9,26 +9,30 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
             isPrimary: true,
             default: '(UUID())',
           },
           {
             name: 'company_id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'customer_id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
             isNullable: true,
           },
           {
             name: 'title',
             type: 'varchar',
             length: '255',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'status',
@@ -77,6 +81,7 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
             onUpdate: 'CURRENT_TIMESTAMP',
           },
         ],
+        engine: 'InnoDB',
       }),
       true,
     );
@@ -108,26 +113,30 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
             isPrimary: true,
             default: '(UUID())',
           },
           {
             name: 'proposal_id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'service_id',
-            type: 'varchar',
+            type: 'char',
             length: '36',
+            collation: 'utf8mb4_unicode_ci',
             isNullable: true,
           },
           {
             name: 'name',
             type: 'varchar',
             length: '255',
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'description',
@@ -164,6 +173,7 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
             onUpdate: 'CURRENT_TIMESTAMP',
           },
         ],
+        engine: 'InnoDB',
       }),
       true,
     );
