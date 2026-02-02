@@ -75,6 +75,9 @@ export function SettingsPage() {
     contract_expiring_template: '',
     payment_reminder_template: '',
     welcome_template: '',
+    notify_customer_on_contract: true,
+    notify_customer_on_payment: true,
+    notify_customer_on_overdue: true,
     notify_admin_on_contract: true,
     notify_admin_on_payment: true,
     admin_contract_created_template: '',
@@ -201,6 +204,9 @@ export function SettingsPage() {
           contract_expiring_template: mailData.contract_expiring_template || '',
           payment_reminder_template: mailData.payment_reminder_template || '',
           welcome_template: mailData.welcome_template || '',
+          notify_customer_on_contract: mailData.notify_customer_on_contract !== undefined ? mailData.notify_customer_on_contract : true,
+          notify_customer_on_payment: mailData.notify_customer_on_payment !== undefined ? mailData.notify_customer_on_payment : true,
+          notify_customer_on_overdue: mailData.notify_customer_on_overdue !== undefined ? mailData.notify_customer_on_overdue : true,
           notify_admin_on_contract: mailData.notify_admin_on_contract !== undefined ? mailData.notify_admin_on_contract : true,
           notify_admin_on_payment: mailData.notify_admin_on_payment !== undefined ? mailData.notify_admin_on_payment : true,
           admin_contract_created_template: mailData.admin_contract_created_template || '',
@@ -1211,38 +1217,107 @@ export function SettingsPage() {
 
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                  Mail Şablonları
+                  Müşteri Bildirim Ayarları
                 </h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Sözleşme Oluşturuldu Şablonu
-                    </label>
-                    <textarea
-                      rows={6}
-                      value={mailForm.contract_created_template}
-                      onChange={(e) =>
-                        setMailForm({ ...mailForm, contract_created_template: e.target.value })
-                      }
-                      placeholder="HTML şablon. Değişkenler: {{customer_name}}, {{contract_number}}, {{room_number}}, {{monthly_price}}, {{start_date}}, {{end_date}}, {{company_name}}"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="notify_customer_on_contract"
+                      checked={mailForm.notify_customer_on_contract}
+                      onChange={(e) => setMailForm({ ...mailForm, notify_customer_on_contract: e.target.checked })}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     />
+                    <label
+                      htmlFor="notify_customer_on_contract"
+                      className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      Sözleşme oluşturulduğunda müşteriye mail gönder
+                    </label>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Ödeme Alındı Şablonu
-                    </label>
-                    <textarea
-                      rows={6}
-                      value={mailForm.payment_received_template}
-                      onChange={(e) =>
-                        setMailForm({ ...mailForm, payment_received_template: e.target.value })
-                      }
-                      placeholder="HTML şablon. Değişkenler: {{customer_name}}, {{payment_number}}, {{amount}}, {{payment_date}}, {{company_name}}"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
+                  {mailForm.notify_customer_on_contract && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Sözleşme Oluşturuldu Şablonu
+                      </label>
+                      <textarea
+                        rows={6}
+                        value={mailForm.contract_created_template}
+                        onChange={(e) =>
+                          setMailForm({ ...mailForm, contract_created_template: e.target.value })
+                        }
+                        placeholder="HTML şablon. Değişkenler: {{customer_name}}, {{contract_number}}, {{room_number}}, {{monthly_price}}, {{start_date}}, {{end_date}}, {{company_name}}"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="notify_customer_on_payment"
+                      checked={mailForm.notify_customer_on_payment}
+                      onChange={(e) => setMailForm({ ...mailForm, notify_customer_on_payment: e.target.checked })}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     />
+                    <label
+                      htmlFor="notify_customer_on_payment"
+                      className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      Ödeme alındığında müşteriye mail gönder
+                    </label>
                   </div>
+
+                  {mailForm.notify_customer_on_payment && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Ödeme Alındı Şablonu
+                      </label>
+                      <textarea
+                        rows={6}
+                        value={mailForm.payment_received_template}
+                        onChange={(e) =>
+                          setMailForm({ ...mailForm, payment_received_template: e.target.value })
+                        }
+                        placeholder="HTML şablon. Değişkenler: {{customer_name}}, {{payment_number}}, {{amount}}, {{payment_date}}, {{company_name}}"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="notify_customer_on_overdue"
+                      checked={mailForm.notify_customer_on_overdue}
+                      onChange={(e) => setMailForm({ ...mailForm, notify_customer_on_overdue: e.target.checked })}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <label
+                      htmlFor="notify_customer_on_overdue"
+                      className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      Geciken ödemelerde müşteriye otomatik hatırlatma gönder
+                    </label>
+                  </div>
+
+                  {mailForm.notify_customer_on_overdue && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Ödeme Hatırlatması Şablonu
+                      </label>
+                      <textarea
+                        rows={6}
+                        value={mailForm.payment_reminder_template}
+                        onChange={(e) =>
+                          setMailForm({ ...mailForm, payment_reminder_template: e.target.value })
+                        }
+                        placeholder="HTML şablon. Değişkenler: {{customer_name}}, {{payment_number}}, {{amount}}, {{due_date}}, {{company_name}}"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1255,21 +1330,6 @@ export function SettingsPage() {
                         setMailForm({ ...mailForm, contract_expiring_template: e.target.value })
                       }
                       placeholder="HTML şablon. Değişkenler: {{customer_name}}, {{contract_number}}, {{end_date}}, {{company_name}}"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Ödeme Hatırlatması Şablonu
-                    </label>
-                    <textarea
-                      rows={6}
-                      value={mailForm.payment_reminder_template}
-                      onChange={(e) =>
-                        setMailForm({ ...mailForm, payment_reminder_template: e.target.value })
-                      }
-                      placeholder="HTML şablon. Değişkenler: {{customer_name}}, {{payment_number}}, {{amount}}, {{due_date}}, {{company_name}}"
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
                     />
                   </div>

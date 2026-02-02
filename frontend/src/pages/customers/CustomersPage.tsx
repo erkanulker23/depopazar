@@ -14,9 +14,11 @@ import {
   CreditCardIcon,
   CalendarIcon,
   QrCodeIcon,
+  PaperAirplaneIcon,
 } from '@heroicons/react/24/outline';
 import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
 import { CollectPaymentModal } from '../../components/modals/CollectPaymentModal';
+import { SendContractModal } from '../../components/modals/SendContractModal';
 import { itemsApi } from '../../services/api/itemsApi';
 import { generateCustomerBarcodePDF } from '../../utils/pdfUtils';
 import { exportCustomersToExcel, importCustomersFromExcel } from '../../utils/excelUtils';
@@ -40,6 +42,8 @@ export function CustomersPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentModalCustomer, setPaymentModalCustomer] = useState<any>(null);
   const [paymentModalPayments, setPaymentModalPayments] = useState<any[]>([]);
+  const [isSendContractModalOpen, setIsSendContractModalOpen] = useState(false);
+  const [sendContractCustomer, setSendContractCustomer] = useState<any>(null);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
@@ -181,6 +185,15 @@ export function CustomersPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchCustomers}
+      />
+
+      <SendContractModal
+        isOpen={isSendContractModalOpen}
+        onClose={() => {
+          setIsSendContractModalOpen(false);
+          setSendContractCustomer(null);
+        }}
+        customer={sendContractCustomer}
       />
 
       <CollectPaymentModal
@@ -365,6 +378,16 @@ export function CustomersPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSendContractCustomer(customer);
+                          setIsSendContractModalOpen(true);
+                        }}
+                        className="p-2 text-indigo-600 dark:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
+                        title="Sözleşme Gönder"
+                      >
+                        <PaperAirplaneIcon className="h-5 w-5" />
+                      </button>
                       <button
                         onClick={() => handleGenerateBarcode(customer)}
                         disabled={pdfLoading === customer.id}
@@ -577,6 +600,17 @@ export function CustomersPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setSendContractCustomer(customer);
+                                  setIsSendContractModalOpen(true);
+                                }}
+                                className="p-1.5 text-indigo-600 dark:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors flex items-center gap-1"
+                                title="Sözleşme Gönder"
+                              >
+                                <PaperAirplaneIcon className="h-5 w-5" />
+                                <span className="text-[10px] font-bold hidden xl:inline">Sözleşme</span>
+                              </button>
                               <button
                                 onClick={() => handleGenerateBarcode(customer)}
                                 disabled={pdfLoading === customer.id}

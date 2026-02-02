@@ -50,6 +50,16 @@ export class CompanyMailSettings extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   welcome_template: string | null;
 
+  // Customer Notification Toggles
+  @Column({ type: 'boolean', default: true })
+  notify_customer_on_contract: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  notify_customer_on_payment: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  notify_customer_on_overdue: boolean;
+
   // Admin Notification Toggles
   @Column({ type: 'boolean', default: true })
   notify_admin_on_contract: boolean;

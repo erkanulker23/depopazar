@@ -64,6 +64,21 @@ export class UpdateMailSettingsDto {
   @IsString()
   welcome_template?: string;
 
+  @ApiPropertyOptional({ description: 'Notify customer on contract creation' })
+  @IsOptional()
+  @IsBoolean()
+  notify_customer_on_contract?: boolean;
+
+  @ApiPropertyOptional({ description: 'Notify customer on payment received' })
+  @IsOptional()
+  @IsBoolean()
+  notify_customer_on_payment?: boolean;
+
+  @ApiPropertyOptional({ description: 'Notify customer on overdue' })
+  @IsOptional()
+  @IsBoolean()
+  notify_customer_on_overdue?: boolean;
+
   @ApiPropertyOptional({ description: 'Notify admin on contract creation' })
   @IsOptional()
   @IsBoolean()

@@ -14,6 +14,7 @@ export class EnforceRoomWarehouseId1770000004000 implements MigrationInterface {
         name: 'warehouse_id',
         type: 'varchar',
         length: '36',
+        collation: 'utf8mb4_unicode_ci',
         isNullable: false,
       }),
     );
@@ -27,6 +28,7 @@ export class EnforceRoomWarehouseId1770000004000 implements MigrationInterface {
         name: 'warehouse_id',
         type: 'varchar',
         length: '36',
+        collation: 'utf8mb4_unicode_ci',
         isNullable: true,
       }),
     );

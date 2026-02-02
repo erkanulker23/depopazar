@@ -47,6 +47,9 @@ export interface MailSettings {
   notify_admin_on_payment?: boolean;
   admin_contract_created_template?: string;
   admin_payment_received_template?: string;
+  notify_customer_on_contract?: boolean;
+  notify_customer_on_payment?: boolean;
+  notify_customer_on_overdue?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
