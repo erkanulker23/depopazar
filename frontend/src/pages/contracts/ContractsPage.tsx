@@ -1070,7 +1070,9 @@ function PaymentModal({ contract, isOpen, onClose, onSuccess }: any) {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                   >
                     <option value="">Ay Seçin</option>
-                    {contract.monthly_prices.map((mp: any) => {
+                    {(contract.monthly_prices || [])
+                      .sort((a: any, b: any) => a.month.localeCompare(b.month))
+                      .map((mp: any) => {
                       const monthPayment = contract.payments?.find((p: any) => {
                         const paymentMonth = new Date(p.due_date).toISOString().slice(0, 7);
                         return paymentMonth === mp.month && p.status === 'paid';

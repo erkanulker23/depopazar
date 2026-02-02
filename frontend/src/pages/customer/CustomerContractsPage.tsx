@@ -163,7 +163,6 @@ export function CustomerContractsPage() {
                     <div className="space-y-4">
                       {Object.keys(paymentsByMonth)
                         .sort()
-                        .reverse()
                         .map((monthKey) => {
                           const [year, month] = monthKey.split('-');
                           const monthPayments = paymentsByMonth[monthKey];

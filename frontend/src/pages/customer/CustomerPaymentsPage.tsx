@@ -60,11 +60,11 @@ export function CustomerPaymentsPage() {
             };
           });
           
-          // Tarihe göre sırala (en yeni önce)
+          // Tarihe göre sırala (en eski önce)
           paymentsWithContract.sort((a: any, b: any) => {
             const dateA = new Date(a.due_date).getTime();
             const dateB = new Date(b.due_date).getTime();
-            return dateB - dateA;
+            return dateA - dateB;
           });
           
           setAllPayments(paymentsWithContract);

@@ -663,8 +663,8 @@ export function CustomersPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                       {Object.values(paymentsByMonth)
                                         .sort((a: any, b: any) => {
-                                          if (a.year !== b.year) return b.year - a.year;
-                                          return b.month - a.month;
+                                          if (a.year !== b.year) return a.year - b.year;
+                                          return a.month - b.month;
                                         })
                                         .map((monthData: any) => {
                                           const monthKey = `${monthData.year}-${String(monthData.month).padStart(2, '0')}`;

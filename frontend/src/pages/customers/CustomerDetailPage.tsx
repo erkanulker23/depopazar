@@ -390,8 +390,8 @@ export function CustomerDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {Object.values(paymentsByMonth)
                 .sort((a: any, b: any) => {
-                  if (a.year !== b.year) return b.year - a.year;
-                  return b.month - a.month;
+                  if (a.year !== b.year) return a.year - b.year;
+                  return a.month - b.month;
                 })
                 .map((monthData: any) => {
                   const hasUnpaid = monthData.unpaid.length > 0;
@@ -679,8 +679,8 @@ export function CustomerDetailPage() {
             <div className="space-y-3">
               {Object.values(paidPaymentsByMonth)
                 .sort((a: any, b: any) => {
-                  if (a.year !== b.year) return b.year - a.year;
-                  return b.month - a.month;
+                  if (a.year !== b.year) return a.year - b.year;
+                  return a.month - b.month;
                 })
                 .map((monthData: any) => (
                   <div
