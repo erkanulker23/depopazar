@@ -165,7 +165,7 @@ export class ReportsService {
         amount: payment.amount,
         paid_at: payment.paid_at,
         transaction_id: payment.transaction_id,
-        contract_number: payment.contract.contract_number,
+        contract_number: payment.contract?.contract_number ?? null,
       });
       groupedByBankAccount[bankAccountId].total_amount += Number(payment.amount);
       groupedByBankAccount[bankAccountId].count += 1;

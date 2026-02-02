@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, BadRequestException } from '@nestjs/common';
 import { ServiceCategoriesService } from './service-categories.service';
 import { CreateServiceCategoryDto } from './dto/create-service-category.dto';
 import { UpdateServiceCategoryDto } from './dto/update-service-category.dto';
@@ -22,20 +22,20 @@ export class ServiceCategoriesController {
   ) {}
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.COMPANY_STAFF, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Create service category' })
   async create(@CurrentUser() user: User, @Body() createDto: CreateServiceCategoryDto) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.categoriesService.create(companyId, createDto);
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.COMPANY_STAFF, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get all service categories' })
   async findAll(@CurrentUser() user: User) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.categoriesService.findAll(companyId);
   }
 
@@ -43,7 +43,7 @@ export class ServiceCategoriesController {
   @ApiOperation({ summary: 'Get service category by id' })
   async findOne(@CurrentUser() user: User, @Param('id') id: string) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.categoriesService.findOne(companyId, id);
   }
 
@@ -55,7 +55,7 @@ export class ServiceCategoriesController {
     @Body() updateDto: UpdateServiceCategoryDto,
   ) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.categoriesService.update(companyId, id, updateDto);
   }
 
@@ -63,7 +63,7 @@ export class ServiceCategoriesController {
   @ApiOperation({ summary: 'Delete service category' })
   async remove(@CurrentUser() user: User, @Param('id') id: string) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.categoriesService.remove(companyId, id);
   }
 }

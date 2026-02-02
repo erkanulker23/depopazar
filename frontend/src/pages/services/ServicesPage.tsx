@@ -9,7 +9,8 @@ export function ServicesPage() {
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [error, setError] = useState<string | null>(null);
+
   // Modal states
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -23,15 +24,27 @@ export function ServicesPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const [cats, srvs] = await Promise.all([
         servicesApi.getCategories(),
         servicesApi.getServices(),
       ]);
       setCategories(cats);
       setServices(srvs);
-    } catch (error) {
-      console.error(error);
-      toast.error('Veriler yüklenirken hata oluştu');
+    } catch (err: unknown) {
+      console.error(err);
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string }; status?: number } }).response?.data?.message
+        : null;
+      const status = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { status?: number } }).response?.status
+        : null;
+      if (status === 404 || msg?.includes('User has no company') || msg?.includes('no company') || msg?.includes('Şirket bulunamadı')) {
+        setError('Bu kullanıcının bir firması bulunmamaktadır. Lütfen bir firmaya atanmanız gerekmektedir.');
+      } else {
+        setError('Veriler yüklenirken hata oluştu.');
+        toast.error('Veriler yüklenirken hata oluştu');
+      }
     } finally {
       setLoading(false);
     }
@@ -66,6 +79,17 @@ export function ServicesPage() {
   }));
 
   if (loading) return <div className="p-4">Yükleniyor...</div>;
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-md mx-auto">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <p className="text-amber-800 dark:text-amber-200">{error}</p>
+          <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">Lütfen sistem yöneticinizle iletişime geçin.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -6,8 +6,13 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
+import { config } from 'dotenv';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+
+// Tüm veriler .env dosyasından çekilsin; .env, process.env'i geçersiz kılsın (Forge vb. enjeksiyon yerine)
+const projectRoot = process.cwd().endsWith('backend') ? join(process.cwd(), '..') : process.cwd();
+config({ path: join(projectRoot, '.env'), override: true });
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -86,6 +91,20 @@ async function bootstrap() {
   await app.listen(port);
 
   console.log(`🚀 Application is running on: http://localhost:${port}`);
+
+  // Graceful shutdown: SIGTERM/SIGINT alınca portu serbest bırak (EADDRINUSE önlemek için)
+  const shutdown = async (signal: string) => {
+    console.log(`Received ${signal}, closing server...`);
+    await app.close();
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  if (err?.code === 'EADDRINUSE') {
+    console.error(`Port ${process.env.PORT || 4100} zaten kullanımda. Eski process'i durdurun veya sadece tek bir process manager (Forge Daemon veya PM2) kullanın.`);
+  }
+  process.exit(1);
+});

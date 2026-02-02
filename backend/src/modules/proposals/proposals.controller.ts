@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, BadRequestException } from '@nestjs/common';
 import { ProposalsService } from './proposals.service';
 import { CreateProposalDto } from './dto/create-proposal.dto';
 import { UpdateProposalDto } from './dto/update-proposal.dto';
@@ -26,16 +26,16 @@ export class ProposalsController {
   @ApiOperation({ summary: 'Create proposal' })
   async create(@CurrentUser() user: User, @Body() createDto: CreateProposalDto) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.proposalsService.create(companyId, createDto);
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.COMPANY_STAFF, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get all proposals' })
   async findAll(@CurrentUser() user: User) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.proposalsService.findAll(companyId);
   }
 
@@ -43,7 +43,7 @@ export class ProposalsController {
   @ApiOperation({ summary: 'Get proposal by id' })
   async findOne(@CurrentUser() user: User, @Param('id') id: string) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.proposalsService.findOne(companyId, id);
   }
 
@@ -55,7 +55,7 @@ export class ProposalsController {
     @Body() updateDto: UpdateProposalDto,
   ) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.proposalsService.update(companyId, id, updateDto);
   }
 
@@ -63,7 +63,7 @@ export class ProposalsController {
   @ApiOperation({ summary: 'Delete proposal' })
   async remove(@CurrentUser() user: User, @Param('id') id: string) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new Error('User has no company');
+    if (!companyId) throw new BadRequestException('User has no company');
     return this.proposalsService.remove(companyId, id);
   }
 }

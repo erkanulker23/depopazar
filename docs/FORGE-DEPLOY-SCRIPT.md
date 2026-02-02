@@ -12,10 +12,13 @@ Bu belgedeki adımlar **mutlaka** uygulanmalı; aksi halde `/login` 404 verir ve
    - **Command:** `node backend/dist/main.js`
    - **Directory:** Site kökü (örn. `/home/forge/general.awapanel.com`)
    - Kaydedip process’i **Start** edin.
-3. **Nginx:** `/api` isteklerinin Node’a gitmesi için Forge’da **Site → Nginx → Edit** ile aşağıdaki **Custom Nginx Configuration** snippet’ini `server { ... }` bloğunun **içine** ekleyin (genelde `location /` bloğundan **önce**):
+3. **Nginx:** Forge’da **Site → Nginx → Edit** ile `server { ... }` bloğunun **içine** aşağıdakileri ekleyin veya mevcut `location /` ile değiştirin:
+
+   - **SPA fallback:** `/staff`, `/services`, `/dashboard` vb. doğrudan açıldığında 404 vermemesi için `location /` mutlaka `try_files $uri $uri/ /index.html;` içermeli.
+   - **API proxy:** `/api` istekleri Node’a yönlendirilmeli.
 
 ```nginx
-# Backend API proxy (location / bloğundan önce ekleyin)
+# 1) Backend API proxy (location / bloğundan önce olmalı)
 location /api {
     proxy_pass http://127.0.0.1:4100;
     proxy_http_version 1.1;
@@ -24,12 +27,36 @@ location /api {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
+
+# 2) SPA fallback: /staff, /services, /dashboard vb. doğrudan URL’ler index.html dönsün (404 vermesin)
+location / {
+    try_files $uri $uri/ /index.html;
+}
 ```
 
 4. **Logları nerede görürsünüz?**  
    Forge’daki **“Site Log”** genelde Nginx/PHP logudur; Node uygulaması oraya yazmaz. Backend hatalarını görmek için: **Settings → Processes** → ilgili process’in yanındaki **“Log”** (veya “View log”). Backend stdout/stderr orada görünür.
 
 5. Deploy’u tekrar çalıştırın; ardından **Processes** ekranından Node process’ini **Restart** edin.
+
+---
+
+## EADDRINUSE: Port 4100 zaten kullanımda
+
+Bu hata, **aynı anda birden fazla backend process** çalıştığında veya restart sırasında eski process portu hemen bırakmadığında oluşur.
+
+**Yapılacaklar:**
+
+1. **Tek process manager kullanın.** Backend’i **ya** Forge Daemon **ya** PM2 ile çalıştırın, ikisini birlikte kullanmayın. Forge kullanıyorsanız deploy script’te `pm2` komutları olmamalı; sadece Forge’daki **Processes → Daemon** ile `node backend/dist/main.js` çalışsın.
+2. **Portu kullanan process’i durdurun.** Sunucuda SSH ile:
+   ```bash
+   # 4100 portunu kullanan process’i bulup kapatın
+   sudo lsof -i :4100
+   # veya
+   sudo fuser -k 4100/tcp
+   ```
+   Sonra Forge’da **Processes** ekranından Node process’ini **Start** edin (tek bir tane olsun).
+3. **Restart sırasında:** Forge’da önce **Stop**, birkaç saniye bekleyin, sonra **Start** yapın. Uygulama artık SIGTERM alınca graceful shutdown yapıyor; port daha hızlı serbest kalır.
 
 ---
 
