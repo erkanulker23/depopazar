@@ -4,58 +4,70 @@ export class InitialFix1769965820508 implements MigrationInterface {
     name = 'InitialFix1769965820508'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE \`users\` DROP FOREIGN KEY \`FK_users_company\``);
-        await queryRunner.query(`ALTER TABLE \`bank_accounts\` DROP FOREIGN KEY \`FK_bank_accounts_company\``);
-        await queryRunner.query(`ALTER TABLE \`customers\` DROP FOREIGN KEY \`FK_customers_company\``);
-        await queryRunner.query(`ALTER TABLE \`customers\` DROP FOREIGN KEY \`FK_customers_user\``);
-        await queryRunner.query(`ALTER TABLE \`payments\` DROP FOREIGN KEY \`FK_payments_contract\``);
-        await queryRunner.query(`ALTER TABLE \`contract_monthly_prices\` DROP FOREIGN KEY \`FK_contract_monthly_prices_contract\``);
-        await queryRunner.query(`ALTER TABLE \`contract_staff\` DROP FOREIGN KEY \`FK_contract_staff_contract\``);
-        await queryRunner.query(`ALTER TABLE \`contract_staff\` DROP FOREIGN KEY \`FK_contract_staff_user\``);
-        await queryRunner.query(`ALTER TABLE \`contracts\` DROP FOREIGN KEY \`FK_contracts_customer\``);
-        await queryRunner.query(`ALTER TABLE \`contracts\` DROP FOREIGN KEY \`FK_contracts_room\``);
-        await queryRunner.query(`ALTER TABLE \`contracts\` DROP FOREIGN KEY \`FK_contracts_sold_by_user\``);
-        await queryRunner.query(`ALTER TABLE \`items\` DROP FOREIGN KEY \`FK_items_contract\``);
-        await queryRunner.query(`ALTER TABLE \`items\` DROP FOREIGN KEY \`FK_items_room\``);
-        await queryRunner.query(`ALTER TABLE \`rooms\` DROP FOREIGN KEY \`FK_rooms_warehouse\``);
-        await queryRunner.query(`ALTER TABLE \`warehouses\` DROP FOREIGN KEY \`FK_warehouses_company\``);
-        await queryRunner.query(`ALTER TABLE \`transportation_job_staff\` DROP FOREIGN KEY \`FK_transportation_job_staff_job\``);
-        await queryRunner.query(`ALTER TABLE \`transportation_job_staff\` DROP FOREIGN KEY \`FK_transportation_job_staff_user\``);
-        await queryRunner.query(`ALTER TABLE \`transportation_jobs\` DROP FOREIGN KEY \`FK_transportation_jobs_company\``);
-        await queryRunner.query(`ALTER TABLE \`transportation_jobs\` DROP FOREIGN KEY \`FK_transportation_jobs_customer\``);
-        await queryRunner.query(`ALTER TABLE \`notifications\` DROP FOREIGN KEY \`FK_notifications_customer\``);
-        await queryRunner.query(`ALTER TABLE \`notifications\` DROP FOREIGN KEY \`FK_notifications_user\``);
-        await queryRunner.query(`ALTER TABLE \`company_paytr_settings\` DROP FOREIGN KEY \`FK_paytr_settings_company\``);
-        await queryRunner.query(`ALTER TABLE \`company_mail_settings\` DROP FOREIGN KEY \`FK_company_mail_settings_company\``);
-        await queryRunner.query(`DROP INDEX \`IDX_users_company\` ON \`users\``);
-        await queryRunner.query(`DROP INDEX \`UQ_users_email\` ON \`users\``);
-        await queryRunner.query(`DROP INDEX \`IDX_bank_accounts_company\` ON \`bank_accounts\``);
-        await queryRunner.query(`DROP INDEX \`UQ_companies_slug\` ON \`companies\``);
-        await queryRunner.query(`DROP INDEX \`IDX_customers_company\` ON \`customers\``);
-        await queryRunner.query(`DROP INDEX \`IDX_customers_user\` ON \`customers\``);
-        await queryRunner.query(`DROP INDEX \`IDX_payments_contract\` ON \`payments\``);
-        await queryRunner.query(`DROP INDEX \`UQ_payments_number\` ON \`payments\``);
-        await queryRunner.query(`DROP INDEX \`IDX_contract_monthly_prices_contract\` ON \`contract_monthly_prices\``);
-        await queryRunner.query(`DROP INDEX \`IDX_contract_monthly_prices_month\` ON \`contract_monthly_prices\``);
-        await queryRunner.query(`DROP INDEX \`IDX_contract_staff_contract\` ON \`contract_staff\``);
-        await queryRunner.query(`DROP INDEX \`IDX_contract_staff_user\` ON \`contract_staff\``);
-        await queryRunner.query(`DROP INDEX \`UQ_contract_staff\` ON \`contract_staff\``);
-        await queryRunner.query(`DROP INDEX \`IDX_contracts_customer\` ON \`contracts\``);
-        await queryRunner.query(`DROP INDEX \`IDX_contracts_room\` ON \`contracts\``);
-        await queryRunner.query(`DROP INDEX \`UQ_contracts_number\` ON \`contracts\``);
-        await queryRunner.query(`DROP INDEX \`IDX_items_contract\` ON \`items\``);
-        await queryRunner.query(`DROP INDEX \`IDX_items_room\` ON \`items\``);
-        await queryRunner.query(`DROP INDEX \`IDX_rooms_warehouse\` ON \`rooms\``);
-        await queryRunner.query(`DROP INDEX \`IDX_warehouses_company\` ON \`warehouses\``);
-        await queryRunner.query(`DROP INDEX \`IDX_transportation_job_staff_job\` ON \`transportation_job_staff\``);
-        await queryRunner.query(`DROP INDEX \`IDX_transportation_job_staff_user\` ON \`transportation_job_staff\``);
-        await queryRunner.query(`DROP INDEX \`IDX_transportation_jobs_company\` ON \`transportation_jobs\``);
-        await queryRunner.query(`DROP INDEX \`IDX_transportation_jobs_customer\` ON \`transportation_jobs\``);
-        await queryRunner.query(`DROP INDEX \`IDX_notifications_customer\` ON \`notifications\``);
-        await queryRunner.query(`DROP INDEX \`IDX_notifications_user\` ON \`notifications\``);
-        await queryRunner.query(`DROP INDEX \`IDX_paytr_settings_company\` ON \`company_paytr_settings\``);
-        await queryRunner.query(`DROP INDEX \`UQ_paytr_settings_company\` ON \`company_paytr_settings\``);
-        await queryRunner.query(`DROP INDEX \`UQ_company_mail_settings_company\` ON \`company_mail_settings\``);
+        const safeDropFK = async (table: string, fk: string) => {
+            try {
+                await queryRunner.query(`ALTER TABLE \`${table}\` DROP FOREIGN KEY \`${fk}\``);
+            } catch (e) {}
+        };
+        const safeDropIndex = async (table: string, index: string, onTable: string) => {
+            try {
+                await queryRunner.query(`DROP INDEX \`${index}\` ON \`${onTable}\``);
+            } catch (e) {}
+        };
+
+        await safeDropFK('users', 'FK_users_company');
+        await safeDropFK('bank_accounts', 'FK_bank_accounts_company');
+        await safeDropFK('customers', 'FK_customers_company');
+        await safeDropFK('customers', 'FK_customers_user');
+        await safeDropFK('payments', 'FK_payments_contract');
+        await safeDropFK('contract_monthly_prices', 'FK_contract_monthly_prices_contract');
+        await safeDropFK('contract_staff', 'FK_contract_staff_contract');
+        await safeDropFK('contract_staff', 'FK_contract_staff_user');
+        await safeDropFK('contracts', 'FK_contracts_customer');
+        await safeDropFK('contracts', 'FK_contracts_room');
+        await safeDropFK('contracts', 'FK_contracts_sold_by_user');
+        await safeDropFK('items', 'FK_items_contract');
+        await safeDropFK('items', 'FK_items_room');
+        await safeDropFK('rooms', 'FK_rooms_warehouse');
+        await safeDropFK('warehouses', 'FK_warehouses_company');
+        await safeDropFK('transportation_job_staff', 'FK_transportation_job_staff_job');
+        await safeDropFK('transportation_job_staff', 'FK_transportation_job_staff_user');
+        await safeDropFK('transportation_jobs', 'FK_transportation_jobs_company');
+        await safeDropFK('transportation_jobs', 'FK_transportation_jobs_customer');
+        await safeDropFK('notifications', 'FK_notifications_customer');
+        await safeDropFK('notifications', 'FK_notifications_user');
+        await safeDropFK('company_paytr_settings', 'FK_paytr_settings_company');
+        await safeDropFK('company_mail_settings', 'FK_company_mail_settings_company');
+
+        await safeDropIndex('users', 'IDX_users_company', 'users');
+        await safeDropIndex('users', 'UQ_users_email', 'users');
+        await safeDropIndex('bank_accounts', 'IDX_bank_accounts_company', 'bank_accounts');
+        await safeDropIndex('companies', 'UQ_companies_slug', 'companies');
+        await safeDropIndex('customers', 'IDX_customers_company', 'customers');
+        await safeDropIndex('customers', 'IDX_customers_user', 'customers');
+        await safeDropIndex('payments', 'IDX_payments_contract', 'payments');
+        await safeDropIndex('payments', 'UQ_payments_number', 'payments');
+        await safeDropIndex('contract_monthly_prices', 'IDX_contract_monthly_prices_contract', 'contract_monthly_prices');
+        await safeDropIndex('contract_monthly_prices', 'IDX_contract_monthly_prices_month', 'contract_monthly_prices');
+        await safeDropIndex('contract_staff', 'IDX_contract_staff_contract', 'contract_staff');
+        await safeDropIndex('contract_staff', 'IDX_contract_staff_user', 'contract_staff');
+        await safeDropIndex('contract_staff', 'UQ_contract_staff', 'contract_staff');
+        await safeDropIndex('contracts', 'IDX_contracts_customer', 'contracts');
+        await safeDropIndex('contracts', 'IDX_contracts_room', 'contracts');
+        await safeDropIndex('contracts', 'UQ_contracts_number', 'contracts');
+        await safeDropIndex('items', 'IDX_items_contract', 'items');
+        await safeDropIndex('items', 'IDX_items_room', 'items');
+        await safeDropIndex('rooms', 'IDX_rooms_warehouse', 'rooms');
+        await safeDropIndex('warehouses', 'IDX_warehouses_company', 'warehouses');
+        await safeDropIndex('transportation_job_staff', 'IDX_transportation_job_staff_job', 'transportation_job_staff');
+        await safeDropIndex('transportation_job_staff', 'IDX_transportation_job_staff_user', 'transportation_job_staff');
+        await safeDropIndex('transportation_jobs', 'IDX_transportation_jobs_company', 'transportation_jobs');
+        await safeDropIndex('transportation_jobs', 'IDX_transportation_jobs_customer', 'transportation_jobs');
+        await safeDropIndex('notifications', 'IDX_notifications_customer', 'notifications');
+        await safeDropIndex('notifications', 'IDX_notifications_user', 'notifications');
+        await safeDropIndex('company_paytr_settings', 'IDX_paytr_settings_company', 'company_paytr_settings');
+        await safeDropIndex('company_paytr_settings', 'UQ_paytr_settings_company', 'company_paytr_settings');
+        await safeDropIndex('company_mail_settings', 'UQ_company_mail_settings_company', 'company_mail_settings');
         await queryRunner.query(`CREATE TABLE \`company_sms_settings\` (\`id\` varchar(36) NOT NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP, \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, \`deleted_at\` datetime(6) NULL, \`company_id\` varchar(255) NOT NULL, \`username\` varchar(255) NULL, \`password\` varchar(255) NULL, \`sender_id\` varchar(50) NULL, \`api_url\` varchar(255) NULL, \`is_active\` tinyint NOT NULL DEFAULT 0, \`test_mode\` tinyint NOT NULL DEFAULT 0, UNIQUE INDEX \`REL_d2b08509989c8a9869b417f48f\` (\`company_id\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
         await queryRunner.query(`ALTER TABLE \`users\` DROP PRIMARY KEY`);
         await queryRunner.query(`ALTER TABLE \`users\` DROP COLUMN \`id\``);
