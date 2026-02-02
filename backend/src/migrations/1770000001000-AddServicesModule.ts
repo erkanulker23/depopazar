@@ -2,6 +2,10 @@ import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm
 
 export class AddServicesModule1770000001000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Drop tables if they exist to avoid schema mismatch from failed migrations
+    await queryRunner.query('DROP TABLE IF EXISTS `services`');
+    await queryRunner.query('DROP TABLE IF EXISTS `service_categories`');
+
     // Service Categories
     await queryRunner.createTable(
       new Table({
@@ -9,7 +13,7 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
             isPrimary: true,
@@ -17,7 +21,7 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
           },
           {
             name: 'company_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
           },
@@ -31,6 +35,7 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
             name: 'description',
             type: 'text',
             isNullable: true,
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'created_at',
@@ -66,7 +71,7 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
             isPrimary: true,
@@ -74,13 +79,13 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
           },
           {
             name: 'company_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'category_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
           },
@@ -94,6 +99,7 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
             name: 'description',
             type: 'text',
             isNullable: true,
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'unit_price',
@@ -107,6 +113,7 @@ export class AddServicesModule1770000001000 implements MigrationInterface {
             type: 'varchar',
             length: '50',
             isNullable: true,
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'created_at',

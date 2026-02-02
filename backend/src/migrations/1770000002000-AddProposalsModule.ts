@@ -2,6 +2,10 @@ import { MigrationInterface, QueryRunner, Table, TableForeignKey } from 'typeorm
 
 export class AddProposalsModule1770000002000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Drop tables if they exist to avoid schema mismatch from failed migrations
+    await queryRunner.query('DROP TABLE IF EXISTS `proposal_items`');
+    await queryRunner.query('DROP TABLE IF EXISTS `proposals`');
+
     // Proposals
     await queryRunner.createTable(
       new Table({
@@ -9,7 +13,7 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
             isPrimary: true,
@@ -17,13 +21,13 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
           },
           {
             name: 'company_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'customer_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
             isNullable: true,
@@ -39,6 +43,7 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
             type: 'varchar',
             length: '50',
             default: "'draft'",
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'total_amount',
@@ -52,6 +57,7 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
             type: 'varchar',
             length: '10',
             default: "'TRY'",
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'valid_until',
@@ -62,12 +68,14 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
             name: 'notes',
             type: 'text',
             isNullable: true,
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'pdf_url',
             type: 'varchar',
             length: '512',
             isNullable: true,
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'created_at',
@@ -113,7 +121,7 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
             isPrimary: true,
@@ -121,13 +129,13 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
           },
           {
             name: 'proposal_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'service_id',
-            type: 'char',
+            type: 'varchar',
             length: '36',
             collation: 'utf8mb4_unicode_ci',
             isNullable: true,
@@ -142,6 +150,7 @@ export class AddProposalsModule1770000002000 implements MigrationInterface {
             name: 'description',
             type: 'text',
             isNullable: true,
+            collation: 'utf8mb4_unicode_ci',
           },
           {
             name: 'quantity',
