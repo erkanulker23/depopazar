@@ -31,15 +31,17 @@ async function runSeeds() {
     const itemRepo = dataSource.getRepository(Item);
     const notificationRepo = dataSource.getRepository(Notification);
 
-    // 1. Super Admin
+    // 1. Super Admin (varsa şifreyi de "password" yaparak güncelle; yoksa oluştur)
+    const superAdminEmail = 'erkanulker0@gmail.com';
+    const superAdminPlainPassword = 'password';
     let superAdmin = await userRepo.findOne({
-      where: { email: 'erkanulker0@gmail.com' },
+      where: { email: superAdminEmail },
     });
 
     if (!superAdmin) {
       superAdmin = userRepo.create({
-        email: 'erkanulker0@gmail.com',
-        password: 'password',
+        email: superAdminEmail,
+        password: superAdminPlainPassword,
         first_name: 'Super',
         last_name: 'Admin',
         role: UserRole.SUPER_ADMIN,
@@ -47,7 +49,12 @@ async function runSeeds() {
       });
       await superAdmin.hashPassword();
       await userRepo.save(superAdmin);
-      console.log('✅ Super Admin created');
+      console.log('✅ Super Admin created (email: %s, şifre: %s)', superAdminEmail, superAdminPlainPassword);
+    } else {
+      superAdmin.password = superAdminPlainPassword;
+      await superAdmin.hashPassword();
+      await userRepo.save(superAdmin);
+      console.log('✅ Super Admin şifre sıfırlandı (email: %s, şifre: %s)', superAdminEmail, superAdminPlainPassword);
     }
 
     // 2. Demo Company
