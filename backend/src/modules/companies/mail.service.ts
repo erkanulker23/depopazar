@@ -138,4 +138,27 @@ export class MailService {
       <p>Teşekkürler,<br>{{company_name}}</p>
     `;
   }
+
+  getDefaultAdminContractCreatedTemplate(): string {
+    return `
+      <h2>Yeni Sözleşme Bildirimi</h2>
+      <p>Sisteme yeni bir sözleşme eklendi.</p>
+      <p><strong>Müşteri:</strong> {{customer_name}}</p>
+      <p><strong>Sözleşme No:</strong> {{contract_number}}</p>
+      <p><strong>Oda:</strong> {{room_number}}</p>
+      <p><strong>Tutar:</strong> {{monthly_price}} TL</p>
+      <p><strong>Tarih:</strong> {{date}}</p>
+    `;
+  }
+
+  getDefaultAdminPaymentReceivedTemplate(): string {
+    return `
+      <h2>Ödeme Alındı Bildirimi</h2>
+      <p>Yeni bir ödeme alındı.</p>
+      <p><strong>Müşteri:</strong> {{customer_name}}</p>
+      <p><strong>Ödeme No:</strong> {{payment_number}}</p>
+      <p><strong>Tutar:</strong> {{amount}} TL</p>
+      <p><strong>Tarih:</strong> {{payment_date}}</p>
+    `;
+  }
 }

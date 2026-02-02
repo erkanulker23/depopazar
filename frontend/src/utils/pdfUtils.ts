@@ -19,7 +19,7 @@ const trToEn = (text: string) => {
 };
 
 export const generateCustomerBarcodePDF = async (customer: any, items: any[]) => {
-  const doc = new jsPDF();
+  const doc = new jsPDF({ orientation: 'landscape' });
   
   const fullName = trToEn(`${customer.first_name} ${customer.last_name}`);
   const phone = trToEn(customer.phone || 'Girilmemis');
@@ -27,7 +27,7 @@ export const generateCustomerBarcodePDF = async (customer: any, items: any[]) =>
 
   // Title
   doc.setFontSize(20);
-  doc.text(trToEn('Müşteri Depo Etiketi'), 105, 15, { align: 'center' });
+  doc.text(trToEn('Müşteri Depo Etiketi'), 148, 15, { align: 'center' }); // Centered horizontally (297/2 approx)
 
   // Barcode
   const canvas = document.createElement('canvas');
@@ -38,7 +38,7 @@ export const generateCustomerBarcodePDF = async (customer: any, items: any[]) =>
     displayValue: true
   });
   const barcodeData = canvas.toDataURL('image/png');
-  doc.addImage(barcodeData, 'PNG', 75, 20, 60, 20);
+  doc.addImage(barcodeData, 'PNG', 118, 20, 60, 20); // Centered under title
 
   // Customer Info Section
   doc.setFontSize(12);
@@ -117,8 +117,8 @@ export const generateCustomerBarcodePDF = async (customer: any, items: any[]) =>
     doc.setPage(i);
     doc.text(
       trToEn(`Olusturulma Tarihi: ${new Date().toLocaleString('tr-TR')} - Sayfa ${i}/${pageCount}`),
-      105,
-      285,
+      148,
+      200, // Bottom of landscape A4
       { align: 'center' }
     );
   }

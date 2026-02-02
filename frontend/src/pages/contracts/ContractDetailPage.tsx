@@ -5,7 +5,7 @@ import { paymentsApi } from '../../services/api/paymentsApi';
 import { itemsApi } from '../../services/api/itemsApi';
 import { companiesApi, BankAccount } from '../../services/api/companiesApi';
 import { ArrowLeftIcon, PrinterIcon, PlusIcon, XMarkIcon, PencilIcon, TrashIcon, CurrencyDollarIcon, CreditCardIcon, BuildingLibraryIcon, CubeIcon } from '@heroicons/react/24/outline';
-import { formatTurkishCurrency } from '../../utils/inputFormatters';
+import { formatTurkishCurrency, formatPhoneNumber } from '../../utils/inputFormatters';
 import { EditContractModal } from '../../components/modals/EditContractModal';
 import toast from 'react-hot-toast';
 
@@ -491,8 +491,29 @@ export function ContractDetailPage() {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">DEPOPAZAR</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Eşya Depolama Hizmetleri</p>
+              {contract.customer?.company?.logo_url && (
+                <img 
+                  src={`/api/uploads/${contract.customer.company.logo_url}`} 
+                  alt="Logo" 
+                  className="h-12 object-contain ml-auto mb-2"
+                />
+              )}
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {contract.customer?.company?.name || 'DEPOPAZAR'}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {contract.customer?.company?.address || 'Eşya Depolama Hizmetleri'}
+              </p>
+              {contract.customer?.company?.phone && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Tel: {formatPhoneNumber(contract.customer.company.phone)}
+                </p>
+              )}
+              {contract.customer?.company?.email && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Email: {contract.customer.company.email}
+                </p>
+              )}
             </div>
           </div>
         </div>

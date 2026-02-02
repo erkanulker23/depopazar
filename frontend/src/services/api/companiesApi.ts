@@ -16,6 +16,8 @@ export interface Company {
   tax_office?: string;
   primary_color?: string;
   secondary_color?: string;
+  contract_template_url?: string | null;
+  insurance_template_url?: string | null;
   package_type: string;
   max_warehouses: number;
   max_rooms: number;
@@ -41,6 +43,10 @@ export interface MailSettings {
   contract_expiring_template?: string;
   payment_reminder_template?: string;
   welcome_template?: string;
+  notify_admin_on_contract?: boolean;
+  notify_admin_on_payment?: boolean;
+  admin_contract_created_template?: string;
+  admin_payment_received_template?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -120,6 +126,50 @@ export const companiesApi = {
 
   deleteLogo: async (): Promise<Company> => {
     const response = await apiClient.delete('/companies/current/logo');
+    return response.data;
+  },
+
+  uploadContractTemplate: async (file: File): Promise<Company> => {
+    const form = new FormData();
+    form.append('file', file);
+    const baseURL = apiClient.defaults.baseURL;
+    const token = useAuthStore.getState().accessToken;
+    const res = await fetch(`${baseURL}/companies/current/contract-template`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw { response: { data: { message: err.message || 'Sözleşme şablonu yüklenemedi' } } };
+    }
+    return res.json();
+  },
+
+  deleteContractTemplate: async (): Promise<Company> => {
+    const response = await apiClient.delete('/companies/current/contract-template');
+    return response.data;
+  },
+
+  uploadInsuranceTemplate: async (file: File): Promise<Company> => {
+    const form = new FormData();
+    form.append('file', file);
+    const baseURL = apiClient.defaults.baseURL;
+    const token = useAuthStore.getState().accessToken;
+    const res = await fetch(`${baseURL}/companies/current/insurance-template`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw { response: { data: { message: err.message || 'Sigorta şablonu yüklenemedi' } } };
+    }
+    return res.json();
+  },
+
+  deleteInsuranceTemplate: async (): Promise<Company> => {
+    const response = await apiClient.delete('/companies/current/insurance-template');
     return response.data;
   },
 

@@ -22,6 +22,8 @@ import {
   ShieldCheckIcon,
   SunIcon,
   MoonIcon,
+  TagIcon,
+  DocumentPlusIcon,
 } from '@heroicons/react/24/outline';
 import { notificationsApi } from '../services/api/notificationsApi';
 import { useTheme } from '../contexts/ThemeContext';
@@ -32,6 +34,8 @@ const navigation = [
   { name: 'Ödeme Al', href: '/payments?collect=true', icon: BanknotesIcon, highlight: true },
   { name: 'Tüm Girişler', href: '/contracts', icon: DocumentTextIcon },
   { name: 'Nakliye İşler', href: '/transportation-jobs', icon: TruckIcon },
+  { name: 'Hizmetler', href: '/services', icon: TagIcon },
+  { name: 'Teklifler', href: '/proposals', icon: DocumentPlusIcon },
   { name: 'Kullanıcılar', href: '/staff', icon: UserGroupIcon },
   { name: 'Kullanıcı Yetkileri', href: '/permissions', icon: ShieldCheckIcon },
   { name: 'Depolar', href: '/warehouses', icon: BuildingOfficeIcon },
@@ -156,8 +160,8 @@ export function DashboardLayout() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#09090b]">
       <div className="flex h-screen">
-        {/* Mobile Menu Button */}
-        <button
+        {/* Mobile Menu Button - Moved to Header in mobile */}
+        {/* <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-[#121214] shadow-lg border border-gray-200 dark:border-[#27272a] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#18181b]"
         >
@@ -166,7 +170,7 @@ export function DashboardLayout() {
           ) : (
             <Bars3Icon className="h-6 w-6" />
           )}
-        </button>
+        </button> */}
 
         {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
@@ -188,7 +192,7 @@ export function DashboardLayout() {
         <div className={`fixed md:static inset-y-0 left-0 z-40 md:z-auto w-72 transform transition-transform duration-300 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         } md:flex md:flex-col`}>
-          <div className="flex flex-col flex-grow pt-6 bg-white dark:bg-[#09090b] border-r border-gray-200/50 dark:border-[#27272a] shadow-lg">
+          <div className="flex flex-col flex-grow pt-6 bg-white dark:bg-[#09090b] border-r border-gray-200/50 dark:border-[#27272a] shadow-lg h-full overflow-hidden">
             <div className="flex items-center flex-shrink-0 px-6 mb-8">
               <div className="flex items-center space-x-3">
                 {logoUrl ? (
@@ -210,7 +214,7 @@ export function DashboardLayout() {
                 </div>
               </div>
             </div>
-            <div className="mt-2 flex-grow flex flex-col px-3 overflow-y-auto">
+            <div className="mt-2 flex-grow flex flex-col px-3 overflow-y-auto min-h-0">
               <nav className="flex-1 space-y-1">
                 {navigation
                   .filter((item) => {
@@ -287,7 +291,22 @@ export function DashboardLayout() {
         <div className="flex flex-col flex-1 overflow-hidden md:ml-0">
           {/* Header with Notifications */}
           <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md border-b border-gray-200 dark:border-[#27272a] shadow-sm">
-            <div className="flex items-center justify-end px-4 sm:px-6 md:px-8 h-14 space-x-3">
+            <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 h-14">
+              {/* Mobile Menu Toggle & Company Name */}
+              <div className="flex items-center md:hidden gap-3">
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#18181b]"
+                >
+                  <Bars3Icon className="h-6 w-6" />
+                </button>
+                <span className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+                  {projectName || 'DepoPazar'}
+                </span>
+              </div>
+
+              {/* Right Side Icons */}
+              <div className="flex items-center space-x-3 ml-auto">
               <button
                 onClick={toggleTheme}
                 className="p-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-[#121214] rounded-lg transition-colors"
@@ -395,7 +414,7 @@ export function DashboardLayout() {
                     </div>
                   </>
                 )}
-              </div>
+            </div>
             </div>
           </header>
           <main className="flex-1 relative overflow-y-auto focus:outline-none">

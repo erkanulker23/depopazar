@@ -32,6 +32,11 @@ import {
   saveLogo,
   removeLogoFile,
 } from './logo-upload.helper';
+import {
+  validatePdfFile,
+  savePdf,
+  removePdfFile,
+} from './pdf-upload.helper';
 
 @ApiTags('Companies')
 @ApiBearerAuth()
@@ -145,6 +150,88 @@ export class CompaniesController {
     const company = await this.companiesService.findOne(companyId);
     await removeLogoFile(company.logo_url);
     return this.companiesService.clearLogo(companyId);
+  }
+
+  @Post('current/contract-template')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @ApiOperation({ summary: 'Upload contract template PDF' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  async uploadContractTemplate(
+    @CurrentUser() user: User,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const companyId = await this.companiesService.getCompanyIdForUser(user);
+    if (!companyId) {
+      throw new BadRequestException('User has no company');
+    }
+    try {
+      validatePdfFile(file);
+    } catch (e: any) {
+      throw new BadRequestException(e.message);
+    }
+    const company = await this.companiesService.findOne(companyId);
+    await removePdfFile(company.contract_template_url);
+    const path = await savePdf(companyId, file, 'contract');
+    return this.companiesService.updateContractTemplate(companyId, path);
+  }
+
+  @Delete('current/contract-template')
+  @ApiOperation({ summary: 'Remove contract template PDF' })
+  async deleteContractTemplate(@CurrentUser() user: User) {
+    const companyId = await this.companiesService.getCompanyIdForUser(user);
+    if (!companyId) {
+      throw new BadRequestException('User has no company');
+    }
+    const company = await this.companiesService.findOne(companyId);
+    await removePdfFile(company.contract_template_url);
+    return this.companiesService.clearContractTemplate(companyId);
+  }
+
+  @Post('current/insurance-template')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @ApiOperation({ summary: 'Upload insurance template PDF' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  async uploadInsuranceTemplate(
+    @CurrentUser() user: User,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const companyId = await this.companiesService.getCompanyIdForUser(user);
+    if (!companyId) {
+      throw new BadRequestException('User has no company');
+    }
+    try {
+      validatePdfFile(file);
+    } catch (e: any) {
+      throw new BadRequestException(e.message);
+    }
+    const company = await this.companiesService.findOne(companyId);
+    await removePdfFile(company.insurance_template_url);
+    const path = await savePdf(companyId, file, 'insurance');
+    return this.companiesService.updateInsuranceTemplate(companyId, path);
+  }
+
+  @Delete('current/insurance-template')
+  @ApiOperation({ summary: 'Remove insurance template PDF' })
+  async deleteInsuranceTemplate(@CurrentUser() user: User) {
+    const companyId = await this.companiesService.getCompanyIdForUser(user);
+    if (!companyId) {
+      throw new BadRequestException('User has no company');
+    }
+    const company = await this.companiesService.findOne(companyId);
+    await removePdfFile(company.insurance_template_url);
+    return this.companiesService.clearInsuranceTemplate(companyId);
   }
 
   @Get('current/mail-settings')

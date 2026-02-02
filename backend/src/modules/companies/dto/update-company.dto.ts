@@ -54,4 +54,14 @@ export class UpdateCompanyDto {
   @IsString()
   @MaxLength(255)
   project_name?: string;
+
+  @ApiPropertyOptional({ description: 'Sözleşme PDF şablonu URL' })
+  @IsOptional()
+  @IsString()
+  contract_template_url?: string;
+
+  @ApiPropertyOptional({ description: 'Sigorta PDF şablonu URL' })
+  @IsOptional()
+  @IsString()
+  insurance_template_url?: string;
 }

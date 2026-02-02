@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { apiClient } from '../../services/api/apiClient';
 import { companiesApi, Company } from '../../services/api/companiesApi';
 import { useAuthStore } from '../../stores/authStore';
@@ -40,6 +40,16 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
         .finally(() => setCompaniesLoading(false));
     }
   }, [isOpen, isSuperAdmin]);
+
+  const generatePassword = () => {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let retVal = "";
+    for (let i = 0, n = charset.length; i < length; ++i) {
+      retVal += charset.charAt(Math.floor(Math.random() * n));
+    }
+    setFormData({ ...formData, password: retVal });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,13 +220,24 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Şifre *
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={generatePassword}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1 text-sm whitespace-nowrap"
+                    title="Otomatik Şifre Oluştur"
+                  >
+                    <ArrowPathIcon className="h-4 w-4" />
+                    Oluştur
+                  </button>
+                </div>
               </div>
 
               {isSuperAdmin && (

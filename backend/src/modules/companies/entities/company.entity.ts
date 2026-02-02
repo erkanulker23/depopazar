@@ -19,6 +19,12 @@ export class Company extends BaseEntity {
   @Column({ type: 'varchar', length: 512, nullable: true })
   logo_url: string | null;
 
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  contract_template_url: string | null;
+
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  insurance_template_url: string | null;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   primary_color: string | null;
 

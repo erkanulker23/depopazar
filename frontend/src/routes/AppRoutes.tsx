@@ -23,6 +23,9 @@ import { CustomerDashboardPage } from '../pages/customer/CustomerDashboardPage';
 import { CustomerContractsPage } from '../pages/customer/CustomerContractsPage';
 import { CustomerPaymentsPage } from '../pages/customer/CustomerPaymentsPage';
 import { TransportationJobsPage } from '../pages/transportation-jobs/TransportationJobsPage';
+import { ServicesPage } from '../pages/services/ServicesPage';
+import { ProposalsPage } from '../pages/proposals/ProposalsPage';
+import { CreateProposalPage } from '../pages/proposals/CreateProposalPage';
 
 // Role-based route wrapper
 function ProtectedRoute({ children, allowedRoles }: { children: JSX.Element; allowedRoles: string[] }) {
@@ -99,6 +102,9 @@ export function AppRoutes() {
         <Route path="staff" element={<StaffPage />} />
         <Route path="permissions" element={<PermissionsPage />} />
         <Route path="transportation-jobs" element={<TransportationJobsPage />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="proposals" element={<ProposalsPage />} />
+        <Route path="proposals/new" element={<CreateProposalPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reports/bank-accounts" element={<BankAccountPaymentsPage />} />
         <Route path="settings" element={<SettingsPage />} />

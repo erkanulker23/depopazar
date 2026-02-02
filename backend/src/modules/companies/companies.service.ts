@@ -78,4 +78,24 @@ export class CompaniesService {
     await this.companiesRepository.update(companyId, { logo_url: null });
     return this.findOne(companyId);
   }
+
+  async updateContractTemplate(companyId: string, relativePath: string): Promise<Company> {
+    await this.companiesRepository.update(companyId, { contract_template_url: relativePath });
+    return this.findOne(companyId);
+  }
+
+  async clearContractTemplate(companyId: string): Promise<Company> {
+    await this.companiesRepository.update(companyId, { contract_template_url: null });
+    return this.findOne(companyId);
+  }
+
+  async updateInsuranceTemplate(companyId: string, relativePath: string): Promise<Company> {
+    await this.companiesRepository.update(companyId, { insurance_template_url: relativePath });
+    return this.findOne(companyId);
+  }
+
+  async clearInsuranceTemplate(companyId: string): Promise<Company> {
+    await this.companiesRepository.update(companyId, { insurance_template_url: null });
+    return this.findOne(companyId);
+  }
 }

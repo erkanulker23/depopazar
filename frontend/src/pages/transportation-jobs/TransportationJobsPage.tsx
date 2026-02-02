@@ -20,8 +20,11 @@ import {
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
 import toast from 'react-hot-toast';
 
+import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
+
 interface TransportationJobFormData {
   customer_id: string;
+  job_type: string;
   pickup_address: string;
   pickup_floor_status: string;
   pickup_elevator_status: string;
@@ -56,9 +59,11 @@ export function TransportationJobsPage() {
   const [staff, setStaff] = useState<any[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<TransportationJob | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
+    const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [formData, setFormData] = useState<TransportationJobFormData>({
     customer_id: '',
+    job_type: '',
     pickup_address: '',
     pickup_floor_status: '',
     pickup_elevator_status: '',
@@ -164,6 +169,7 @@ export function TransportationJobsPage() {
         (job.delivery_province ? `${job.delivery_province}${job.delivery_district ? ` / ${job.delivery_district}` : ''}${job.delivery_neighborhood ? ` / ${job.delivery_neighborhood}` : ''}`.trim() : '');
       setFormData({
         customer_id: job.customer_id,
+        job_type: job.job_type || '',
         pickup_address: pickupAddress,
         pickup_floor_status: job.pickup_floor_status || '',
         pickup_elevator_status: job.pickup_elevator_status || '',
@@ -188,6 +194,7 @@ export function TransportationJobsPage() {
       setEditingJob(null);
       setFormData({
         customer_id: '',
+        job_type: '',
         pickup_address: '',
         pickup_floor_status: '',
         pickup_elevator_status: '',
@@ -764,18 +771,47 @@ export function TransportationJobsPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Müşteri <span className="text-red-500">*</span>
                     </label>
+                    <div className="flex gap-2">
+                      <select
+                        required
+                        value={formData.customer_id}
+                        onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">Müşteri seçin</option>
+                        {customers.map((customer) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.first_name} {customer.last_name} - {customer.email}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddCustomerModal(true)}
+                        className="px-3 py-2 bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 rounded-md hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
+                        title="Yeni Müşteri Ekle"
+                      >
+                        <PlusIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hizmet Seçimi */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Hizmet Türü <span className="text-red-500">*</span>
+                    </label>
                     <select
                       required
-                      value={formData.customer_id}
-                      onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
+                      value={formData.job_type}
+                      onChange={(e) => setFormData({ ...formData, job_type: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                     >
-                      <option value="">Müşteri seçin</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.first_name} {customer.last_name} - {customer.email}
-                        </option>
-                      ))}
+                      <option value="">Hizmet seçin</option>
+                      <option value="Evden Eve Nakliyat">Evden Eve Nakliyat</option>
+                      <option value="Şehirlerarası Nakliyat">Şehirlerarası Nakliyat</option>
+                      <option value="Ofis Taşımacılığı">Ofis Taşımacılığı</option>
+                      <option value="Uluslararası Nakliyat">Uluslararası Nakliyat</option>
                     </select>
                   </div>
 
@@ -898,28 +934,46 @@ export function TransportationJobsPage() {
                     <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-4">Diğer Bilgiler</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Personel <span className="text-gray-500">(Çoklu seçim)</span>
                         </label>
-                        <select
-                          multiple
-                          value={formData.staff_ids}
-                          onChange={(e) => {
-                            const selectedIds = Array.from(e.target.selectedOptions, (option) => option.value);
-                            setFormData({ ...formData, staff_ids: selectedIds });
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white min-h-[100px]"
-                          size={5}
-                        >
-                          {staff.map((staffMember) => (
-                            <option key={staffMember.id} value={staffMember.id}>
-                              {staffMember.first_name} {staffMember.last_name} ({staffMember.email})
-                            </option>
-                          ))}
-                        </select>
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          Çoklu seçim için Ctrl (Windows) veya Cmd (Mac) tuşuna basılı tutun
-                        </p>
+                        <div className="border border-gray-300 dark:border-gray-600 rounded-md max-h-[200px] overflow-y-auto p-2 bg-white dark:bg-gray-700">
+                          {staff.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 p-2">Personel bulunamadı.</p>
+                          ) : (
+                            <div className="space-y-1">
+                              {staff.map((staffMember) => (
+                                <label
+                                  key={staffMember.id}
+                                  className={`flex items-center p-2 rounded cursor-pointer transition-colors ${
+                                    formData.staff_ids.includes(staffMember.id)
+                                      ? 'bg-primary-50 dark:bg-primary-900/20'
+                                      : 'hover:bg-gray-50 dark:hover:bg-gray-600'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.staff_ids.includes(staffMember.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setFormData({ ...formData, staff_ids: [...formData.staff_ids, staffMember.id] });
+                                      } else {
+                                        setFormData({ ...formData, staff_ids: formData.staff_ids.filter((id) => id !== staffMember.id) });
+                                      }
+                                    }}
+                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                  />
+                                  <div className="ml-3">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                      {staffMember.first_name} {staffMember.last_name}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{staffMember.email}</p>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İş Tarihi</label>
@@ -1099,6 +1153,18 @@ export function TransportationJobsPage() {
           </div>
         </div>
       )}
+      <AddCustomerModal
+        isOpen={showAddCustomerModal}
+        onClose={() => setShowAddCustomerModal(false)}
+        onSuccess={async (customer) => {
+          setShowAddCustomerModal(false);
+          if (customer) {
+            await fetchCustomers();
+            setFormData((prev) => ({ ...prev, customer_id: customer.id }));
+            toast.success('Müşteri başarıyla eklendi ve seçildi');
+          }
+        }}
+      />
     </div>
   );
 }

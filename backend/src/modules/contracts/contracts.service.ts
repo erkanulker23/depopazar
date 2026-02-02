@@ -158,6 +158,38 @@ export class ContractsService {
       console.error('[ContractsService] Error in notification creation:', error?.message || error);
     }
 
+    // Admin Bildirimi Gönder
+    try {
+      if (contractWithRelations.customer?.company_id) {
+        const companyId = contractWithRelations.customer.company_id;
+        const mailSettings = await this.mailSettingsService.findByCompanyId(companyId);
+        
+        if (mailSettings && mailSettings.is_active && mailSettings.notify_admin_on_contract) {
+          const company = await this.companiesService.findOne(companyId);
+          if (company.email) {
+            const template = mailSettings.admin_contract_created_template || this.mailService.getDefaultAdminContractCreatedTemplate();
+            const variables = {
+              customer_name: `${contractWithRelations.customer.first_name} ${contractWithRelations.customer.last_name}`,
+              contract_number: contractWithRelations.contract_number,
+              room_number: contractWithRelations.room?.room_number || '-',
+              monthly_price: contractWithRelations.monthly_price,
+              date: new Date().toLocaleDateString('tr-TR'),
+            };
+            const html = this.mailService.renderTemplate(template, variables);
+            
+            await this.mailService.sendMail(mailSettings, {
+              to: company.email,
+              subject: `Yeni Sözleşme: ${contractWithRelations.contract_number}`,
+              html: html,
+            });
+            console.log(`[ContractsService] Admin notification sent to ${company.email}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[ContractsService] Error sending admin notification:', error);
+    }
+
     // Ödeme kontrolü ve bildirim gönderme
     await this.checkAndSendPaymentNotifications(contractWithRelations);
 
@@ -337,6 +369,7 @@ export class ContractsService {
       .createQueryBuilder('contract')
       .leftJoinAndSelect('contract.customer', 'customer')
       .leftJoinAndSelect('customer.user', 'customer_user')
+      .leftJoinAndSelect('customer.company', 'company')
       .leftJoinAndSelect('contract.room', 'room')
       .leftJoinAndSelect('room.warehouse', 'warehouse')
       .leftJoinAndSelect('contract.payments', 'payments')

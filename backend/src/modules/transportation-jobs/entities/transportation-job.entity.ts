@@ -74,6 +74,10 @@ export class TransportationJob extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   contract_pdf_url: string | null; // PDF Sözleşme URL'i
 
+  // İş Türü (Evden Eve, Ofis, vb.)
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  job_type: string | null;
+
   // Not alanı
   @Column({ type: 'text', nullable: true })
   notes: string | null;

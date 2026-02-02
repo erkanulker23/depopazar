@@ -64,6 +64,26 @@ export class UpdateMailSettingsDto {
   @IsString()
   welcome_template?: string;
 
+  @ApiPropertyOptional({ description: 'Notify admin on contract creation' })
+  @IsOptional()
+  @IsBoolean()
+  notify_admin_on_contract?: boolean;
+
+  @ApiPropertyOptional({ description: 'Notify admin on payment received' })
+  @IsOptional()
+  @IsBoolean()
+  notify_admin_on_payment?: boolean;
+
+  @ApiPropertyOptional({ description: 'Admin contract created template' })
+  @IsOptional()
+  @IsString()
+  admin_contract_created_template?: string;
+
+  @ApiPropertyOptional({ description: 'Admin payment received template' })
+  @IsOptional()
+  @IsString()
+  admin_payment_received_template?: string;
+
   @ApiPropertyOptional({ description: 'Is mail settings active' })
   @IsOptional()
   @IsBoolean()

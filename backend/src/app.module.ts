@@ -16,6 +16,9 @@ import { ItemsModule } from './modules/items/items.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TransportationJobsModule } from './modules/transportation-jobs/transportation-jobs.module';
+import { ServicesModule } from './modules/services/services.module';
+import { ProposalsModule } from './modules/proposals/proposals.module';
+import { BackupModule } from './modules/backup/backup.module';
 
 @Module({
   imports: [
@@ -49,6 +52,9 @@ import { TransportationJobsModule } from './modules/transportation-jobs/transpor
     NotificationsModule,
     ReportsModule,
     TransportationJobsModule,
+    ServicesModule,
+    ProposalsModule,
+    BackupModule,
   ],
   providers: [
     {
