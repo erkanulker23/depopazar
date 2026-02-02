@@ -27,7 +27,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [customerDebtInfo, setCustomerDebtInfo] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
-  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [selectedPayments, setSelectedPayments] = useState<any[]>([]);
   const [paytrSettings, setPaytrSettings] = useState<any>(null);
   const [paytrToken, setPaytrToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +55,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
       if (initialCustomer && initialPayments && initialPayments.length > 0) {
         setSelectedCustomer(initialCustomer);
         setPayments(initialPayments);
+        setSelectedPayments(initialPayments);
         // Load customer debt info
         customersApi.getDebtInfo(initialCustomer.id).then((customerData) => {
           if (isMounted) {
@@ -81,7 +82,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
       setStep('customer');
       setSelectedCustomer(null);
       setCustomerDebtInfo(null);
-      setSelectedPayment(null);
+      setSelectedPayments([]);
       setPaytrToken(null);
       setError(null);
       setSearchTerm('');
@@ -235,7 +236,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
   };
 
   const handlePaymentSelect = (payment: any) => {
-    setSelectedPayment(payment);
+    setSelectedPayments([payment]);
     setError(null);
     setStep('paymentMethod');
   };
@@ -259,12 +260,17 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
   };
 
   const handleCashPayment = async () => {
-    if (!selectedPayment || loading) return;
+    if (selectedPayments.length === 0 || loading) return;
     
     setLoading(true);
     setError(null);
     try {
-      await paymentsApi.markAsPaid(selectedPayment.id, 'cash');
+      if (selectedPayments.length === 1) {
+        await paymentsApi.markAsPaid(selectedPayments[0].id, 'cash');
+      } else {
+        await paymentsApi.markManyAsPaid(selectedPayments.map(p => p.id), 'cash');
+      }
+      
       if (onSuccess) {
         onSuccess();
       }
@@ -278,7 +284,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
 
   const handleBankTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPayment || loading) return;
+    if (selectedPayments.length === 0 || loading) return;
 
     if (!selectedBankAccountId) {
       setError('Lütfen bir banka hesabı seçin');
@@ -288,13 +294,25 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
     setLoading(true);
     setError(null);
     try {
-      await paymentsApi.markAsPaid(
-        selectedPayment.id,
-        'bank_transfer',
-        bankTransferData.transactionId || undefined,
-        bankTransferData.notes || undefined,
-        selectedBankAccountId
-      );
+      const paymentIds = selectedPayments.map(p => p.id);
+      if (paymentIds.length === 1) {
+        await paymentsApi.markAsPaid(
+          paymentIds[0],
+          'bank_transfer',
+          bankTransferData.transactionId || undefined,
+          bankTransferData.notes || undefined,
+          selectedBankAccountId
+        );
+      } else {
+        await paymentsApi.markManyAsPaid(
+          paymentIds,
+          'bank_transfer',
+          bankTransferData.transactionId || undefined,
+          bankTransferData.notes || undefined,
+          selectedBankAccountId
+        );
+      }
+      
       if (onSuccess) {
         onSuccess();
       }
@@ -307,7 +325,13 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
   };
 
   const handleCreditCardPayment = async () => {
-    if (!selectedPayment) return;
+    if (selectedPayments.length === 0) return;
+
+    if (selectedPayments.length > 1) {
+      setError('Kredi kartı ile toplu ödeme şu an desteklenmemektedir. Lütfen ödemeleri tek tek yapın.');
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -318,7 +342,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
         return;
       }
 
-      const result = await paymentsApi.initiatePaytr(selectedPayment.id, selectedCustomer.id);
+      const result = await paymentsApi.initiatePaytr(selectedPayments[0].id, selectedCustomer.id);
       setPaytrToken(result.token);
       setStep('card');
     } catch (error: any) {
@@ -590,13 +614,13 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
             )}
 
             {/* Step 3: Payment Method Selection */}
-            {step === 'paymentMethod' && selectedPayment && (
+            {step === 'paymentMethod' && selectedPayments.length > 0 && (
               <div>
                 <div className="mb-4 flex items-center space-x-2">
                   <button
                     onClick={() => {
                       setStep('payment');
-                      setSelectedPayment(null);
+                      setSelectedPayments([]);
                       setSelectedPaymentMethod(null);
                     }}
                     className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
@@ -606,10 +630,12 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
                 </div>
                 <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>Ödeme Tutarı:</strong> {formatTurkishCurrency(Number(selectedPayment?.amount))}
+                    <strong>Ödeme Tutarı:</strong> {formatTurkishCurrency(selectedPayments.reduce((sum, p) => sum + Number(p.amount), 0))}
                   </p>
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Ödeme No: {selectedPayment?.payment_number}
+                    {selectedPayments.length === 1 
+                      ? `Ödeme No: ${selectedPayments[0].payment_number}`
+                      : `${selectedPayments.length} adet ödeme seçildi`}
                   </p>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -640,13 +666,15 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
                   </button>
                   <button
                     onClick={() => handlePaymentMethodSelect('credit_card')}
-                    disabled={loading}
+                    disabled={loading || selectedPayments.length > 1}
                     className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors disabled:opacity-50 flex items-center space-x-3"
                   >
                     <CreditCardIcon className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                     <div className="text-left flex-1">
                       <p className="font-semibold text-gray-900 dark:text-white">Kredi Kartı</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">PayTR ile güvenli ödeme</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {selectedPayments.length > 1 ? 'Toplu ödemede kullanılamaz' : 'PayTR ile güvenli ödeme'}
+                      </p>
                     </div>
                   </button>
                 </div>
@@ -654,7 +682,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
             )}
 
             {/* Step 4: Bank Transfer Form */}
-            {step === 'bankTransfer' && selectedPayment && (
+            {step === 'bankTransfer' && selectedPayments.length > 0 && (
               <div>
                 <div className="mb-4 flex items-center space-x-2">
                   <button
@@ -672,7 +700,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
                 </div>
                 <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>Ödeme Tutarı:</strong> {formatTurkishCurrency(Number(selectedPayment?.amount))}
+                    <strong>Ödeme Tutarı:</strong> {formatTurkishCurrency(selectedPayments.reduce((sum, p) => sum + Number(p.amount), 0))}
                   </p>
                 </div>
                 <form onSubmit={handleBankTransferSubmit} className="space-y-4">
@@ -756,7 +784,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
             )}
 
             {/* Step 5: PayTR Card Payment */}
-            {step === 'card' && paytrToken && (
+            {step === 'card' && paytrToken && selectedPayments.length > 0 && (
               <div>
                 <div className="mb-4 flex items-center space-x-2">
                   <button
@@ -771,7 +799,7 @@ export function CollectPaymentModal({ isOpen, onClose, onSuccess, initialCustome
                 </div>
                 <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>Ödeme Tutarı:</strong> {formatTurkishCurrency(Number(selectedPayment?.amount))}
+                    <strong>Ödeme Tutarı:</strong> {formatTurkishCurrency(Number(selectedPayments[0].amount))}
                   </p>
                 </div>
                 <div className="space-y-4">

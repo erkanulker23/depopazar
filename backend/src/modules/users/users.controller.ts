@@ -20,7 +20,7 @@ export class UsersController {
   ) {}
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING, UserRole.COMPANY_STAFF)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Get all users' })
   async findAll(@CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);

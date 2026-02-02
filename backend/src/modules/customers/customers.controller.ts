@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CustomersService } from './customers.service';
 import { CompaniesService } from '../companies/companies.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -10,7 +12,7 @@ import { parsePagination } from '../../common/utils/pagination';
 
 @ApiTags('Customers')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('customers')
 export class CustomersController {
   constructor(
@@ -19,6 +21,7 @@ export class CustomersController {
   ) {}
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Create a new customer' })
   async create(@Body() createCustomerDto: CreateCustomerDto, @CurrentUser() user: any) {
     try {
@@ -35,6 +38,7 @@ export class CustomersController {
   }
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get customers (paginated)' })
   async findAll(
     @CurrentUser() user: any,
@@ -50,6 +54,7 @@ export class CustomersController {
   }
 
   @Post('bulk-delete')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Delete multiple customers' })
   async bulkDelete(@Body() body: { ids: string[] }, @CurrentUser() user: any) {
     let companyId: string | null = null;
@@ -93,6 +98,7 @@ export class CustomersController {
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get customer by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const customer = await this.customersService.findOne(id);
@@ -106,6 +112,7 @@ export class CustomersController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Update customer' })
   async update(@Param('id') id: string, @Body() updateCustomerDto: any, @CurrentUser() user: any) {
     const customer = await this.customersService.findOne(id);
@@ -120,6 +127,7 @@ export class CustomersController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Delete customer' })
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     const customer = await this.customersService.findOne(id);

@@ -33,6 +33,7 @@ export function CustomersPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
+  const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentModalCustomer, setPaymentModalCustomer] = useState<any>(null);
   const [paymentModalPayments, setPaymentModalPayments] = useState<any[]>([]);
@@ -506,8 +507,10 @@ export function CustomersPage() {
                             onClick={() => {
                               if (isExpanded) {
                                 setExpandedCustomer(null);
+                                setSelectedMonths(new Set());
                               } else {
                                 setExpandedCustomer(customer.id);
+                                setSelectedMonths(new Set());
                               }
                             }}
                           >
@@ -605,6 +608,45 @@ export function CustomersPage() {
                           <tr>
                             <td colSpan={7} className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
                               <div className="space-y-4">
+                                {/* Toplu Ödeme Butonu */}
+                                {selectedMonths.size > 0 && (
+                                  <div className="flex items-center justify-between p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-semibold text-primary-900 dark:text-primary-100">
+                                        {selectedMonths.size} Ay Seçildi
+                                      </span>
+                                      <span className="text-xs text-primary-700 dark:text-primary-300">
+                                        Toplam: {formatTurkishCurrency(
+                                          Array.from(selectedMonths).reduce((total, monthKey) => {
+                                            return total + (paymentsByMonth[monthKey]?.unpaid.reduce((s: number, p: any) => s + Number(p.amount), 0) || 0);
+                                          }, 0)
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => setSelectedMonths(new Set())}
+                                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                                      >
+                                        Seçimi Temizle
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          const allSelectedPayments = Array.from(selectedMonths).flatMap(
+                                            (monthKey) => paymentsByMonth[monthKey].unpaid
+                                          );
+                                          setPaymentModalCustomer(customer);
+                                          setPaymentModalPayments(allSelectedPayments);
+                                          setIsPaymentModalOpen(true);
+                                        }}
+                                        className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 shadow-sm"
+                                      >
+                                        Seçilenleri Öde
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
                                 {/* Ödenmiş Aylar */}
                                 {Object.keys(paymentsByMonth).length > 0 && (
                                   <div>
@@ -619,43 +661,90 @@ export function CustomersPage() {
                                           return b.month - a.month;
                                         })
                                         .map((monthData: any) => {
+                                          const monthKey = `${monthData.year}-${String(monthData.month).padStart(2, '0')}`;
                                           const hasUnpaid = monthData.unpaid.length > 0;
                                           const hasPaid = monthData.paid.length > 0;
+                                          const isSelected = selectedMonths.has(monthKey);
                                           
+                                          // Geçmiş aylarda ödenmemiş var mı kontrolü
+                                          const hasEarlierUnpaid = Object.values(paymentsByMonth).some((m: any) => {
+                                            if (m.year < monthData.year) return m.unpaid.length > 0;
+                                            if (m.year === monthData.year && m.month < monthData.month) return m.unpaid.length > 0;
+                                            return false;
+                                          });
+
                                           const handleMonthClick = () => {
-                                            if (hasUnpaid && monthData.unpaid.length > 0) {
-                                              setPaymentModalCustomer(customer);
-                                              setPaymentModalPayments(monthData.unpaid);
-                                              setIsPaymentModalOpen(true);
+                                            if (!hasUnpaid) return;
+
+                                            if (hasEarlierUnpaid && !isSelected) {
+                                              toast.error(`${monthData.monthName} ${monthData.year} ödemesini yapabilmek için önce geçmiş dönem borçlarını kapatmalısınız.`);
+                                              return;
                                             }
+
+                                            const newSelected = new Set(selectedMonths);
+                                            if (isSelected) {
+                                              // Eğer bu ayı bırakıyorsa, kendisinden sonraki seçili ayları da bırakmalı (ardışık ödeme kuralı)
+                                              Object.keys(paymentsByMonth).forEach(key => {
+                                                const [y, m] = key.split('-').map(Number);
+                                                if (y > monthData.year || (y === monthData.year && m >= monthData.month)) {
+                                                  newSelected.delete(key);
+                                                }
+                                              });
+                                            } else {
+                                              newSelected.add(monthKey);
+                                            }
+                                            setSelectedMonths(newSelected);
                                           };
 
-                                          const baseClassName = hasUnpaid
-                                            ? 'p-3 rounded-lg border bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors'
-                                            : hasPaid
-                                            ? 'p-3 rounded-lg border bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                                            : 'p-3 rounded-lg border bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600';
+                                          let baseClassName = 'p-3 rounded-lg border transition-all ';
+                                          if (isSelected) {
+                                            baseClassName += 'bg-primary-50 dark:bg-primary-900/40 border-primary-500 dark:border-primary-400 ring-2 ring-primary-500/20 cursor-pointer';
+                                          } else if (hasUnpaid) {
+                                            baseClassName += 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30';
+                                          } else if (hasPaid) {
+                                            baseClassName += 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+                                          } else {
+                                            baseClassName += 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600';
+                                          }
 
                                           return (
                                             <div
-                                              key={`${monthData.year}-${monthData.month}`}
+                                              key={monthKey}
                                               className={baseClassName}
                                               onClick={handleMonthClick}
                                               onKeyDown={(e) => {
-                                                if ((e.key === 'Enter' || e.key === ' ') && hasUnpaid && monthData.unpaid.length > 0) {
+                                                if ((e.key === 'Enter' || e.key === ' ') && hasUnpaid) {
                                                   e.preventDefault();
                                                   handleMonthClick();
                                                 }
                                               }}
-                                              role={hasUnpaid ? 'button' : undefined}
+                                              role={hasUnpaid ? 'checkbox' : undefined}
+                                              aria-checked={isSelected}
                                               tabIndex={hasUnpaid ? 0 : undefined}
-                                              title={hasUnpaid ? 'Ödeme almak için tıklayın' : undefined}
+                                              title={hasUnpaid ? (isSelected ? 'Seçimi kaldır' : 'Ödeme için seç') : undefined}
                                             >
                                               <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                  {monthData.monthName} {monthData.year}
-                                                </span>
+                                                <div className="flex items-center">
+                                                  {hasUnpaid && (
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={isSelected}
+                                                      readOnly
+                                                      className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 mr-2"
+                                                    />
+                                                  )}
+                                                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {monthData.monthName} {monthData.year}
+                                                  </span>
+                                                </div>
                                                 {(() => {
+                                                  if (isSelected) {
+                                                    return (
+                                                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
+                                                        Seçildi
+                                                      </span>
+                                                    );
+                                                  }
                                                   if (hasUnpaid) {
                                                     return (
                                                       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
@@ -685,7 +774,9 @@ export function CustomersPage() {
                                               {hasUnpaid && (
                                                 <div className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center justify-between">
                                                   <span>Ödenmemiş: {formatTurkishCurrency(monthData.unpaid.reduce((sum: number, p: any) => sum + Number(p.amount), 0))}</span>
-                                                  <span className="ml-2 text-xs text-red-700 dark:text-red-300 font-semibold">Ödeme Al →</span>
+                                                  {!isSelected && !hasEarlierUnpaid && (
+                                                    <span className="ml-2 text-[10px] text-red-700 dark:text-red-300 font-semibold border border-red-200 dark:border-red-800 px-1 rounded">Seç →</span>
+                                                  )}
                                                 </div>
                                               )}
                                             </div>

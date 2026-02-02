@@ -223,6 +223,18 @@ export class PaymentsService {
     }
   }
 
+  /**
+   * Birden fazla ödemeyi yapıldı olarak işaretler
+   */
+  async markManyAsPaid(ids: string[], paymentMethod?: string, transactionId?: string, notes?: string, bankAccountId?: string): Promise<Payment[]> {
+    const updatedPayments: Payment[] = [];
+    for (const id of ids) {
+      const updated = await this.markAsPaid(id, paymentMethod, transactionId, notes, bankAccountId);
+      updatedPayments.push(updated);
+    }
+    return updatedPayments;
+  }
+
   async remove(id: string): Promise<void> {
     await this.findOne(id);
     await this.paymentsRepository.softDelete(id);

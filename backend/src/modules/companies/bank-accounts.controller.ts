@@ -3,12 +3,14 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { BankAccountsService } from './bank-accounts.service';
 import { CompaniesService } from './companies.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 
 @ApiTags('Bank Accounts')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('bank-accounts')
 export class BankAccountsController {
   constructor(
@@ -17,6 +19,7 @@ export class BankAccountsController {
   ) {}
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Create a new bank account' })
   async create(@Body() createBankAccountDto: any, @CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -27,6 +30,7 @@ export class BankAccountsController {
   }
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get all bank accounts for company' })
   async findAll(@CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -37,6 +41,7 @@ export class BankAccountsController {
   }
 
   @Get('active')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get active bank accounts for company' })
   async findActive(@CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -47,6 +52,7 @@ export class BankAccountsController {
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get bank account by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -57,6 +63,7 @@ export class BankAccountsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Update bank account' })
   async update(@Param('id') id: string, @Body() updateBankAccountDto: any, @CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -67,6 +74,7 @@ export class BankAccountsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Delete bank account' })
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);

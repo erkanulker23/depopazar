@@ -26,6 +26,16 @@ export const paymentsApi = {
     });
     return response.data;
   },
+  markManyAsPaid: async (ids: string[], paymentMethod?: string, transactionId?: string, notes?: string, bankAccountId?: string) => {
+    const response = await apiClient.post('/payments/bulk/mark-as-paid', {
+      ids,
+      payment_method: paymentMethod,
+      transaction_id: transactionId,
+      notes: notes,
+      bank_account_id: bankAccountId,
+    });
+    return response.data;
+  },
   initiatePaytr: async (paymentId: string, customerId: string) => {
     const response = await apiClient.post('/payments/paytr/initiate', {
       payment_id: paymentId,

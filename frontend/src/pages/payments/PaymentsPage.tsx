@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
 import { CreditCardIcon, UsersIcon, MagnifyingGlassIcon, FunnelIcon, BanknotesIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -392,22 +392,50 @@ export function PaymentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <CreditCardIcon className="h-5 w-5 text-primary-500 mr-2" />
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {payment.payment_number}
-                        </span>
+                        {payment.contract_id ? (
+                          <Link 
+                            to={`/contracts/${payment.contract_id}`}
+                            className="text-sm font-medium text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
+                          >
+                            {payment.payment_number}
+                          </Link>
+                        ) : (
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {payment.payment_number}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      <div className="flex items-center">
-                        <UsersIcon className="h-4 w-4 mr-1 text-gray-400" />
-                        {payment.contract?.customer?.first_name} {payment.contract?.customer?.last_name}
-                      </div>
+                      {payment.contract?.customer?.id ? (
+                        <Link 
+                          to={`/customers/${payment.contract.customer.id}`}
+                          className="flex items-center hover:text-primary-600 transition-colors"
+                        >
+                          <UsersIcon className="h-4 w-4 mr-1 text-gray-400" />
+                          {payment.contract.customer.first_name} {payment.contract.customer.last_name}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center">
+                          <UsersIcon className="h-4 w-4 mr-1 text-gray-400" />
+                          {payment.contract?.customer?.first_name} {payment.contract?.customer?.last_name}
+                        </div>
+                      )}
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {payment.contract?.customer?.email}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {payment.contract?.contract_number || '-'}
+                      {payment.contract_id ? (
+                        <Link 
+                          to={`/contracts/${payment.contract_id}`}
+                          className="hover:text-primary-600 transition-colors"
+                        >
+                          {payment.contract?.contract_number || '-'}
+                        </Link>
+                      ) : (
+                        payment.contract?.contract_number || '-'
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {formatTurkishCurrency(Number(payment.amount))}

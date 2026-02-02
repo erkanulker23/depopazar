@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { PaytrService } from './paytr.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CompanyPaytrSettingsService } from '../companies/company-paytr-settings.service';
 import { CustomersService } from '../customers/customers.service';
@@ -13,7 +15,7 @@ import { Request } from 'express';
 
 @ApiTags('Payments')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('payments')
 export class PaymentsController {
   constructor(
@@ -26,6 +28,7 @@ export class PaymentsController {
   ) {}
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Create a new payment' })
   async create(@Body() createPaymentDto: any, @CurrentUser() user: any) {
     // Validate that the contract belongs to user's company
@@ -42,6 +45,7 @@ export class PaymentsController {
   }
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get all payments' })
   async findAll(@CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -52,6 +56,7 @@ export class PaymentsController {
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get payment by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const payment = await this.paymentsService.findOne(id);
@@ -75,6 +80,7 @@ export class PaymentsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Update payment' })
   async update(@Param('id') id: string, @Body() updatePaymentDto: any, @CurrentUser() user: any) {
     const payment = await this.paymentsService.findOne(id);
@@ -96,6 +102,7 @@ export class PaymentsController {
   }
 
   @Post(':id/mark-as-paid')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Mark payment as paid' })
   async markAsPaid(
     @Param('id') id: string,
@@ -125,7 +132,38 @@ export class PaymentsController {
     return this.paymentsService.markAsPaid(id, body.payment_method, body.transaction_id, body.notes, body.bank_account_id);
   }
 
+  @Post('bulk/mark-as-paid')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING)
+  @ApiOperation({ summary: 'Mark multiple payments as paid' })
+  async markManyAsPaid(
+    @Body() body: { ids: string[]; payment_method?: string; transaction_id?: string; notes?: string; bank_account_id?: string },
+    @CurrentUser() user: any,
+  ) {
+    if (!body.ids || body.ids.length === 0) {
+      throw new BadRequestException('No payment IDs provided');
+    }
+
+    const companyId = user.role !== UserRole.SUPER_ADMIN 
+      ? await this.companiesService.getCompanyIdForUser(user)
+      : null;
+
+    if (!companyId && user.role !== UserRole.SUPER_ADMIN) {
+      throw new BadRequestException('User has no company');
+    }
+
+    // Verify each payment belongs to user's company
+    for (const paymentId of body.ids) {
+      const payment = await this.paymentsService.findOne(paymentId);
+      if (user.role !== UserRole.SUPER_ADMIN && payment.contract?.customer?.company_id !== companyId) {
+        throw new ForbiddenException(`Ödeme ${paymentId} işaretlenemez - yetkiniz yok`);
+      }
+    }
+
+    return this.paymentsService.markManyAsPaid(body.ids, body.payment_method, body.transaction_id, body.notes, body.bank_account_id);
+  }
+
   @Post('paytr/initiate')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTING, UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Initiate PayTR payment' })
   async initiatePaytrPayment(
     @CurrentUser() user: any,
@@ -184,6 +222,7 @@ export class PaymentsController {
   }
 
   @Delete('bulk/delete')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Delete multiple payments' })
   async removeMany(@Body() body: { ids: string[] }, @CurrentUser() user: any) {
     if (!body.ids || body.ids.length === 0) {
@@ -211,6 +250,7 @@ export class PaymentsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Delete a payment' })
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     const payment = await this.paymentsService.findOne(id);

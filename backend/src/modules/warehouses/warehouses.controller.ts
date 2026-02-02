@@ -3,13 +3,15 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WarehousesService } from './warehouses.service';
 import { CompaniesService } from '../companies/companies.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 
 @ApiTags('Warehouses')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('warehouses')
 export class WarehousesController {
   constructor(
@@ -18,6 +20,7 @@ export class WarehousesController {
   ) {}
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Create a new warehouse' })
   async create(@Body() createWarehouseDto: CreateWarehouseDto, @CurrentUser() user: any) {
     try {
@@ -34,6 +37,7 @@ export class WarehousesController {
   }
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get all warehouses' })
   async findAll(@CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -44,6 +48,7 @@ export class WarehousesController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Delete warehouse' })
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     const warehouse = await this.warehousesService.findOne(id);
@@ -67,6 +72,7 @@ export class WarehousesController {
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get warehouse by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const warehouse = await this.warehousesService.findOne(id);
@@ -80,6 +86,7 @@ export class WarehousesController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Update warehouse' })
   async update(@Param('id') id: string, @Body() updateWarehouseDto: any, @CurrentUser() user: any) {
     const warehouse = await this.warehousesService.findOne(id);

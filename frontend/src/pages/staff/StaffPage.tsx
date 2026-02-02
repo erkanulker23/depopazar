@@ -3,6 +3,7 @@ import { apiClient } from '../../services/api/apiClient';
 import { UserIcon, PlusIcon, TrashIcon, XMarkIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { AddStaffModal } from '../../components/modals/AddStaffModal';
 import { EditStaffModal } from '../../components/modals/EditStaffModal';
+import { useAuthStore } from '../../stores/authStore';
 
 export function StaffPage() {
   const user = useAuthStore((s) => s.user);
@@ -22,7 +23,7 @@ export function StaffPage() {
       const response = await apiClient.get('/users');
       // Sadece sistem kullanıcılarını göster (müşteriler hariç)
       const staffUsers = (response.data || []).filter(
-        (user: any) => user.role !== 'customer'
+        (u: any) => u.role !== 'customer'
       );
       setStaff(staffUsers);
     } catch (error) {

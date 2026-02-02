@@ -17,13 +17,15 @@ import { CompaniesService } from '../companies/companies.service';
 import { CustomersService } from '../customers/customers.service';
 import { RoomsService } from '../rooms/rooms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { parsePagination } from '../../common/utils/pagination';
 
 @ApiTags('Contracts')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('contracts')
 export class ContractsController {
   constructor(
@@ -43,6 +45,7 @@ export class ContractsController {
   }
 
   @Post()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Create a new contract' })
   async create(@Body() createContractDto: any, @CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -67,6 +70,7 @@ export class ContractsController {
   }
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get contracts (paginated, filterable)' })
   async findAll(
     @CurrentUser() user: any,
@@ -89,6 +93,7 @@ export class ContractsController {
   }
 
   @Get('customers-with-multiple-contracts')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Find customers with multiple active contracts' })
   async findCustomersWithMultipleActiveContracts(@CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
@@ -99,6 +104,7 @@ export class ContractsController {
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get contract by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     await this.ensureContractAccess(id, user);
@@ -106,6 +112,7 @@ export class ContractsController {
   }
 
   @Get(':id/total-debt')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Get total debt for contract' })
   async getTotalDebt(@Param('id') id: string, @CurrentUser() user: any) {
     await this.ensureContractAccess(id, user);
@@ -119,6 +126,7 @@ export class ContractsController {
   }
 
   @Get(':id/payment-consistency')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY, UserRole.ACCOUNTING)
   @ApiOperation({ summary: 'Check payment and monthly price consistency for contract' })
   async checkPaymentConsistency(@Param('id') id: string, @CurrentUser() user: any) {
     await this.ensureContractAccess(id, user);
@@ -126,6 +134,7 @@ export class ContractsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Update contract' })
   async update(@Param('id') id: string, @Body() updateContractDto: any, @CurrentUser() user: any) {
     await this.ensureContractAccess(id, user);
@@ -133,6 +142,7 @@ export class ContractsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Delete contract' })
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     await this.ensureContractAccess(id, user);
@@ -141,6 +151,7 @@ export class ContractsController {
   }
 
   @Post(':id/terminate')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Terminate contract (end storage)' })
   async terminate(@Param('id') id: string, @CurrentUser() user: any) {
     await this.ensureContractAccess(id, user);
@@ -148,6 +159,7 @@ export class ContractsController {
   }
 
   @Post('bulk-delete')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Delete multiple contracts' })
   async bulkDelete(@Body() body: { ids: string[] }, @CurrentUser() user: any) {
     if (user.role !== UserRole.SUPER_ADMIN) {
@@ -177,6 +189,7 @@ export class ContractsController {
   }
 
   @Post('bulk-terminate')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Terminate multiple contracts (end storage)' })
   async bulkTerminate(@Body() body: { ids: string[] }, @CurrentUser() user: any) {
     if (user.role !== UserRole.SUPER_ADMIN) {

@@ -19,6 +19,7 @@ export function ContractDetailPage() {
   const [paymentType, setPaymentType] = useState<'monthly' | 'intermediate' | null>(null);
   const [, setSelectedMonth] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,42 +173,74 @@ export function ContractDetailPage() {
     window.print();
   };
 
-  const handleCheckboxChange = async (monthPrice: any, checked: boolean) => {
+  const handleCheckboxChange = (monthPrice: any, checked: boolean) => {
     if (!contract || !id) return;
 
-    if (checked) {
-      // Ödeme yöntemi seçimi için modal göster
-      setPendingMonthPrice(monthPrice);
-      setShowPaymentMethodModal(true);
-    } else {
-      // Ödemeyi iptal et (beklemede yap)
-      setPaymentLoading(true);
-      try {
-        const existingPayment = contract.payments?.find((p: any) => {
-          const paymentMonth = new Date(p.due_date).toISOString().slice(0, 7);
-          return paymentMonth === monthPrice.month && p.status === 'paid';
-        });
+    const monthKey = monthPrice.month;
+    const isPaid = contract.payments?.some((p: any) => {
+      const paymentMonth = new Date(p.due_date).toISOString().slice(0, 7);
+      return paymentMonth === monthKey && p.status === 'paid';
+    });
 
-        if (existingPayment) {
-          await paymentsApi.update(existingPayment.id, {
-            status: 'pending',
-            paid_at: null,
-            payment_method: null,
-            bank_account_id: null,
-          });
-        }
-        await loadContract();
-      } catch (error) {
-        console.error('Error updating payment:', error);
-        toast.error('Ödeme güncellenirken bir hata oluştu');
-      } finally {
-        setPaymentLoading(false);
+    if (isPaid) {
+      if (!checked) {
+        // Zaten ödenmiş bir ödemeyi iptal etme işlemi (isteğe bağlı, şimdilik toast gösterelim)
+        toast.error('Ödenmiş bir ödemeyi buradan iptal edemezsiniz.');
       }
+      return;
     }
+
+    const newSelected = new Set(selectedMonths);
+    if (checked) {
+      // Geçmiş aylarda ödenmemiş veya seçilmemiş var mı kontrolü
+      const hasEarlierUnpaid = contract.monthly_prices.some((mp: any) => {
+        const [y, m] = mp.month.split('-').map(Number);
+        const [targetY, targetM] = monthKey.split('-').map(Number);
+        
+        if (y < targetY || (y === targetY && m < targetM)) {
+          const isMonthPaid = contract.payments?.some((p: any) => {
+            const paymentMonth = new Date(p.due_date).toISOString().slice(0, 7);
+            return paymentMonth === mp.month && p.status === 'paid';
+          });
+          return !isMonthPaid && !newSelected.has(mp.month);
+        }
+        return false;
+      });
+
+      if (hasEarlierUnpaid) {
+        toast.error('Önce geçmiş dönem borçlarını seçmelisiniz.');
+        return;
+      }
+      newSelected.add(monthKey);
+    } else {
+      // Eğer bu ayı bırakıyorsa, kendisinden sonraki seçili ayları da bırakmalı
+      contract.monthly_prices.forEach((mp: any) => {
+        const [y, m] = mp.month.split('-').map(Number);
+        const [targetY, targetM] = monthKey.split('-').map(Number);
+        if (y > targetY || (y === targetY && m >= targetM)) {
+          newSelected.delete(mp.month);
+        }
+      });
+    }
+    setSelectedMonths(newSelected);
+  };
+
+  const handleBulkPayment = () => {
+    if (selectedMonths.size === 0) return;
+    
+    // Seçili ayların verilerini hazırla
+    const selectedMonthlyPrices = contract.monthly_prices.filter((mp: any) => selectedMonths.has(mp.month));
+    setPendingMonthPrice(selectedMonthlyPrices); // Artık dizi olabilir
+    setShowPaymentMethodModal(true);
   };
 
   const handlePaymentMethodSelect = async (method: 'cash' | 'credit_card' | 'bank_transfer') => {
     if (!pendingMonthPrice) return;
+
+    if (Array.isArray(pendingMonthPrice) && pendingMonthPrice.length > 1 && method === 'credit_card') {
+      toast.error('Kredi kartı ile toplu ödeme şu an desteklenmemektedir. Lütfen ödemeleri tek tek yapın.');
+      return;
+    }
 
     if (method === 'bank_transfer' && !selectedBankAccountId) {
       toast.error('Lütfen bir banka hesabı seçin');
@@ -216,12 +249,9 @@ export function ContractDetailPage() {
 
     setSelectedPaymentMethod(method);
     
-    if (method === 'cash' || method === 'credit_card') {
-      // Nakit veya kredi kartı için direkt kaydet
+    if (method === 'cash' || (method === 'credit_card' && !Array.isArray(pendingMonthPrice))) {
+      // Nakit veya tekli kredi kartı için direkt kaydet
       await savePaymentWithMethod(method, null);
-    } else {
-      // Havale için transaction ID ve notes almak için form göster
-      // Bu durumda modal içinde form gösterilecek
     }
   };
 
@@ -230,40 +260,44 @@ export function ContractDetailPage() {
 
     setPaymentLoading(true);
     try {
-      const [year, month] = pendingMonthPrice.month.split('-');
-      const dueDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const pricesToPay = Array.isArray(pendingMonthPrice) ? pendingMonthPrice : [pendingMonthPrice];
       
-      // Bu ay için zaten ödeme var mı kontrol et
-      const existingPayment = contract.payments?.find((p: any) => {
-        const paymentMonth = new Date(p.due_date).toISOString().slice(0, 7);
-        return paymentMonth === pendingMonthPrice.month;
+      const paymentPromises = pricesToPay.map(async (mp: any) => {
+        const [year, month] = mp.month.split('-');
+        const dueDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+        
+        // Bu ay için zaten ödeme var mı kontrol et
+        const existingPayment = contract.payments?.find((p: any) => {
+          const paymentMonth = new Date(p.due_date).toISOString().slice(0, 7);
+          return paymentMonth === mp.month;
+        });
+
+        if (existingPayment) {
+          return paymentsApi.markAsPaid(
+            existingPayment.id,
+            method,
+            transactionId || undefined,
+            paymentNotes || undefined,
+            bankAccountId || undefined
+          );
+        } else {
+          const paymentNumber = `PAY-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}-${mp.month}`;
+          return paymentsApi.create({
+            payment_number: paymentNumber,
+            contract_id: contract.id,
+            amount: mp.price,
+            status: 'paid',
+            due_date: dueDate.toISOString(),
+            paid_at: new Date().toISOString(),
+            payment_method: method,
+            bank_account_id: bankAccountId,
+            transaction_id: transactionId || null,
+            notes: paymentNotes || null,
+          });
+        }
       });
 
-      if (existingPayment) {
-        // Mevcut ödemeyi güncelle
-        await paymentsApi.markAsPaid(
-          existingPayment.id,
-          method,
-          transactionId || undefined,
-          paymentNotes || undefined,
-          bankAccountId || undefined
-        );
-      } else {
-        // Yeni ödeme oluştur
-        const paymentNumber = `PAY-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-        await paymentsApi.create({
-          payment_number: paymentNumber,
-          contract_id: contract.id,
-          amount: pendingMonthPrice.price,
-          status: 'paid',
-          due_date: dueDate.toISOString(),
-          paid_at: new Date().toISOString(),
-          payment_method: method,
-          bank_account_id: bankAccountId,
-          transaction_id: transactionId || null,
-          notes: paymentNotes || null,
-        });
-      }
+      await Promise.all(paymentPromises);
       
       // Modal'ı kapat ve state'i temizle
       setShowPaymentMethodModal(false);
@@ -271,10 +305,11 @@ export function ContractDetailPage() {
       setSelectedPaymentMethod(null);
       setTransactionId('');
       setPaymentNotes('');
+      setSelectedMonths(new Set());
       
       // Sözleşmeyi yeniden yükle
       await loadContract();
-      toast.success('Ödeme başarıyla kaydedildi');
+      toast.success('Ödeme(ler) başarıyla kaydedildi');
     } catch (error) {
       console.error('Error updating payment:', error);
       toast.error('Ödeme güncellenirken bir hata oluştu');
@@ -687,7 +722,32 @@ export function ContractDetailPage() {
         {/* Aylık Fiyatlandırma Tablosu */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">AYLIK FİYATLANDIRMA</h3>
+            <div className="flex items-center gap-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">AYLIK FİYATLANDIRMA</h3>
+              {selectedMonths.size > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-full">
+                  <span className="text-xs font-semibold text-primary-700 dark:text-primary-300">
+                    {selectedMonths.size} ay seçildi - Toplam: {formatTurkishCurrency(
+                      contract.monthly_prices
+                        ?.filter((mp: any) => selectedMonths.has(mp.month))
+                        ?.reduce((sum: number, mp: any) => sum + Number(mp.price), 0) || 0
+                    )}
+                  </span>
+                  <button 
+                    onClick={handleBulkPayment}
+                    className="text-xs font-bold text-primary-600 hover:text-primary-700 underline"
+                  >
+                    Hemen Öde
+                  </button>
+                  <button 
+                    onClick={() => setSelectedMonths(new Set())}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => {
                 setPaymentType('intermediate');
@@ -706,7 +766,7 @@ export function ContractDetailPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ay</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Fiyat (TL)</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Not</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ödendi</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Öde</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ödeme Durumu</th>
                 </tr>
               </thead>
@@ -717,9 +777,10 @@ export function ContractDetailPage() {
                     return paymentMonth === mp.month && (p.type === 'warehouse' || !p.type);
                   });
                   const isPaid = monthPayment?.status === 'paid';
+                  const isSelected = selectedMonths.has(mp.month);
                   
                   return (
-                    <tr key={index}>
+                    <tr key={index} className={isSelected ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {new Date(mp.month + '-01').toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' })}
                       </td>
@@ -732,9 +793,9 @@ export function ContractDetailPage() {
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <input
                           type="checkbox"
-                          checked={isPaid}
+                          checked={isPaid || isSelected}
                           onChange={(e) => handleCheckboxChange(mp, e.target.checked)}
-                          disabled={paymentLoading}
+                          disabled={paymentLoading || isPaid}
                           className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-50"
                         />
                       </td>
@@ -1101,10 +1162,16 @@ export function ContractDetailPage() {
 
                 <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>Ödeme Tutarı:</strong> {formatTurkishCurrency(Number(pendingMonthPrice.price))}
+                    <strong>Toplam Tutar:</strong> {formatTurkishCurrency(
+                      Array.isArray(pendingMonthPrice) 
+                        ? pendingMonthPrice.reduce((sum: number, mp: any) => sum + Number(mp.price), 0)
+                        : Number(pendingMonthPrice.price)
+                    )}
                   </p>
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Ay: {new Date(pendingMonthPrice.month + '-01').toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' })}
+                    {Array.isArray(pendingMonthPrice) 
+                      ? `${pendingMonthPrice.length} ay seçildi`
+                      : `Ay: ${new Date(pendingMonthPrice.month + '-01').toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' })}`}
                   </p>
                 </div>
 
@@ -1264,7 +1331,7 @@ export function ContractDetailPage() {
                       <button
                         type="button"
                         onClick={() => savePaymentWithMethod(selectedPaymentMethod, null)}
-                        disabled={paymentLoading}
+                        disabled={paymentLoading || (selectedPaymentMethod === 'credit_card' && Array.isArray(pendingMonthPrice) && pendingMonthPrice.length > 1)}
                         className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {paymentLoading ? 'Kaydediliyor...' : 'Ödemeyi Kaydet'}

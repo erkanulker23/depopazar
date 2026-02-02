@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
 import { warehousesApi } from '../../services/api/warehousesApi';
 import { roomsApi } from '../../services/api/roomsApi';
 import { customersApi } from '../../services/api/customersApi';
@@ -18,6 +19,7 @@ import { formatTurkishCurrency } from '../../utils/inputFormatters';
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [stats, setStats] = useState({
     warehouses: 0,
     rooms: 0,
@@ -40,14 +42,17 @@ export function DashboardPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [warehouses, rooms, customersRes, payments, contractsRes] = await Promise.all([
+        const canViewFinancials = user?.role === 'super_admin' || user?.role === 'company_owner' || user?.role === 'accounting';
+
+        const [warehouses, rooms, customersRes, paymentsRes, contractsRes] = await Promise.all([
           warehousesApi.getAll(),
           roomsApi.getAll(),
           customersApi.getAll({ limit: 100 }),
-          paymentsApi.getAll(),
+          canViewFinancials ? paymentsApi.getAll() : Promise.resolve([]),
           contractsApi.getAll({ limit: 100 }),
         ]);
         const customers = customersRes.data;
+        const payments = Array.isArray(paymentsRes) ? paymentsRes : [];
         const contracts = contractsRes.data;
 
         const pendingPayments = payments.filter((p: any) => p.status === 'pending');
@@ -295,85 +300,89 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="modern-card-gradient p-6 group hover:scale-[1.02] transition-transform duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Bu Ay Gelir
-              </p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                {stats.loading ? '...' : formatTurkishCurrency(stats.monthlyRevenue)}
-              </p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-green-400 to-green-600 rounded-xl shadow-lg">
-              <CurrencyDollarIcon className="h-8 w-8 text-white" />
+        {(user?.role === 'super_admin' || user?.role === 'company_owner' || user?.role === 'accounting') && (
+          <div className="modern-card-gradient p-6 group hover:scale-[1.02] transition-transform duration-300">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                  Bu Ay Gelir
+                </p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {stats.loading ? '...' : formatTurkishCurrency(stats.monthlyRevenue)}
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-green-400 to-green-600 rounded-xl shadow-lg">
+                <CurrencyDollarIcon className="h-8 w-8 text-white" />
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Ödeme Durumları - Modern Design */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
-        <button
-          onClick={() => navigate('/payments?status=pending')}
-          className="modern-card-gradient p-6 border-l-4 border-yellow-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Bekleyen Ödeme
-              </p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                {stats.loading ? '...' : stats.pendingPayments}
-              </p>
+      {(user?.role === 'super_admin' || user?.role === 'company_owner' || user?.role === 'accounting') && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+          <button
+            onClick={() => navigate('/payments?status=pending')}
+            className="modern-card-gradient p-6 border-l-4 border-yellow-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                  Bekleyen Ödeme
+                </p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {stats.loading ? '...' : stats.pendingPayments}
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-lg">
+                <CreditCardIcon className="h-8 w-8 text-white" />
+              </div>
             </div>
-            <div className="p-3 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-lg">
-              <CreditCardIcon className="h-8 w-8 text-white" />
-            </div>
-          </div>
-        </button>
+          </button>
 
-        <button
-          onClick={() => navigate('/payments?status=overdue')}
-          className="modern-card-gradient p-6 border-l-4 border-red-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Geciken Ödeme
-              </p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                {stats.loading ? '...' : stats.overduePayments}
-              </p>
+          <button
+            onClick={() => navigate('/payments?status=overdue')}
+            className="modern-card-gradient p-6 border-l-4 border-red-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                  Geciken Ödeme
+                </p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {stats.loading ? '...' : stats.overduePayments}
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-red-400 to-red-600 rounded-xl shadow-lg">
+                <ExclamationTriangleIcon className="h-8 w-8 text-white" />
+              </div>
             </div>
-            <div className="p-3 bg-gradient-to-br from-red-400 to-red-600 rounded-xl shadow-lg">
-              <ExclamationTriangleIcon className="h-8 w-8 text-white" />
-            </div>
-          </div>
-        </button>
+          </button>
 
-        <button
-          onClick={() => navigate('/payments?status=unpaid')}
-          className="modern-card-gradient p-6 border-l-4 border-red-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left sm:col-span-2 lg:col-span-1"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Toplam Borç
-              </p>
-              <p className="text-3xl font-bold text-red-600 dark:text-red-400">
-                {stats.loading ? '...' : formatTurkishCurrency(stats.totalDebt)}
-              </p>
+          <button
+            onClick={() => navigate('/payments?status=unpaid')}
+            className="modern-card-gradient p-6 border-l-4 border-red-500 group hover:scale-[1.02] transition-transform duration-300 cursor-pointer w-full text-left sm:col-span-2 lg:col-span-1"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                  Toplam Borç
+                </p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-400">
+                  {stats.loading ? '...' : formatTurkishCurrency(stats.totalDebt)}
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-red-400 to-red-600 rounded-xl shadow-lg">
+                <ChartBarIcon className="h-8 w-8 text-white" />
+              </div>
             </div>
-            <div className="p-3 bg-gradient-to-br from-red-400 to-red-600 rounded-xl shadow-lg">
-              <ChartBarIcon className="h-8 w-8 text-white" />
-            </div>
-          </div>
-        </button>
-      </div>
+          </button>
+        </div>
+      )}
 
       {/* 5 Gün İçinde Kalan Ödemeler - Modern Design */}
-      {stats.paymentsIn5Days.length > 0 && (
+      {(user?.role === 'super_admin' || user?.role === 'company_owner' || user?.role === 'accounting') && stats.paymentsIn5Days.length > 0 && (
         <div className="modern-card-gradient p-6 mb-6 border-l-4 border-red-500 animate-fade-in">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
             <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg mr-3">

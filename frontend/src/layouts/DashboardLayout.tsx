@@ -214,14 +214,41 @@ export function DashboardLayout() {
               <nav className="flex-1 space-y-1.5">
                 {navigation
                   .filter((item) => {
-                    // Müşteriler dışındaki herkes Kullanıcılar ve Yetkileri görebilsin
+                    const role = user?.role;
+
+                    // Müşteriler sadece Dashboard ve Nakliye İşlerini görebilir (varsayılan kısıtlama)
+                    if (role === 'customer') {
+                      return ['/dashboard', '/transportation-jobs'].includes(item.href);
+                    }
+
+                    // Kullanıcılar ve Yetkileri sadece Admin ve Sahibe özel
                     if (['/staff', '/permissions'].includes(item.href)) {
-                      return user?.role !== 'customer';
+                      return role === 'super_admin' || role === 'company_owner';
                     }
-                    // Raporlar ve Ayarlar sadece Admin ve Sahibe özel kalsın
-                    if (['/reports', '/settings'].includes(item.href)) {
-                      return user?.role === 'super_admin' || user?.role === 'company_owner';
+
+                    // Raporlar sadece Admin, Sahip ve Muhasebeye özel
+                    if (item.href === '/reports') {
+                      return role === 'super_admin' || role === 'company_owner' || role === 'accounting';
                     }
+
+                    // Ayarlar sadece Admin ve Sahibe özel
+                    if (item.href === '/settings') {
+                      return role === 'super_admin' || role === 'company_owner';
+                    }
+
+                    // Ödemeler ve Ödeme Al sadece Admin, Sahip ve Muhasebeye özel
+                    if (item.href.startsWith('/payments')) {
+                      return role === 'super_admin' || role === 'company_owner' || role === 'accounting';
+                    }
+
+                    // Veri Girişi kullanıcısı için kısıtlamalar
+                    if (role === 'data_entry') {
+                      // Veri girişi ödemeleri ve raporları görmemeli
+                      if (item.href.startsWith('/payments') || item.href === '/reports') {
+                        return false;
+                      }
+                    }
+
                     return true;
                   })
                   .map((item) => renderNavItem(item))}
