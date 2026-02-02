@@ -75,6 +75,26 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto, user);
   }
 
+  @Patch(':id/reset-password')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
+  @ApiOperation({ summary: 'Reset user password' })
+  async resetPassword(@Param('id') id: string, @Body() body: { password?: string }, @CurrentUser() user: any) {
+    const targetUser = await this.usersService.findOne(id);
+    
+    // Authorization checks
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      const companyId = await this.companiesService.getCompanyIdForUser(user);
+      if (!companyId || targetUser.company_id !== companyId) {
+        throw new ForbiddenException('Bu işlem için yetkiniz yok');
+      }
+    }
+
+    const newPassword = body.password || Math.random().toString(36).slice(-8);
+    await this.usersService.update(id, { password: newPassword }, user);
+    
+    return { message: 'Password reset successfully', password: newPassword };
+  }
+
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Delete user' })

@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { proposalsApi } from '../../services/api/proposalsApi';
 import { servicesApi, Service } from '../../services/api/servicesApi';
 import { customersApi, Customer } from '../../services/api/customersApi';
-import { PlusIcon, TrashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ArrowLeftIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
 
 export function CreateProposalPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -150,18 +152,28 @@ export function CreateProposalPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Müşteri
               </label>
-              <select
-                value={formData.customer_id}
-                onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-              >
-                <option value="">Seçiniz (Opsiyonel)</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.first_name} {c.last_name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={formData.customer_id}
+                  onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Seçiniz (Opsiyonel)</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.first_name} {c.last_name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setIsAddCustomerModalOpen(true)}
+                  className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  title="Yeni Müşteri Ekle"
+                >
+                  <UserPlusIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div>
@@ -302,6 +314,17 @@ export function CreateProposalPage() {
           </button>
         </div>
       </form>
+      <AddCustomerModal
+        isOpen={isAddCustomerModalOpen}
+        onClose={() => setIsAddCustomerModalOpen(false)}
+        onSuccess={(newCustomer) => {
+          if (newCustomer) {
+            setCustomers([...customers, newCustomer]);
+            setFormData({ ...formData, customer_id: newCustomer.id });
+            toast.success('Müşteri başarıyla eklendi');
+          }
+        }}
+      />
     </div>
   );
 }

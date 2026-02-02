@@ -14,7 +14,7 @@ import { ContractDetailPage } from '../pages/contracts/ContractDetailPage';
 import { PaymentsPage } from '../pages/payments/PaymentsPage';
 import { PaymentSuccessPage } from '../pages/payments/PaymentSuccessPage';
 import { PaymentFailPage } from '../pages/payments/PaymentFailPage';
-import { StaffPage } from '../pages/staff/StaffPage';
+import { StaffDetailPage } from '../pages/staff/StaffDetailPage';
 import { PermissionsPage } from '../pages/permissions/PermissionsPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
 import { ReportsPage } from '../pages/reports/ReportsPage';
@@ -100,6 +100,7 @@ export function AppRoutes() {
         <Route path="payments/success" element={<PaymentSuccessPage />} />
         <Route path="payments/fail" element={<PaymentFailPage />} />
         <Route path="staff" element={<StaffPage />} />
+        <Route path="staff/:id" element={<StaffDetailPage />} />
         <Route path="permissions" element={<PermissionsPage />} />
         <Route path="transportation-jobs" element={<TransportationJobsPage />} />
         <Route path="services" element={<ServicesPage />} />

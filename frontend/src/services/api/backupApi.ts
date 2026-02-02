@@ -15,5 +15,9 @@ export const backupApi = {
     // Direct download link
     const baseURL = apiClient.defaults.baseURL;
     window.open(`${baseURL}/backups/${filename}`, '_blank');
+  },
+
+  delete: async (filename: string): Promise<void> => {
+    await apiClient.delete(`/backups/${filename}`);
   }
 };

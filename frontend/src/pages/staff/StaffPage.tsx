@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../services/api/apiClient';
-import { UserIcon, PlusIcon, TrashIcon, XMarkIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { UserIcon, PlusIcon, TrashIcon, XMarkIcon, PencilIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { AddStaffModal } from '../../components/modals/AddStaffModal';
 import { EditStaffModal } from '../../components/modals/EditStaffModal';
 import { useAuthStore } from '../../stores/authStore';
 
 export function StaffPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'super_admin' || user?.role === 'company_owner';
   
@@ -261,6 +263,13 @@ export function StaffPage() {
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => navigate(`/staff/${person.id}`)}
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                            title="Detayları Görüntüle"
+                          >
+                            <EyeIcon className="h-5 w-5" />
+                          </button>
                           <button
                             onClick={() => {
                               setSelectedStaff(person);

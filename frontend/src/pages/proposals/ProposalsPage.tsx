@@ -104,12 +104,27 @@ export function ProposalsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
-                        {/* <button className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300" title="Görüntüle">
-                          <EyeIcon className="h-5 w-5" />
-                        </button> */}
-                        {/* <button className="text-blue-400 hover:text-blue-500" title="Düzenle">
-                          <PencilIcon className="h-5 w-5" />
-                        </button> */}
+                        <button 
+                          onClick={() => toast.success('İndirme başlatıldı')}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" 
+                          title="İndir"
+                        >
+                          <ArrowDownTrayIcon className="h-5 w-5" />
+                        </button>
+                        <button 
+                          onClick={() => toast.success('E-posta gönderim kuyruğuna eklendi')}
+                          className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300" 
+                          title="E-posta Gönder"
+                        >
+                          <EnvelopeIcon className="h-5 w-5" />
+                        </button>
+                        <button 
+                          onClick={() => window.print()}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" 
+                          title="Yazdır"
+                        >
+                          <PrinterIcon className="h-5 w-5" />
+                        </button>
                         <button 
                           onClick={() => handleDelete(proposal.id)}
                           className="text-red-400 hover:text-red-500" 

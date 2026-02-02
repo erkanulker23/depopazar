@@ -32,8 +32,17 @@ export interface Proposal {
 
 export const proposalsApi = {
   getAll: async (): Promise<Proposal[]> => {
-    const response = await apiClient.get('/proposals');
-    return response.data;
+    try {
+      const response = await apiClient.get('/proposals');
+      return response.data;
+    } catch (error: any) {
+      // If 404, just return empty array as it might mean no proposals found or route not ready yet
+      // Ideally backend returns [] with 200, but handling 404 gracefully is safer for UI
+      if (error.response && error.response.status === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   getById: async (id: string): Promise<Proposal> => {

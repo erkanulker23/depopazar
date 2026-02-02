@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -47,5 +47,20 @@ export class BackupService {
         return [];
       }
       return fs.readdirSync(backupDir).filter(f => f.endsWith('.sql')).sort().reverse();
+  }
+
+  async deleteBackup(filename: string): Promise<void> {
+    const backupDir = path.join(process.cwd(), 'backups');
+    const filePath = path.join(backupDir, filename);
+    
+    if (filename.includes('..') || filename.includes('/')) {
+        throw new Error('Invalid filename');
+    }
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    } else {
+        throw new NotFoundException('Backup not found');
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, UseGuards, Res, Param } from '@nestjs/common';
+import { Controller, Post, Get, Delete, UseGuards, Res, Param, Body, BadRequestException, NotFoundException } from '@nestjs/common';
 import { BackupService } from './backup.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -50,5 +50,13 @@ export class BackupController {
       }
       
       res.download(filePath);
+  }
+
+  @Delete(':filename')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Delete backup' })
+  async deleteBackup(@Param('filename') filename: string) {
+      await this.backupService.deleteBackup(filename);
+      return { message: 'Backup deleted' };
   }
 }
