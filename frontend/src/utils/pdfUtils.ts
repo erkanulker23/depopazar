@@ -125,3 +125,50 @@ export const generateCustomerBarcodePDF = async (customer: any, items: any[]) =>
 
   doc.save(`etiket_${trToEn(customer.first_name)}_${trToEn(customer.last_name)}.pdf`);
 };
+
+export const generateProposalPDF = (proposal: any) => {
+  const doc = new jsPDF();
+  const trToEn = (t: string) =>
+    (t || '')
+      .replace(/ğ/g, 'g').replace(/Ğ/g, 'G').replace(/ü/g, 'u').replace(/Ü/g, 'U')
+      .replace(/ş/g, 's').replace(/Ş/g, 'S').replace(/ı/g, 'i').replace(/İ/g, 'I')
+      .replace(/ö/g, 'o').replace(/Ö/g, 'O').replace(/ç/g, 'c').replace(/Ç/g, 'C');
+
+  doc.setFontSize(18);
+  doc.text(trToEn(proposal.title || 'Teklif'), 14, 20);
+  doc.setFontSize(10);
+  doc.text(trToEn(`Tarih: ${new Date(proposal.created_at).toLocaleDateString('tr-TR')}`), 14, 28);
+  if (proposal.customer) {
+    doc.text(trToEn(`Müşteri: ${proposal.customer.first_name} ${proposal.customer.last_name}`), 14, 34);
+  }
+
+  const items = proposal.items || [];
+  const tableData = items.map((it: any) => [
+    trToEn(it.name || '-'),
+    String(it.quantity || 0),
+    String(it.unit_price || 0),
+    String(it.total_price || 0),
+  ]);
+  if (tableData.length > 0) {
+    autoTable(doc, {
+      startY: 42,
+      head: [['Hizmet/Ürün', 'Miktar', 'Birim Fiyat', 'Toplam'].map(trToEn)],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [16, 185, 129] },
+      styles: { font: 'helvetica', fontSize: 9 },
+    });
+  }
+  let y = (doc as any).lastAutoTable?.finalY || 50;
+  doc.setFont('helvetica', 'bold');
+  doc.text(trToEn(`Toplam: ${proposal.currency || 'TRY'} ${Number(proposal.total_amount || 0).toLocaleString('tr-TR')}`), 14, y + 10);
+  if (proposal.transport_terms) {
+    y += 18;
+    doc.setFont('helvetica', 'bold');
+    doc.text(trToEn('Taşıma Şartları'), 14, y);
+    doc.setFont('helvetica', 'normal');
+    const terms = doc.splitTextToSize(trToEn(proposal.transport_terms), 180);
+    doc.text(terms, 14, y + 6);
+  }
+  doc.save(`teklif_${proposal.id?.slice(0, 8) || 'teklif'}.pdf`);
+};

@@ -14,11 +14,17 @@ export function CreateProposalPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   
+  const DEFAULT_TRANSPORT_TERMS = `1. Eşyalar profesyonel ekibimiz tarafından taşınacaktır.
+2. Taşıma sırasında oluşabilecek hasarlara karşı sigorta kapsamı uygulanır.
+3. Teslim tarihi ve saati müşteri ile mutabık kalınarak belirlenir.
+4. Ödeme teklifte belirtilen tutar üzerinden yapılacaktır.`;
+
   const [formData, setFormData] = useState({
     title: '',
     customer_id: '',
     valid_until: '',
     notes: '',
+    transport_terms: DEFAULT_TRANSPORT_TERMS,
     currency: 'TRY',
   });
 
@@ -36,8 +42,8 @@ export function CreateProposalPage() {
         customersApi.getAll(),
         servicesApi.getServices(),
       ]);
-      setCustomers(custs.data);
-      setServices(srvs);
+      setCustomers(Array.isArray(custs) ? custs : (custs?.data ?? []));
+      setServices(Array.isArray(srvs) ? srvs : []);
     } catch (error) {
       console.error(error);
       toast.error('Veriler yüklenirken hata oluştu');
@@ -99,6 +105,7 @@ export function CreateProposalPage() {
       setLoading(true);
       await proposalsApi.create({
         ...formData,
+        transport_terms: formData.transport_terms || undefined,
         items: items.map(item => ({
           service_id: item.service_id || undefined,
           name: item.name,
@@ -197,6 +204,19 @@ export function CreateProposalPage() {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Taşıma Şartları
+              </label>
+              <textarea
+                rows={6}
+                value={formData.transport_terms}
+                onChange={(e) => setFormData({ ...formData, transport_terms: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                placeholder="Taşıma şartları..."
               />
             </div>
           </div>

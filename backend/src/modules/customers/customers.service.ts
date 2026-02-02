@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity';
+import { TransportationJob } from '../transportation-jobs/entities/transportation-job.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
@@ -18,6 +19,8 @@ export class CustomersService {
   constructor(
     @InjectRepository(Customer)
     private readonly customersRepository: Repository<Customer>,
+    @InjectRepository(TransportationJob)
+    private readonly transportationJobsRepository: Repository<TransportationJob>,
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
   ) {}
@@ -194,6 +197,8 @@ export class CustomersService {
   }
 
   async remove(id: string): Promise<void> {
+    // Önce bu müşteriye bağlı nakliye işlerini sil (FK constraint hatasını önlemek için)
+    await this.transportationJobsRepository.delete({ customer_id: id });
     await this.customersRepository.delete(id);
   }
 }

@@ -14,9 +14,11 @@ export const notificationsApi = {
     return response.data;
   },
   markAllAsRead: async () => {
-    // Backend'de bu endpoint yoksa, tüm bildirimleri tek tek işaretleyebiliriz
-    const notifications = await notificationsApi.getAll();
-    const unreadNotifications = notifications.filter((n: any) => !n.is_read);
-    await Promise.all(unreadNotifications.map((n: any) => notificationsApi.markAsRead(n.id)));
+    const response = await apiClient.patch('/notifications/mark-all-read');
+    return response.data;
+  },
+  deleteAll: async () => {
+    const response = await apiClient.delete('/notifications/delete-all');
+    return response.data;
   },
 };

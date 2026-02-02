@@ -50,6 +50,11 @@ export class CreateProposalDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({ description: 'Taşıma şartları' })
+  @IsOptional()
+  @IsString()
+  transport_terms?: string;
+
   @ApiProperty({ description: 'Para Birimi' })
   @IsOptional()
   @IsString()

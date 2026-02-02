@@ -24,6 +24,7 @@ export interface Proposal {
   currency: string;
   valid_until?: string | null;
   notes?: string | null;
+  transport_terms?: string | null;
   pdf_url?: string | null;
   items?: ProposalItem[];
   created_at: string;

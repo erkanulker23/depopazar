@@ -143,6 +143,7 @@ export class CustomersController {
         'Bu müşterinin aktif sözleşmeleri var. Müşteriyi silebilmek için önce sözleşmeleri sonlandırmanız gerekiyor.',
       );
     }
+    // Nakliye işleri otomatik silinir (customers.service)
     await this.customersService.remove(id);
     return { message: 'Customer deleted successfully' };
   }

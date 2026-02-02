@@ -326,8 +326,8 @@ export function DashboardLayout() {
                 >
                   <BellIcon className="h-5 w-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-white dark:ring-[#09090b]">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-600 text-[11px] font-extrabold text-white ring-2 ring-white dark:ring-[#09090b] shadow-lg">
+                      {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </button>
@@ -340,22 +340,45 @@ export function DashboardLayout() {
                       onClick={() => setNotificationsOpen(false)}
                     />
                     <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#121214] rounded-xl shadow-2xl border border-gray-200 dark:border-[#27272a] z-50 max-h-[480px] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-                      <div className="px-4 py-3 border-b border-gray-100 dark:border-[#27272a] flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100">
-                          Bildirimler
-                        </h3>
-                        {unreadCount > 0 && (
-                          <button
-                            onClick={async () => {
-                              const unread = notifications.filter(n => !n.is_read);
-                              await Promise.all(unread.map(n => notificationsApi.markAsRead(n.id)));
-                              setNotifications(notifications.map(n => ({ ...n, is_read: true })));
-                            }}
-                            className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
-                          >
-                            Tümünü oku
-                          </button>
-                        )}
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-[#27272a] flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100">
+                            Bildirimler
+                          </h3>
+                          <div className="flex items-center gap-1">
+                            {unreadCount > 0 && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await notificationsApi.markAllAsRead();
+                                    setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+                                  } catch (e) {
+                                    console.error(e);
+                                  }
+                                }}
+                                className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 px-2 py-1 rounded hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                              >
+                                Tümünü Okundu Yap
+                              </button>
+                            )}
+                            {notifications.length > 0 && (
+                              <button
+                                onClick={async () => {
+                                  if (!confirm('Tüm bildirimleri silmek istediğinize emin misiniz?')) return;
+                                  try {
+                                    await notificationsApi.deleteAll();
+                                    setNotifications([]);
+                                  } catch (e) {
+                                    console.error(e);
+                                  }
+                                }}
+                                className="text-[10px] font-bold text-red-600 dark:text-red-400 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                              >
+                                Tümünü Sil
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       <div className="overflow-y-auto flex-1">
                         {loadingNotifications ? (

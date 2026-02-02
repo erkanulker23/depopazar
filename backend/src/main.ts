@@ -52,22 +52,27 @@ async function bootstrap() {
   // Tüm API endpointleri /api ile başlasın
   app.setGlobalPrefix('api');
 
-  // Swagger (API Dökümantasyonu) Ayarları
-  const config = new DocumentBuilder()
-    .setTitle('DepoPazar API')
-    .setDescription('Eşya Depolama Firmaları için SaaS Tabanlı Depo Takip & CRM Sistemi API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  // Swagger (API Dökümantasyonu) - Sadece development ortamında veya SWAGGER_ENABLED=true ise
+  const swaggerEnabled = process.env.SWAGGER_ENABLED === 'true' || process.env.NODE_ENV !== 'production';
+  if (swaggerEnabled) {
+    const config = new DocumentBuilder()
+      .setTitle('DepoPazar API')
+      .setDescription('Eşya Depolama Firmaları için SaaS Tabanlı Depo Takip & CRM Sistemi API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+    console.log('📚 Swagger: http://localhost:' + (process.env.PORT || 4100) + '/api/docs');
+  } else {
+    console.log('⚠️ Swagger devre dışı (güvenlik)');
+  }
 
   // Port ayarı (Forge'da 4100 kullanıyoruz)
   const port = process.env.PORT || 4100;
   await app.listen(port);
 
   console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
 }
 
 bootstrap();

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 
 @Injectable()
@@ -85,6 +85,26 @@ export class NotificationsService {
       read_at: new Date(),
     });
     return this.findOne(id);
+  }
+
+  async markAllAsRead(userId: string): Promise<{ count: number }> {
+    const result = await this.notificationsRepository.update(
+      { user_id: userId, is_read: false },
+      { is_read: true, read_at: new Date() },
+    );
+    return { count: result.affected ?? 0 };
+  }
+
+  async removeAll(userId: string): Promise<{ count: number }> {
+    const toDelete = await this.notificationsRepository.find({
+      where: { user_id: userId },
+      select: ['id'],
+    });
+    const ids = toDelete.map((n) => n.id);
+    if (ids.length > 0) {
+      await this.notificationsRepository.delete({ id: In(ids) });
+    }
+    return { count: ids.length };
   }
 
   async remove(id: string): Promise<void> {

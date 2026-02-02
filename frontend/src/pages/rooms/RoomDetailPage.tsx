@@ -171,10 +171,39 @@ export function RoomDetailPage() {
                 )}
                 {deleteModalMode === 'blocked' ? (
                   <>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       <strong className="text-gray-900 dark:text-white">Bu odada müşteri var.</strong>{' '}
                       Odayı silebilmek için önce sözleşmeyi sonlandırmanız gerekiyor.
                     </p>
+                    {(() => {
+                      const activeContractsToTerminate = contracts.filter((c) => c.is_active);
+                      return activeContractsToTerminate.length > 0 ? (
+                        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 uppercase tracking-wide mb-2">
+                            Sonlandırılması gereken sözleşmeler
+                          </p>
+                          <ul className="space-y-1 text-sm text-amber-900 dark:text-amber-100">
+                            {activeContractsToTerminate.map((c) => (
+                              <li key={c.id} className="flex items-center justify-between">
+                                <span>
+                                  {c.contract_number} – {c.customer?.first_name} {c.customer?.last_name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigate(`/contracts/${c.id}`);
+                                    setDeleteModalMode(null);
+                                  }}
+                                  className="text-primary-600 hover:text-primary-700 dark:text-primary-400 text-xs font-medium"
+                                >
+                                  Sözleşmeye git →
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null;
+                    })()}
                     <div className="flex justify-end">
                       <button
                         type="button"

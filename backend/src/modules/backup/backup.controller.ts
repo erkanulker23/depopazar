@@ -17,7 +17,7 @@ export class BackupController {
   constructor(private readonly backupService: BackupService) {}
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'Create database backup' })
   async createBackup() {
     const filename = await this.backupService.createBackup();
@@ -25,7 +25,7 @@ export class BackupController {
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)
   @ApiOperation({ summary: 'List backups' })
   async listBackups() {
     return this.backupService.listBackups();

@@ -31,6 +31,20 @@ export class NotificationsController {
     return this.notificationsService.findAllNotificationsForCompany(user?.company_id);
   }
 
+  @Patch('mark-all-read')
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  async markAllAsRead(@CurrentUser() user: any) {
+    if (!user?.id) return { count: 0 };
+    return this.notificationsService.markAllAsRead(user.id);
+  }
+
+  @Delete('delete-all')
+  @ApiOperation({ summary: 'Delete all notifications for current user' })
+  async deleteAll(@CurrentUser() user: any) {
+    if (!user?.id) return { count: 0 };
+    return this.notificationsService.removeAll(user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get notification by ID' })
   async findOne(@Param('id') id: string) {

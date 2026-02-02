@@ -38,6 +38,9 @@ export class Proposal extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  transport_terms: string | null; // Taşıma şartları
+
   @Column({ type: 'varchar', length: 512, nullable: true })
   pdf_url: string | null;
 

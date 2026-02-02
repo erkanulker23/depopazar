@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { proposalsApi, Proposal } from '../../services/api/proposalsApi';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { generateProposalPDF } from '../../utils/pdfUtils';
+import { PlusIcon, TrashIcon, ArrowDownTrayIcon, EnvelopeIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 export function ProposalsPage() {
@@ -34,6 +35,67 @@ export function ProposalsPage() {
     } catch (error) {
       toast.error('Teklif silinemedi');
     }
+  };
+
+  const handlePdfDownload = async (proposal: Proposal) => {
+    try {
+      const full = await proposalsApi.getById(proposal.id);
+      generateProposalPDF(full);
+      toast.success('PDF indirildi');
+    } catch (e) {
+      toast.error('PDF oluşturulamadı');
+    }
+  };
+
+  const handlePrint = async (proposal: Proposal) => {
+    try {
+      const full = await proposalsApi.getById(proposal.id);
+      const win = window.open('', '_blank');
+      if (!win) {
+        toast.error('Yazdırma penceresi açılamadı');
+        return;
+      }
+      win.document.write(`
+        <!DOCTYPE html>
+        <html><head><title>Teklif - ${full.title}</title>
+        <style>body{font-family:sans-serif;padding:24px;max-width:800px;margin:0 auto}
+        h1{font-size:1.5rem} table{width:100%;border-collapse:collapse}
+        th,td{border:1px solid #ddd;padding:8px;text-align:left}
+        .total{font-weight:bold;margin-top:16px}
+        .terms{white-space:pre-wrap;margin-top:16px;padding:12px;background:#f5f5f5;border-radius:8px}</style>
+        </head><body>
+        <h1>${full.title}</h1>
+        <p>Tarih: ${new Date(full.created_at).toLocaleDateString('tr-TR')}</p>
+        ${full.customer ? `<p>Müşteri: ${full.customer.first_name} ${full.customer.last_name}</p>` : ''}
+        <table><thead><tr><th>Hizmet/Ürün</th><th>Miktar</th><th>Birim Fiyat</th><th>Toplam</th></tr></thead>
+        <tbody>${(full.items || []).map((i: any) => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${i.unit_price} ₺</td><td>${i.total_price} ₺</td></tr>`).join('')}</tbody>
+        </table>
+        <p class="total">Toplam: ${full.currency} ${Number(full.total_amount).toLocaleString('tr-TR')} ₺</p>
+        ${full.transport_terms ? `<div class="terms"><strong>Taşıma Şartları:</strong><br>${full.transport_terms.replace(/\n/g, '<br>')}</div>` : ''}
+        </body></html>
+      `);
+      win.document.close();
+      win.focus();
+      setTimeout(() => { win.print(); win.close(); }, 250);
+      toast.success('Yazdırma penceresi açıldı');
+    } catch (e) {
+      toast.error('Yazdırılamadı');
+    }
+  };
+
+  const handleEmail = (proposal: Proposal) => {
+    const email = proposal.customer?.email;
+    if (!email) {
+      toast.error('Müşteri e-posta adresi bulunamadı');
+      return;
+    }
+    const subject = encodeURIComponent(`Teklif: ${proposal.title}`);
+    const body = encodeURIComponent(
+      `Sayın ${proposal.customer?.first_name} ${proposal.customer?.last_name},\n\n` +
+      `${proposal.title} teklifimiz ekte sunulmuştur.\n\nToplam: ${proposal.currency} ${Number(proposal.total_amount).toLocaleString('tr-TR')} ₺`
+    );
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    toast.success('E-posta uygulaması açıldı');
   };
 
   if (loading) return <div className="p-4">Yükleniyor...</div>;
@@ -105,21 +167,21 @@ export function ProposalsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <button 
-                          onClick={() => toast.success('İndirme başlatıldı')}
+                          onClick={() => handlePdfDownload(proposal)}
                           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" 
-                          title="İndir"
+                          title="PDF İndir"
                         >
                           <ArrowDownTrayIcon className="h-5 w-5" />
                         </button>
                         <button 
-                          onClick={() => toast.success('E-posta gönderim kuyruğuna eklendi')}
+                          onClick={() => handleEmail(proposal)}
                           className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300" 
                           title="E-posta Gönder"
                         >
                           <EnvelopeIcon className="h-5 w-5" />
                         </button>
                         <button 
-                          onClick={() => window.print()}
+                          onClick={() => handlePrint(proposal)}
                           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" 
                           title="Yazdır"
                         >

@@ -16,6 +16,7 @@ export function RoomsPage() {
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all');
   const [selectedRooms, setSelectedRooms] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleteModalMode, setDeleteModalMode] = useState<'blocked' | 'confirm' | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -125,6 +126,7 @@ export function RoomsPage() {
               onClick={() => {
                 if (!deleteLoading) {
                   setDeleteTarget(null);
+                  setDeleteModalMode(null);
                   setDeleteError('');
                 }
               }}
@@ -133,12 +135,13 @@ export function RoomsPage() {
               <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                    Odayı Sil
+                    {deleteModalMode === 'blocked' ? 'Oda silinemez' : 'Odayı Sil'}
                   </h3>
                   <button
                     onClick={() => {
                       if (!deleteLoading) {
                         setDeleteTarget(null);
+                        setDeleteModalMode(null);
                         setDeleteError('');
                       }
                     }}
@@ -152,6 +155,54 @@ export function RoomsPage() {
                     <p className="text-sm text-red-800 dark:text-red-200">{deleteError}</p>
                   </div>
                 )}
+                {deleteModalMode === 'blocked' && deleteTarget && deleteTarget !== 'bulk' ? (
+                  <>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      <strong className="text-gray-900 dark:text-white">Bu odada müşteri var.</strong>{' '}
+                      Odayı silebilmek için önce sözleşmeyi sonlandırmanız gerekiyor.
+                    </p>
+                    {(() => {
+                      const activeContracts = (deleteTarget.contracts ?? []).filter((c: any) => c.is_active);
+                      return activeContracts.length > 0 ? (
+                        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 uppercase tracking-wide mb-2">
+                            Sonlandırılması gereken sözleşmeler
+                          </p>
+                          <ul className="space-y-1 text-sm text-amber-900 dark:text-amber-100">
+                            {activeContracts.map((c: any) => (
+                              <li key={c.id} className="flex items-center justify-between">
+                                <span>
+                                  {c.contract_number} – {c.customer?.first_name} {c.customer?.last_name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigate(`/contracts/${c.id}`);
+                                    setDeleteTarget(null);
+                                    setDeleteModalMode(null);
+                                  }}
+                                  className="text-primary-600 hover:text-primary-700 dark:text-primary-400 text-xs font-medium"
+                                >
+                                  Sözleşmeye git →
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null;
+                    })()}
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => { setDeleteTarget(null); setDeleteModalMode(null); setDeleteError(''); }}
+                        className="px-4 py-2 text-white bg-primary-600 hover:bg-primary-700 rounded-md text-sm font-medium"
+                      >
+                        Tamam
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                   {deleteTarget === 'bulk' ? (
                     <>
@@ -161,7 +212,7 @@ export function RoomsPage() {
                   ) : (
                     <>
                       <strong className="text-gray-900 dark:text-white">
-                        {deleteTarget.room_number}
+                        {deleteTarget?.room_number}
                       </strong>{' '}
                       odasını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
                     </>
@@ -173,6 +224,7 @@ export function RoomsPage() {
                     onClick={() => {
                       if (!deleteLoading) {
                         setDeleteTarget(null);
+                        setDeleteModalMode(null);
                         setDeleteError('');
                       }
                     }}
@@ -194,6 +246,7 @@ export function RoomsPage() {
                           await roomsApi.remove(deleteTarget.id);
                         }
                         setDeleteTarget(null);
+                        setDeleteModalMode(null);
                         fetchRooms();
                       } catch (err: any) {
                         setDeleteError(
@@ -209,6 +262,8 @@ export function RoomsPage() {
                     {deleteLoading ? 'Siliniyor...' : 'Sil'}
                   </button>
                 </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -232,6 +287,7 @@ export function RoomsPage() {
               onClick={() => {
                 setDeleteError('');
                 setDeleteTarget('bulk');
+                setDeleteModalMode('confirm');
               }}
               className="px-3 py-1 text-sm text-white bg-red-600 hover:bg-red-700 rounded inline-flex items-center"
             >
@@ -400,7 +456,9 @@ export function RoomsPage() {
                       <button
                         onClick={() => {
                           setDeleteError('');
+                          const hasActiveContract = (room.contracts ?? []).some((c: any) => c.is_active);
                           setDeleteTarget(room);
+                          setDeleteModalMode(hasActiveContract ? 'blocked' : 'confirm');
                         }}
                         className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                         title="Sil"
