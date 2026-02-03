@@ -417,58 +417,60 @@ export function DashboardLayout() {
           </div>
         </header>
           <main className="flex-1 relative overflow-y-auto focus:outline-none">
-            <div className="py-6 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
+            <div className="py-6 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto pb-20 md:pb-6">
               <Outlet />
             </div>
           </main>
         </div>
 
-        {/* Bottom Navigation - Mobile Only */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-md border-t border-gray-200 dark:border-[#27272a] px-2 pt-2 pb-safe shadow-2xl">
-          <div className="flex items-center justify-around h-14">
+        {/* Bottom Navigation - Mobile Only: viewport'a sabit, overflow dışında */}
+        <div
+          className="md:hidden fixed inset-x-0 bottom-0 z-50 flex items-center justify-around bg-white dark:bg-[#09090b] border-t border-gray-200 dark:border-[#27272a] px-2 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]"
+          style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+        >
+          <Link
+            to={paths.genelBakis}
+            className={`flex flex-col items-center justify-center flex-1 h-14 space-y-0.5 transition-colors ${
+              location.pathname === paths.genelBakis ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
+            }`}
+          >
+            <HomeIcon className="h-5 w-5 shrink-0" />
+            <span className="text-[9px] font-bold">Ana Sayfa</span>
+          </Link>
+          <Link
+            to={paths.musteriler}
+            className={`flex flex-col items-center justify-center flex-1 h-14 space-y-0.5 transition-colors ${
+              location.pathname === paths.musteriler ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
+            }`}
+          >
+            <UsersIcon className="h-5 w-5 shrink-0" />
+            <span className="text-[9px] font-bold">Müşteriler</span>
+          </Link>
+          <div className="relative -mt-6 flex-shrink-0">
             <Link
-              to={paths.genelBakis}
-              className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors ${
-                location.pathname === paths.genelBakis ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
-              }`}
+              to={paths.girisYeni}
+              className="flex items-center justify-center w-12 h-12 bg-emerald-600 rounded-2xl text-white shadow-xl shadow-emerald-500/20 transform transition-all active:scale-90"
             >
-              <HomeIcon className="h-5 w-5" />
-              <span className="text-[9px] font-bold">Genel Bakış</span>
+              <PlusCircleIcon className="h-7 w-7" />
             </Link>
-            <Link
-              to={paths.musteriler}
-              className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors ${
-                location.pathname === paths.musteriler ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
-              }`}
-            >
-              <UsersIcon className="h-5 w-5" />
-              <span className="text-[9px] font-bold">Müşteriler</span>
-            </Link>
-            <div className="relative -mt-8 flex-shrink-0">
-              <Link
-                to={paths.girisYeni}
-                className="flex items-center justify-center w-12 h-12 bg-emerald-600 rounded-2xl text-white shadow-xl shadow-emerald-500/20 transform transition-all active:scale-90"
-              >
-                <PlusCircleIcon className="h-7 w-7" />
-              </Link>
-            </div>
-            <Link
-              to={paths.odemeler}
-              className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors ${
-                location.pathname === paths.odemeler ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
-              }`}
-            >
-              <CreditCardIcon className="h-5 w-5" />
-              <span className="text-[9px] font-bold">Ödemeler</span>
-            </Link>
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="flex flex-col items-center justify-center flex-1 h-full space-y-1 text-gray-400 dark:text-zinc-500 transition-colors"
-            >
-              <Bars3Icon className="h-5 w-5" />
-              <span className="text-[9px] font-bold">Menü</span>
-            </button>
           </div>
+          <Link
+            to={paths.odemeler}
+            className={`flex flex-col items-center justify-center flex-1 h-14 space-y-0.5 transition-colors ${
+              location.pathname === paths.odemeler ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
+            }`}
+          >
+            <CreditCardIcon className="h-5 w-5 shrink-0" />
+            <span className="text-[9px] font-bold">Ödemeler</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 h-14 space-y-0.5 text-gray-400 dark:text-zinc-500 transition-colors"
+          >
+            <Bars3Icon className="h-5 w-5 shrink-0" />
+            <span className="text-[9px] font-bold">Menü</span>
+          </button>
         </div>
       </div>
     </div>

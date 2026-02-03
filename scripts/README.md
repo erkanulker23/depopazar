@@ -1,27 +1,22 @@
-# DepoPazar – Scripts
+# DepoPazar / Depotakip – Scripts
 
-Bu klasör yerel geliştirme ve sunucu dışı ortamlarda kullanılan script’leri içerir.
+## depotakip-v1.test (PHP uygulaması)
 
-## Proje kökünden kullanım
+PHP uygulamasını yerelde çalıştırmak için:
 
-- **Servisleri başlat:** `./run-all.sh` (kökteki wrapper `scripts/run-all.sh` çağırır)
-- **Servisleri durdur:** `./stop-all.sh`
+```bash
+./scripts/setup-valet.sh
+```
 
-## Scripts klasörü içeriği
+Bu script:
 
-| Script | Açıklama |
-|--------|----------|
-| `run-all.sh` | Docker + Backend + Frontend’i başlatır |
-| `stop-all.sh` | Backend ve Frontend process’lerini durdurur |
-| `fix-valet.sh` | Valet (Laravel) yerel domain ayarlarını düzeltir |
-| `setup-valet.sh` | Valet kurulumu |
-| `restart-valet.sh` | Valet’i yeniden başlatır |
-| `test-connection.sh` | Yerel API ve frontend bağlantısını test eder |
+1. Eski Nginx config’i kaldırır (varsa, React build’e yönlendiren).
+2. `valet link depotakip-v1` ile `php-app/public` dizinini `depotakip-v1.test` adresine bağlar.
+3. Valet’i yeniden başlatır.
 
-## Yerel Nginx/Valet/Laragon
+**Gereksinimler:** Laravel Valet kurulu ve çalışır olmalı (`valet install`).  
+**Veritabanı:** `php-app/config/db.local.php` (örnek: `php-app/config/db.local.php.example` kopyalayıp düzenleyin).
 
-`valet*.conf`, `laragon.conf`, `nginx.conf` dosyaları **sadece yerel ortam** (Valet/Laragon) için referanstır. Sunucuda Nginx konfigürasyonu Forge vb. panel üzerinden yönetilir.
+---
 
-## Path alias (@/)
-
-Backend ve frontend’te `@/` ile `src/` altındaki modüllere import yapılabilir (tsconfig path alias ile yapılandırılmıştır).
+- `valet.conf` / `nginx.conf`: Eski React + API proxy ayarları (PHP app için **kullanmayın**; PHP için sadece `setup-valet.sh` yeterli).

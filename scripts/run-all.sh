@@ -12,11 +12,11 @@ echo "🚀 DepoPazar servisleri başlatılıyor..."
 echo ""
 
 if command -v docker &> /dev/null; then
-  echo -e "${YELLOW}1. Docker servisleri...${NC}"
-  cd "$ROOT" && docker compose up -d postgres redis 2>&1 | tail -3
+  echo -e "${YELLOW}1. Docker servisleri (MySQL + Redis)...${NC}"
+  cd "$ROOT" && docker compose up -d mysql redis 2>&1 | tail -3
   echo -e "${GREEN}   ✅ Docker servisleri başlatıldı${NC}"
 else
-  echo -e "${RED}   ⚠️  Docker bulunamadı, atlanıyor${NC}"
+  echo -e "${RED}   ⚠️  Docker bulunamadı, atlanıyor (yerel MySQL/Redis kullanın)${NC}"
 fi
 
 echo -e "${YELLOW}2. Backend...${NC}"

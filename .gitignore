@@ -15,6 +15,9 @@ dist/
 # Environment variables
 .env
 .env.local
+
+# PHP app local config (generated during deploy)
+php-app/config/db.local.php
 .env.development.local
 .env.test.local
 .env.production.local
@@ -39,8 +42,9 @@ Thumbs.db
 *.sqlite
 *.db
 
-# Uploads (logo, etc.)
+# Uploads (logo, PDF, etc.)
 backend/uploads/
+php-app/uploads/
 
 # Logs (backend PM2 izolasyonu: backend/logs/depopazar-*-*.log)
 logs/

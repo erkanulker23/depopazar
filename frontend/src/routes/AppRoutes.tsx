@@ -58,6 +58,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Navigate to={paths.giris} replace />} />
+      <Route path="/dashboard" element={<Navigate to={paths.genelBakis} replace />} />
       <Route
         path={paths.giris}
         element={!isAuthenticated ? <LoginPage /> : <Navigate to={getRedirectPath()} />}

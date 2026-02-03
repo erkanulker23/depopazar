@@ -1,119 +1,125 @@
-# Forge / AWA – Deploy script ve yeni kurulum
+# Laravel Forge Deploy – DepoPazar (PHP)
 
-**Kök deploy script:** Proje kökündeki `deploy.sh` Forge “Quick Deploy” ile uyumludur. Tek `.env` dosyası proje kökünde olmalı; backend ve frontend bu dosyadan beslenir. Script gerekli dizinleri (backend/uploads, backend/backups, backend/logs) oluşturur ve izinleri ayarlar.
+DepoPazar PHP uygulaması Laravel Forge ile deploy edilir. Bu dokümanda Forge kurulumu adım adım açıklanır.
 
-## 404 (general.awapanel.com/login) ve boş log çözümü
+---
 
-Bu belgedeki adımlar **mutlaka** uygulanmalı; aksi halde `/login` 404 verir ve Site Log boş kalır.
+## 1. GitHub Repo
 
-1. **Settings → General**
-   - **Web directory:** `/public` **olmasın.** Değeri **`frontend/dist`** yapın (projede `public` yok; React build `frontend/dist` içindedir).
-   - **Root directory:** Boş bırakın (veya `/`) — site kökü = proje kökü.
-2. **Settings → Processes**
-   - **“No background processes yet”** ise **“New Daemon”** ile ekleyin:
-   - **Command:** `node backend/dist/main.js`
-   - **Directory:** Site kökü (örn. `/home/forge/general.awapanel.com`)
-   - Kaydedip process’i **Start** edin.
-3. **Nginx:** Forge’da **Site → Nginx → Edit** ile `server { ... }` bloğunun **içine** aşağıdakileri ekleyin veya mevcut `location /` ile değiştirin:
+- Repo: `https://github.com/erkanulker23/depopazar`
+- Branch: `main` (veya Forge'da seçeceğiniz branch)
 
-   - **SPA fallback:** `/staff`, `/services`, `/dashboard` vb. doğrudan açıldığında 404 vermemesi için `location /` mutlaka `try_files $uri $uri/ /index.html;` içermeli.
-   - **API proxy:** `/api` istekleri Node’a yönlendirilmeli.
+---
+
+## 2. Forge Site Oluşturma
+
+1. **Server** seçin veya yeni bir server ekleyin
+2. **Sites** → **Create Site**
+3. **Domain**: `your-domain.com` (veya alt domain)
+4. **Project Type**: PHP
+5. **Web Directory**: `php-app/public` ← **Önemli**
+6. **PHP Version**: 8.0 veya üzeri önerilir
+
+---
+
+## 3. GitHub Bağlantısı
+
+1. **Source Control** → GitHub hesabınızı bağlayın
+2. **Repository**: `erkanulker23/depopazar`
+3. **Branch**: `main`
+4. **Deploy Script**: Aşağıdaki metni kullanın veya proje kökündeki `deploy.sh` kullanılacak
+
+---
+
+## 4. Deploy Script
+
+Forge **Deploy Script** alanına şunu yazın (veya `deploy.sh` dosyası zaten projede mevcut – Forge bunu çalıştıracak):
+
+```bash
+cd /home/forge/your-domain.com
+git pull origin main
+```
+
+**Veya** proje kökündeki `deploy.sh` kullanılacak şekilde:
+
+```bash
+cd /home/forge/your-domain.com
+./deploy.sh
+```
+
+`deploy.sh` şunları yapar:
+- `git fetch` + `git reset --hard origin/main`
+- `.env` dosyasından DB bilgilerini okuyup `php-app/config/db.local.php` oluşturur
+- İlk kurulumda `php-app/sql/schema.sql` ile tabloları oluşturur (CREATE IF NOT EXISTS)
+- `php-app/uploads` dizinini oluşturur ve izinleri ayarlar
+
+---
+
+## 5. Environment (.env)
+
+Forge **Environment** sekmesinde aşağıdaki değişkenleri tanımlayın:
+
+```
+APP_NAME=DepoPazar
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.com
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=depotakip
+DB_USERNAME=forge
+DB_PASSWORD=your_db_password
+```
+
+Forge bu değerleri `.env` dosyasına yazar. `deploy.sh` bu dosyayı okur ve `db.local.php` oluşturur.
+
+---
+
+## 6. MySQL Veritabanı
+
+1. Forge **Databases** → **Create Database**
+2. Database adı: `depotakip` (veya farklı bir ad – `.env`'deki `DB_DATABASE` ile eşleşmeli)
+3. Kullanıcı ve şifre oluşturun
+4. Bu bilgileri `.env` (Environment) içine yazın
+
+---
+
+## 7. Nginx Ayarları
+
+Forge genelde otomatik ayarlar. Özel gereksinim varsa:
+
+**Web Directory** mutlaka `php-app/public` olmalı:
 
 ```nginx
-# 1) Backend API proxy (location / bloğundan önce olmalı)
-location /api {
-    proxy_pass http://127.0.0.1:4100;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-
-# 2) SPA fallback: /staff, /services, /dashboard vb. doğrudan URL’ler index.html dönsün (404 vermesin)
-location / {
-    try_files $uri $uri/ /index.html;
-}
+root /home/forge/your-domain.com/php-app/public;
 ```
 
-4. **Logları nerede görürsünüz?**  
-   Forge’daki **“Site Log”** genelde Nginx/PHP logudur; Node uygulaması oraya yazmaz. Backend hatalarını görmek için: **Settings → Processes** → ilgili process’in yanındaki **“Log”** (veya “View log”). Backend stdout/stderr orada görünür.
-
-5. Deploy’u tekrar çalıştırın; ardından **Processes** ekranından Node process’ini **Restart** edin.
+**PHP** ve **index.php** yönlendirmesi Forge varsayılanı ile çalışır.
 
 ---
 
-## EADDRINUSE: Port 4100 zaten kullanımda
+## 8. İlk Deploy
 
-Bu hata, **aynı anda birden fazla backend process** çalıştığında veya restart sırasında eski process portu hemen bırakmadığında oluşur.
-
-**Yapılacaklar:**
-
-1. **Tek process manager kullanın.** Backend’i **ya** Forge Daemon **ya** PM2 ile çalıştırın, ikisini birlikte kullanmayın. Forge kullanıyorsanız deploy script’te `pm2` komutları olmamalı; sadece Forge’daki **Processes → Daemon** ile `node backend/dist/main.js` çalışsın.
-2. **Portu kullanan process’i durdurun.** Sunucuda SSH ile:
-   ```bash
-   # 4100 portunu kullanan process’i bulup kapatın
-   sudo lsof -i :4100
-   # veya
-   sudo fuser -k 4100/tcp
-   ```
-   Sonra Forge’da **Processes** ekranından Node process’ini **Start** edin (tek bir tane olsun).
-3. **Restart sırasında:** Forge’da önce **Stop**, birkaç saniye bekleyin, sonra **Start** yapın. Uygulama artık SIGTERM alınca graceful shutdown yapıyor; port daha hızlı serbest kalır.
+1. **Deploy Now** butonuna tıklayın
+2. Hata yoksa site `https://your-domain.com` adresinde açılır
+3. Giriş: `/giris` – İlk kullanıcı için `php-app/set-password.php` ile şifre oluşturulabilir (sunucuda çalıştırılır)
 
 ---
 
-## Yeni site kurulumu (ilk kez)
+## 9. Özet
 
-1. **Site oluştur:** Static → Other (veya HTML).
-2. **Settings → General**
-   - Root directory: **boş** (veya `/`)
-   - Web directory: **`frontend/dist`**
-3. **Settings → Deployments → Deploy script:** Aşağıdaki script’i yapıştırın; `general.awapanel.com` yerine kendi site yolunuzu yazın.
-4. **Settings → Environment:** Proje kökündeki `.env` buradan düzenlenir. `.env.example` içeriğini kopyalayıp **DB_USERNAME**, **DB_PASSWORD**, **JWT_SECRET**, **JWT_REFRESH_SECRET** doldurun; **NODE_ENV=production**, **SWAGGER_ENABLED=false** olsun.
-5. **Settings → Processes → New Daemon:** Komut `node backend/dist/main.js`, çalışma dizini site kökü (örn. `/home/forge/general.awapanel.com`). Kaydedip **Start** edin.
-6. **Nginx:** Yukarıdaki “Custom Nginx Configuration” snippet’ini ekleyin.
-7. İlk deploy’u çalıştırın; deploy bittikten sonra Node process’i **Restart** edin.
+| Ayar           | Değer                |
+|----------------|----------------------|
+| Web Directory  | `php-app/public`     |
+| PHP            | 8.0+                 |
+| Deploy Script  | `./deploy.sh`        |
+| Branch         | `main`               |
 
 ---
 
-## Deploy script (kopyala-yapıştır) – paralel, daha hızlı
+## Sorun Giderme
 
-`/home/forge/general.awapanel.com` yerine kendi site yolunuzu yazın.
-
-- **Backend ve frontend** bağımlılık kurulumu ve build’i **paralel** çalışır; süre belirgin şekilde kısalır.
-- `--prefer-offline --no-audit` ile npm biraz daha hızlanır.
-
-```bash
-set -e
-cd /home/forge/general.awapanel.com
-git pull origin $FORGE_SITE_BRANCH
-
-ROOT="$PWD"
-
-# 1) Paralel: backend ve frontend bağımlılıkları
-(cd "$ROOT/backend"   && npm ci --legacy-peer-deps --prefer-offline --no-audit) &
-(cd "$ROOT/frontend"  && npm ci --legacy-peer-deps --prefer-offline --no-audit) &
-wait
-
-# 2) Migration (sadece backend)
-(cd "$ROOT/backend" && npm run migration:run)
-
-# 3) Paralel: backend ve frontend build
-(cd "$ROOT/backend"  && npm run build) &
-(cd "$ROOT/frontend" && npm run build) &
-wait
-```
-
-Deploy sonrası **Processes** ekranından Node process’ini **Restart** edin (Supervisor otomatik restart etmiyorsa).
-
----
-
-### İsteğe bağlı: Daha da hızlı (npm install)
-
-Bağımlılık listesini nadiren değiştiriyorsanız, `npm ci` yerine `npm install` kullanabilirsiniz: önceki `node_modules` silinmez, sadece değişen paketler güncellenir; deploy daha kısa sürer. Trade-off: `package-lock.json` ile tam uyum garisi `npm ci` kadar güçlü olmaz.
-
-```bash
-# Yukarıdaki script’te sadece bu iki satırı değiştirin:
-(cd "$ROOT/backend"   && npm install --legacy-peer-deps --no-audit) &
-(cd "$ROOT/frontend"  && npm install --legacy-peer-deps --no-audit) &
-```
+- **500 hatası**: `php-app/storage/logs` veya PHP error log'una bakın
+- **Veritabanı bağlantı hatası**: `.env` / Environment değişkenlerini kontrol edin; `db.local.php` deploy sonrası oluşmuş olmalı
+- **403 Forbidden**: Web Directory'nin `php-app/public` olduğundan emin olun

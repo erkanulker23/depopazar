@@ -39,10 +39,14 @@ export function DashboardPage() {
     paymentsIn10Days: [] as any[],
     expiringContracts: [] as any[],
     loading: true,
+    error: null as string | null,
   });
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchStats = async () => {
+      setStats((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const canViewFinancials = user?.role === 'super_admin' || user?.role === 'company_owner' || user?.role === 'accounting';
 
@@ -179,15 +183,20 @@ export function DashboardPage() {
           paymentsIn10Days,
           expiringContracts,
           loading: false,
+          error: null,
         });
       } catch (error) {
-        console.error('Error fetching stats:', error);
-        setStats((prev) => ({ ...prev, loading: false }));
+        const message = error instanceof Error ? error.message : 'Veriler yüklenemedi';
+        setStats((prev) => ({
+          ...prev,
+          loading: false,
+          error: message,
+        }));
       }
     };
 
     fetchStats();
-  }, []);
+  }, [user]);
 
   const renderMobileList = (items: any[], type: 'payment' | 'contract') => (
     <div className="grid grid-cols-1 gap-3 md:hidden">
@@ -245,6 +254,21 @@ export function DashboardPage() {
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">Genel Bakış</h1>
         <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-widest font-bold">Sistem özeti</p>
       </div>
+
+      {stats.error && (
+        <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center gap-3">
+          <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400 shrink-0" />
+          <div>
+            <p className="font-semibold text-red-800 dark:text-red-300">Veriler yüklenemedi</p>
+            <p className="text-sm text-red-700 dark:text-red-400">{stats.error}</p>
+            <p className="text-xs text-red-600 dark:text-red-500 mt-1">
+              {stats.error.includes('502') || stats.error.includes('Bad Gateway')
+                ? 'Backend API çalışmıyor olabilir. Yerelde test için proje kökünden ./run-all.sh çalıştırın (backend port 4100).'
+                : 'API adresini ve giriş oturumunuzu kontrol edin. Sayfayı yenileyerek tekrar deneyebilirsiniz.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Ana İstatistikler - Modern Design */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">

@@ -1,19 +1,27 @@
 #!/bin/bash
-# Valet kurulumu (yerel ortam). Proje kökü: scripts/ bir üst dizin.
+# depotakip-v1.test -> PHP uygulaması (php-app/public)
+set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PUBLIC="$ROOT/php-app/public"
 
-echo "🚀 DepoPazar Valet kurulumu..."
-
-cd "$ROOT"
-valet link depotakip-v1
-
-CONFIG_FILE="$HOME/.config/valet/Nginx/depotakip-v1.test"
-VALET_CONF="$ROOT/scripts/valet-dev.conf"
-if [ -f "$VALET_CONF" ]; then
-  cp "$VALET_CONF" "$CONFIG_FILE"
-  echo "✅ Nginx yapılandırması kopyalandı"
+if ! command -v valet &>/dev/null; then
+  echo "Hata: Valet yüklü değil. Önce: composer global require laravel/valet && valet install"
+  exit 1
 fi
 
+# Eski Nginx config'i kaldır (React/frontend build'e yönlendiren)
+rm -f "$HOME/.config/valet/Nginx/depotakip-v1.test" 2>/dev/null || true
+
+cd "$PUBLIC"
+valet link depotakip-v1
+valet secure depotakip-v1 2>/dev/null || true
 valet restart
-echo "✅ Kurulum tamamlandı. Backend: cd backend && npm run start:dev  |  Frontend: cd frontend && npm run dev"
+
 echo ""
+echo "OK: https://depotakip-v1.test -> $PUBLIC (SSL açık)"
+echo "   Veritabanı: $ROOT/php-app/config/db.local.php"
+echo ""
+echo "Çalışmazsa:"
+echo "  1. Tarayıcıda https://depotakip-v1.test/giris deneyin"
+echo "  2. valet links ile linkin listelendiğini kontrol edin"
+echo "  3. PHP driver: $PUBLIC/LocalValetDriver.php (BasicValetDriver kullanıyor)"
