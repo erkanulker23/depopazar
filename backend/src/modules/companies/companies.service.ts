@@ -15,9 +15,10 @@ export class CompaniesService {
    * Güvenli company ID: sadece JWT user bilgisinden. Client'tan alınmaz.
    * Super_admin company_id yoksa ilk şirketi döner; diğer roller kendi company_id.
    */
-  async getCompanyIdForUser(user: { role: string; company_id: string | null }): Promise<string | null> {
-    if (user.company_id) return user.company_id;
-    if (user.role === UserRole.SUPER_ADMIN) {
+  async getCompanyIdForUser(user: { role?: string; company_id?: string | null }): Promise<string | null> {
+    if (user?.company_id) return user.company_id;
+    const role = user?.role;
+    if (role === UserRole.SUPER_ADMIN || role === 'super_admin') {
       const companies = await this.companiesRepository.find({ take: 1 });
       return companies.length > 0 ? companies[0].id : null;
     }

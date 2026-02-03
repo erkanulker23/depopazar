@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { companiesApi, Company, MailSettings, PaytrSettings, SmsSettings, BankAccount } from '../../services/api/companiesApi';
 import { backupApi } from '../../services/api/backupApi';
+import { getErrorMessage } from '../../utils/errorMessage';
 import { useAuthStore } from '../../stores/authStore';
 import { useCompanyStore } from '../../stores/companyStore';
 import { formatPhoneNumber, unformatPhoneNumber, isValidEmail, isValidPhoneNumber } from '../../utils/inputFormatters';
@@ -201,9 +202,9 @@ Tarih: {{payment_date}}`,
     try {
       const list = await backupApi.list();
       setBackups(list);
-    } catch (error) {
-      console.error('Failed to load backups:', error);
-      toast.error('Yedekler yüklenirken hata oluştu');
+    } catch (err: unknown) {
+      console.error('Failed to load backups:', err);
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -384,20 +385,9 @@ Tarih: {{payment_date}}`,
         // Set empty array so page doesn't break
         setBankAccounts([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load settings:', error);
-      const status = error.response?.status;
-      const errorMessage = error.response?.data?.message || error.message;
-      const isNoCompany =
-        status === 404 ||
-        errorMessage?.includes('User has no company') ||
-        errorMessage?.includes('no company') ||
-        errorMessage?.includes('Şirket bulunamadı');
-      if (isNoCompany) {
-        setError('Bu kullanıcının bir firması bulunmamaktadır. Lütfen bir firmaya atanmanız gerekmektedir.');
-      } else {
-        setError('Ayarlar yüklenirken bir hata oluştu: ' + errorMessage);
-      }
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }

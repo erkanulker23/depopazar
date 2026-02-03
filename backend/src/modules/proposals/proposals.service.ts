@@ -54,7 +54,7 @@ export class ProposalsService {
     });
 
     if (!proposal) {
-      throw new NotFoundException('Proposal not found');
+      throw new NotFoundException('Teklif bulunamadı. Silinmiş veya yetkiniz dışında olabilir.');
     }
 
     return proposal;
@@ -99,7 +99,7 @@ export class ProposalsService {
   async remove(companyId: string, id: string): Promise<void> {
     const result = await this.proposalRepository.delete({ id, company_id: companyId });
     if (result.affected === 0) {
-      throw new NotFoundException('Proposal not found');
+      throw new NotFoundException('Teklif bulunamadı. Silinmiş veya yetkiniz dışında olabilir.');
     }
   }
 }

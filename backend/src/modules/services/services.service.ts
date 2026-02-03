@@ -33,7 +33,7 @@ export class ServicesService {
       where: { id, company_id: companyId },
       relations: ['category'],
     });
-    if (!service) throw new NotFoundException('Service not found');
+    if (!service) throw new NotFoundException('Hizmet bulunamadı. Belirtilen hizmet silinmiş veya yetkiniz dışında olabilir.');
     return service;
   }
 
@@ -44,6 +44,6 @@ export class ServicesService {
 
   async remove(companyId: string, id: string): Promise<void> {
     const result = await this.serviceRepository.delete({ id, company_id: companyId });
-    if (result.affected === 0) throw new NotFoundException('Service not found');
+    if (result.affected === 0) throw new NotFoundException('Hizmet bulunamadı. Belirtilen hizmet silinmiş veya yetkiniz dışında olabilir.');
   }
 }

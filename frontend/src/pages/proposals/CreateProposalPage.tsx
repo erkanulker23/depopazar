@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { proposalsApi } from '../../services/api/proposalsApi';
 import { servicesApi, Service } from '../../services/api/servicesApi';
 import { customersApi, Customer } from '../../services/api/customersApi';
+import { getErrorMessage } from '../../utils/errorMessage';
 import { PlusIcon, TrashIcon, ArrowLeftIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
@@ -38,15 +39,16 @@ export function CreateProposalPage() {
 
   const loadDependencies = async () => {
     try {
-      const [custs, srvs] = await Promise.all([
-        customersApi.getAll(),
+      const [custsRes, srvs] = await Promise.all([
+        customersApi.getAll({ page: 1, limit: 500 }),
         servicesApi.getServices(),
       ]);
-      setCustomers(Array.isArray(custs) ? custs : (custs?.data ?? []));
+      const custList = custsRes?.data ?? (Array.isArray(custsRes) ? custsRes : []);
+      setCustomers(Array.isArray(custList) ? custList : []);
       setServices(Array.isArray(srvs) ? srvs : []);
-    } catch (error) {
-      console.error(error);
-      toast.error('Veriler yüklenirken hata oluştu');
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -115,8 +117,8 @@ export function CreateProposalPage() {
       });
       toast.success('Teklif oluşturuldu');
       navigate('/proposals');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Teklif oluşturulamadı');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

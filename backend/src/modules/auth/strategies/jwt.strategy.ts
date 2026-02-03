@@ -10,10 +10,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private configService: ConfigService,
     private usersService: UsersService,
   ) {
+    const secret = configService.get('JWT_SECRET');
+    if (!secret) {
+      throw new Error(
+        'JWT_SECRET .env içinde tanımlanmalıdır (proje kökü .env veya backend/.env).',
+      );
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_SECRET'),
+      secretOrKey: secret,
     });
   }
 

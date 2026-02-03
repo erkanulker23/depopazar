@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { servicesApi, Service, ServiceCategory } from '../../services/api/servicesApi';
 import { PlusIcon, PencilIcon, TrashIcon, FolderPlusIcon, TagIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessage';
 import { AddServiceCategoryModal } from '../../components/modals/AddServiceCategoryModal';
 import { AddServiceModal } from '../../components/modals/AddServiceModal';
 
@@ -33,18 +34,9 @@ export function ServicesPage() {
       setServices(srvs);
     } catch (err: unknown) {
       console.error(err);
-      const msg = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { message?: string }; status?: number } }).response?.data?.message
-        : null;
-      const status = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { status?: number } }).response?.status
-        : null;
-      if (status === 404 || msg?.includes('User has no company') || msg?.includes('no company') || msg?.includes('Şirket bulunamadı')) {
-        setError('Bu kullanıcının bir firması bulunmamaktadır. Lütfen bir firmaya atanmanız gerekmektedir.');
-      } else {
-        setError('Veriler yüklenirken hata oluştu.');
-        toast.error('Veriler yüklenirken hata oluştu');
-      }
+      const message = getErrorMessage(err);
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -56,8 +48,8 @@ export function ServicesPage() {
       await servicesApi.deleteCategory(id);
       toast.success('Kategori silindi');
       loadData();
-    } catch (error) {
-      toast.error('Kategori silinemedi');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -67,8 +59,8 @@ export function ServicesPage() {
       await servicesApi.deleteService(id);
       toast.success('Hizmet silindi');
       loadData();
-    } catch (error) {
-      toast.error('Hizmet silinemedi');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -84,8 +76,8 @@ export function ServicesPage() {
     return (
       <div className="p-6 max-w-md mx-auto">
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-          <p className="text-amber-800 dark:text-amber-200">{error}</p>
-          <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">Lütfen sistem yöneticinizle iletişime geçin.</p>
+          <p className="font-medium text-amber-800 dark:text-amber-200">Hizmetler yüklenemedi</p>
+          <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">{error}</p>
         </div>
       </div>
     );
@@ -116,6 +108,13 @@ export function ServicesPage() {
         </div>
       </div>
 
+      {categories.length === 0 && (
+        <div className="text-center py-12 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+          <TagIcon className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+          <p className="text-gray-600 dark:text-gray-400 font-medium">Henüz kategori yok</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Yeni Kategori ekleyerek başlayın, ardından hizmet ekleyebilirsiniz.</p>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {servicesByCategory.map(category => (
           <div key={category.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">

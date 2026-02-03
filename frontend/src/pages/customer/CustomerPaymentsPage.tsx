@@ -13,6 +13,7 @@ import {
   BuildingLibraryIcon,
 } from '@heroicons/react/24/outline';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
+import { getErrorMessage } from '../../utils/errorMessage';
 import toast from 'react-hot-toast';
 
 export function CustomerPaymentsPage() {
@@ -77,9 +78,9 @@ export function CustomerPaymentsPage() {
         } catch (error) {
           console.error('Error loading bank accounts:', error);
         }
-      } catch (error) {
-        console.error('Error fetching payments:', error);
-        toast.error('Ödemeler yüklenirken bir hata oluştu');
+      } catch (err: unknown) {
+        console.error('Error fetching payments:', err);
+        toast.error(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -99,7 +100,7 @@ export function CustomerPaymentsPage() {
       // Sayfayı yenile
       window.location.reload();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Ödeme yapılırken bir hata oluştu');
+      toast.error(getErrorMessage(error));
     }
   };
 

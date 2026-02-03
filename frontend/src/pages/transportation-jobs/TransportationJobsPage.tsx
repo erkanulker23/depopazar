@@ -19,6 +19,7 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
+import { getErrorMessage } from '../../utils/errorMessage';
 import toast from 'react-hot-toast';
 
 import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
@@ -123,17 +124,7 @@ export function TransportationJobsPage() {
       setFilteredJobs(jobsData);
     } catch (error: any) {
       console.error('Error fetching transportation jobs:', error);
-      console.error('Error details:', {
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        data: error?.response?.data,
-        message: error?.message,
-      });
-      const errorMessage = 
-        error?.response?.data?.message || 
-        error?.message || 
-        `Nakliye işleri yüklenirken bir hata oluştu${error?.response?.status ? ` (${error.response.status})` : ''}`;
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -269,7 +260,7 @@ export function TransportationJobsPage() {
           await transportationJobsApi.uploadPdf(jobId, formData.contract_pdf_file);
           toast.success('PDF sözleşme başarıyla yüklendi');
         } catch (error: any) {
-          toast.error(error.response?.data?.message || 'PDF yüklenirken bir hata oluştu');
+          toast.error(getErrorMessage(error));
         }
       }
 
@@ -290,7 +281,7 @@ export function TransportationJobsPage() {
       setDeleteTarget(null);
       fetchJobs();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Nakliye işi silinirken bir hata oluştu');
+      toast.error(getErrorMessage(error));
     } finally {
       setDeleteLoading(false);
     }

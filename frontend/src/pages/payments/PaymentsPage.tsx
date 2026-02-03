@@ -321,7 +321,7 @@ export function PaymentsPage() {
       )}
       {!loading && filteredPayments.length === 0 && (
         <div className="modern-card p-12 text-center">
-          <CreditCardIcon className="h-12 w-12 text-gray-300 dark:text-zinc-700 mx-auto mb-4" />
+          <CreditCardIcon className="h-6 w-6 text-gray-300 dark:text-zinc-700 mx-auto mb-4" />
           <p className="text-sm text-gray-500 dark:text-zinc-500 font-medium">
             {payments.length === 0
               ? 'Henüz ödeme bulunmamaktadır.'

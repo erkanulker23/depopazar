@@ -26,7 +26,7 @@ export class ServicesController {
   @ApiOperation({ summary: 'Create service' })
   async create(@CurrentUser() user: User, @Body() createDto: CreateServiceDto) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    if (!companyId) throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
     return this.servicesService.create(companyId, createDto);
   }
 
@@ -35,7 +35,11 @@ export class ServicesController {
   @ApiOperation({ summary: 'Get all services' })
   async findAll(@CurrentUser() user: User) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN || String(user?.role ?? '').toLowerCase() === 'super_admin';
+    if (!companyId) {
+      if (isSuperAdmin) return [];
+      throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
+    }
     return this.servicesService.findAll(companyId);
   }
 
@@ -43,7 +47,7 @@ export class ServicesController {
   @ApiOperation({ summary: 'Get service by id' })
   async findOne(@CurrentUser() user: User, @Param('id') id: string) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    if (!companyId) throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
     return this.servicesService.findOne(companyId, id);
   }
 
@@ -55,7 +59,7 @@ export class ServicesController {
     @Body() updateDto: UpdateServiceDto,
   ) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    if (!companyId) throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
     return this.servicesService.update(companyId, id, updateDto);
   }
 
@@ -63,7 +67,7 @@ export class ServicesController {
   @ApiOperation({ summary: 'Delete service' })
   async remove(@CurrentUser() user: User, @Param('id') id: string) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    if (!companyId) throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
     return this.servicesService.remove(companyId, id);
   }
 }

@@ -23,21 +23,44 @@ const errorTranslations: { [key: string]: string } = {
   'Mail settings not found or not active': 'Mail ayarları bulunamadı veya aktif değil',
 };
 
+/** Veritabanı / SQL hatalarını Türkçe açıklamaya çevirir */
+function translateDbError(message: string): string {
+  if (message.includes("Unknown column") && message.includes("deleted_at")) {
+    return "Veritabanında bu tabloda 'deleted_at' sütunu yok. Nedeni: Eski migration’da bu sütun eklenmemiş. Çözüm: Backend’de 'npm run migration:run' çalıştırın.";
+  }
+  if (message.includes("Unknown column")) {
+    return "Veritabanı hatası: Tabloda bilinmeyen sütun kullanılıyor. Nedeni: Migration’lar güncel değil. Çözüm: 'npm run migration:run' çalıştırın.";
+  }
+  if (message.includes("Duplicate entry")) {
+    return "Bu kayıt zaten var. Nedeni: Aynı benzersiz değer tekrar eklenmeye çalışıldı.";
+  }
+  if (message.includes("foreign key constraint")) {
+    return "İlişkili kayıt hatası: Bağlı olduğu başka bir kayıt var veya referans geçersiz.";
+  }
+  return message;
+}
+
 function translateError(message: string): string {
+  // Önce veritabanı hatalarını Türkçeleştir
+  const dbTranslated = translateDbError(message);
+  if (dbTranslated !== message) return dbTranslated;
+
   // Eğer mesaj zaten Türkçe karakterler içeriyorsa, çevirme
   if (/[çğıöşüÇĞIİÖŞÜ]/.test(message)) {
     return message;
   }
-  
+
   // Mapping'de varsa çevir
   if (errorTranslations[message]) {
     return errorTranslations[message];
   }
-  
+
   // Eğer mesaj bir object ise, message property'sini kontrol et
   if (typeof message === 'object' && message !== null) {
     const msg = (message as any).message;
     if (msg && typeof msg === 'string') {
+      const dbMsg = translateDbError(msg);
+      if (dbMsg !== msg) return dbMsg;
       if (errorTranslations[msg]) {
         return errorTranslations[msg];
       }
@@ -46,7 +69,7 @@ function translateError(message: string): string {
       }
     }
   }
-  
+
   return message;
 }
 

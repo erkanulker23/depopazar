@@ -26,7 +26,7 @@ export class ProposalsController {
   @ApiOperation({ summary: 'Create proposal' })
   async create(@CurrentUser() user: User, @Body() createDto: CreateProposalDto) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    if (!companyId) throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
     return this.proposalsService.create(companyId, createDto);
   }
 
@@ -35,7 +35,11 @@ export class ProposalsController {
   @ApiOperation({ summary: 'Get all proposals' })
   async findAll(@CurrentUser() user: User) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN || String(user?.role ?? '').toLowerCase() === 'super_admin';
+    if (!companyId) {
+      if (isSuperAdmin) return [];
+      throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
+    }
     return this.proposalsService.findAll(companyId);
   }
 
@@ -43,7 +47,7 @@ export class ProposalsController {
   @ApiOperation({ summary: 'Get proposal by id' })
   async findOne(@CurrentUser() user: User, @Param('id') id: string) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    if (!companyId) throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
     return this.proposalsService.findOne(companyId, id);
   }
 
@@ -55,7 +59,7 @@ export class ProposalsController {
     @Body() updateDto: UpdateProposalDto,
   ) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    if (!companyId) throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
     return this.proposalsService.update(companyId, id, updateDto);
   }
 
@@ -63,7 +67,7 @@ export class ProposalsController {
   @ApiOperation({ summary: 'Delete proposal' })
   async remove(@CurrentUser() user: User, @Param('id') id: string) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
-    if (!companyId) throw new BadRequestException('User has no company');
+    if (!companyId) throw new BadRequestException('Bu kullanıcının bir firması atanmamış. Lütfen kullanıcıyı bir firmaya atayın veya firma oluşturun.');
     return this.proposalsService.remove(companyId, id);
   }
 }

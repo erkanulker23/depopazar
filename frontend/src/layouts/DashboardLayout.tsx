@@ -123,7 +123,7 @@ export function DashboardLayout() {
       <Link
         key={item.name}
         to={item.href}
-        onClick={() => isMobile && setMobileMenuOpen(false)}
+        onClick={() => setMobileMenuOpen(false)}
         className={`group relative flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 cursor-pointer ${
           isActive
             ? isHighlight
@@ -291,14 +291,8 @@ export function DashboardLayout() {
           {/* Header with Notifications */}
           <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md border-b border-gray-200 dark:border-[#27272a] shadow-sm">
             <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 h-14">
-              {/* Mobile Menu Toggle & Company Name */}
-              <div className="flex items-center md:hidden gap-3">
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#18181b]"
-                >
-                  <Bars3Icon className="h-6 w-6" />
-                </button>
+              {/* Mobile: sadece proje adı (menü footer'da) */}
+              <div className="flex items-center md:hidden">
                 <span className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
                   {projectName || 'DepoPazar'}
                 </span>

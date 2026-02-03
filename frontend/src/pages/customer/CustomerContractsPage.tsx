@@ -10,6 +10,7 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
+import { getErrorMessage } from '../../utils/errorMessage';
 import toast from 'react-hot-toast';
 
 export function CustomerContractsPage() {
@@ -42,9 +43,9 @@ export function CustomerContractsPage() {
           );
           setContracts(customerContracts);
         }
-      } catch (error) {
-        console.error('Error fetching contracts:', error);
-        toast.error('Sözleşmeler yüklenirken bir hata oluştu');
+      } catch (err: unknown) {
+        console.error('Error fetching contracts:', err);
+        toast.error(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -60,7 +61,7 @@ export function CustomerContractsPage() {
       // Sayfayı yenile
       window.location.reload();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Ödeme yapılırken bir hata oluştu');
+      toast.error(getErrorMessage(error));
     }
   };
 

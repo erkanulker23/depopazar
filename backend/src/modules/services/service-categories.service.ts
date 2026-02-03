@@ -33,7 +33,7 @@ export class ServiceCategoriesService {
       where: { id, company_id: companyId },
       relations: ['services'],
     });
-    if (!category) throw new NotFoundException('Category not found');
+    if (!category) throw new NotFoundException('Hizmet kategorisi bulunamadı. Silinmiş veya yetkiniz dışında olabilir.');
     return category;
   }
 
@@ -44,6 +44,6 @@ export class ServiceCategoriesService {
 
   async remove(companyId: string, id: string): Promise<void> {
     const result = await this.categoryRepository.delete({ id, company_id: companyId });
-    if (result.affected === 0) throw new NotFoundException('Category not found');
+    if (result.affected === 0) throw new NotFoundException('Hizmet kategorisi bulunamadı. Silinmiş veya yetkiniz dışında olabilir.');
   }
 }

@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { proposalsApi, Proposal } from '../../services/api/proposalsApi';
 import { generateProposalPDF } from '../../utils/pdfUtils';
+import { getErrorMessage } from '../../utils/errorMessage';
 import { PlusIcon, TrashIcon, ArrowDownTrayIcon, EnvelopeIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 export function ProposalsPage() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,10 +19,13 @@ export function ProposalsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await proposalsApi.getAll();
       setProposals(data);
-    } catch (error) {
-      toast.error('Teklifler yüklenirken hata oluştu');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -32,8 +37,8 @@ export function ProposalsPage() {
       await proposalsApi.delete(id);
       toast.success('Teklif silindi');
       loadData();
-    } catch (error) {
-      toast.error('Teklif silinemedi');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -42,8 +47,8 @@ export function ProposalsPage() {
       const full = await proposalsApi.getById(proposal.id);
       generateProposalPDF(full);
       toast.success('PDF indirildi');
-    } catch (e) {
-      toast.error('PDF oluşturulamadı');
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -78,8 +83,8 @@ export function ProposalsPage() {
       win.focus();
       setTimeout(() => { win.print(); win.close(); }, 250);
       toast.success('Yazdırma penceresi açıldı');
-    } catch (e) {
-      toast.error('Yazdırılamadı');
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -99,6 +104,17 @@ export function ProposalsPage() {
   };
 
   if (loading) return <div className="p-4">Yükleniyor...</div>;
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-md mx-auto">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <p className="font-medium text-amber-800 dark:text-amber-200">Teklifler yüklenemedi</p>
+          <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
