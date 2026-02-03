@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { XCircleIcon } from '@heroicons/react/24/outline';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
@@ -70,13 +71,13 @@ export function PaymentFailPage() {
         )}
         <div className="flex gap-4 justify-center">
           <button
-            onClick={() => navigate('/payments?collect=true')}
+            onClick={() => navigate(paths.odemeAl)}
             className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             Tekrar Dene
           </button>
           <button
-            onClick={() => navigate('/payments')}
+            onClick={() => navigate(paths.odemeler)}
             className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
           >
             Ödemeler Sayfasına Dön

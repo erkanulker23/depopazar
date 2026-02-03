@@ -1,4 +1,4 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 // İngilizce hata mesajlarını Türkçe'ye çeviren mapping
@@ -75,6 +75,8 @@ function translateError(message: string): string {
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -131,13 +133,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     // Log error (development: full; production: one line so Forge/PM2 process log shows it)
     if (process.env.NODE_ENV === 'development') {
-      console.error('Exception:', exception);
-      if (exception instanceof Error) {
-        console.error('Stack:', exception.stack);
-      }
+      this.logger.error('Exception:', exception instanceof Error ? exception.stack : String(exception));
     } else {
       const msg = exception instanceof Error ? exception.message : String(exception);
-      console.error(`[${request.method} ${request.url}] ${status} ${msg}`);
+      this.logger.error(`[${request.method} ${request.url}] ${status} ${msg}`);
     }
 
     response.status(status).json({

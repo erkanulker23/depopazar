@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, BadRequestException } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { entities } from './entities';
@@ -7,7 +7,7 @@ import { entities } from './entities';
 function requireEnv(configService: ConfigService, key: string): string {
   const v = configService.get(key);
   if (v === undefined) {
-    throw new Error(`Production için ${key} .env içinde tanımlanmalıdır.`);
+    throw new BadRequestException(`Production için ${key} .env içinde tanımlanmalıdır.`);
   }
   return String(v);
 }

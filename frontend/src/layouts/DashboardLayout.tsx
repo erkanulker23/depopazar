@@ -26,23 +26,24 @@ import {
 } from '@heroicons/react/24/outline';
 import { notificationsApi } from '../services/api/notificationsApi';
 import { useTheme } from '../contexts/ThemeContext';
+import { paths } from '../routes/paths';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Depo Girişi Ekle', href: '/contracts?newSale=true', icon: PlusCircleIcon },
-  { name: 'Ödeme Al', href: '/payments?collect=true', icon: BanknotesIcon, highlight: true },
-  { name: 'Tüm Girişler', href: '/contracts', icon: DocumentTextIcon },
-  { name: 'Nakliye İşler', href: '/transportation-jobs', icon: TruckIcon },
-  { name: 'Hizmetler', href: '/services', icon: TagIcon },
-  { name: 'Teklifler', href: '/proposals', icon: DocumentPlusIcon },
-  { name: 'Kullanıcılar', href: '/staff', icon: UserGroupIcon },
-  { name: 'Kullanıcı Yetkileri', href: '/permissions', icon: ShieldCheckIcon },
-  { name: 'Depolar', href: '/warehouses', icon: BuildingOfficeIcon },
-  { name: 'Odalar', href: '/rooms', icon: CubeIcon },
-  { name: 'Müşteriler', href: '/customers', icon: UsersIcon },
-  { name: 'Ödemeler', href: '/payments', icon: CreditCardIcon },
-  { name: 'Raporlar', href: '/reports', icon: ChartBarIcon },
-  { name: 'Ayarlar', href: '/settings', icon: Cog6ToothIcon },
+  { name: 'Genel Bakış', href: paths.genelBakis, icon: HomeIcon },
+  { name: 'Depo Girişi Ekle', href: paths.girisYeni, icon: PlusCircleIcon },
+  { name: 'Ödeme Al', href: paths.odemeAl, icon: BanknotesIcon, highlight: true },
+  { name: 'Tüm Sözleşmeler', href: paths.girisler, icon: DocumentTextIcon },
+  { name: 'Nakliye İşler', href: paths.nakliyeIsler, icon: TruckIcon },
+  { name: 'Hizmetler', href: paths.hizmetler, icon: TagIcon },
+  { name: 'Teklifler', href: paths.teklifler, icon: DocumentPlusIcon },
+  { name: 'Kullanıcılar', href: paths.kullanicilar, icon: UserGroupIcon },
+  { name: 'Kullanıcı Yetkileri', href: paths.yetkiler, icon: ShieldCheckIcon },
+  { name: 'Depolar', href: paths.depolar, icon: BuildingOfficeIcon },
+  { name: 'Odalar', href: paths.odalar, icon: CubeIcon },
+  { name: 'Müşteriler', href: paths.musteriler, icon: UsersIcon },
+  { name: 'Ödemeler', href: paths.odemeler, icon: CreditCardIcon },
+  { name: 'Raporlar', href: paths.raporlar, icon: ChartBarIcon },
+  { name: 'Ayarlar', href: paths.ayarlar, icon: Cog6ToothIcon },
 ];
 
 export function DashboardLayout() {
@@ -96,21 +97,14 @@ export function DashboardLayout() {
     // Özel aktif durum kontrolü
     let isActive = false;
     
-    if (itemPath === '/contracts') {
-      // "Depo Girişi Ekle" için: newSale=true query parametresi varsa aktif
+    if (itemPath === paths.girisler || itemPath === paths.girisYeni) {
       if (item.name === 'Depo Girişi Ekle') {
-        isActive = location.pathname === itemPath && searchParams.get('newSale') === 'true';
-      }
-      // "Tüm Girişler" için: query parametresi yoksa aktif
-      else if (item.name === 'Tüm Girişler') {
-        isActive = location.pathname === itemPath && !searchParams.get('newSale');
-      }
-      // "Ödeme Al" için: hiçbir zaman aktif olmamalı (sadece highlight)
-      else if (item.name === 'Ödeme Al') {
+        isActive = location.pathname === paths.girisYeni;
+      } else if (item.name === 'Tüm Sözleşmeler') {
+        isActive = location.pathname === paths.girisler;
+      } else if (item.name === 'Ödeme Al') {
         isActive = false;
-      }
-      // Diğer durumlar için normal kontrol
-      else {
+      } else {
         isActive = location.pathname === itemPath;
       }
     } else {
@@ -219,35 +213,23 @@ export function DashboardLayout() {
                   .filter((item) => {
                     const role = user?.role;
 
-                    // Müşteriler sadece Dashboard ve Nakliye İşlerini görebilir (varsayılan kısıtlama)
                     if (role === 'customer') {
-                      return ['/dashboard', '/transportation-jobs'].includes(item.href);
+                      return [paths.genelBakis, paths.nakliyeIsler].includes(item.href);
                     }
-
-                    // Kullanıcılar ve Yetkileri sadece Admin ve Sahibe özel
-                    if (['/staff', '/permissions'].includes(item.href)) {
+                    if ([paths.kullanicilar, paths.yetkiler].includes(item.href)) {
                       return role === 'super_admin' || role === 'company_owner';
                     }
-
-                    // Raporlar sadece Admin, Sahip ve Muhasebeye özel
-                    if (item.href === '/reports') {
+                    if (item.href === paths.raporlar) {
                       return role === 'super_admin' || role === 'company_owner' || role === 'accounting';
                     }
-
-                    // Ayarlar sadece Admin ve Sahibe özel
-                    if (item.href === '/settings') {
+                    if (item.href === paths.ayarlar) {
                       return role === 'super_admin' || role === 'company_owner';
                     }
-
-                    // Ödemeler ve Ödeme Al sadece Admin, Sahip ve Muhasebeye özel
-                    if (item.href.startsWith('/payments')) {
+                    if (item.href.startsWith(paths.odemeler) || item.href === paths.odemeAl) {
                       return role === 'super_admin' || role === 'company_owner' || role === 'accounting';
                     }
-
-                    // Veri Girişi kullanıcısı için kısıtlamalar
                     if (role === 'data_entry') {
-                      // Veri girişi ödemeleri ve raporları görmemeli
-                      if (item.href.startsWith('/payments') || item.href === '/reports') {
+                      if (item.href.startsWith(paths.odemeler) || item.href === paths.raporlar) {
                         return false;
                       }
                     }
@@ -445,18 +427,18 @@ export function DashboardLayout() {
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-md border-t border-gray-200 dark:border-[#27272a] px-2 pt-2 pb-safe shadow-2xl">
           <div className="flex items-center justify-around h-14">
             <Link
-              to="/dashboard"
+              to={paths.genelBakis}
               className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors ${
-                location.pathname === '/dashboard' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
+                location.pathname === paths.genelBakis ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
               }`}
             >
               <HomeIcon className="h-5 w-5" />
-              <span className="text-[9px] font-bold">Ana Sayfa</span>
+              <span className="text-[9px] font-bold">Genel Bakış</span>
             </Link>
             <Link
-              to="/customers"
+              to={paths.musteriler}
               className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors ${
-                location.pathname === '/customers' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
+                location.pathname === paths.musteriler ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
               }`}
             >
               <UsersIcon className="h-5 w-5" />
@@ -464,16 +446,16 @@ export function DashboardLayout() {
             </Link>
             <div className="relative -mt-8 flex-shrink-0">
               <Link
-                to="/contracts?newSale=true"
+                to={paths.girisYeni}
                 className="flex items-center justify-center w-12 h-12 bg-emerald-600 rounded-2xl text-white shadow-xl shadow-emerald-500/20 transform transition-all active:scale-90"
               >
                 <PlusCircleIcon className="h-7 w-7" />
               </Link>
             </div>
             <Link
-              to="/payments"
+              to={paths.odemeler}
               className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors ${
-                location.pathname === '/payments' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
+                location.pathname === paths.odemeler ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'
               }`}
             >
               <CreditCardIcon className="h-5 w-5" />

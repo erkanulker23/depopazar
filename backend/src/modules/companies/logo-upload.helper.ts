@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -22,14 +23,14 @@ function extFromMime(mime: string): string {
 
 export function validateLogoFile(file: Express.Multer.File): void {
   if (!file || !file.buffer) {
-    throw new Error('Dosya yüklenmedi');
+    throw new BadRequestException('Dosya yüklenmedi');
   }
   if (file.size > MAX_SIZE) {
-    throw new Error('Logo en fazla 2MB olabilir');
+    throw new BadRequestException('Logo en fazla 2MB olabilir');
   }
   const mime = file.mimetype.split(';')[0].trim().toLowerCase();
   if (!ALLOWED_MIMES.includes(mime)) {
-    throw new Error('Sadece resim dosyaları (JPEG, PNG, GIF, WebP) yüklenebilir');
+    throw new BadRequestException('Sadece resim dosyaları (JPEG, PNG, GIF, WebP) yüklenebilir');
   }
 }
 

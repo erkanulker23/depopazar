@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
@@ -73,7 +74,7 @@ export function PaymentSuccessPage() {
           </div>
         )}
         <button
-          onClick={() => navigate('/payments')}
+          onClick={() => navigate(paths.odemeler)}
           className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
         >
           Ödemeler Sayfasına Dön

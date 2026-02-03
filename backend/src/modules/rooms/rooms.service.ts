@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Room } from './entities/room.entity';
@@ -8,6 +8,8 @@ import { NotificationType } from '../../common/enums/notification-type.enum';
 
 @Injectable()
 export class RoomsService {
+  private readonly logger = new Logger(RoomsService.name);
+
   constructor(
     @InjectRepository(Room)
     private roomsRepository: Repository<Room>,
@@ -26,25 +28,13 @@ export class RoomsService {
     });
 
     try {
-      console.log(`[RoomsService] Creating room - warehouse_id: ${savedRoom.warehouse_id}`);
-      const usersToNotify: any[] = [];
-      
-      // Şirket kullanıcılarına bildirim gönder
+      const usersToNotify: Array<{ id: string }> = [];
       if (roomWithWarehouse?.warehouse?.company_id) {
-        const companyUsers = await this.usersService.findByCompanyId(roomWithWarehouse.warehouse.company_id);
-        usersToNotify.push(...companyUsers);
-        console.log(`[RoomsService] Found ${companyUsers.length} company users`);
+        usersToNotify.push(...(await this.usersService.findByCompanyId(roomWithWarehouse.warehouse.company_id)));
       }
-      
-      // Super admin kullanıcılarına da bildirim gönder
-      const superAdmins = await this.usersService.findAllSuperAdmins();
-      usersToNotify.push(...superAdmins);
-      console.log(`[RoomsService] Found ${superAdmins.length} super admin users`);
-      
-      // Tüm kullanıcılara bildirim gönder
+      usersToNotify.push(...(await this.usersService.findAllSuperAdmins()));
       for (const user of usersToNotify) {
         try {
-          console.log(`[RoomsService] Creating notification for user: ${user.email}`);
           await this.notificationsService.create({
             user_id: user.id,
             type: NotificationType.ROOM_CREATED,
@@ -57,13 +47,12 @@ export class RoomsService {
               warehouse_id: savedRoom.warehouse_id,
             },
           });
-          console.log(`[RoomsService] Notification created successfully`);
-        } catch (error: any) {
-          console.error(`[RoomsService] Error creating notification:`, error?.message || error);
+        } catch (error: unknown) {
+          this.logger.warn(`Notification failed for user ${user.id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
-    } catch (error: any) {
-      console.error('[RoomsService] Error in notification creation:', error?.message || error);
+    } catch (error: unknown) {
+      this.logger.warn('Notification creation failed', error instanceof Error ? error.message : String(error));
     }
 
     return savedRoom;

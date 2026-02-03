@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { apiClient } from '../../services/api/apiClient';
 import { UserIcon, PlusIcon, TrashIcon, XMarkIcon, PencilIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { AddStaffModal } from '../../components/modals/AddStaffModal';
@@ -42,18 +43,18 @@ export function StaffPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Kullanıcı Listesi</h1>
-          <p className="text-gray-600 dark:text-gray-400">Sistem kullanıcıları yönetimi ve yetkilendirme</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-1 sm:mb-2">Kullanıcı Listesi</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Sistem kullanıcıları yönetimi ve yetkilendirme</p>
         </div>
         {isAdmin && (
           <button
             onClick={() => setAddModalOpen(true)}
-            className="btn-primary inline-flex items-center px-6 py-3"
+            className="btn-primary inline-flex items-center justify-center px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base shrink-0 w-full sm:w-auto"
           >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Kullanıcı Ekle
+            <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 shrink-0" />
+            <span>Kullanıcı Ekle</span>
           </button>
         )}
       </div>
@@ -264,7 +265,7 @@ export function StaffPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-3">
                           <button
-                            onClick={() => navigate(`/staff/${person.id}`)}
+                            onClick={() => navigate(paths.kullaniciDetay(person.id))}
                             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                             title="Detayları Görüntüle"
                           >

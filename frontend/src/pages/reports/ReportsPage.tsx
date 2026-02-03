@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { reportsApi } from '../../services/api/reportsApi';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
 import { CurrencyDollarIcon, BuildingOfficeIcon, CreditCardIcon } from '@heroicons/react/24/outline';
@@ -93,7 +94,7 @@ export function ReportsPage() {
       {/* Bank Account Payments Report Link */}
       <div className="mb-6">
         <button
-          onClick={() => navigate('/reports/bank-accounts')}
+          onClick={() => navigate(paths.raporlarBankaHesaplari)}
           className="modern-card p-6 w-full text-left hover:shadow-lg transition-shadow cursor-pointer group"
         >
           <div className="flex items-center gap-3">

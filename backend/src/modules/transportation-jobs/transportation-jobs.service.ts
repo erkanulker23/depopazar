@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TransportationJob } from './entities/transportation-job.entity';
@@ -15,6 +15,8 @@ import {
 
 @Injectable()
 export class TransportationJobsService {
+  private readonly logger = new Logger(TransportationJobsService.name);
+
   constructor(
     @InjectRepository(TransportationJob)
     private transportationJobsRepository: Repository<TransportationJob>,
@@ -43,32 +45,18 @@ export class TransportationJobsService {
 
     const jobWithRelations = await this.findOne(savedJob.id);
 
-    // Bildirim oluştur: Yeni nakliye işi oluşturulduğunda
     try {
-      console.log(`[TransportationJobsService] Creating transportation job - company_id: ${jobWithRelations.company_id}`);
-      const usersToNotify: any[] = [];
-      
-      // Şirket kullanıcılarına bildirim gönder
-      if (jobWithRelations.company_id && jobWithRelations.customer) {
-        const companyUsers = await this.usersService.findByCompanyId(jobWithRelations.company_id);
-        usersToNotify.push(...companyUsers);
-        console.log(`[TransportationJobsService] Found ${companyUsers.length} company users`);
+      const usersToNotify: Array<{ id: string }> = [];
+      if (jobWithRelations.company_id) {
+        usersToNotify.push(...(await this.usersService.findByCompanyId(jobWithRelations.company_id)));
       }
-      
-      // Super admin kullanıcılarına da bildirim gönder
-      const superAdmins = await this.usersService.findAllSuperAdmins();
-      usersToNotify.push(...superAdmins);
-      console.log(`[TransportationJobsService] Found ${superAdmins.length} super admin users`);
-      
-      // Tüm kullanıcılara bildirim gönder
+      usersToNotify.push(...(await this.usersService.findAllSuperAdmins()));
+      const paymentStatus = jobWithRelations.is_paid ? 'Ödeme alındı' : 'Ödeme alınmadı';
+      const customerName = jobWithRelations.customer
+        ? `${jobWithRelations.customer.first_name} ${jobWithRelations.customer.last_name}`
+        : 'Bilinmeyen Müşteri';
       for (const user of usersToNotify) {
         try {
-          console.log(`[TransportationJobsService] Creating notification for user: ${user.email}`);
-          const paymentStatus = jobWithRelations.is_paid ? 'Ödeme alındı' : 'Ödeme alınmadı';
-          const customerName = jobWithRelations.customer 
-            ? `${jobWithRelations.customer.first_name} ${jobWithRelations.customer.last_name}`
-            : 'Bilinmeyen Müşteri';
-          
           await this.notificationsService.create({
             user_id: user.id,
             customer_id: jobWithRelations.customer?.id || null,
@@ -86,13 +74,12 @@ export class TransportationJobsService {
               is_paid: jobWithRelations.is_paid,
             },
           });
-          console.log(`[TransportationJobsService] Notification created successfully`);
-        } catch (error: any) {
-          console.error(`[TransportationJobsService] Error creating notification:`, error?.message || error);
+        } catch (error: unknown) {
+          this.logger.warn(`Notification failed for user ${user.id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
-    } catch (error: any) {
-      console.error('[TransportationJobsService] Error in notification creation:', error?.message || error);
+    } catch (error: unknown) {
+      this.logger.warn('Notification creation failed', error instanceof Error ? error.message : String(error));
     }
 
     return jobWithRelations;
@@ -142,8 +129,8 @@ export class TransportationJobsService {
       const [data, total] = await queryBuilder.skip(skip).take(take).getManyAndCount();
 
       return toPaginatedResult(data, total, params);
-    } catch (error: any) {
-      console.error('[TransportationJobsService] Error in findAll:', error);
+    } catch (error: unknown) {
+      this.logger.error('Error in findAll', error instanceof Error ? error.stack : String(error));
       throw error;
     }
   }

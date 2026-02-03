@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -12,7 +12,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     const secret = configService.get('JWT_SECRET');
     if (!secret) {
-      throw new Error(
+      throw new BadRequestException(
         'JWT_SECRET .env içinde tanımlanmalıdır (proje kökü .env veya backend/.env).',
       );
     }

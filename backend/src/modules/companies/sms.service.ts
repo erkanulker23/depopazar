@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { CompanySmsSettings } from './entities/company-sms-settings.entity';
 
 export interface SmsOptions {
@@ -13,11 +13,11 @@ export class SmsService {
   async sendSms(settings: CompanySmsSettings, options: SmsOptions): Promise<void> {
     try {
       if (!settings.is_active) {
-        throw new Error('SMS ayarları aktif değil');
+        throw new BadRequestException('SMS ayarları aktif değil');
       }
 
       if (!settings.username || !settings.password || !settings.sender_id) {
-        throw new Error('SMS ayarları eksik. Lütfen kullanıcı adı, şifre ve gönderen başlığını kontrol edin.');
+        throw new BadRequestException('SMS ayarları eksik. Lütfen kullanıcı adı, şifre ve gönderen başlığını kontrol edin.');
       }
 
       const apiUrl = settings.api_url || 'https://api.netgsm.com.tr';
@@ -45,7 +45,7 @@ export class SmsService {
       });
 
       if (!response.ok) {
-        throw new Error(`SMS API yanıtı başarısız: ${response.status}`);
+        throw new BadRequestException(`SMS API yanıtı başarısız: ${response.status}`);
       }
 
       const data = await response.text();
@@ -55,7 +55,7 @@ export class SmsService {
       if (data && (data.startsWith('00') || !Number.isNaN(Number(data)))) {
         this.logger.log(`SMS sent successfully to ${options.to}: ${data}`);
       } else {
-        throw new Error(`SMS gönderilemedi: ${data}`);
+        throw new BadRequestException(`SMS gönderilemedi: ${data}`);
       }
     } catch (error) {
       this.logger.error(`Failed to send SMS: ${error.message}`, error.stack);

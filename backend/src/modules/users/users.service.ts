@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -10,6 +10,8 @@ import { CompaniesService } from '../companies/companies.service';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -36,26 +38,14 @@ export class UsersService {
 
     // Bildirim oluştur: Personel eklendiğinde (sadece COMPANY_STAFF için)
     try {
-      console.log(`[UsersService] Creating user - role: ${savedUser.role}, company_id: ${savedUser.company_id}`);
       const staffRoles = [UserRole.COMPANY_STAFF, UserRole.DATA_ENTRY, UserRole.ACCOUNTING];
       if (staffRoles.includes(savedUser.role) && savedUser.company_id) {
-        console.log(`[UsersService] Staff/Internal user created, fetching company users for company_id: ${savedUser.company_id}`);
-        const usersToNotify: any[] = [];
-        
-        // Şirket kullanıcılarına bildirim gönder
         const companyUsers = await this.findByCompanyId(savedUser.company_id);
-        usersToNotify.push(...companyUsers.filter(u => u.id !== savedUser.id));
-        console.log(`[UsersService] Found ${companyUsers.length} company users`);
-        
-        // Super admin kullanıcılarına da bildirim gönder
+        const usersToNotify = companyUsers.filter(u => u.id !== savedUser.id);
         const superAdmins = await this.findAllSuperAdmins();
-        usersToNotify.push(...superAdmins);
-        console.log(`[UsersService] Found ${superAdmins.length} super admin users`);
-        
-        // Tüm kullanıcılara bildirim gönder
-        for (const user of usersToNotify) {
+        const allToNotify = [...usersToNotify, ...superAdmins];
+        for (const user of allToNotify) {
           try {
-            console.log(`[UsersService] Creating notification for user: ${user.email} (${user.id})`);
             await this.notificationsService.create({
               user_id: user.id,
               type: NotificationType.STAFF_CREATED,
@@ -68,16 +58,13 @@ export class UsersService {
                 staff_email: savedUser.email,
               },
             });
-            console.log(`[UsersService] Notification created successfully for user: ${user.email}`);
-          } catch (notifError: any) {
-            console.error(`[UsersService] Error creating notification for user ${user.id}:`, notifError?.message || notifError);
+          } catch (notifError: unknown) {
+            this.logger.warn(`Notification failed for user ${user.id}: ${notifError instanceof Error ? notifError.message : String(notifError)}`);
           }
         }
-      } else {
-        console.log(`[UsersService] Skipping notification - role: ${savedUser.role}, company_id: ${savedUser.company_id}`);
       }
-    } catch (error: any) {
-      console.error('[UsersService] Error in notification creation:', error?.message || error);
+    } catch (error: unknown) {
+      this.logger.warn('Notification creation failed', error instanceof Error ? error.message : String(error));
     }
 
     return savedUser;
@@ -116,26 +103,17 @@ export class UsersService {
   }
 
   async findByCompanyId(companyId: string): Promise<User[]> {
-    console.log(`[UsersService] Finding users for company_id: ${companyId}`);
-    const users = await this.usersRepository.find({
+    return this.usersRepository.find({
       where: { company_id: companyId, is_active: true },
       relations: ['company'],
     });
-    console.log(`[UsersService] Found ${users.length} active users for company ${companyId}`);
-    users.forEach(user => {
-      console.log(`[UsersService] User: ${user.email} (${user.id}), role: ${user.role}`);
-    });
-    return users;
   }
 
   async findAllSuperAdmins(): Promise<User[]> {
-    console.log(`[UsersService] Finding all super admin users`);
-    const users = await this.usersRepository.find({
+    return this.usersRepository.find({
       where: { role: UserRole.SUPER_ADMIN, is_active: true },
       relations: ['company'],
     });
-    console.log(`[UsersService] Found ${users.length} super admin users`);
-    return users;
   }
 
   async updateLastLogin(id: string): Promise<void> {

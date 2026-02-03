@@ -20,8 +20,8 @@ Bu klasör yerel geliştirme ve sunucu dışı ortamlarda kullanılan script’l
 
 ## Yerel Nginx/Valet/Laragon
 
-`valet*.conf`, `laragon.conf`, `nginx.conf` dosyaları **sadece yerel ortam** (Valet/Laragon) için referanstır. Sunucuda Nginx konfigürasyonu `docs/` altındaki örnekler ve Forge panel üzerinden yönetilir.
+`valet*.conf`, `laragon.conf`, `nginx.conf` dosyaları **sadece yerel ortam** (Valet/Laragon) için referanstır. Sunucuda Nginx konfigürasyonu Forge vb. panel üzerinden yönetilir.
 
 ## Path alias (@/)
 
-Backend ve frontend’te `@/` ile `src/` altındaki modüllere import yapılabilir. Detay: `docs/PATH-ALIAS.md`.
+Backend ve frontend’te `@/` ile `src/` altındaki modüllere import yapılabilir (tsconfig path alias ile yapılandırılmıştır).

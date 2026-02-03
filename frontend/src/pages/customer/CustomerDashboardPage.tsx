@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
 import { useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 
 export function CustomerDashboardPage() {
   const { user } = useAuthStore();
@@ -173,7 +174,7 @@ export function CustomerDashboardPage() {
                   <div
                     key={contract.id}
                     className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/customer/contracts/${contract.id}`)}
+                    onClick={() => navigate(paths.musteri.sozlesmeDetay(contract.id))}
                   >
                     <div className="flex items-center justify-between">
                       <div>

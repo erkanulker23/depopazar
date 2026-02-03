@@ -22,6 +22,9 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { parsePagination } from '../../common/utils/pagination';
+import { CreateContractDto } from './dto/create-contract.dto';
+import { UpdateContractDto } from './dto/update-contract.dto';
+import { Contract } from './entities/contract.entity';
 
 @ApiTags('Contracts')
 @ApiBearerAuth()
@@ -47,7 +50,7 @@ export class ContractsController {
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Create a new contract' })
-  async create(@Body() createContractDto: any, @CurrentUser() user: any) {
+  async create(@Body() createContractDto: CreateContractDto, @CurrentUser() user: any) {
     const companyId = await this.companiesService.getCompanyIdForUser(user);
     if (!companyId) {
       throw new BadRequestException('Kullanıcı bir şirkete bağlı değil.');
@@ -136,9 +139,9 @@ export class ContractsController {
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.DATA_ENTRY)
   @ApiOperation({ summary: 'Update contract' })
-  async update(@Param('id') id: string, @Body() updateContractDto: any, @CurrentUser() user: any) {
+  async update(@Param('id') id: string, @Body() updateContractDto: UpdateContractDto, @CurrentUser() user: any) {
     await this.ensureContractAccess(id, user);
-    return this.contractsService.update(id, updateContractDto);
+    return this.contractsService.update(id, updateContractDto as unknown as Partial<Contract>);
   }
 
   @Delete(':id')

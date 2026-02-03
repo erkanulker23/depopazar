@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { useAuthStore } from '../../stores/authStore';
 import { warehousesApi } from '../../services/api/warehousesApi';
 import { roomsApi } from '../../services/api/roomsApi';
@@ -241,7 +242,7 @@ export function DashboardPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">Dashboard</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">Genel Bakış</h1>
         <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-widest font-bold">Sistem özeti</p>
       </div>
 
@@ -324,7 +325,7 @@ export function DashboardPage() {
       {(user?.role === 'super_admin' || user?.role === 'company_owner' || user?.role === 'accounting') && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
           <button
-            onClick={() => navigate('/payments?status=pending')}
+            onClick={() => navigate(`${paths.odemeler}?status=pending`)}
             className="modern-card p-5 border-l-4 border-yellow-500 group hover:scale-[1.01] transition-all duration-300 cursor-pointer w-full text-left"
           >
             <div className="flex items-center justify-between">
@@ -343,7 +344,7 @@ export function DashboardPage() {
           </button>
 
           <button
-            onClick={() => navigate('/payments?status=overdue')}
+            onClick={() => navigate(`${paths.odemeler}?status=overdue`)}
             className="modern-card p-5 border-l-4 border-red-500 group hover:scale-[1.01] transition-all duration-300 cursor-pointer w-full text-left"
           >
             <div className="flex items-center justify-between">
@@ -362,7 +363,7 @@ export function DashboardPage() {
           </button>
 
           <button
-            onClick={() => navigate('/payments?status=unpaid')}
+            onClick={() => navigate(`${paths.odemeler}?status=unpaid`)}
             className="modern-card p-5 border-l-4 border-zinc-900 dark:border-zinc-100 group hover:scale-[1.01] transition-all duration-300 cursor-pointer w-full text-left sm:col-span-2 lg:col-span-1"
           >
             <div className="flex items-center justify-between">

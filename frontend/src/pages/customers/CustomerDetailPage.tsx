@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { customersApi } from '../../services/api/customersApi';
 import { itemsApi } from '../../services/api/itemsApi';
 import {
@@ -271,7 +272,7 @@ export function CustomerDetailPage() {
     <div>
       <div className="mb-6">
         <button
-          onClick={() => navigate('/customers')}
+          onClick={() => navigate(paths.musteriler)}
           className="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mb-4"
         >
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -838,7 +839,7 @@ export function CustomerDetailPage() {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <button
-                          onClick={() => navigate(`/rooms/${item.room_id}`)}
+                          onClick={() => navigate(paths.odaDetay(item.room_id))}
                           className="text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
                         >
                           {item.room?.room_number || '-'}

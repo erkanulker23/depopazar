@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { useCompanyStore } from '../stores/companyStore';
 import {
   HomeIcon,
   DocumentTextIcon,
@@ -12,20 +13,26 @@ import {
 import { notificationsApi } from '../services/api/notificationsApi';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { paths } from '../routes/paths';
 
 const customerNavigation = [
-  { name: 'Ana Sayfa', href: '/customer/dashboard', icon: HomeIcon },
-  { name: 'Sözleşmelerim', href: '/customer/contracts', icon: DocumentTextIcon },
-  { name: 'Ödemelerim', href: '/customer/payments', icon: CreditCardIcon },
+  { name: 'Genel Bakış', href: paths.musteri.genelBakis, icon: HomeIcon },
+  { name: 'Sözleşmelerim', href: paths.musteri.sozlesmeler, icon: DocumentTextIcon },
+  { name: 'Ödemelerim', href: paths.musteri.odemeler, icon: CreditCardIcon },
 ];
 
 export function CustomerLayout() {
   const { user, logout } = useAuthStore();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const { projectName, loadCompany } = useCompanyStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  useEffect(() => {
+    loadCompany();
+  }, [loadCompany]);
 
   useEffect(() => {
     fetchNotifications();
@@ -69,9 +76,9 @@ export function CustomerLayout() {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-                    Müşteri Paneli
+                    {projectName || 'DepoPazar'}
                   </h1>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Depo Yönetim Sistemi</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Müşteri Paneli</p>
                 </div>
               </div>
             </div>

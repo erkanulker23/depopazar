@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -11,14 +12,14 @@ const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function validatePdfFile(file: Express.Multer.File): void {
   if (!file || !file.buffer) {
-    throw new Error('Dosya yüklenmedi');
+    throw new BadRequestException('Dosya yüklenmedi');
   }
   if (file.size > MAX_SIZE) {
-    throw new Error('Dosya en fazla 10MB olabilir');
+    throw new BadRequestException('Dosya en fazla 10MB olabilir');
   }
   const mime = file.mimetype.split(';')[0].trim().toLowerCase();
   if (!ALLOWED_MIMES.includes(mime)) {
-    throw new Error('Sadece PDF dosyaları yüklenebilir');
+    throw new BadRequestException('Sadece PDF dosyaları yüklenebilir');
   }
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { roomsApi } from '../../services/api/roomsApi';
 import { contractsApi } from '../../services/api/contractsApi';
 import {
@@ -102,7 +103,7 @@ export function RoomDetailPage() {
     <div>
       <div className="mb-6">
         <button
-          onClick={() => navigate('/rooms')}
+          onClick={() => navigate(paths.odalar)}
           className="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mb-4"
         >
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -191,7 +192,7 @@ export function RoomDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    navigate(`/contracts/${c.id}`);
+                                    navigate(paths.girisDetay(c.id));
                                     setDeleteModalMode(null);
                                   }}
                                   className="text-primary-600 hover:text-primary-700 dark:text-primary-400 text-xs font-medium"
@@ -246,7 +247,7 @@ export function RoomDetailPage() {
                           try {
                             await roomsApi.remove(id);
                             setDeleteModalMode(null);
-                            navigate('/rooms');
+                            navigate(paths.odalar);
                           } catch (err: any) {
                             setDeleteError(
                               err.response?.data?.message || 'Oda silinirken bir hata oluştu',

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, BadRequestException, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { RoomsService } from './rooms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -12,6 +12,8 @@ import { CreateRoomDto } from './dto/create-room.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('rooms')
 export class RoomsController {
+  private readonly logger = new Logger(RoomsController.name);
+
   constructor(private readonly roomsService: RoomsService) {}
 
   @Post()
@@ -20,9 +22,9 @@ export class RoomsController {
   async create(@Body() createRoomDto: CreateRoomDto) {
     try {
       return await this.roomsService.create(createRoomDto);
-    } catch (error: any) {
-      console.error('Error creating room:', error);
-      throw new BadRequestException(error?.message || 'Failed to create room');
+    } catch (error: unknown) {
+      this.logger.error('Error creating room', error instanceof Error ? error.stack : String(error));
+      throw new BadRequestException(error instanceof Error ? error.message : 'Failed to create room');
     }
   }
 
@@ -64,9 +66,9 @@ export class RoomsController {
     try {
       await this.roomsService.remove(id);
       return { message: 'Room deleted successfully' };
-    } catch (error: any) {
-      console.error('Error deleting room:', error);
-      throw new BadRequestException(error?.message || 'Failed to delete room');
+    } catch (error: unknown) {
+      this.logger.error('Error deleting room', error instanceof Error ? error.stack : String(error));
+      throw new BadRequestException(error instanceof Error ? error.message : 'Failed to delete room');
     }
   }
 }

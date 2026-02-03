@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Warehouse } from '../warehouses/entities/warehouse.entity';
@@ -27,7 +27,7 @@ export class ReportsService {
   async getOccupancyReport(companyId: string) {
     try {
       if (!companyId) {
-        throw new Error('Şirket ID bulunamadı');
+        throw new BadRequestException('Şirket ID bulunamadı');
       }
 
       const warehouses = await this.warehousesRepository.find({
@@ -71,20 +71,20 @@ export class ReportsService {
         locked_rooms: lockedRooms,
         occupancy_rate: totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0,
       };
-    } catch (error: any) {
-      console.error('[ReportsService] Error in getOccupancyReport:', error);
-      throw new Error('Doluluk raporu oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Bilinmeyen hata';
+      throw new BadRequestException('Doluluk raporu oluşturulurken bir hata oluştu: ' + message);
     }
   }
 
   async getMonthlyRevenueReport(companyId: string, year: number, month: number) {
     try {
       if (!companyId) {
-        throw new Error('Şirket ID bulunamadı');
+        throw new BadRequestException('Şirket ID bulunamadı');
       }
 
       if (!year || !month || month < 1 || month > 12) {
-        throw new Error('Geçersiz yıl veya ay değeri');
+        throw new BadRequestException('Geçersiz yıl veya ay değeri');
       }
 
       const startDate = new Date(year, month - 1, 1);
@@ -114,9 +114,9 @@ export class ReportsService {
           contract_number: p.contract?.contract_number || null,
         })),
       };
-    } catch (error: any) {
-      console.error('[ReportsService] Error in getMonthlyRevenueReport:', error);
-      throw new Error('Gelir raporu oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Bilinmeyen hata';
+      throw new BadRequestException('Gelir raporu oluşturulurken bir hata oluştu: ' + message);
     }
   }
 

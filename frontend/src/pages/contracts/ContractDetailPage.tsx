@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { contractsApi } from '../../services/api/contractsApi';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import { itemsApi } from '../../services/api/itemsApi';
@@ -173,7 +174,7 @@ export function ContractDetailPage() {
     if (!id) return;
     try {
       await contractsApi.delete(id);
-      navigate('/contracts');
+      navigate(paths.girisler);
     } catch (error) {
       console.error('Error deleting contract:', error);
       toast.error('Sözleşme silinirken bir hata oluştu');
@@ -393,7 +394,7 @@ export function ContractDetailPage() {
       <div className="modern-card p-8 text-center">
         <p className="text-gray-600 dark:text-gray-400 mb-4">Geçersiz sözleşme adresi.</p>
         <button
-          onClick={() => navigate('/contracts')}
+          onClick={() => navigate(paths.girisler)}
           className="btn-primary inline-flex items-center px-6 py-3"
         >
           <ArrowLeftIcon className="h-5 w-5 mr-2" />
@@ -417,7 +418,7 @@ export function ContractDetailPage() {
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400 mb-4 text-lg font-semibold">{error}</p>
           <button
-            onClick={() => navigate('/contracts')}
+            onClick={() => navigate(paths.girisler)}
             className="btn-primary inline-flex items-center px-6 py-3"
           >
             <ArrowLeftIcon className="h-5 w-5 mr-2" />
@@ -440,7 +441,7 @@ export function ContractDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <button
-          onClick={() => navigate('/contracts')}
+          onClick={() => navigate(paths.girisler)}
           className="inline-flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           <ArrowLeftIcon className="h-5 w-5 mr-2" />

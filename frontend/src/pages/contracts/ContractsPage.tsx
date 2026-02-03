@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { contractsApi, type ContractStatusFilter, type ContractPaymentFilter, type ContractDebtFilter } from '../../services/api/contractsApi';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import { customersApi } from '../../services/api/customersApi';
@@ -10,6 +11,7 @@ import toast from 'react-hot-toast';
 
 export function ContractsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
@@ -34,11 +36,11 @@ export function ContractsPage() {
   const [debtFilter, setDebtFilter] = useState<ContractDebtFilter>('all');
 
   useEffect(() => {
-    if (searchParams.get('newSale') === 'true') {
+    if (searchParams.get('newSale') === 'true' || location.pathname === paths.girisYeni) {
       setIsNewSaleModalOpen(true);
       setSearchParams({});
     }
-  }, [searchParams]);
+  }, [searchParams, location.pathname]);
 
   useEffect(() => {
     fetchContracts();
@@ -89,7 +91,7 @@ export function ContractsPage() {
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">Tüm Girişler</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">Tüm Sözleşmeler</h1>
           <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-widest font-bold">Sözleşme ve ödeme yönetimi</p>
         </div>
         <button
@@ -748,7 +750,7 @@ export function ContractsPage() {
                           <div className="flex items-center">
                             <DocumentTextIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-500 mr-2.5" />
                             <button
-                              onClick={() => window.location.href = `/contracts/${contract.id}`}
+                              onClick={() => window.location.href = paths.girisDetay(contract.id)}
                               className="text-sm font-bold text-gray-900 dark:text-zinc-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                             >
                               {contract.contract_number}

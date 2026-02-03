@@ -27,59 +27,59 @@ import { TransportationJobsPage } from '../pages/transportation-jobs/Transportat
 import { ServicesPage } from '../pages/services/ServicesPage';
 import { ProposalsPage } from '../pages/proposals/ProposalsPage';
 import { CreateProposalPage } from '../pages/proposals/CreateProposalPage';
+import { paths } from './paths';
 
-// Role-based route wrapper
 function ProtectedRoute({ children, allowedRoles }: { children: JSX.Element; allowedRoles: string[] }) {
   const { user, isAuthenticated } = useAuthStore();
-  
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to={paths.giris} />;
   }
-  
+
   if (user && !allowedRoles.includes(user.role)) {
-    // Redirect to appropriate dashboard based on role
     if (user.role === 'customer') {
-      return <Navigate to="/customer/dashboard" />;
+      return <Navigate to={paths.musteri.genelBakis} />;
     }
-    return <Navigate to="/dashboard" />;
+    return <Navigate to={paths.genelBakis} />;
   }
-  
+
   return children;
 }
 
 export function AppRoutes() {
   const { isAuthenticated, user } = useAuthStore();
 
-  // Determine redirect path based on role
   const getRedirectPath = () => {
-    if (!isAuthenticated) return '/login';
-    if (user?.role === 'customer') return '/customer/dashboard';
-    return '/dashboard';
+    if (!isAuthenticated) return paths.giris;
+    if (user?.role === 'customer') return paths.musteri.genelBakis;
+    return paths.genelBakis;
   };
 
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={!isAuthenticated ? <LoginPage /> : <Navigate to={getRedirectPath()} />} 
-      />
-      
-      {/* Customer Routes */}
+      <Route path="/login" element={<Navigate to={paths.giris} replace />} />
       <Route
-        path="/customer"
+        path={paths.giris}
+        element={!isAuthenticated ? <LoginPage /> : <Navigate to={getRedirectPath()} />}
+      />
+
+      {/* Müşteri paneli */}
+      <Route
+        path="/musteri"
         element={
           <ProtectedRoute allowedRoles={['customer']}>
             <CustomerLayout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/customer/dashboard" />} />
-        <Route path="dashboard" element={<CustomerDashboardPage />} />
-        <Route path="contracts" element={<CustomerContractsPage />} />
-        <Route path="payments" element={<CustomerPaymentsPage />} />
+        <Route index element={<Navigate to={paths.musteri.genelBakis} />} />
+        <Route path="genel-bakis" element={<CustomerDashboardPage />} />
+        <Route path="sozlesmeler" element={<CustomerContractsPage />} />
+        <Route path="sozlesmeler/:id" element={<ContractDetailPage />} />
+        <Route path="odemeler" element={<CustomerPaymentsPage />} />
       </Route>
 
-      {/* Admin/Staff Routes */}
+      {/* Admin/Personel paneli */}
       <Route
         path="/"
         element={
@@ -88,29 +88,30 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" />} />
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="warehouses" element={<WarehousesPage />} />
-        <Route path="rooms" element={<RoomsPage />} />
-        <Route path="rooms/:id" element={<RoomDetailPage />} />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="customers/:id" element={<CustomerDetailPage />} />
-        <Route path="contracts" element={<ContractsPage />} />
-        <Route path="contracts/:id" element={<ContractDetailPage />} />
-        <Route path="payments" element={<PaymentsPage />} />
-        <Route path="payments/success" element={<PaymentSuccessPage />} />
-        <Route path="payments/fail" element={<PaymentFailPage />} />
-        <Route path="staff" element={<StaffPage />} />
-        <Route path="staff/:id" element={<StaffDetailPage />} />
-        <Route path="permissions" element={<PermissionsPage />} />
-        <Route path="transportation-jobs" element={<TransportationJobsPage />} />
-        <Route path="services" element={<ServicesPage />} />
-        <Route path="proposals" element={<ProposalsPage />} />
-        <Route path="proposals/new" element={<CreateProposalPage />} />
-        <Route path="proposals/:id/edit" element={<CreateProposalPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="reports/bank-accounts" element={<BankAccountPaymentsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        <Route index element={<Navigate to={paths.genelBakis} />} />
+        <Route path="genel-bakis" element={<DashboardPage />} />
+        <Route path="depolar" element={<WarehousesPage />} />
+        <Route path="odalar" element={<RoomsPage />} />
+        <Route path="odalar/:id" element={<RoomDetailPage />} />
+        <Route path="musteriler" element={<CustomersPage />} />
+        <Route path="musteriler/:id" element={<CustomerDetailPage />} />
+        <Route path="girisler" element={<ContractsPage />} />
+        <Route path="girisler/yeni" element={<ContractsPage />} />
+        <Route path="girisler/:id" element={<ContractDetailPage />} />
+        <Route path="odemeler" element={<PaymentsPage />} />
+        <Route path="odemeler/basarili" element={<PaymentSuccessPage />} />
+        <Route path="odemeler/hata" element={<PaymentFailPage />} />
+        <Route path="kullanicilar" element={<StaffPage />} />
+        <Route path="kullanicilar/:id" element={<StaffDetailPage />} />
+        <Route path="yetkiler" element={<PermissionsPage />} />
+        <Route path="nakliye-isler" element={<TransportationJobsPage />} />
+        <Route path="hizmetler" element={<ServicesPage />} />
+        <Route path="teklifler" element={<ProposalsPage />} />
+        <Route path="teklifler/yeni" element={<CreateProposalPage />} />
+        <Route path="teklifler/:id/duzenle" element={<CreateProposalPage />} />
+        <Route path="raporlar" element={<ReportsPage />} />
+        <Route path="raporlar/banka-hesaplari" element={<BankAccountPaymentsPage />} />
+        <Route path="ayarlar" element={<SettingsPage />} />
       </Route>
     </Routes>
   );

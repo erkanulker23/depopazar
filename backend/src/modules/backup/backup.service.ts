@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -9,6 +9,8 @@ const execAsync = promisify(exec);
 
 @Injectable()
 export class BackupService {
+  private readonly logger = new Logger(BackupService.name);
+
   constructor(private configService: ConfigService) {}
 
   async createBackup(): Promise<string> {
@@ -36,7 +38,7 @@ export class BackupService {
       await execAsync(command);
       return filename; // Return just filename
     } catch (error) {
-      console.error('Backup failed:', error);
+      this.logger.error('Backup failed', error instanceof Error ? error.stack : String(error));
       throw new InternalServerErrorException('Backup failed');
     }
   }
@@ -54,7 +56,7 @@ export class BackupService {
     const filePath = path.join(backupDir, filename);
     
     if (filename.includes('..') || filename.includes('/')) {
-        throw new Error('Invalid filename');
+        throw new BadRequestException('Invalid filename');
     }
 
     if (fs.existsSync(filePath)) {

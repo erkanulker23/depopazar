@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { proposalsApi } from '../../services/api/proposalsApi';
 import { servicesApi, Service } from '../../services/api/servicesApi';
 import { customersApi, Customer } from '../../services/api/customersApi';
@@ -84,7 +85,7 @@ export function CreateProposalPage() {
       setItems(proposalItems.length > 0 ? proposalItems : [{ service_id: '', name: '', quantity: 1, unit_price: 0, total_price: 0 }]);
     } catch (err: unknown) {
       toast.error(getErrorMessage(err));
-      navigate('/proposals');
+      navigate(paths.teklifler);
     } finally {
       setLoadingProposal(false);
     }
@@ -160,7 +161,7 @@ export function CreateProposalPage() {
         await proposalsApi.create(payload);
         toast.success('Teklif oluşturuldu');
       }
-      navigate('/proposals');
+      navigate(paths.teklifler);
     } catch (err: unknown) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -172,7 +173,7 @@ export function CreateProposalPage() {
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       <div className="flex items-center gap-4">
         <button 
-          onClick={() => navigate('/proposals')}
+          onClick={() => navigate(paths.teklifler)}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         >
           <ArrowLeftIcon className="w-5 h-5 text-gray-500" />
@@ -372,7 +373,7 @@ export function CreateProposalPage() {
         <div className="flex justify-end gap-4">
           <button
             type="button"
-            onClick={() => navigate('/proposals')}
+            onClick={() => navigate(paths.teklifler)}
             className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             İptal

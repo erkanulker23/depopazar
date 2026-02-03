@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Contract } from './entities/contract.entity';
@@ -22,6 +22,7 @@ import {
   type PaginatedResult,
   toPaginatedResult,
 } from '../../common/utils/pagination';
+import { CreateContractDto } from './dto/create-contract.dto';
 
 /** Filtre: all | active | terminated */
 export type ContractStatusFilter = 'all' | 'active' | 'terminated';
@@ -38,6 +39,8 @@ export interface ContractListFilters {
 
 @Injectable()
 export class ContractsService {
+  private readonly logger = new Logger(ContractsService.name);
+
   constructor(
     @InjectRepository(Contract)
     private contractsRepository: Repository<Contract>,
@@ -57,7 +60,7 @@ export class ContractsService {
     private readonly companiesService: CompaniesService,
   ) {}
 
-  async create(createContractDto: any): Promise<Contract> {
+  async create(createContractDto: CreateContractDto): Promise<Contract> {
     const { monthly_prices, staff_ids, ...contractData } = createContractDto;
     
     // Müşterinin zaten aktif bir sözleşmesi var mı kontrol et
@@ -114,25 +117,13 @@ export class ContractsService {
     // Bildirim oluştur: Yeni satış (sözleşme) oluşturulduğunda
     const contractWithRelations = await this.findOne(saved.id);
     try {
-      console.log(`[ContractsService] Creating contract - customer company_id: ${contractWithRelations.customer?.company_id}`);
-      const usersToNotify: any[] = [];
-      
-      // Şirket kullanıcılarına bildirim gönder
+      const usersToNotify: Array<{ id: string; email?: string }> = [];
       if (contractWithRelations.customer?.company_id) {
-        const companyUsers = await this.usersService.findByCompanyId(contractWithRelations.customer.company_id);
-        usersToNotify.push(...companyUsers);
-        console.log(`[ContractsService] Found ${companyUsers.length} company users`);
+        usersToNotify.push(...(await this.usersService.findByCompanyId(contractWithRelations.customer.company_id)));
       }
-      
-      // Super admin kullanıcılarına da bildirim gönder
-      const superAdmins = await this.usersService.findAllSuperAdmins();
-      usersToNotify.push(...superAdmins);
-      console.log(`[ContractsService] Found ${superAdmins.length} super admin users`);
-      
-      // Tüm kullanıcılara bildirim gönder
+      usersToNotify.push(...(await this.usersService.findAllSuperAdmins()));
       for (const user of usersToNotify) {
         try {
-          console.log(`[ContractsService] Creating notification for user: ${user.email}`);
           await this.notificationsService.create({
             user_id: user.id,
             customer_id: contractWithRelations.customer.id,
@@ -149,13 +140,12 @@ export class ContractsService {
               monthly_price: contractWithRelations.monthly_price,
             },
           });
-          console.log(`[ContractsService] Notification created successfully`);
-        } catch (error: any) {
-          console.error(`[ContractsService] Error creating notification:`, error?.message || error);
+        } catch (error: unknown) {
+          this.logger.warn(`Notification failed for user ${user.id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
-    } catch (error: any) {
-      console.error('[ContractsService] Error in notification creation:', error?.message || error);
+    } catch (error: unknown) {
+      this.logger.warn('Notification creation failed', error instanceof Error ? error.message : String(error));
     }
 
     // Admin Bildirimi Gönder
@@ -182,12 +172,12 @@ export class ContractsService {
               subject: `Yeni Sözleşme: ${contractWithRelations.contract_number}`,
               html: html,
             });
-            console.log(`[ContractsService] Admin notification sent to ${company.email}`);
+            this.logger.log(`Admin notification sent to ${company.email}`);
           }
         }
       }
     } catch (error) {
-      console.error('[ContractsService] Error sending admin notification:', error);
+      this.logger.error('Error sending admin notification', error instanceof Error ? error.stack : String(error));
     }
 
     // Ödeme kontrolü ve bildirim gönderme
@@ -688,35 +678,35 @@ export class ContractsService {
 
       // Eğer ödeme yoksa işlemi sonlandır
       if (pendingPayments.length === 0) {
-        console.log(`[ContractsService] No pending payments for contract ${contract.contract_number}`);
+        this.logger.log(`No pending payments for contract ${contract.contract_number}`);
         return;
       }
 
       // Müşteri bilgilerini al
       const customer = contractWithPayments.customer;
       if (!customer) {
-        console.error(`[ContractsService] Customer not found for contract ${contract.contract_number}`);
+        this.logger.error(`Customer not found for contract ${contract.contract_number}`);
         return;
       }
 
       // Şirket ID'sini al
       const companyId = customer.company_id;
       if (!companyId) {
-        console.error(`[ContractsService] Company ID not found for customer ${customer.id}`);
+        this.logger.error(`Company ID not found for customer ${customer.id}`);
         return;
       }
 
       // Mail ayarlarını kontrol et
       const mailSettings = await this.mailSettingsService.findByCompanyId(companyId);
       if (!mailSettings || !mailSettings.is_active || !mailSettings.smtp_host || !mailSettings.smtp_port) {
-        console.warn(`[ContractsService] Mail settings not configured for company ${companyId}`);
+        this.logger.warn(`Mail settings not configured for company ${companyId}`);
         return;
       }
 
       // SMS ayarlarını kontrol et
       const smsSettings = await this.smsSettingsService.findByCompanyId(companyId);
       if (!smsSettings || !smsSettings.is_active || !smsSettings.username || !smsSettings.password || !smsSettings.sender_id) {
-        console.warn(`[ContractsService] SMS settings not configured for company ${companyId}`);
+        this.logger.warn(`SMS settings not configured for company ${companyId}`);
         return;
       }
 
@@ -731,7 +721,7 @@ export class ContractsService {
         const company = await this.companiesService.findOne(companyId);
         companyName = company.name;
       } catch (error) {
-        console.warn(`[ContractsService] Could not fetch company name for ${companyId}`);
+        this.logger.warn(`Could not fetch company name for ${companyId}`);
       }
 
       // Mail gönder
@@ -757,10 +747,10 @@ export class ContractsService {
           html: mailHtml,
         });
 
-        console.log(`[ContractsService] Payment reminder email sent to ${customer.email}`);
-      } catch (error: any) {
-        console.error(`[ContractsService] Error sending payment reminder email:`, error?.message || error);
-        throw error; // Mail gönderilemezse hata fırlat
+        this.logger.log(`Payment reminder email sent to ${customer.email}`);
+      } catch (error: unknown) {
+        this.logger.error('Error sending payment reminder email', error instanceof Error ? error.message : String(error));
+        throw error;
       }
 
       // SMS gönder (müşterinin telefon numarası varsa)
@@ -775,22 +765,21 @@ export class ContractsService {
             message: smsMessage,
           });
 
-          console.log(`[ContractsService] Payment reminder SMS sent to ${customer.phone}`);
-        } catch (error: any) {
-          console.error(`[ContractsService] Error sending payment reminder SMS:`, error?.message || error);
-          throw error; // SMS gönderilemezse hata fırlat
+          this.logger.log(`Payment reminder SMS sent to ${customer.phone}`);
+        } catch (error: unknown) {
+          this.logger.error('Error sending payment reminder SMS', error instanceof Error ? error.message : String(error));
+          throw error;
         }
       } else {
-        console.warn(`[ContractsService] Customer ${customer.id} has no phone number, skipping SMS`);
+        this.logger.warn(`Customer ${customer.id} has no phone number, skipping SMS`);
       }
-    } catch (error: any) {
-      console.error('[ContractsService] Error in payment notification:', error?.message || error);
-      // Hata durumunda exception fırlat ki kullanıcı bilgilendirilsin
+    } catch (error: unknown) {
+      this.logger.error('Error in payment notification', error instanceof Error ? error.message : String(error));
       if (error instanceof BadRequestException) {
         throw error;
       }
       throw new BadRequestException(
-        `Ödeme bildirimi gönderilirken bir hata oluştu: ${error?.message || 'Bilinmeyen hata'}`
+        `Ödeme bildirimi gönderilirken bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`
       );
     }
   }

@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
@@ -20,6 +21,7 @@ import { CompanySmsSettingsService } from './company-sms-settings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { UpdateMailSettingsDto } from './dto/update-mail-settings.dto';
@@ -49,6 +51,13 @@ export class CompaniesController {
     private readonly paytrSettingsService: CompanyPaytrSettingsService,
     private readonly smsSettingsService: CompanySmsSettingsService,
   ) {}
+
+  @Get('public/brand')
+  @Public()
+  @ApiOperation({ summary: 'Get public brand (project name, logo) for login/SEO – no auth' })
+  async getPublicBrand() {
+    return this.companiesService.getPublicBrand();
+  }
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN)
@@ -106,7 +115,7 @@ export class CompaniesController {
   ) {
     // Only super admin or company owner can update
     if (user.role !== UserRole.SUPER_ADMIN && user.company_id !== id) {
-      throw new Error('Unauthorized');
+      throw new ForbiddenException('Bu şirketi güncelleme yetkiniz yok.');
     }
     return this.companiesService.update(id, updateCompanyDto);
   }

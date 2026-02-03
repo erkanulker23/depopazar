@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, BadRequestException, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { CompaniesService } from '../companies/companies.service';
@@ -14,6 +14,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.COMPANY_STAFF, UserRole.ACCOUNTING)
 @Controller('reports')
 export class ReportsController {
+  private readonly logger = new Logger(ReportsController.name);
+
   constructor(
     private readonly reportsService: ReportsService,
     private readonly companiesService: CompaniesService,
@@ -33,12 +35,10 @@ export class ReportsController {
       }
       
       return await this.reportsService.getOccupancyReport(companyId);
-    } catch (error: any) {
-      console.error('[ReportsController] Error in getOccupancyReport:', error);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException('Doluluk raporu yüklenirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('Error in getOccupancyReport', error instanceof Error ? error.stack : String(error));
+      throw new BadRequestException('Doluluk raporu yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     }
   }
 
@@ -67,12 +67,10 @@ export class ReportsController {
       }
       
       return await this.reportsService.getMonthlyRevenueReport(companyId, y, m);
-    } catch (error: any) {
-      console.error('[ReportsController] Error in getMonthlyRevenueReport:', error);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException('Gelir raporu yüklenirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('Error in getMonthlyRevenueReport', error instanceof Error ? error.stack : String(error));
+      throw new BadRequestException('Gelir raporu yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     }
   }
 
@@ -93,12 +91,10 @@ export class ReportsController {
       }
       
       return await this.reportsService.getPaymentsByBankAccount(companyId, bankAccountId);
-    } catch (error: any) {
-      console.error('[ReportsController] Error in getPaymentsByBankAccount:', error);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException('Banka hesabına göre ödemeler yüklenirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('Error in getPaymentsByBankAccount', error instanceof Error ? error.stack : String(error));
+      throw new BadRequestException('Banka hesabına göre ödemeler yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     }
   }
 
@@ -126,12 +122,10 @@ export class ReportsController {
         startDate,
         endDate,
       );
-    } catch (error: any) {
-      console.error('[ReportsController] Error in getBankAccountPaymentsByCustomer:', error);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException('Müşteri bazında banka hesabı ödemeleri yüklenirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('Error in getBankAccountPaymentsByCustomer', error instanceof Error ? error.stack : String(error));
+      throw new BadRequestException('Müşteri bazında banka hesabı ödemeleri yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     }
   }
 }

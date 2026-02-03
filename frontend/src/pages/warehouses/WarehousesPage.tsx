@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { warehousesApi } from '../../services/api/warehousesApi';
 import {
   BuildingOfficeIcon,
@@ -79,17 +80,17 @@ export function WarehousesPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Depolar</h1>
-          <p className="text-gray-600 dark:text-gray-400">Depo yönetimi ve oda takibi</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-1 sm:mb-2">Depolar</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Depo yönetimi ve oda takibi</p>
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="btn-primary inline-flex items-center px-6 py-3"
+          className="btn-primary inline-flex items-center justify-center px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base shrink-0 w-full sm:w-auto"
         >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Yeni Depo
+          <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 shrink-0" />
+          <span>Yeni Depo</span>
         </button>
       </div>
 
@@ -370,7 +371,7 @@ export function WarehousesPage() {
                             <div
                               key={room.id}
                               className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-300 dark:hover:border-primary-600 cursor-pointer transition-colors"
-                              onClick={() => navigate(`/rooms/${room.id}`)}
+                              onClick={() => navigate(paths.odaDetay(room.id))}
                             >
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center">

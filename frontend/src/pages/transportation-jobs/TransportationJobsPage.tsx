@@ -309,14 +309,17 @@ export function TransportationJobsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Nakliye İşleri</h1>
-          <p className="text-gray-600 dark:text-gray-400">Nakliye işleri yönetimi ve takibi</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-1 sm:mb-2">Nakliye İşleri</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Nakliye işleri yönetimi ve takibi</p>
         </div>
-        <button onClick={() => handleOpenModal()} className="btn-primary inline-flex items-center px-6 py-3">
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Yeni Nakliye İşi Ekle
+        <button
+          onClick={() => handleOpenModal()}
+          className="btn-primary inline-flex items-center justify-center px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base shrink-0 w-full sm:w-auto"
+        >
+          <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 shrink-0" />
+          <span>Yeni Nakliye İşi Ekle</span>
         </button>
       </div>
 

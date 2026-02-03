@@ -12,6 +12,7 @@ import {
   ForbiddenException,
   UseInterceptors,
   UploadedFile,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
@@ -31,6 +32,8 @@ import { validatePdfFile, savePdf, removePdfFile } from './pdf-upload.helper';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('transportation-jobs')
 export class TransportationJobsController {
+  private readonly logger = new Logger(TransportationJobsController.name);
+
   constructor(
     private readonly transportationJobsService: TransportationJobsService,
     private readonly companiesService: CompaniesService,
@@ -114,12 +117,10 @@ export class TransportationJobsController {
       }
 
       return await this.transportationJobsService.findAll(companyId || undefined, pagination, yearFilter, monthFilter);
-    } catch (error: any) {
-      console.error('[TransportationJobsController] Error in findAll:', error);
-      if (error instanceof BadRequestException || error instanceof ForbiddenException) {
-        throw error;
-      }
-      throw new BadRequestException('Nakliye işleri yüklenirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException || error instanceof ForbiddenException) throw error;
+      this.logger.error('Error in findAll', error instanceof Error ? error.stack : String(error));
+      throw new BadRequestException('Nakliye işleri yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     }
   }
 

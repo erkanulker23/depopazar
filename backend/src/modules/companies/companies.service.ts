@@ -99,4 +99,18 @@ export class CompaniesService {
     await this.companiesRepository.update(companyId, { insurance_template_url: null });
     return this.findOne(companyId);
   }
+
+  /** Giriş yapmadan login/SEO için: ilk (tek) şirketin marka bilgisi. */
+  async getPublicBrand(): Promise<{ project_name: string | null; logo_url: string | null }> {
+    const companies = await this.companiesRepository.find({
+      select: { project_name: true, logo_url: true },
+      order: { created_at: 'ASC' as const },
+      take: 1,
+    });
+    const company = companies[0];
+    return {
+      project_name: company?.project_name ?? null,
+      logo_url: company?.logo_url ?? null,
+    };
+  }
 }

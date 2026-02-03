@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { useCompanyStore } from '../../stores/companyStore';
 import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useTheme } from '../../contexts/ThemeContext';
+import { paths } from '../../routes/paths';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,6 +15,12 @@ export function LoginPage() {
   const { login } = useAuthStore();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const { publicBrand, loadPublicBrand } = useCompanyStore();
+  const projectName = publicBrand?.project_name?.trim() || 'DepoPazar';
+
+  useEffect(() => {
+    loadPublicBrand();
+  }, [loadPublicBrand]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,9 +32,9 @@ export function LoginPage() {
       // Role bazlı yönlendirme
       const { user } = useAuthStore.getState();
       if (user?.role === 'customer') {
-        navigate('/customer/dashboard');
+        navigate(paths.musteri.genelBakis);
       } else {
-        navigate('/dashboard');
+        navigate(paths.genelBakis);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Giriş başarısız');
@@ -61,7 +69,7 @@ export function LoginPage() {
             </svg>
           </div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-1">
-            DepoPazar
+            {projectName}
           </h2>
           <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-widest font-bold">
             Depo yönetim sistemi
@@ -163,7 +171,7 @@ export function LoginPage() {
 
         {/* Footer */}
         <p className="mt-8 text-center text-[10px] font-bold text-gray-400 dark:text-zinc-600 uppercase tracking-[0.2em]">
-          © 2026 DepoPazar
+          © {new Date().getFullYear()} {projectName}
         </p>
       </div>
     </div>

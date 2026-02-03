@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity';
@@ -16,6 +16,8 @@ import {
 
 @Injectable()
 export class CustomersService {
+  private readonly logger = new Logger(CustomersService.name);
+
   constructor(
     @InjectRepository(Customer)
     private readonly customersRepository: Repository<Customer>,
@@ -31,25 +33,15 @@ export class CustomersService {
 
     // Bildirim oluştur: Yeni müşteri eklendiğinde
     try {
-      console.log(`[CustomersService] Creating customer - company_id: ${savedCustomer.company_id}`);
-      const usersToNotify: any[] = [];
-      
-      // Şirket kullanıcılarına bildirim gönder
+      const usersToNotify: Array<{ id: string; email: string }> = [];
       if (savedCustomer.company_id) {
         const companyUsers = await this.usersService.findByCompanyId(savedCustomer.company_id);
         usersToNotify.push(...companyUsers);
-        console.log(`[CustomersService] Found ${companyUsers.length} company users`);
       }
-      
-      // Super admin kullanıcılarına da bildirim gönder
       const superAdmins = await this.usersService.findAllSuperAdmins();
       usersToNotify.push(...superAdmins);
-      console.log(`[CustomersService] Found ${superAdmins.length} super admin users`);
-      
-      // Tüm kullanıcılara bildirim gönder
       for (const user of usersToNotify) {
         try {
-          console.log(`[CustomersService] Creating notification for user: ${user.email}`);
           await this.notificationsService.create({
             user_id: user.id,
             customer_id: savedCustomer.id,
@@ -62,13 +54,12 @@ export class CustomersService {
               customer_name: `${savedCustomer.first_name} ${savedCustomer.last_name}`,
             },
           });
-          console.log(`[CustomersService] Notification created successfully`);
-        } catch (error: any) {
-          console.error(`[CustomersService] Error creating notification:`, error?.message || error);
+        } catch (error: unknown) {
+          this.logger.warn(`Notification failed for user ${user.id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
-    } catch (error: any) {
-      console.error('[CustomersService] Error in notification creation:', error?.message || error);
+    } catch (error: unknown) {
+      this.logger.warn('Notification creation failed', error instanceof Error ? error.message : String(error));
     }
 
     return savedCustomer;

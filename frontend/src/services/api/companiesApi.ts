@@ -93,7 +93,18 @@ export interface BankAccount {
   updated_at: string;
 }
 
+export interface PublicBrand {
+  project_name: string | null;
+  logo_url: string | null;
+}
+
 export const companiesApi = {
+  /** Giriş yapmadan login/SEO için marka bilgisi (auth gerekmez). */
+  getPublicBrand: async (): Promise<PublicBrand> => {
+    const response = await apiClient.get<PublicBrand>('/companies/public/brand');
+    return response.data;
+  },
+
   /** Tüm şirketleri listeler (sadece super_admin) */
   getAll: async (): Promise<Company[]> => {
     const response = await apiClient.get('/companies');

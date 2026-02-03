@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { paymentsApi } from '../../services/api/paymentsApi';
 import { formatTurkishCurrency } from '../../utils/inputFormatters';
 import { CreditCardIcon, MagnifyingGlassIcon, FunnelIcon, BanknotesIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -398,7 +399,7 @@ export function PaymentsPage() {
                       <div className="flex flex-col">
                         {payment.contract?.customer?.id ? (
                           <Link 
-                            to={`/customers/${payment.contract.customer.id}`}
+                            to={paths.musteriDetay(payment.contract.customer.id)}
                             className="text-xs font-bold text-gray-900 dark:text-zinc-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                           >
                             {payment.contract.customer.first_name} {payment.contract.customer.last_name}
@@ -408,7 +409,7 @@ export function PaymentsPage() {
                         )}
                         {payment.contract_id && (
                           <Link 
-                            to={`/contracts/${payment.contract_id}`}
+                            to={paths.girisDetay(payment.contract_id)}
                             className="text-[10px] text-emerald-600 dark:text-emerald-50 font-bold hover:underline"
                           >
                             Sözleşme: {payment.contract?.contract_number || '-'}

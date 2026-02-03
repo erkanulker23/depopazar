@@ -213,8 +213,8 @@ export class PaymentsController {
       userAddress: customer.address || 'Adres belirtilmemiş',
       userPhone: customerUser.phone || customer.phone || '05000000000',
       userIp,
-      okUrl: `${frontendUrl}/payments/success?payment_id=${payment.id}`,
-      failUrl: `${frontendUrl}/payments/fail?payment_id=${payment.id}`,
+      okUrl: `${frontendUrl}/odemeler/basarili?payment_id=${payment.id}`,
+      failUrl: `${frontendUrl}/odemeler/hata?payment_id=${payment.id}`,
     });
 
     return {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Warehouse } from './entities/warehouse.entity';
@@ -9,6 +9,8 @@ import { NotificationType } from '../../common/enums/notification-type.enum';
 
 @Injectable()
 export class WarehousesService {
+  private readonly logger = new Logger(WarehousesService.name);
+
   constructor(
     @InjectRepository(Warehouse)
     private warehousesRepository: Repository<Warehouse>,
@@ -22,27 +24,14 @@ export class WarehousesService {
     const warehouse = this.warehousesRepository.create(createWarehouseDto);
     const savedWarehouse = await this.warehousesRepository.save(warehouse);
 
-    // Bildirim oluştur: Depo eklendiğinde
     try {
-      console.log(`[WarehousesService] Creating warehouse - company_id: ${savedWarehouse.company_id}`);
-      const usersToNotify: any[] = [];
-      
-      // Şirket kullanıcılarına bildirim gönder
+      const usersToNotify: Array<{ id: string }> = [];
       if (savedWarehouse.company_id) {
-        const companyUsers = await this.usersService.findByCompanyId(savedWarehouse.company_id);
-        usersToNotify.push(...companyUsers);
-        console.log(`[WarehousesService] Found ${companyUsers.length} company users`);
+        usersToNotify.push(...(await this.usersService.findByCompanyId(savedWarehouse.company_id)));
       }
-      
-      // Super admin kullanıcılarına da bildirim gönder
-      const superAdmins = await this.usersService.findAllSuperAdmins();
-      usersToNotify.push(...superAdmins);
-      console.log(`[WarehousesService] Found ${superAdmins.length} super admin users`);
-      
-      // Tüm kullanıcılara bildirim gönder
+      usersToNotify.push(...(await this.usersService.findAllSuperAdmins()));
       for (const user of usersToNotify) {
         try {
-          console.log(`[WarehousesService] Creating notification for user: ${user.email}`);
           await this.notificationsService.create({
             user_id: user.id,
             type: NotificationType.WAREHOUSE_CREATED,
@@ -54,13 +43,12 @@ export class WarehousesService {
               warehouse_name: savedWarehouse.name,
             },
           });
-          console.log(`[WarehousesService] Notification created successfully`);
-        } catch (error: any) {
-          console.error(`[WarehousesService] Error creating notification:`, error?.message || error);
+        } catch (error: unknown) {
+          this.logger.warn(`Notification failed for user ${user.id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
-    } catch (error: any) {
-      console.error('[WarehousesService] Error in notification creation:', error?.message || error);
+    } catch (error: unknown) {
+      this.logger.warn('Notification creation failed', error instanceof Error ? error.message : String(error));
     }
 
     return savedWarehouse;

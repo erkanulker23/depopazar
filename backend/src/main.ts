@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -9,19 +9,17 @@ import { existsSync } from 'fs';
 import { config } from 'dotenv';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { getEnvPath } from './common/config/env-path';
 
-// Tüm veriler .env dosyasından çekilsin; .env, process.env'i geçersiz kılsın (Forge vb. enjeksiyon yerine)
-const projectRoot = process.cwd().endsWith('backend') ? join(process.cwd(), '..') : process.cwd();
-config({ path: join(projectRoot, '.env'), override: true });
+// Tüm veriler .env dosyasından çekilsin; PROJECT_ROOT veya proje kökü kullanılır (taşınabilirlik)
+config({ path: getEnvPath(), override: true });
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
-  // Hangi .env kullanıldığını doğrulamak için (şifre yok)
-  console.log(
-    '[env] NODE_ENV=%s DB_DATABASE=%s (degistiriyorsaniz deploy sonrasi pm2 restart gerekir)',
-    config.get('NODE_ENV'),
-    config.get('DB_DATABASE'),
+  const logger = new Logger('Bootstrap');
+  logger.log(
+    `[env] NODE_ENV=${config.get('NODE_ENV')} DB_DATABASE=${config.get('DB_DATABASE')} (degistiriyorsaniz deploy sonrasi pm2 restart gerekir)`,
   );
 
   // Uploads klasörü kontrolü ve oluşturulması
@@ -58,7 +56,7 @@ async function bootstrap() {
     corsOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3180', 'http://127.0.0.1:3180'];
   }
   if (process.env.NODE_ENV === 'production' && corsOrigins.length === 0) {
-    throw new Error('Production için CORS_ORIGINS veya FRONTEND_URL tanımlanmalı.');
+    throw new BadRequestException('Production için CORS_ORIGINS veya FRONTEND_URL tanımlanmalı.');
   }
   app.enableCors({
     origin: corsOrigins.length > 0 ? corsOrigins : true,
@@ -81,20 +79,20 @@ async function bootstrap() {
       .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document);
-    console.log('📚 Swagger: http://localhost:' + (process.env.PORT || 4100) + '/api/docs');
+    logger.log('Swagger: http://localhost:' + (process.env.PORT || 4100) + '/api/docs');
   } else {
-    console.log('⚠️ Swagger devre dışı (güvenlik)');
+    logger.warn('Swagger devre dışı (güvenlik)');
   }
 
   // Port ayarı (Forge'da 4100 kullanıyoruz)
   const port = process.env.PORT || 4100;
   await app.listen(port);
 
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
+  logger.log(`Application is running on: http://localhost:${port}`);
 
   // Graceful shutdown: SIGTERM/SIGINT alınca portu serbest bırak (EADDRINUSE önlemek için)
   const shutdown = async (signal: string) => {
-    console.log(`Received ${signal}, closing server...`);
+    logger.log(`Received ${signal}, closing server...`);
     await app.close();
     process.exit(0);
   };
@@ -102,9 +100,10 @@ async function bootstrap() {
   process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
+const bootstrapLogger = new Logger('Bootstrap');
 bootstrap().catch((err) => {
   if (err?.code === 'EADDRINUSE') {
-    console.error(`Port ${process.env.PORT || 4100} zaten kullanımda. Eski process'i durdurun veya sadece tek bir process manager (Forge Daemon veya PM2) kullanın.`);
+    bootstrapLogger.error(`Port ${process.env.PORT || 4100} zaten kullanımda. Eski process'i durdurun veya sadece tek bir process manager (Forge Daemon veya PM2) kullanın.`);
   }
   process.exit(1);
 });

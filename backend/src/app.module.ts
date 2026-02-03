@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { join } from 'path';
 import { DatabaseModule } from './database/database.module';
+import { getEnvPath } from './common/config/env-path';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { CompaniesModule } from './modules/companies/companies.module';
@@ -20,15 +20,11 @@ import { ServicesModule } from './modules/services/services.module';
 import { ProposalsModule } from './modules/proposals/proposals.module';
 import { BackupModule } from './modules/backup/backup.module';
 
-// Tek .env: her zaman proje kökü (backend/ üst dizini)
-const projectRoot = process.cwd().endsWith('backend') ? join(process.cwd(), '..') : process.cwd();
-const rootEnv = join(projectRoot, '.env');
-
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: rootEnv,
+      envFilePath: getEnvPath(),
     }),
 
     // Database

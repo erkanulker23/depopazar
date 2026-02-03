@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { CompanyMailSettings } from './entities/company-mail-settings.entity';
 
@@ -15,7 +15,7 @@ export class MailService {
 
   async createTransporter(settings: CompanyMailSettings): Promise<nodemailer.Transporter> {
     if (!settings.is_active || !settings.smtp_host || !settings.smtp_port) {
-      throw new Error('Mail settings are not configured or not active');
+      throw new BadRequestException('Mail settings are not configured or not active');
     }
 
     const transporter = nodemailer.createTransport({

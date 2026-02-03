@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CompanySmsSettings } from './entities/company-sms-settings.entity';
@@ -93,7 +93,7 @@ export class CompanySmsSettingsService {
       });
 
       if (!response.ok) {
-        throw new Error(`API yanıtı başarısız: ${response.status}`);
+        throw new BadRequestException(`API yanıtı başarısız: ${response.status}`);
       }
 
       const data = await response.text();

@@ -38,19 +38,19 @@ apiClient.interceptors.response.use(
     const url = originalRequest?.url ?? '';
     if (url.includes('/auth/login') || url.includes('/auth/refresh')) {
       useAuthStore.getState().logout();
-      window.location.href = '/login';
+      window.location.href = '/giris';
       return Promise.reject(error);
     }
     if (originalRequest._retry) {
       useAuthStore.getState().logout();
-      window.location.href = '/login';
+      window.location.href = '/giris';
       return Promise.reject(error);
     }
     refreshPromise ??= useAuthStore.getState().refreshAccessToken();
     const ok = await refreshPromise;
     refreshPromise = null;
     if (!ok) {
-      window.location.href = '/login';
+      window.location.href = '/giris';
       return Promise.reject(error);
     }
     originalRequest._retry = true;

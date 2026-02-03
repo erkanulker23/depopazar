@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { paths } from '../../routes/paths';
 import { customersApi } from '../../services/api/customersApi';
 import {
   UsersIcon,
@@ -401,7 +402,7 @@ export function CustomersPage() {
                         )}
                       </button>
                       <button
-                        onClick={() => navigate(`/customers/${customer.id}`)}
+                        onClick={() => navigate(paths.musteriDetay(customer.id))}
                         className="p-2 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors"
                       >
                         <UsersIcon className="h-5 w-5" />
@@ -625,7 +626,7 @@ export function CustomersPage() {
                                 <span className="text-[10px] font-bold">Barkod</span>
                               </button>
                               <button
-                                onClick={() => navigate(`/customers/${customer.id}`)}
+                                onClick={() => navigate(paths.musteriDetay(customer.id))}
                                 className="p-1.5 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors"
                                 title="Detayları Görüntüle"
                               >
@@ -882,7 +883,7 @@ export function CustomersPage() {
                                                 </td>
                                                 <td className="px-4 py-2">
                                                   <button
-                                                    onClick={() => navigate(`/payments?status=${payment.status === 'overdue' ? 'overdue' : 'pending'}`)}
+                                                    onClick={() => navigate(`${paths.odemeler}?status=${payment.status === 'overdue' ? 'overdue' : 'pending'}`)}
                                                     className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                                   >
                                                     Ödemeler Sayfasına Git
