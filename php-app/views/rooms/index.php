@@ -37,15 +37,23 @@ ob_start();
     </div>
 <?php endif; ?>
 
-<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
     <?php if (empty($rooms)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400"><?= empty($warehouses) ? 'Önce Depolar sayfasından depo ekleyin. Her oda bir depoya aittir.' : 'Bu depoda oda yok veya filtreye uygun oda bulunamadı. Yeni Oda ile ekleyebilirsiniz.' ?></div>
     <?php else: ?>
+        <div id="roomBulkBar" class="hidden flex items-center justify-between gap-3 px-4 py-3 bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><span id="roomBulkCount">0</span> oda seçildi</span>
+            <form method="post" action="/odalar/sil" id="roomBulkDeleteForm">
+                <div id="roomBulkIdsContainer"></div>
+                <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Toplu Sil</button>
+            </form>
+        </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Oda No</th>
+                        <th class="px-4 py-3 text-left"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="selectAllRooms" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" title="Tümünü seç"></label></th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Oda No</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Depo</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Alan (m²)</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Aylık Fiyat</th>
@@ -57,13 +65,14 @@ ob_start();
                     <?php foreach ($rooms as $r): ?>
                         <?php
                         $status = $r['status'] ?? 'empty';
-                        $badgeClass = $status === 'empty' ? 'bg-green-100 text-green-800' : ($status === 'occupied' ? 'bg-red-100 text-red-800' : ($status === 'reserved' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'));
+                        $badgeClass = $status === 'empty' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : ($status === 'occupied' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : ($status === 'reserved' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' : 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'));
                         ?>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 font-medium text-gray-900"><?= htmlspecialchars($r['room_number']) ?></td>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="room-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($r['id']) ?>"></label></td>
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($r['room_number']) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600"><?= htmlspecialchars($r['warehouse_name'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600"><?= number_format((float)$r['area_m2'], 2, ',', '.') ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600"><?= number_format((float)$r['monthly_price'], 2, ',', '.') ?> ₺</td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($r['monthly_price'] ?? 0) ?></td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $badgeClass ?>"><?= $statusLabels[$status] ?? $status ?></span>
                             </td>
@@ -83,7 +92,7 @@ ob_start();
                                     'notes' => $r['notes'] ?? '',
                                 ]) ?>)' class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1">Düzenle</button>
                                 <form method="post" action="/odalar/sil" class="inline" onsubmit="return confirm('Bu odayı silmek istediğinize emin misiniz?');">
-                                    <input type="hidden" name="id" value="<?= htmlspecialchars($r['id']) ?>">
+                                    <input type="hidden" name="ids[]" value="<?= htmlspecialchars($r['id']) ?>">
                                     <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Sil</button>
                                 </form>
                             </td>
@@ -264,6 +273,28 @@ function openEditRoom(d) {
 document.querySelectorAll('.modal-overlay').forEach(function(el) {
     el.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(el.id); });
 });
+(function() {
+    var bulkBar = document.getElementById('roomBulkBar');
+    var bulkCountEl = document.getElementById('roomBulkCount');
+    var selectAll = document.getElementById('selectAllRooms');
+    var form = document.getElementById('roomBulkDeleteForm');
+    var container = document.getElementById('roomBulkIdsContainer');
+    function update() {
+        var cbs = document.querySelectorAll('.room-cb:checked');
+        var n = cbs.length;
+        if (bulkCountEl) bulkCountEl.textContent = n;
+        if (bulkBar) bulkBar.classList.toggle('hidden', n === 0);
+        if (selectAll) selectAll.checked = n > 0 && document.querySelectorAll('.room-cb').length === n;
+    }
+    if (form) form.addEventListener('submit', function(e) {
+        var cbs = document.querySelectorAll('.room-cb:checked');
+        if (cbs.length === 0) { e.preventDefault(); return; }
+        if (!confirm('Seçili ' + cbs.length + ' odayı silmek istediğinize emin misiniz?')) { e.preventDefault(); return; }
+        if (container) { container.innerHTML = ''; cbs.forEach(function(cb) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'ids[]'; i.value = cb.value; container.appendChild(i); }); }
+    });
+    document.querySelectorAll('.room-cb').forEach(function(cb) { cb.addEventListener('change', update); });
+    if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.room-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); update(); });
+})();
 </script>
 <?php
 $content = ob_get_clean();

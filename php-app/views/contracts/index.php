@@ -54,9 +54,6 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
     </div>
 <?php endif; ?>
 
-<?php
-function fmtPrice($n) { $f = (float)$n; return ($f == (int)$f ? number_format((int)$f, 0, '', '.') : number_format($f, 2, ',', '.')) . ' ₺'; }
-?>
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
     <?php if (empty($contracts)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz sözleşme yok. "Yeni Satış Gir" ile ekleyebilirsiniz.</div>

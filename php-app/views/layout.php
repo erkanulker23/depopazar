@@ -4,7 +4,7 @@ if (!isset($projectName)) $projectName = $_SESSION['company_project_name'] ?? 'D
 $user = Auth::user();
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
 if (($q = strpos($currentPath, '?')) !== false) $currentPath = substr($currentPath, 0, $q);
-$navIcons = ['Dashboard'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
+$navIcons = ['Dashboard'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Bildirimler'=>'bell','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
 $navItems = [
     ['name' => 'Dashboard', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
     ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
@@ -19,6 +19,7 @@ $navItems = [
     ['name' => 'Odalar', 'href' => '/odalar', 'active' => $currentPath === '/odalar'],
     ['name' => 'Müşteriler', 'href' => '/musteriler', 'active' => $currentPath === '/musteriler'],
     ['name' => 'Ödemeler', 'href' => '/odemeler', 'active' => $currentPath === '/odemeler'],
+    ['name' => 'Bildirimler', 'href' => '/bildirimler', 'active' => $currentPath === '/bildirimler'],
     ['name' => 'Raporlar', 'href' => '/raporlar', 'active' => $currentPath === '/raporlar'],
     ['name' => 'Ayarlar', 'href' => '/ayarlar', 'active' => $currentPath === '/ayarlar'],
 ];
@@ -65,7 +66,7 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); --safe-left: env(safe-area-inset-left); --safe-right: env(safe-area-inset-right); }
-        body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+        html, body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
         .nav-active .nav-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: rgba(255,255,255,.9); border-radius: 0 3px 3px 0; }
         .sidebar-mobile { transform: translateX(-100%); transition: transform .3s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
@@ -169,12 +170,20 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                             <i class="bi bi-bell text-xl md:text-lg"></i>
                             <span id="notifBadge" class="hidden absolute top-2 right-2 md:top-1.5 md:right-1.5 w-2.5 h-2.5 md:w-2 md:h-2 bg-red-500 rounded-full"></span>
                         </button>
-                        <div id="notifDropdown" class="hidden absolute right-0 top-full mt-1 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl z-50 py-2 max-h-[70vh] overflow-y-auto" onclick="event.stopPropagation()">
-                            <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <div id="notifDropdown" class="hidden absolute right-0 top-full mt-1 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl z-50 py-0 max-h-[70vh] overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+                            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                                 <span class="font-semibold text-gray-900 dark:text-white">Bildirimler</span>
                                 <a href="/bildirimler" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Tümü</a>
                             </div>
-                            <div id="notifList" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Bildirim bulunmuyor.</div>
+                            <div id="notifList" class="flex-1 overflow-y-auto px-4 py-3 text-sm text-gray-500 dark:text-gray-400 min-h-[4rem]">Yükleniyor…</div>
+                            <div class="flex-shrink-0 border-t border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-700/50">
+                                <form method="post" action="/bildirimler/okundu" class="inline" id="notifMarkAllForm">
+                                    <button type="submit" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">Tümü okundu</button>
+                                </form>
+                                <form method="post" action="/bildirimler/tumunu-sil" class="inline" id="notifDeleteAllForm" onsubmit="return confirm('Tüm bildirimleri silmek istediğinize emin misiniz?');">
+                                    <button type="submit" class="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Tümünü sil</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -226,11 +235,30 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                 localStorage.setItem('theme', isDark ? 'dark' : 'light');
             });
         }
-        var notifBtn = document.getElementById('notifBtn'), notifDrop = document.getElementById('notifDropdown');
+        var notifBtn = document.getElementById('notifBtn'), notifDrop = document.getElementById('notifDropdown'), notifList = document.getElementById('notifList'), notifBadge = document.getElementById('notifBadge');
+        function loadNotifs() {
+            if (!notifList) return;
+            fetch('/api/bildirimler').then(function(r) { return r.json(); }).then(function(data) {
+                var n = data.notifications || [];
+                var unread = data.unread_count || 0;
+                if (notifBadge) { notifBadge.classList.toggle('hidden', unread === 0); }
+                if (n.length === 0) { notifList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Bildirim bulunmuyor.</p>'; return; }
+                var html = '';
+                n.forEach(function(item) {
+                    var icon = item.type === 'payment' ? 'credit-card' : (item.type === 'contract' ? 'file-text' : 'bell');
+                    var unreadClass = item.is_read ? '' : ' bg-emerald-50/50 dark:bg-emerald-900/10';
+                    var dateStr = item.created_at ? new Date(item.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                    html += '<div class="py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-0' + unreadClass + '"><p class="font-medium text-gray-900 dark:text-white text-sm">' + (item.title || '').replace(/</g, '&lt;') + '</p><p class="text-gray-600 dark:text-gray-400 text-xs mt-0.5">' + (item.message || '').replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</p><p class="text-gray-400 dark:text-gray-500 text-[10px] mt-1">' + dateStr + '</p></div>';
+                });
+                notifList.innerHTML = html;
+            }).catch(function() { if (notifList) notifList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Bildirimler yüklenemedi.</p>'; });
+        }
         if (notifBtn && notifDrop) {
-            notifBtn.addEventListener('click', function(e) { e.stopPropagation(); notifDrop.classList.toggle('hidden'); notifBtn.setAttribute('aria-expanded', notifDrop.classList.contains('hidden') ? 'false' : 'true'); });
+            notifBtn.addEventListener('click', function(e) { e.stopPropagation(); notifDrop.classList.toggle('hidden'); notifBtn.setAttribute('aria-expanded', notifDrop.classList.contains('hidden') ? 'false' : 'true'); if (!notifDrop.classList.contains('hidden')) loadNotifs(); });
             document.addEventListener('click', function() { notifDrop.classList.add('hidden'); notifBtn.setAttribute('aria-expanded', 'false'); });
         }
+        loadNotifs();
+        setInterval(loadNotifs, 60000);
     })();
     </script>
 </body>

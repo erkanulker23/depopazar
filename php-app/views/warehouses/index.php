@@ -31,10 +31,18 @@ ob_start();
     <?php if (empty($warehouses)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz depo eklenmemiş. Yeni Depo ile ekleyebilirsiniz.</div>
     <?php else: ?>
+        <div id="whBulkBar" class="hidden flex items-center justify-between gap-3 px-4 py-3 bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><span id="whBulkCount">0</span> depo seçildi</span>
+            <form method="post" action="/depolar/sil" id="whBulkDeleteForm">
+                <div id="whBulkIdsContainer"></div>
+                <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Toplu Sil</button>
+            </form>
+        </div>
         <div class="table-responsive overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
+                        <th class="px-4 py-3 text-left"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="selectAllWh" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" title="Tümünü seç"></label></th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Depo Adı</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Adres / Şehir</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Oda Sayısı</th>
@@ -45,6 +53,7 @@ ob_start();
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                     <?php foreach ($warehouses as $w): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="wh-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($w['id']) ?>"></label></td>
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($w['name']) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                                 <?= htmlspecialchars(trim($w['address'] ?? '') ?: '-') ?>
@@ -73,7 +82,7 @@ ob_start();
                                     'is_active' => !empty($w['is_active']),
                                 ]) ?>)' class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1">Düzenle</button>
                                 <form method="post" action="/depolar/sil" class="inline" onsubmit="return confirm('Bu depoyu silmek istediğinize emin misiniz?');">
-                                    <input type="hidden" name="id" value="<?= htmlspecialchars($w['id']) ?>">
+                                    <input type="hidden" name="ids[]" value="<?= htmlspecialchars($w['id']) ?>">
                                     <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Sil</button>
                                 </form>
                             </td>
@@ -201,6 +210,28 @@ function openEditWarehouse(d) {
 document.querySelectorAll('.modal-overlay').forEach(function(el) {
     el.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(el.id); });
 });
+(function() {
+    var bulkBar = document.getElementById('whBulkBar');
+    var bulkCountEl = document.getElementById('whBulkCount');
+    var selectAll = document.getElementById('selectAllWh');
+    var form = document.getElementById('whBulkDeleteForm');
+    var container = document.getElementById('whBulkIdsContainer');
+    function update() {
+        var cbs = document.querySelectorAll('.wh-cb:checked');
+        var n = cbs.length;
+        if (bulkCountEl) bulkCountEl.textContent = n;
+        if (bulkBar) bulkBar.classList.toggle('hidden', n === 0);
+        if (selectAll) selectAll.checked = n > 0 && document.querySelectorAll('.wh-cb').length === n;
+    }
+    if (form) form.addEventListener('submit', function(e) {
+        var cbs = document.querySelectorAll('.wh-cb:checked');
+        if (cbs.length === 0) { e.preventDefault(); return; }
+        if (!confirm('Seçili ' + cbs.length + ' depoyu silmek istediğinize emin misiniz?')) { e.preventDefault(); return; }
+        if (container) { container.innerHTML = ''; cbs.forEach(function(cb) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'ids[]'; i.value = cb.value; container.appendChild(i); }); }
+    });
+    document.querySelectorAll('.wh-cb').forEach(function(cb) { cb.addEventListener('change', update); });
+    if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.wh-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); update(); });
+})();
 </script>
 <?php
 $content = ob_get_clean();

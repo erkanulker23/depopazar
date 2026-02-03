@@ -4,7 +4,8 @@ class TransportationJob
     public static function findAll(PDO $pdo, ?string $companyId = null, ?string $customerSearch = null, ?int $year = null, ?int $month = null): array
     {
         $sql = 'SELECT tj.*, 
-          c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.email AS customer_email, c.phone AS customer_phone
+          c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.email AS customer_email, c.phone AS customer_phone,
+          (SELECT GROUP_CONCAT(CONCAT(u.first_name, \' \', u.last_name) SEPARATOR \', \') FROM transportation_job_staff tjs INNER JOIN users u ON u.id = tjs.user_id AND u.deleted_at IS NULL WHERE tjs.transportation_job_id = tj.id AND (tjs.deleted_at IS NULL)) AS staff_names
           FROM transportation_jobs tj
           INNER JOIN customers c ON c.id = tj.customer_id AND c.deleted_at IS NULL
           WHERE tj.deleted_at IS NULL ';
@@ -39,8 +40,8 @@ class TransportationJob
     {
         $id = self::uuid();
         $stmt = $pdo->prepare(
-            'INSERT INTO transportation_jobs (id, company_id, customer_id, job_type, pickup_address, pickup_floor_status, pickup_elevator_status, pickup_room_count, delivery_address, delivery_floor_status, delivery_elevator_status, delivery_room_count, price, vat_rate, price_includes_vat, job_date, status, is_paid, notes) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO transportation_jobs (id, company_id, customer_id, job_type, pickup_address, pickup_floor_status, pickup_elevator_status, pickup_room_count, delivery_address, delivery_floor_status, delivery_elevator_status, delivery_room_count, price, vat_rate, price_includes_vat, job_date, status, is_paid, notes, vehicle_plate) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
@@ -62,6 +63,7 @@ class TransportationJob
             $data['status'] ?? 'pending',
             !empty($data['is_paid']) ? 1 : 0,
             $data['notes'] ?? null,
+            isset($data['vehicle_plate']) && trim($data['vehicle_plate']) !== '' ? trim($data['vehicle_plate']) : null,
         ]);
         $staffIds = $data['staff_ids'] ?? [];
         if (is_array($staffIds) && count($staffIds) > 0) {
@@ -97,7 +99,7 @@ class TransportationJob
         $stmt = $pdo->prepare(
             'UPDATE transportation_jobs SET job_type = ?, pickup_address = ?, pickup_floor_status = ?, pickup_elevator_status = ?, pickup_room_count = ?,
              delivery_address = ?, delivery_floor_status = ?, delivery_elevator_status = ?, delivery_room_count = ?,
-             price = ?, vat_rate = ?, price_includes_vat = ?, job_date = ?, status = ?, is_paid = ?, notes = ?
+             price = ?, vat_rate = ?, price_includes_vat = ?, job_date = ?, status = ?, is_paid = ?, notes = ?, vehicle_plate = ?
              WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
@@ -117,6 +119,7 @@ class TransportationJob
             $data['status'] ?? 'pending',
             !empty($data['is_paid']) ? 1 : 0,
             $data['notes'] ?? null,
+            isset($data['vehicle_plate']) && trim($data['vehicle_plate']) !== '' ? trim($data['vehicle_plate']) : null,
             $id,
         ]);
         $pdo->prepare('DELETE FROM transportation_job_staff WHERE transportation_job_id = ?')->execute([$id]);

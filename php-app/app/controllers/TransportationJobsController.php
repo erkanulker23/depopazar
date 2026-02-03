@@ -46,6 +46,7 @@ class TransportationJobsController
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
         require __DIR__ . '/../../views/transportation_jobs/index.php';
     }
 
@@ -146,7 +147,9 @@ class TransportationJobsController
                 'is_paid' => isset($_POST['is_paid']) && $_POST['is_paid'] === '1',
                 'notes' => trim($_POST['notes'] ?? '') ?: null,
                 'staff_ids' => isset($_POST['staff_ids']) && is_array($_POST['staff_ids']) ? array_filter($_POST['staff_ids']) : [],
+                'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
             ]);
+            Notification::createForCompany($this->pdo, $companyId, 'transport', 'Nakliye işi eklendi', 'Yeni nakliye işi oluşturuldu.');
             $_SESSION['flash_success'] = 'Nakliye işi eklendi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Kayıt oluşturulamadı: ' . $e->getMessage();
@@ -199,6 +202,7 @@ class TransportationJobsController
                 'is_paid' => isset($_POST['is_paid']) && $_POST['is_paid'] === '1',
                 'notes' => trim($_POST['notes'] ?? '') ?: null,
                 'staff_ids' => isset($_POST['staff_ids']) && is_array($_POST['staff_ids']) ? array_filter($_POST['staff_ids']) : [],
+                'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
             ]);
             $_SESSION['flash_success'] = 'Nakliye işi güncellendi.';
         } catch (Exception $e) {
@@ -233,6 +237,7 @@ class TransportationJobsController
             if (!$job) continue;
             if ($companyId && ($job['company_id'] ?? '') !== $companyId) continue;
             TransportationJob::remove($this->pdo, $id);
+            Notification::createForCompany($this->pdo, $job['company_id'] ?? null, 'transport', 'Nakliye işi silindi', 'Nakliye işi silindi.');
             $deleted++;
         }
         if ($deleted > 0) {

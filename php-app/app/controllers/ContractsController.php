@@ -148,6 +148,8 @@ class ContractsController
                 }
                 Room::update($this->pdo, $roomId, ['status' => 'occupied']);
             }
+            $contractNumber = $created['contract_number'] ?? $contractId ?? '';
+            Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId]);
             $_SESSION['flash_success'] = 'Sözleşme oluşturuldu.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Kayıt oluşturulamadı: ' . $e->getMessage();
@@ -315,8 +317,10 @@ class ContractsController
             if (!$contract) continue;
             if ($companyId && ($contract['company_id'] ?? '') !== $companyId) continue;
             $roomId = $contract['room_id'] ?? null;
+            $contractNumber = $contract['contract_number'] ?? $id;
             Contract::softDelete($this->pdo, $id);
             if ($roomId) Room::update($this->pdo, $roomId, ['status' => 'empty']);
+            Notification::createForCompany($this->pdo, $contract['company_id'] ?? null, 'contract', 'Sözleşme silindi', 'Sözleşme ' . $contractNumber . ' silindi.');
             $deleted++;
         }
         if ($deleted > 0) {

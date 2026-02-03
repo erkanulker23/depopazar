@@ -104,13 +104,24 @@ ob_start();
                         <input type="number" name="vat_rate" value="<?= htmlspecialchars($job['vat_rate'] ?? '20') ?>" step="0.01" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hangi plakalı araç gitti</label>
+                        <input type="text" name="vehicle_plate" value="<?= htmlspecialchars($job['vehicle_plate'] ?? '') ?>" placeholder="Örn: 34 ABC 123" maxlength="20" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Durum</label>
-                        <select name="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            <option value="pending" <?= ($job['status'] ?? '') === 'pending' ? 'selected' : '' ?>>Beklemede</option>
-                            <option value="in_progress" <?= ($job['status'] ?? '') === 'in_progress' ? 'selected' : '' ?>>Devam Ediyor</option>
-                            <option value="completed" <?= ($job['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Tamamlandı</option>
-                            <option value="cancelled" <?= ($job['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>İptal Edildi</option>
-                        </select>
+                        <?php
+                        $statusLabels = ['pending' => 'Beklemede', 'in_progress' => 'Devam Ediyor', 'completed' => 'Tamamlandı', 'cancelled' => 'İptal Edildi'];
+                        $statusClasses = ['pending' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300', 'in_progress' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', 'completed' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300', 'cancelled' => 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-200'];
+                        $jobStatus = $job['status'] ?? 'pending';
+                        ?>
+                        <div class="flex items-center gap-2">
+                            <select name="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                <?php foreach ($statusLabels as $val => $label): ?>
+                                    <option value="<?= htmlspecialchars($val) ?>" <?= $jobStatus === $val ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <span class="px-2.5 py-1 text-xs font-semibold rounded-full shrink-0 <?= $statusClasses[$jobStatus] ?? $statusClasses['pending'] ?>"><?= htmlspecialchars($statusLabels[$jobStatus] ?? $jobStatus) ?></span>
+                        </div>
                     </div>
                 </div>
                 <div class="mt-4 flex flex-wrap gap-4">
@@ -124,12 +135,14 @@ ob_start();
                     </label>
                 </div>
                 <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Personel (Çoklu seçim)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">İşe giden personel</label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">İşe gidecek personeli seçin (seçilenler listede görünür)</p>
                     <div class="border border-gray-300 dark:border-gray-600 rounded-xl max-h-40 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-700/50">
                         <?php foreach ($staff as $s): ?>
                             <label class="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
                                 <input type="checkbox" name="staff_ids[]" value="<?= htmlspecialchars($s['id']) ?>" <?= in_array($s['id'], $staffIds, true) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                                 <span class="ml-3 text-sm text-gray-900 dark:text-white"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></span>
+                                <?php if (in_array($s['id'], $staffIds, true)): ?><span class="ml-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">(seçili)</span><?php endif; ?>
                             </label>
                         <?php endforeach; ?>
                         <?php if (empty($staff)): ?><p class="text-sm text-gray-500 dark:text-gray-400">Personel bulunamadı.</p><?php endif; ?>

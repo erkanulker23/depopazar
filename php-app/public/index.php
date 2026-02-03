@@ -8,6 +8,7 @@ date_default_timezone_set($config['timezone'] ?? 'Europe/Istanbul');
 
 $pdo = require APP_ROOT . '/config/db.php';
 
+require APP_ROOT . '/app/helpers.php';
 require APP_ROOT . '/app/Auth.php';
 require APP_ROOT . '/app/Router.php';
 require APP_ROOT . '/app/models/User.php';
@@ -21,8 +22,10 @@ require APP_ROOT . '/app/models/TransportationJob.php';
 require APP_ROOT . '/app/models/Service.php';
 require APP_ROOT . '/app/models/ServiceCategory.php';
 require APP_ROOT . '/app/models/Proposal.php';
+require APP_ROOT . '/app/models/ProposalItem.php';
 require APP_ROOT . '/app/models/BankAccount.php';
 require APP_ROOT . '/app/models/Item.php';
+require APP_ROOT . '/app/models/Notification.php';
 require APP_ROOT . '/app/controllers/AuthController.php';
 require APP_ROOT . '/app/controllers/DashboardController.php';
 require APP_ROOT . '/app/controllers/WarehousesController.php';
@@ -38,6 +41,7 @@ require APP_ROOT . '/app/controllers/PermissionsController.php';
 require APP_ROOT . '/app/controllers/PlaceholderController.php';
 require APP_ROOT . '/app/controllers/SettingsController.php';
 require APP_ROOT . '/app/controllers/ReportsController.php';
+require APP_ROOT . '/app/controllers/NotificationsController.php';
 
 Auth::init();
 $router = new Router();
@@ -63,6 +67,10 @@ $router->post('/odalar/sil', fn() => (new RoomsController($pdo))->delete());
 $router->get('/musteri/genel-bakis', fn() => PlaceholderController::page('Müşteri Paneli', 'Hoş geldiniz.'));
 
 $router->get('/musteriler', fn() => (new CustomersController($pdo))->index());
+$router->get('/musteriler/excel-disari-aktar', fn() => (new CustomersController($pdo))->exportCsv());
+$router->get('/musteriler/excel-sablon', fn() => (new CustomersController($pdo))->downloadTemplate());
+$router->get('/musteriler/excel-ice-aktar', fn() => (new CustomersController($pdo))->importForm());
+$router->post('/musteriler/excel-ice-aktar', fn() => (new CustomersController($pdo))->importCsv());
 $router->post('/musteriler/ekle', fn() => (new CustomersController($pdo))->create());
 $router->get('/musteriler/{id}/satir-detay', fn(array $p) => (new CustomersController($pdo))->rowFragment($p));
 $router->get('/musteriler/{id}/barkod', fn(array $p) => (new CustomersController($pdo))->barcode($p));
@@ -91,7 +99,9 @@ $router->post('/hizmetler/hizmet/ekle', fn() => (new ServicesController($pdo))->
 $router->post('/hizmetler/hizmet/guncelle', fn() => (new ServicesController($pdo))->updateService());
 $router->post('/hizmetler/hizmet/sil', fn() => (new ServicesController($pdo))->deleteService());
 $router->get('/teklifler', fn() => (new ProposalsController($pdo))->index());
+$router->get('/teklifler/yazdir', fn() => (new ProposalsController($pdo))->printPage());
 $router->get('/teklifler/yeni', fn() => (new ProposalsController($pdo))->newForm());
+$router->get('/teklifler/{id}/yazdir', fn(array $p) => (new ProposalsController($pdo))->printOne($p));
 $router->get('/teklifler/{id}/duzenle', fn(array $p) => (new ProposalsController($pdo))->editForm($p));
 $router->post('/teklifler/ekle', fn() => (new ProposalsController($pdo))->create());
 $router->post('/teklifler/guncelle', fn() => (new ProposalsController($pdo))->update());
@@ -113,7 +123,10 @@ $router->post('/ayarlar/banka-guncelle', fn() => (new SettingsController($pdo))-
 $router->post('/ayarlar/banka-sil', fn() => (new SettingsController($pdo))->deleteBankAccount());
 $router->post('/ayarlar/eposta-guncelle', fn() => (new SettingsController($pdo))->updateMailSettings());
 $router->post('/ayarlar/paytr-guncelle', fn() => (new SettingsController($pdo))->updatePaytrSettings());
-$router->get('/bildirimler', fn() => PlaceholderController::page('Bildirimler', 'Bildirimler burada listelenecek.'));
+$router->get('/bildirimler', fn() => (new NotificationsController($pdo))->index());
+$router->get('/api/bildirimler', fn() => (new NotificationsController($pdo))->apiList());
+$router->post('/bildirimler/okundu', fn() => (new NotificationsController($pdo))->markAllRead());
+$router->post('/bildirimler/tumunu-sil', fn() => (new NotificationsController($pdo))->deleteAll());
 
 $router->get('/', function () {
     if (!Auth::isAuthenticated()) { header('Location: /giris'); exit; }

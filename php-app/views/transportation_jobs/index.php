@@ -5,6 +5,7 @@ $years = $years ?? [];
 $customers = $customers ?? [];
 $services = $services ?? [];
 $staff = $staff ?? [];
+$newCustomerId = $newCustomerId ?? '';
 $currentQ = isset($_GET['q']) ? trim($_GET['q']) : '';
 $currentYear = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : '';
 $currentMonth = isset($_GET['month']) && $_GET['month'] !== '' ? (int) $_GET['month'] : '';
@@ -57,13 +58,32 @@ ob_start();
             <p>Henüz nakliye işi bulunmamaktadır.</p>
         </div>
     <?php else: ?>
+        <div id="jobBulkBar" class="hidden flex items-center justify-between gap-3 px-4 py-3 bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><span id="jobBulkCount">0</span> iş seçildi</span>
+            <form method="post" action="/nakliye-isler/sil" id="jobBulkDeleteForm">
+                <div id="jobBulkIdsContainer"></div>
+                <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Toplu Sil</button>
+            </form>
+        </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                <?php
+                    $statusLabels = ['pending' => 'Beklemede', 'in_progress' => 'Devam Ediyor', 'completed' => 'Tamamlandı', 'cancelled' => 'İptal Edildi'];
+                    $statusClasses = [
+                        'pending' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+                        'in_progress' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+                        'completed' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+                        'cancelled' => 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-200',
+                    ];
+                    ?>
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
+                        <th class="px-4 py-3 text-left"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="selectAllJobs" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" title="Tümünü seç"></label></th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Müşteri</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tarih</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Alış / Teslim</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Araç Plakası</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşe Giden Personel</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
@@ -72,6 +92,7 @@ ob_start();
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                     <?php foreach ($jobs as $j): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="job-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($j['id']) ?>"></label></td>
                             <td class="px-4 py-3">
                                 <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars(($j['customer_first_name'] ?? '') . ' ' . ($j['customer_last_name'] ?? '')) ?></span>
                                 <?php if (!empty($j['customer_phone'])): ?><br><span class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($j['customer_phone']) ?></span><?php endif; ?>
@@ -84,14 +105,21 @@ ob_start();
                                 echo $p || $d ? htmlspecialchars($p . ($p && $d ? ' / ' : '') . $d) . (mb_strlen($j['pickup_address'] ?? '') > 25 || mb_strlen($j['delivery_address'] ?? '') > 25 ? '…' : '') : '-';
                                 ?>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= $j['price'] !== null ? number_format((float)$j['price'], 2, ',', '.') . ' ₺' : '-' ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                <?php if (!empty($j['vehicle_plate'])): ?>
+                                    <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($j['vehicle_plate']) ?></span>
+                                <?php else: ?>–<?php endif; ?>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= !empty($j['staff_names']) ? htmlspecialchars($j['staff_names']) : '–' ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= ($j['price'] !== null && $j['price'] !== '') ? fmtPrice($j['price']) : '-' ?></td>
                             <td class="px-4 py-3">
-                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200"><?= htmlspecialchars($j['status'] ?? 'pending') ?></span>
+                                <?php $st = $j['status'] ?? 'pending'; $stClass = $statusClasses[$st] ?? $statusClasses['pending']; $stLabel = $statusLabels[$st] ?? $st; ?>
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $stClass ?>"><?= htmlspecialchars($stLabel) ?></span>
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <a href="/nakliye-isler/<?= htmlspecialchars($j['id']) ?>/duzenle" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 mr-1">Düzenle</a>
                                 <form method="post" action="/nakliye-isler/sil" class="inline" onsubmit="return confirm('Bu nakliye işini silmek istediğinize emin misiniz?');">
-                                    <input type="hidden" name="id" value="<?= htmlspecialchars($j['id']) ?>">
+                                    <input type="hidden" name="ids[]" value="<?= htmlspecialchars($j['id']) ?>">
                                     <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
                                 </form>
                             </td>
@@ -202,8 +230,13 @@ ob_start();
                     <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Diğer Bilgiler</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hangi plakalı araç gitti</label>
+                                <input type="text" name="vehicle_plate" placeholder="Örn: 34 ABC 123" maxlength="20" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            </div>
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Personel (Çoklu seçim)</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">İşe giden personel</label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">İşe gidecek personeli seçin (seçilenler listede görünür)</p>
                                 <div class="border border-gray-300 dark:border-gray-600 rounded-xl max-h-40 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-700/50">
                                     <?php if (empty($staff)): ?>
                                         <p class="text-sm text-gray-500 dark:text-gray-400">Personel bulunamadı.</p>
@@ -270,9 +303,102 @@ ob_start();
         </div>
     </div>
 </div>
+
+<!-- Modal: Yeni Müşteri Ekle (Nakliye İşi içinden) -->
+<div id="newJobCustomerModal" class="modal-overlay hidden fixed inset-0 z-[60] overflow-y-auto" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeNewJobCustomer()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-600">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Yeni Müşteri Ekle</h3>
+                <button type="button" onclick="closeNewJobCustomer()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form method="post" action="/musteriler/ekle">
+                <input type="hidden" name="redirect_to" value="new_job">
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad <span class="text-red-500">*</span></label>
+                            <input type="text" name="first_name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Soyad <span class="text-red-500">*</span></label>
+                            <input type="text" name="last_name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-posta</label>
+                        <input type="email" name="email" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
+                        <input type="text" name="phone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No</label>
+                        <input type="text" name="identity_number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adres</label>
+                        <textarea name="address" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not</label>
+                        <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-2">
+                    <button type="button" onclick="closeNewJobCustomer()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle ve nakliye formuna dön</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-function openNewJobModal() { document.getElementById('newJobModal').classList.remove('hidden'); }
-function closeNewJobModal() { document.getElementById('newJobModal').classList.add('hidden'); }
+function openNewJobModal() { document.getElementById('newJobModal').classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+function closeNewJobModal() { document.getElementById('newJobModal').classList.add('hidden'); document.body.style.overflow = ''; }
+function closeNewJobCustomer() {
+    document.getElementById('newJobCustomerModal').classList.add('hidden');
+    document.getElementById('newJobCustomerModal').setAttribute('aria-hidden', 'true');
+}
+(function() {
+    var bulkBar = document.getElementById('jobBulkBar');
+    var bulkCountEl = document.getElementById('jobBulkCount');
+    var selectAll = document.getElementById('selectAllJobs');
+    var form = document.getElementById('jobBulkDeleteForm');
+    var container = document.getElementById('jobBulkIdsContainer');
+    function updateBulkBar() {
+        var cbs = document.querySelectorAll('.job-cb:checked');
+        var n = cbs.length;
+        if (bulkCountEl) bulkCountEl.textContent = n;
+        if (bulkBar) bulkBar.classList.toggle('hidden', n === 0);
+        if (selectAll) selectAll.checked = n > 0 && document.querySelectorAll('.job-cb').length === n;
+    }
+    if (form) form.addEventListener('submit', function(e) {
+        var cbs = document.querySelectorAll('.job-cb:checked');
+        if (cbs.length === 0) { e.preventDefault(); return; }
+        if (!confirm('Seçili ' + cbs.length + ' nakliye işini silmek istediğinize emin misiniz?')) { e.preventDefault(); return; }
+        if (container) {
+            container.innerHTML = '';
+            cbs.forEach(function(cb) {
+                var inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = 'ids[]';
+                inp.value = cb.value;
+                container.appendChild(inp);
+            });
+        }
+    });
+    document.querySelectorAll('.job-cb').forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
+    if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.job-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); updateBulkBar(); });
+})();
+var newJobCustomerId = <?= json_encode($newCustomerId) ?>;
+if (newJobCustomerId && document.getElementById('newJob_customer_id')) {
+    var sel = document.getElementById('newJob_customer_id');
+    if (sel && sel.querySelector('option[value="' + newJobCustomerId + '"]')) { sel.value = newJobCustomerId; }
+}
 </script>
 <?php
 $content = ob_get_clean();

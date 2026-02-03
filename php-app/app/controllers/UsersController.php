@@ -168,6 +168,8 @@ class UsersController
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ];
         User::create($this->pdo, $data);
+        $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $newCompanyId, 'user', 'Personel eklendi', $fullName . ' kullanıcı olarak eklendi.');
         $_SESSION['flash_success'] = 'Kullanıcı eklendi.';
         header('Location: /kullanicilar');
         exit;
@@ -221,6 +223,8 @@ class UsersController
             $data['password'] = $_POST['password'];
         }
         User::update($this->pdo, $id, $data);
+        $fullName = trim(($data['first_name'] ?? $profile['first_name'] ?? '') . ' ' . ($data['last_name'] ?? $profile['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.');
         $_SESSION['flash_success'] = 'Kullanıcı güncellendi.';
         header('Location: /kullanicilar/' . $id);
         exit;
@@ -257,7 +261,9 @@ class UsersController
             header('Location: /kullanicilar');
             exit;
         }
+        $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
         User::remove($this->pdo, $id);
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.');
         $_SESSION['flash_success'] = 'Kullanıcı silindi.';
         header('Location: /kullanicilar');
         exit;

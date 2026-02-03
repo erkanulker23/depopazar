@@ -40,6 +40,7 @@ class ServicesController
         $name = trim($_POST['name'] ?? '');
         if ($name === '') { $_SESSION['flash_error'] = 'Kategori adı gerekli.'; header('Location: /hizmetler'); exit; }
         ServiceCategory::create($this->pdo, ['company_id' => $companyId, 'name' => $name, 'description' => trim($_POST['description'] ?? '') ?: null]);
+        Notification::createForCompany($this->pdo, $companyId, 'service', 'Hizmet kategorisi eklendi', $name . ' kategorisi eklendi.');
         $_SESSION['flash_success'] = 'Kategori eklendi.';
         header('Location: /hizmetler');
         exit;
@@ -74,6 +75,7 @@ class ServicesController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($cat['company_id'] ?? '') !== $companyId) { header('Location: /hizmetler'); exit; }
         ServiceCategory::softDelete($this->pdo, $id);
+        Notification::createForCompany($this->pdo, $companyId, 'service', 'Hizmet kategorisi silindi', ($cat['name'] ?? '') . ' kategorisi silindi.');
         $_SESSION['flash_success'] = 'Kategori silindi.';
         header('Location: /hizmetler');
         exit;
@@ -99,6 +101,7 @@ class ServicesController
             'unit_price' => isset($_POST['unit_price']) && $_POST['unit_price'] !== '' ? (float) str_replace(',', '.', $_POST['unit_price']) : 0,
             'unit' => trim($_POST['unit'] ?? '') ?: null,
         ]);
+        Notification::createForCompany($this->pdo, $companyId, 'service', 'Hizmet eklendi', $name . ' hizmeti eklendi.');
         $_SESSION['flash_success'] = 'Hizmet eklendi.';
         header('Location: /hizmetler');
         exit;
@@ -140,6 +143,7 @@ class ServicesController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($svc['company_id'] ?? '') !== $companyId) { header('Location: /hizmetler'); exit; }
         Service::softDelete($this->pdo, $id);
+        Notification::createForCompany($this->pdo, $companyId, 'service', 'Hizmet silindi', ($svc['name'] ?? '') . ' hizmeti silindi.');
         $_SESSION['flash_success'] = 'Hizmet silindi.';
         header('Location: /hizmetler');
         exit;

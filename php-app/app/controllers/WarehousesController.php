@@ -63,6 +63,7 @@ class WarehousesController
         ];
         try {
             Warehouse::create($this->pdo, $data);
+            Notification::createForCompany($this->pdo, $companyId, 'warehouse', 'Depo eklendi', $name . ' depo olarak eklendi.');
             $_SESSION['flash_success'] = 'Depo eklendi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Depo eklenemedi: ' . $e->getMessage();
@@ -109,6 +110,7 @@ class WarehousesController
             'is_active'   => isset($_POST['is_active']) ? 1 : 0,
         ];
         Warehouse::update($this->pdo, $id, $data);
+        Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo güncellendi', ($data['name'] ?? $warehouse['name']) . ' depo bilgileri güncellendi.');
         $_SESSION['flash_success'] = 'Depo güncellendi.';
         header('Location: /depolar');
         exit;
@@ -121,34 +123,40 @@ class WarehousesController
             header('Location: /depolar');
             exit;
         }
-        $id = $_POST['id'] ?? '';
-        if ($id === '') {
-            $_SESSION['flash_error'] = 'Depo bulunamadı.';
-            header('Location: /depolar');
-            exit;
+        $ids = isset($_POST['ids']) && is_array($_POST['ids']) ? array_filter(array_map('trim', $_POST['ids'])) : [];
+        if (empty($ids)) {
+            $id = trim($_POST['id'] ?? '');
+            if ($id !== '') $ids = [$id];
         }
-        $warehouse = Warehouse::findOne($this->pdo, $id);
-        if (!$warehouse) {
-            $_SESSION['flash_error'] = 'Depo bulunamadı.';
+        if (empty($ids)) {
+            $_SESSION['flash_error'] = 'Depo seçilmedi.';
             header('Location: /depolar');
             exit;
         }
         $user = Auth::user();
-        if ($user['role'] !== 'super_admin') {
-            $companyId = Company::getCompanyIdForUser($this->pdo, $user);
-            if (!$companyId || $warehouse['company_id'] !== $companyId) {
-                $_SESSION['flash_error'] = 'Bu depoya erişim yetkiniz yok.';
-                header('Location: /depolar');
-                exit;
+        $companyId = $user['role'] !== 'super_admin' ? Company::getCompanyIdForUser($this->pdo, $user) : null;
+        $deleted = 0;
+        $errors = [];
+        foreach ($ids as $id) {
+            $warehouse = Warehouse::findOne($this->pdo, $id);
+            if (!$warehouse) continue;
+            if ($companyId && $warehouse['company_id'] !== $companyId) continue;
+            if (Warehouse::hasActiveContracts($this->pdo, $id)) {
+                $errors[] = $warehouse['name'] ?? $id;
+                continue;
             }
+            Warehouse::remove($this->pdo, $id);
+            Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo silindi', ($warehouse['name'] ?? '') . ' depo silindi.');
+            $deleted++;
         }
-        if (Warehouse::hasActiveContracts($this->pdo, $id)) {
-            $_SESSION['flash_error'] = 'Bu depoda aktif sözleşmeli odalar var. Önce sözleşmeleri sonlandırın.';
-            header('Location: /depolar');
-            exit;
+        if (!empty($errors)) {
+            $_SESSION['flash_error'] = 'Bazı depolar silinemedi (aktif sözleşme var): ' . implode(', ', $errors);
         }
-        Warehouse::remove($this->pdo, $id);
-        $_SESSION['flash_success'] = 'Depo silindi.';
+        if ($deleted > 0) {
+            $_SESSION['flash_success'] = $deleted === 1 ? 'Depo silindi.' : $deleted . ' depo silindi.';
+        } elseif (empty($errors)) {
+            $_SESSION['flash_error'] = 'Silinecek depo bulunamadı veya yetkiniz yok.';
+        }
         header('Location: /depolar');
         exit;
     }

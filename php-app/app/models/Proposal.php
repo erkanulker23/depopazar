@@ -3,7 +3,7 @@ class Proposal
 {
     public static function findAll(PDO $pdo, ?string $companyId = null, ?string $statusFilter = null): array
     {
-        $sql = 'SELECT p.*, c.first_name AS customer_first_name, c.last_name AS customer_last_name
+        $sql = 'SELECT p.*, c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.email AS customer_email
                 FROM proposals p
                 LEFT JOIN customers c ON c.id = p.customer_id AND c.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL ';
@@ -24,7 +24,7 @@ class Proposal
 
     public static function findOne(PDO $pdo, string $id): ?array
     {
-        $stmt = $pdo->prepare('SELECT p.*, c.first_name AS customer_first_name, c.last_name AS customer_last_name FROM proposals p LEFT JOIN customers c ON c.id = p.customer_id AND c.deleted_at IS NULL WHERE p.id = ? AND p.deleted_at IS NULL LIMIT 1');
+        $stmt = $pdo->prepare('SELECT p.*, c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.email AS customer_email, c.phone AS customer_phone FROM proposals p LEFT JOIN customers c ON c.id = p.customer_id AND c.deleted_at IS NULL WHERE p.id = ? AND p.deleted_at IS NULL LIMIT 1');
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
@@ -38,7 +38,7 @@ class Proposal
     public static function update(PDO $pdo, string $id, array $data): void
     {
         $stmt = $pdo->prepare(
-            'UPDATE proposals SET title = ?, customer_id = ?, status = ?, total_amount = ?, valid_until = ?, notes = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE proposals SET title = ?, customer_id = ?, status = ?, total_amount = ?, valid_until = ?, notes = ?, pickup_address = ?, delivery_address = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
             trim($data['title'] ?? '') ?: 'Teklif',
@@ -47,8 +47,17 @@ class Proposal
             isset($data['total_amount']) ? (float) $data['total_amount'] : 0,
             trim($data['valid_until'] ?? '') ?: null,
             trim($data['notes'] ?? '') ?: null,
+            trim($data['pickup_address'] ?? '') ?: null,
+            trim($data['delivery_address'] ?? '') ?: null,
             $id,
         ]);
+        if (isset($data['items']) && is_array($data['items'])) {
+            ProposalItem::deleteByProposalId($pdo, $id);
+            foreach ($data['items'] as $item) {
+                if (empty(trim($item['name'] ?? ''))) continue;
+                ProposalItem::create($pdo, $id, $item);
+            }
+        }
     }
 
     public static function softDelete(PDO $pdo, string $id): void
@@ -61,8 +70,8 @@ class Proposal
     {
         $id = self::uuid();
         $stmt = $pdo->prepare(
-            'INSERT INTO proposals (id, company_id, customer_id, title, status, total_amount, currency, valid_until, notes) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO proposals (id, company_id, customer_id, title, status, total_amount, currency, valid_until, notes, pickup_address, delivery_address) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
@@ -74,7 +83,16 @@ class Proposal
             $data['currency'] ?? 'TRY',
             !empty($data['valid_until']) ? $data['valid_until'] : null,
             trim($data['notes'] ?? '') ?: null,
+            trim($data['pickup_address'] ?? '') ?: null,
+            trim($data['delivery_address'] ?? '') ?: null,
         ]);
+        $items = $data['items'] ?? [];
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                if (empty(trim($item['name'] ?? ''))) continue;
+                ProposalItem::create($pdo, $id, $item);
+            }
+        }
         $p = self::findOne($pdo, $id);
         return $p ?: [];
     }

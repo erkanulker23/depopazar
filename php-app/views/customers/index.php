@@ -15,9 +15,17 @@ ob_start();
         <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
         <?php if ($q !== ''): ?><a href="/musteriler" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
     </form>
-    <button type="button" onclick="document.getElementById('addCustomerModal').classList.remove('hidden')" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
-        <i class="bi bi-plus-lg mr-2"></i> Yeni Müşteri
-    </button>
+    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <a href="/musteriler/excel-disari-aktar<?= $q !== '' ? '?q=' . urlencode($q) : '' ?>" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar
+        </a>
+        <a href="/musteriler/excel-ice-aktar" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <i class="bi bi-file-earmark-arrow-up"></i> Excel İçe Aktar
+        </a>
+        <button type="button" onclick="document.getElementById('addCustomerModal').classList.remove('hidden')" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
+            <i class="bi bi-plus-lg mr-2"></i> Yeni Müşteri
+        </button>
+    </div>
 </div>
 
 <?php if (isset($flashSuccess) && $flashSuccess): ?>

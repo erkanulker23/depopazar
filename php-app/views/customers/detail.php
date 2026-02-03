@@ -110,7 +110,7 @@ ob_start();
             <?php endif; ?>
         </div>
 
-        <!-- Aylık ödeme takvimi: hangi aylar ödendi / ödenmedi / gecikmede -->
+        <!-- Aylar takvimi: Ocak, Şubat, Mart... hangi ay ödendi / ödenmedi -->
         <?php
         $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
         $monthsStatus = [];
@@ -122,28 +122,55 @@ ob_start();
             $label = $status === 'paid' ? 'Ödendi' : ($status === 'overdue' ? 'Gecikmede' : 'Ödenmedi');
             $monthsStatus[$key] = ['status' => $status, 'label' => $label, 'amount' => $p['amount'] ?? 0, 'contract_number' => $p['contract_number'] ?? ''];
         }
-        krsort($monthsStatus, SORT_STRING);
+        $minYear = date('Y');
+        $maxYear = date('Y');
+        foreach (array_keys($monthsStatus) as $ym) {
+            $y = (int) substr($ym, 0, 4);
+            if ($y < $minYear) $minYear = $y;
+            if ($y > $maxYear) $maxYear = $y;
+        }
+        foreach ($contracts as $c) {
+            if (!empty($c['start_date'])) { $y = (int) date('Y', strtotime($c['start_date'])); if ($y < $minYear) $minYear = $y; }
+            if (!empty($c['end_date'])) { $y = (int) date('Y', strtotime($c['end_date'])); if ($y > $maxYear) $maxYear = $y; }
+        }
         ?>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-                <i class="bi bi-calendar-month text-emerald-600"></i> Aylık Ödeme Durumu (Takvim)
+                <i class="bi bi-calendar-month text-emerald-600"></i> Aylar Takvimi – Ödendi / Ödenmedi
             </h2>
-            <div class="p-4">
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Hangi aylar ödendi, hangi aylar ödenmedi veya gecikmede</p>
-                <div class="flex flex-wrap gap-2">
-                    <?php foreach ($monthsStatus as $ym => $info):
-                        $status = $info['status'];
-                        $bg = $status === 'paid' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : ($status === 'overdue' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300');
-                        $parts = explode('-', $ym);
-                        $monthLabel = $monthNames[(int)$parts[1] - 1] . ' ' . $parts[0];
-                    ?>
-                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium <?= $bg ?>" title="<?= htmlspecialchars($info['contract_number']) ?> – <?= number_format((float)$info['amount'], 2, ',', '.') ?> ₺">
-                            <?= htmlspecialchars($monthLabel) ?>: <?= htmlspecialchars($info['label']) ?>
-                        </span>
-                    <?php endforeach; ?>
-                </div>
-                <?php if (empty($monthsStatus)): ?>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Ödeme kaydı yok.</p>
+            <div class="p-4 overflow-x-auto">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Ocak, Şubat, Mart… hangi ay ödendi, hangi ay ödenmedi</p>
+                <?php if ($maxYear >= $minYear): ?>
+                <table class="min-w-full border border-gray-200 dark:border-gray-600 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-700/50">
+                        <tr>
+                            <th class="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300">Yıl</th>
+                            <?php for ($m = 1; $m <= 12; $m++): ?>
+                                <th class="border border-gray-200 dark:border-gray-600 px-2 py-2 text-center font-bold text-gray-700 dark:text-gray-300"><?= $monthNames[$m - 1] ?></th>
+                            <?php endfor; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php for ($year = $maxYear; $year >= $minYear; $year--): ?>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <td class="border border-gray-200 dark:border-gray-600 px-2 py-2 font-medium text-gray-900 dark:text-white"><?= $year ?></td>
+                            <?php for ($m = 1; $m <= 12; $m++): ?>
+                                <?php
+                                $key = $year . '-' . str_pad((string)$m, 2, '0', STR_PAD_LEFT);
+                                $info = $monthsStatus[$key] ?? null;
+                                $status = $info['status'] ?? null;
+                                $label = $info ? $info['label'] : '–';
+                                $bg = $status === 'paid' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : ($status === 'overdue' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : ($status === 'pending' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' : 'bg-gray-50 dark:bg-gray-700/30 text-gray-500 dark:text-gray-400'));
+                                $title = $info ? (($info['contract_number'] ?? '') . ' – ' . fmtPrice($info['amount'] ?? 0)) : '';
+                                ?>
+                                <td class="border border-gray-200 dark:border-gray-600 px-2 py-1.5 text-center <?= $bg ?>" title="<?= htmlspecialchars($title) ?>"><?= htmlspecialchars($label) ?></td>
+                            <?php endfor; ?>
+                        </tr>
+                        <?php endfor; ?>
+                    </tbody>
+                </table>
+                <?php else: ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Sözleşme veya ödeme kaydı yok.</p>
                 <?php endif; ?>
             </div>
         </div>

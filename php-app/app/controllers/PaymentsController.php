@@ -106,8 +106,16 @@ class PaymentsController
         try {
             if (count($paymentIds) === 1) {
                 Payment::markAsPaid($this->pdo, $paymentIds[0], $paymentMethod, $transactionId, $notes, $bankAccountId);
+                $firstPayment = Payment::findOne($this->pdo, $paymentIds[0]);
+                if ($firstPayment && !empty($firstPayment['contract_id'])) {
+                    $contract = Contract::findOne($this->pdo, $firstPayment['contract_id']);
+                    if ($contract) {
+                        Notification::createForCompany($this->pdo, $contract['company_id'] ?? null, 'payment', 'Ödeme alındı', 'Sözleşme ' . ($contract['contract_number'] ?? '') . ' için ödeme alındı.', ['contract_id' => $firstPayment['contract_id']]);
+                    }
+                }
             } else {
                 Payment::markManyAsPaid($this->pdo, $paymentIds, $paymentMethod, $transactionId, $notes, $bankAccountId);
+                Notification::createForCompany($this->pdo, $companyId, 'payment', 'Ödemeler alındı', count($paymentIds) . ' adet ödeme kaydedildi.');
             }
             $_SESSION['flash_success'] = 'Ödeme kaydedildi.';
         } catch (Exception $e) {

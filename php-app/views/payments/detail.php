@@ -26,26 +26,30 @@ ob_start();
     </div>
 </div>
 
-<!-- Fatura benzeri (yazdırma) -->
-<div class="hidden print:block bg-white p-8 max-w-2xl mx-auto border border-gray-300 mb-6">
-    <h2 class="text-xl font-bold text-gray-900 border-b border-gray-300 pb-2 mb-4">ÖDEME MAKBUZU</h2>
-    <div class="grid grid-cols-2 gap-6 mb-6">
+<!-- Çıktı: barkod sayfası tasarımına uyumlu (yazdırma) -->
+<div class="hidden print:block bg-white p-6 max-w-4xl mx-auto border-2 border-gray-200 rounded-xl mb-6 print:border-gray-400">
+    <h1 class="text-xl font-bold text-center text-gray-900 mb-6">Ödeme Makbuzu</h1>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
-            <p class="text-xs font-bold text-gray-500 uppercase">Firma</p>
-            <p class="font-semibold"><?= htmlspecialchars($company['name'] ?? '') ?></p>
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Firma</h2>
+            <p class="font-semibold text-gray-900"><?= htmlspecialchars($company['name'] ?? '') ?></p>
         </div>
         <div>
-            <p class="text-xs font-bold text-gray-500 uppercase">Müşteri</p>
-            <p class="font-semibold"><?= htmlspecialchars($customerName ?: '-') ?></p>
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Müşteri</h2>
+            <p class="font-semibold text-gray-900"><?= htmlspecialchars($customerName ?: '-') ?></p>
+            <?php if (!empty($payment['customer_email'])): ?><p class="text-sm text-gray-600"><?= htmlspecialchars($payment['customer_email']) ?></p><?php endif; ?>
+            <?php if (!empty($payment['customer_phone'])): ?><p class="text-sm text-gray-600">Tel: <?= htmlspecialchars($payment['customer_phone']) ?></p><?php endif; ?>
         </div>
     </div>
-    <table class="min-w-full border border-gray-300">
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50 w-40">Ödeme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($payment['payment_number'] ?? '') ?></td></tr>
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">Tutar</td><td class="border border-gray-300 px-3 py-2 font-bold"><?= number_format((float)($payment['amount'] ?? 0), 2, ',', '.') ?> ₺</td></tr>
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">Vade</td><td class="border border-gray-300 px-3 py-2"><?= !empty($payment['due_date']) ? date('d.m.Y', strtotime($payment['due_date'])) : '–' ?></td></tr>
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">Ödenme</td><td class="border border-gray-300 px-3 py-2"><?= !empty($payment['paid_at']) ? date('d.m.Y', strtotime($payment['paid_at'])) : '–' ?></td></tr>
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">Durum</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($statusLabel) ?></td></tr>
+    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Bilgileri</h2>
+    <table class="min-w-full border border-gray-300 text-sm">
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-40">Ödeme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($payment['payment_number'] ?? '') ?></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Tutar</td><td class="border border-gray-300 px-3 py-2 font-bold"><?= fmtPrice($payment['amount'] ?? 0) ?></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Vade</td><td class="border border-gray-300 px-3 py-2"><?= !empty($payment['due_date']) ? date('d.m.Y', strtotime($payment['due_date'])) : '–' ?></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ödenme</td><td class="border border-gray-300 px-3 py-2"><?= !empty($payment['paid_at']) ? date('d.m.Y', strtotime($payment['paid_at'])) : '–' ?></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Durum</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($statusLabel) ?></td></tr>
     </table>
+    <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= date('d.m.Y H:i') ?></p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
@@ -61,7 +65,7 @@ ob_start();
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</dt>
-                    <dd class="mt-1 font-semibold text-gray-900 dark:text-white"><?= number_format((float)($payment['amount'] ?? 0), 2, ',', '.') ?> ₺</dd>
+                    <dd class="mt-1 font-semibold text-gray-900 dark:text-white"><?= fmtPrice($payment['amount'] ?? 0) ?></dd>
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</dt>

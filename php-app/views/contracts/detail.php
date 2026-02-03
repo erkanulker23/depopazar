@@ -43,11 +43,12 @@ ob_start();
     </div>
 </div>
 
-<!-- Fatura benzeri sözleşme (yazdırma için) -->
-<div class="print-fatura hidden bg-white p-8 max-w-4xl mx-auto border border-gray-200 shadow-sm rounded-xl mb-8">
-    <div class="grid grid-cols-2 gap-8 mb-8">
+<!-- Çıktı: barkod sayfası tasarımına uyumlu -->
+<div class="print-fatura hidden bg-white p-6 max-w-4xl mx-auto border-2 border-gray-200 rounded-xl mb-8 print:border-gray-400">
+    <h1 class="text-xl font-bold text-center text-gray-900 mb-6">Sözleşme Detayı</h1>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
-            <h2 class="text-lg font-bold text-gray-900 border-b border-gray-300 pb-2 mb-2">Firma</h2>
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Firma</h2>
             <p class="font-semibold text-gray-900"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
             <?php if (!empty($company['address'])): ?><p class="text-sm text-gray-600"><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
             <?php if (!empty($company['phone'])): ?><p class="text-sm text-gray-600">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
@@ -55,29 +56,30 @@ ob_start();
             <?php if (!empty($company['tax_office'])): ?><p class="text-sm text-gray-600">Vergi Dairesi: <?= htmlspecialchars($company['tax_office']) ?></p><?php endif; ?>
         </div>
         <div>
-            <h2 class="text-lg font-bold text-gray-900 border-b border-gray-300 pb-2 mb-2">Müşteri</h2>
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Müşteri</h2>
             <p class="font-semibold text-gray-900"><?= htmlspecialchars($customerName ?: '-') ?></p>
             <?php if (!empty($contract['customer_email'])): ?><p class="text-sm text-gray-600"><?= htmlspecialchars($contract['customer_email']) ?></p><?php endif; ?>
             <?php if (!empty($contract['customer_phone'])): ?><p class="text-sm text-gray-600">Tel: <?= htmlspecialchars($contract['customer_phone']) ?></p><?php endif; ?>
             <?php if (!empty($contract['customer_address'])): ?><p class="text-sm text-gray-600"><?= nl2br(htmlspecialchars($contract['customer_address'])) ?></p><?php endif; ?>
         </div>
     </div>
-    <h2 class="text-xl font-bold text-gray-900 border-b border-gray-300 pb-2 mb-4">SÖZLEŞME: <?= htmlspecialchars($contract['contract_number'] ?? '') ?></h2>
-    <table class="min-w-full border border-gray-300 mb-6">
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50 w-48">Sözleşme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['contract_number'] ?? '-') ?></td></tr>
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">Başlangıç – Bitiş</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?= number_format((float)($contract['monthly_price'] ?? 0), 2, ',', '.') ?> ₺</td></tr>
+    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Sözleşme Bilgileri</h2>
+    <table class="min-w-full border border-gray-300 text-sm mb-6">
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-48">Sözleşme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['contract_number'] ?? '-') ?></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Başlangıç – Bitiş</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></td></tr>
     </table>
-    <h3 class="font-bold text-gray-900 mb-2">Ödeme Takvimi</h3>
-    <table class="min-w-full border border-gray-300">
-        <thead><tr class="bg-gray-100"><th class="border border-gray-300 px-3 py-2 text-left">Vade</th><th class="border border-gray-300 px-3 py-2 text-left">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left">Durum</th></tr></thead>
+    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Takvimi</h2>
+    <table class="min-w-full border border-gray-300 text-sm">
+        <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th></tr></thead>
         <tbody>
             <?php foreach ($payments as $p): $s = $p['status'] ?? 'pending'; $l = $s === 'paid' ? 'Ödendi' : ($s === 'overdue' ? 'Gecikmiş' : 'Bekliyor'); ?>
-            <tr><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td><td class="border border-gray-300 px-3 py-2"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</td><td class="border border-gray-300 px-3 py-2"><?= $l ?></td></tr>
+            <tr><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td><td class="border border-gray-300 px-3 py-2"><?= $l ?></td></tr>
             <?php endforeach; ?>
         </tbody>
     </table>
+    <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= date('d.m.Y H:i') ?></p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -108,7 +110,7 @@ ob_start();
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 uppercase tracking-widest">Aylık Fiyat</dt>
-                    <dd class="mt-1 font-semibold text-gray-900"><?= number_format((float)($contract['monthly_price'] ?? 0), 2, ',', '.') ?> ₺</dd>
+                    <dd class="mt-1 font-semibold text-gray-900"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></dd>
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 uppercase tracking-widest">Durum</dt>
@@ -146,7 +148,7 @@ ob_start();
                             <?php foreach ($payments as $p): ?>
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-sm text-gray-600"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td>
-                                    <td class="px-4 py-3 text-sm font-medium text-gray-900"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</td>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-900"><?= fmtPrice($p['amount'] ?? 0) ?></td>
                                     <td class="px-4 py-3">
                                         <?php
                                         $status = $p['status'] ?? 'pending';
@@ -185,7 +187,7 @@ ob_start();
                     <?php foreach ($monthlyPrices as $mp): ?>
                         <li class="px-4 py-3 flex justify-between items-center text-sm">
                             <span class="text-gray-700"><?= htmlspecialchars($mp['month'] ?? '') ?></span>
-                            <span class="font-medium text-gray-900"><?= number_format((float)($mp['price'] ?? 0), 2, ',', '.') ?> ₺</span>
+                            <span class="font-medium text-gray-900"><?= fmtPrice($mp['price'] ?? 0) ?></span>
                         </li>
                     <?php endforeach; ?>
                 </ul>

@@ -94,6 +94,7 @@ class RoomsController
         ];
         try {
             Room::create($this->pdo, $data);
+            Notification::createForCompany($this->pdo, $companyId, 'room', 'Oda eklendi', $roomNumber . ' numaralı oda ' . ($warehouse['name'] ?? '') . ' deposuna eklendi.');
             $_SESSION['flash_success'] = 'Oda eklendi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Oda eklenemedi: ' . $e->getMessage();
@@ -148,6 +149,7 @@ class RoomsController
             'notes'         => trim($_POST['notes'] ?? '') ?: null,
         ];
         Room::update($this->pdo, $id, $data);
+        Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda güncellendi', ($data['room_number'] ?? $room['room_number']) . ' oda bilgileri güncellendi.');
         $_SESSION['flash_success'] = 'Oda güncellendi.';
         header('Location: /odalar');
         exit;
@@ -160,27 +162,40 @@ class RoomsController
             header('Location: /odalar');
             exit;
         }
-        $id = $_POST['id'] ?? '';
-        $room = $id ? Room::findOne($this->pdo, $id) : null;
-        if (!$room) {
-            $_SESSION['flash_error'] = 'Oda bulunamadı.';
-            header('Location: /odalar');
-            exit;
+        $ids = isset($_POST['ids']) && is_array($_POST['ids']) ? array_filter(array_map('trim', $_POST['ids'])) : [];
+        if (empty($ids)) {
+            $id = trim($_POST['id'] ?? '');
+            if ($id !== '') $ids = [$id];
         }
-        if (Room::hasActiveContract($this->pdo, $id)) {
-            $_SESSION['flash_error'] = 'Bu odada müşteri var. Önce sözleşmeyi sonlandırın.';
+        if (empty($ids)) {
+            $_SESSION['flash_error'] = 'Oda seçilmedi.';
             header('Location: /odalar');
             exit;
         }
         $user = Auth::user();
-        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
-        if ($user['role'] !== 'super_admin' && $room['company_id'] !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu odaya erişim yetkiniz yok.';
-            header('Location: /odalar');
-            exit;
+        $companyId = $user['role'] !== 'super_admin' ? Company::getCompanyIdForUser($this->pdo, $user) : null;
+        $deleted = 0;
+        $errors = [];
+        foreach ($ids as $id) {
+            $room = Room::findOne($this->pdo, $id);
+            if (!$room) continue;
+            if ($companyId && $room['company_id'] !== $companyId) continue;
+            if (Room::hasActiveContract($this->pdo, $id)) {
+                $errors[] = $room['room_number'] ?? $id;
+                continue;
+            }
+            Room::remove($this->pdo, $id);
+            Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda silindi', ($room['room_number'] ?? '') . ' numaralı oda silindi.');
+            $deleted++;
         }
-        Room::remove($this->pdo, $id);
-        $_SESSION['flash_success'] = 'Oda silindi.';
+        if (!empty($errors)) {
+            $_SESSION['flash_error'] = 'Bazı odalar silinemedi (aktif sözleşme var): ' . implode(', ', $errors);
+        }
+        if ($deleted > 0) {
+            $_SESSION['flash_success'] = $deleted === 1 ? 'Oda silindi.' : $deleted . ' oda silindi.';
+        } elseif (empty($errors)) {
+            $_SESSION['flash_error'] = 'Silinecek oda bulunamadı veya yetkiniz yok.';
+        }
         header('Location: /odalar');
         exit;
     }

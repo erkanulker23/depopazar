@@ -120,6 +120,22 @@ root /home/forge/your-domain.com/php-app/public;
 
 ## Sorun Giderme
 
-- **500 hatası**: `php-app/storage/logs` veya PHP error log'una bakın
-- **Veritabanı bağlantı hatası**: `.env` / Environment değişkenlerini kontrol edin; `db.local.php` deploy sonrası oluşmuş olmalı
-- **403 Forbidden**: Web Directory'nin `php-app/public` olduğundan emin olun
+### HTTP 500 – "Bu isteği işleme alamıyor"
+
+1. **Sağlık kontrolü sayfasını açın**  
+   Tarayıcıda şu adrese gidin:  
+   `https://general.awapanel.com/health.php`  
+   Bu sayfa hangi adımda hata veriyorsa (config, db.local.php yok, veritabanı bağlantısı vb.) onu gösterir.
+
+2. **Sık nedenler**
+   - **`db.local.php` yok**: Deploy script çalışmamış demektir. Forge'da **Deploy Now** yapın. Deploy script (`deploy.sh`) `.env` değişkenlerinden `php-app/config/db.local.php` dosyasını oluşturur.
+   - **Veritabanı bilgileri yanlış**: Forge **Environment** sekmesinde `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` doğru olmalı. Değiştirdikten sonra tekrar **Deploy Now** yapın.
+   - **Web Directory yanlış**: Forge site ayarlarında **Web Directory** mutlaka `php-app/public` olmalı.
+   - **PHP eklentisi**: Sunucuda `pdo_mysql` (PHP → Extensions) açık olmalı.
+
+3. **Loglara bakma**
+   - Forge'da site **Logs** veya sunucuda: `~/general.awapanel.com/logs/` (veya Forge’un gösterdiği path), Nginx: `/var/log/nginx/error.log`, PHP-FPM error log.
+
+4. **Güvenlik**: Sorun çözüldükten sonra `php-app/public/health.php` dosyasını sunucudan silebilir veya erişimi kapatabilirsiniz.
+
+- **403 Forbidden**: Web Directory'nin `php-app/public` olduğundan emin olun.
