@@ -1,5 +1,7 @@
 # Forge / AWA – Deploy script ve yeni kurulum
 
+**Kök deploy script:** Proje kökündeki `deploy.sh` Forge “Quick Deploy” ile uyumludur. Tek `.env` dosyası proje kökünde olmalı; backend ve frontend bu dosyadan beslenir. Script gerekli dizinleri (backend/uploads, backend/backups, backend/logs) oluşturur ve izinleri ayarlar.
+
 ## 404 (general.awapanel.com/login) ve boş log çözümü
 
 Bu belgedeki adımlar **mutlaka** uygulanmalı; aksi halde `/login` 404 verir ve Site Log boş kalır.

@@ -20,16 +20,15 @@ import { ServicesModule } from './modules/services/services.module';
 import { ProposalsModule } from './modules/proposals/proposals.module';
 import { BackupModule } from './modules/backup/backup.module';
 
-// Tek .env: önce proje kökü (Forge/CI), yoksa backend/.env (lokal geliştirme)
+// Tek .env: her zaman proje kökü (backend/ üst dizini)
 const projectRoot = process.cwd().endsWith('backend') ? join(process.cwd(), '..') : process.cwd();
 const rootEnv = join(projectRoot, '.env');
-const backendEnv = join(projectRoot, 'backend', '.env');
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [rootEnv, backendEnv],
+      envFilePath: rootEnv,
     }),
 
     // Database

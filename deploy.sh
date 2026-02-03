@@ -1,72 +1,96 @@
 #!/bin/bash
 # =============================================================================
-# DepoPazar – Kesintisiz deploy (multi-domain / subdomain, DB izolasyonu)
-# Her domain/subdomain için bu script ilgili dizinde, kendi .env ile çalıştırılır.
-# Sıra: migration -> build -> PM2 reload (başarısızda eski sürüm çalışmaya devam).
+# DepoPazar – Forge Quick Deploy uyumlu deploy script
+# Tek .env proje kökünde; backend ve frontend bu dosyadan beslenir.
+# Kullanım: Forge’da “Deploy Now” veya sunucuda: ./deploy.sh
 # =============================================================================
+
+set -e
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-set -e
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT"
 
-echo -e "${GREEN}Deploy başlatılıyor...${NC}"
+echo -e "${GREEN}[1/6] Deploy başlatıldı (ROOT=$ROOT)${NC}"
 
-# 1. Kod güncelleme (opsiyonel – CI/CD’de genelde dışarıdan yapılır)
+# -----------------------------------------------------------------------------
+# Git güncelleme (Forge branch’i kullanır; SKIP_GIT=1 ile atlanabilir)
+# -----------------------------------------------------------------------------
 if [ "${SKIP_GIT}" != "1" ]; then
-  echo -e "${YELLOW}Kodlar güncelleniyor...${NC}"
+  echo -e "${YELLOW}[2/6] Kod güncelleniyor...${NC}"
   git fetch origin
-  git reset --hard origin/main
-fi
-
-# 2. Backend
-echo -e "${YELLOW}Backend işlemleri...${NC}"
-cd "$(dirname "$0")/backend"
-
-# Production’da .env zorunlu (hardcoded DB yok)
-if [ "${NODE_ENV}" = "production" ] || [ "${DEPLOY_STRICT}" = "1" ]; then
-  if [ ! -f .env ]; then
-    echo -e "${RED}HATA: backend/.env bulunamadı. Her kurulum için ayrı .env zorunludur.${NC}"
-    exit 1
+  if [ -n "${FORGE_SITE_BRANCH}" ]; then
+    git reset --hard "origin/${FORGE_SITE_BRANCH}"
+  else
+    git reset --hard origin/main
   fi
+  cd "$ROOT"
 else
-  if [ ! -f .env ]; then
-    echo -e "${YELLOW}UYARI: .env yok, .env.example kopyalanıyor. Düzenleyip tekrar çalıştırın.${NC}"
-    cp .env.example .env
+  echo -e "${YELLOW}[2/6] Git atlandı (SKIP_GIT=1)${NC}"
+fi
+
+# -----------------------------------------------------------------------------
+# Tek .env – proje kökünde zorunlu (production’da)
+# -----------------------------------------------------------------------------
+if [ ! -f "$ROOT/.env" ]; then
+  if [ "${NODE_ENV}" = "production" ] || [ "${DEPLOY_STRICT}" = "1" ]; then
+    echo -e "${RED}HATA: $ROOT/.env bulunamadı. Production için zorunludur.${NC}"
     exit 1
   fi
+  echo -e "${YELLOW}UYARI: .env yok; .env.example kopyalanıyor. Değerleri doldurup tekrar deploy edin.${NC}"
+  cp "$ROOT/.env.example" "$ROOT/.env"
+  exit 1
 fi
+
+# -----------------------------------------------------------------------------
+# Backend: dizinler, izinler, bağımlılık, migration, build, PM2
+# -----------------------------------------------------------------------------
+echo -e "${YELLOW}[3/6] Backend işlemleri...${NC}"
+cd "$ROOT/backend"
 
 mkdir -p uploads backups logs
 chmod 755 uploads backups logs 2>/dev/null || true
 
-echo "Bağımlılıklar yükleniyor..."
-npm ci --legacy-peer-deps
+npm ci --legacy-peer-deps --prefer-offline --no-audit
 
-# Önce migration (başarısızsa build/reload yapılmaz – zero-downtime güvenliği)
-echo "Veritabanı migration’ları çalıştırılıyor..."
+echo "Migration çalıştırılıyor..."
 npm run migration:run
 
-echo "Build alınıyor..."
+echo "Backend build..."
 npm run build
 
-# PM2: reload = kesintisiz; yoksa start
-echo "PM2 process güncelleniyor..."
-pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+echo "PM2 güncelleniyor..."
+pm2 reload ecosystem.config.js --env production 2>/dev/null || pm2 start ecosystem.config.js --env production
 
-cd ..
+cd "$ROOT"
 
-# 3. Frontend (bu repo tek frontend ise; çoklu domain’de her domain ayrı build olabilir)
-echo -e "${YELLOW}Frontend işlemleri...${NC}"
-cd frontend
-if [ ! -f .env ]; then
-  echo -e "${YELLOW}UYARI: frontend/.env yok. VITE_API_URL bu domain’in API adresi olmalı.${NC}"
-  [ -f .env.example ] && cp .env.example .env
+# -----------------------------------------------------------------------------
+# Frontend: bağımlılık, build (root .env envDir ile okunur)
+# -----------------------------------------------------------------------------
+echo -e "${YELLOW}[4/6] Frontend işlemleri...${NC}"
+cd "$ROOT/frontend"
+
+npm ci --legacy-peer-deps --prefer-offline --no-audit
+npm run build
+
+cd "$ROOT"
+
+# -----------------------------------------------------------------------------
+# Frontend dağıtım dizini (Nginx root = frontend/dist)
+# -----------------------------------------------------------------------------
+echo -e "${YELLOW}[5/6] Build çıktısı kontrol ediliyor...${NC}"
+if [ ! -d "$ROOT/frontend/dist" ] || [ -z "$(ls -A "$ROOT/frontend/dist" 2>/dev/null)" ]; then
+  echo -e "${RED}HATA: frontend/dist boş veya yok. Frontend build başarısız olmuş olabilir.${NC}"
+  exit 1
 fi
-npm ci --legacy-peer-deps
-npm run build
-cd ..
 
-echo -e "${GREEN}Deploy tamamlandı.${NC}"
+echo -e "${GREEN}[6/6] Deploy tamamlandı.${NC}"
+echo ""
+echo "  Backend:  node backend/dist/main.js (PM2 ile çalışıyor)"
+echo "  Frontend: frontend/dist (Nginx Web directory olarak ayarlayın)"
+echo "  Nginx:    location /api -> proxy_pass http://127.0.0.1:\${PORT:-4100};"
+echo ""
