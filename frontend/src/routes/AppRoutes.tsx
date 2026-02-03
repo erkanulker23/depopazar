@@ -107,6 +107,7 @@ export function AppRoutes() {
         <Route path="services" element={<ServicesPage />} />
         <Route path="proposals" element={<ProposalsPage />} />
         <Route path="proposals/new" element={<CreateProposalPage />} />
+        <Route path="proposals/:id/edit" element={<CreateProposalPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reports/bank-accounts" element={<BankAccountPaymentsPage />} />
         <Route path="settings" element={<SettingsPage />} />

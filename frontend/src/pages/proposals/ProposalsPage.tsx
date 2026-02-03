@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { proposalsApi, Proposal } from '../../services/api/proposalsApi';
+import { companiesApi } from '../../services/api/companiesApi';
 import { generateProposalPDF } from '../../utils/pdfUtils';
 import { getErrorMessage } from '../../utils/errorMessage';
-import { PlusIcon, TrashIcon, ArrowDownTrayIcon, EnvelopeIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ArrowDownTrayIcon, EnvelopeIcon, PrinterIcon, PencilIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 export function ProposalsPage() {
@@ -44,8 +45,11 @@ export function ProposalsPage() {
 
   const handlePdfDownload = async (proposal: Proposal) => {
     try {
-      const full = await proposalsApi.getById(proposal.id);
-      generateProposalPDF(full);
+      const [full, company] = await Promise.all([
+        proposalsApi.getById(proposal.id),
+        companiesApi.getCurrent().catch(() => null),
+      ]);
+      await generateProposalPDF(full, company ?? undefined);
       toast.success('PDF indirildi');
     } catch (e: unknown) {
       toast.error(getErrorMessage(e));
@@ -182,6 +186,13 @@ export function ProposalsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
+                        <button
+                          onClick={() => navigate(`/proposals/${proposal.id}/edit`)}
+                          className="text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                          title="Düzenle"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
                         <button 
                           onClick={() => handlePdfDownload(proposal)}
                           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" 

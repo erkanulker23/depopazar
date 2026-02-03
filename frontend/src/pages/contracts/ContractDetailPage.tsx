@@ -45,6 +45,7 @@ export function ContractDetailPage() {
   const [paymentNotes, setPaymentNotes] = useState('');
   const [items, setItems] = useState<any[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
@@ -53,7 +54,17 @@ export function ContractDetailPage() {
       setLoading(false);
     }
     loadBankAccounts();
+    loadCurrentCompany();
   }, [id]);
+
+  const loadCurrentCompany = async () => {
+    try {
+      const company = await companiesApi.getCurrent();
+      setCompanyInfo(company);
+    } catch {
+      setCompanyInfo(null);
+    }
+  };
 
   const loadBankAccounts = async () => {
     try {
@@ -491,27 +502,27 @@ export function ContractDetailPage() {
               </p>
             </div>
             <div className="text-right">
-              {contract.customer?.company?.logo_url && (
-                <img 
-                  src={`/api/uploads/${contract.customer.company.logo_url}`} 
-                  alt="Logo" 
-                  className="h-12 object-contain ml-auto mb-2"
+              {(companyInfo?.logo_url || contract.customer?.company?.logo_url) && (
+                <img
+                  src={`/api/uploads/${companyInfo?.logo_url || contract.customer?.company?.logo_url}`}
+                  alt="Firma logosu"
+                  className="h-14 object-contain ml-auto mb-2"
                 />
               )}
               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {contract.customer?.company?.name || 'DEPOPAZAR'}
+                {companyInfo?.name || contract.customer?.company?.name || 'DEPOPAZAR'}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {contract.customer?.company?.address || 'Eşya Depolama Hizmetleri'}
+                {companyInfo?.address || contract.customer?.company?.address || 'Eşya Depolama Hizmetleri'}
               </p>
-              {contract.customer?.company?.phone && (
+              {(companyInfo?.phone || contract.customer?.company?.phone) && (
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Tel: {formatPhoneNumber(contract.customer.company.phone)}
+                  Tel: {formatPhoneNumber(companyInfo?.phone || contract.customer?.company?.phone)}
                 </p>
               )}
-              {contract.customer?.company?.email && (
+              {(companyInfo?.email || contract.customer?.company?.email) && (
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Email: {contract.customer.company.email}
+                  Email: {companyInfo?.email || contract.customer?.company?.email}
                 </p>
               )}
             </div>

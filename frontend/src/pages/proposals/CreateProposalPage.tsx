@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { proposalsApi } from '../../services/api/proposalsApi';
 import { servicesApi, Service } from '../../services/api/servicesApi';
 import { customersApi, Customer } from '../../services/api/customersApi';
@@ -9,8 +9,11 @@ import toast from 'react-hot-toast';
 import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
 
 export function CreateProposalPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isEdit = Boolean(id);
   const [loading, setLoading] = useState(false);
+  const [loadingProposal, setLoadingProposal] = useState(isEdit);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
@@ -37,6 +40,12 @@ export function CreateProposalPage() {
     loadDependencies();
   }, []);
 
+  useEffect(() => {
+    if (isEdit && id && customers.length > 0 && services.length > 0) {
+      loadProposal();
+    }
+  }, [isEdit, id, customers.length, services.length]);
+
   const loadDependencies = async () => {
     try {
       const [custsRes, srvs] = await Promise.all([
@@ -49,6 +58,35 @@ export function CreateProposalPage() {
     } catch (err: unknown) {
       console.error(err);
       toast.error(getErrorMessage(err));
+    }
+  };
+
+  const loadProposal = async () => {
+    if (!id) return;
+    try {
+      setLoadingProposal(true);
+      const proposal = await proposalsApi.getById(id);
+      setFormData({
+        title: proposal.title || '',
+        customer_id: proposal.customer_id || '',
+        valid_until: proposal.valid_until ? new Date(proposal.valid_until).toISOString().split('T')[0] : '',
+        notes: proposal.notes || '',
+        transport_terms: proposal.transport_terms || DEFAULT_TRANSPORT_TERMS,
+        currency: proposal.currency || 'TRY',
+      });
+      const proposalItems = (proposal.items || []).map((it: any) => ({
+        service_id: it.service_id || '',
+        name: it.name || '',
+        quantity: Number(it.quantity) || 1,
+        unit_price: Number(it.unit_price) || 0,
+        total_price: Number(it.total_price) || 0,
+      }));
+      setItems(proposalItems.length > 0 ? proposalItems : [{ service_id: '', name: '', quantity: 1, unit_price: 0, total_price: 0 }]);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
+      navigate('/proposals');
+    } finally {
+      setLoadingProposal(false);
     }
   };
 
@@ -105,7 +143,7 @@ export function CreateProposalPage() {
     e.preventDefault();
     try {
       setLoading(true);
-      await proposalsApi.create({
+      const payload = {
         ...formData,
         transport_terms: formData.transport_terms || undefined,
         items: items.map(item => ({
@@ -114,8 +152,14 @@ export function CreateProposalPage() {
           quantity: Number(item.quantity),
           unit_price: Number(item.unit_price),
         }))
-      });
-      toast.success('Teklif oluşturuldu');
+      };
+      if (isEdit && id) {
+        await proposalsApi.update(id, payload);
+        toast.success('Teklif güncellendi');
+      } else {
+        await proposalsApi.create(payload);
+        toast.success('Teklif oluşturuldu');
+      }
       navigate('/proposals');
     } catch (err: unknown) {
       toast.error(getErrorMessage(err));
@@ -134,10 +178,15 @@ export function CreateProposalPage() {
           <ArrowLeftIcon className="w-5 h-5 text-gray-500" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Yeni Teklif Oluştur</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {isEdit ? 'Teklif Düzenle' : 'Yeni Teklif Oluştur'}
+          </h1>
         </div>
       </div>
 
+      {loadingProposal ? (
+        <div className="py-12 text-center text-gray-500 dark:text-gray-400">Yükleniyor...</div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Proposal Details */}
         <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl p-6 border border-gray-200 dark:border-gray-700">
@@ -332,7 +381,7 @@ export function CreateProposalPage() {
             disabled={loading}
             className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Oluşturuluyor...' : 'Teklifi Oluştur'}
+            {loading ? (isEdit ? 'Kaydediliyor...' : 'Oluşturuluyor...') : (isEdit ? 'Güncelle' : 'Teklifi Oluştur')}
           </button>
         </div>
       </form>
