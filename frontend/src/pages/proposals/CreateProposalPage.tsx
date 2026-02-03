@@ -187,6 +187,7 @@ export function CreateProposalPage() {
       {loadingProposal ? (
         <div className="py-12 text-center text-gray-500 dark:text-gray-400">Yükleniyor...</div>
       ) : (
+      <>
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Proposal Details */}
         <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl p-6 border border-gray-200 dark:border-gray-700">
@@ -396,6 +397,8 @@ export function CreateProposalPage() {
           }
         }}
       />
+      </>
+      )}
     </div>
   );
 }
