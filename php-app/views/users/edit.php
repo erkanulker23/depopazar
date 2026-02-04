@@ -54,8 +54,8 @@ ob_start();
                 <option value="company_owner" <?= ($profile['role'] ?? '') === 'company_owner' ? 'selected' : '' ?>>Şirket Sahibi</option>
                 <option value="data_entry" <?= ($profile['role'] ?? '') === 'data_entry' ? 'selected' : '' ?>>Veri Girişi</option>
                 <option value="accounting" <?= ($profile['role'] ?? '') === 'accounting' ? 'selected' : '' ?>>Muhasebe</option>
-                <?php if (($profile['role'] ?? '') === 'super_admin'): ?>
-                <option value="super_admin" selected>Süper Admin</option>
+                <?php if (!empty($currentUserIsSuperAdmin) || ($profile['role'] ?? '') === 'super_admin'): ?>
+                <option value="super_admin" <?= ($profile['role'] ?? '') === 'super_admin' ? 'selected' : '' ?>>Süper Admin</option>
                 <?php endif; ?>
             </select>
         </div>

@@ -110,6 +110,7 @@ class UsersController
             'accounting' => 'Muhasebe',
             'customer' => 'Müşteri',
         ];
+        $currentUserIsSuperAdmin = ($user['role'] ?? '') === 'super_admin';
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);

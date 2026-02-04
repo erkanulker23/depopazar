@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { apiClient } from '../../services/api/apiClient';
+import { useAuthStore } from '../../stores/authStore';
 import { formatPhoneNumber, unformatPhoneNumber, isValidEmail, isValidPhoneNumber } from '../../utils/inputFormatters';
 
 interface EditStaffModalProps {
@@ -16,6 +17,9 @@ export function EditStaffModal({
   onSuccess,
   staff,
 }: EditStaffModalProps) {
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === 'super_admin';
+
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -231,7 +235,7 @@ export function EditStaffModal({
                   <option value="company_owner">Depo Sahibi</option>
                   <option value="data_entry">Veri Girişi</option>
                   <option value="accounting">Muhasebe</option>
-                  <option value="super_admin">Süper Admin</option>
+                  {isSuperAdmin && <option value="super_admin">Süper Admin</option>}
                 </select>
               </div>
 

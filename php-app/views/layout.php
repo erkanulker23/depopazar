@@ -194,10 +194,10 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                     </div>
                 </div>
             </div>
-            <!-- Push bildirim izni – sayfa ilk açıldığında görünür (mobil dahil) -->
-            <div id="pushBanner" class="hidden border-b border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+            <!-- Push bildirim izni – sayfa ilk açıldığında görünür (mobil dahil); JS izin/dismiss durumuna göre gizler -->
+            <div id="pushBanner" class="push-banner-default border-b border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap" role="region" aria-label="Bildirimlere izin verin">
                 <p class="text-sm text-gray-800 dark:text-gray-200 flex-1 min-w-0">
-                    <i class="bi bi-bell text-emerald-600 dark:text-emerald-400 mr-2"></i>
+                    <i class="bi bi-bell text-emerald-600 dark:text-emerald-400 mr-2" aria-hidden="true"></i>
                     <strong>Bildirimlere izin verin</strong> – ödeme, sözleşme ve işlemlerde cihazınıza anlık bildirim gider.
                 </p>
                 <div class="flex items-center gap-2 flex-shrink-0">
@@ -286,6 +286,18 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         var pushBanner = document.getElementById('pushBanner');
         var pushBannerAllow = document.getElementById('pushBannerAllow');
         var pushBannerLater = document.getElementById('pushBannerLater');
+        var forceShowBanner = /[?&]push_banner=1/.test(location.search || '');
+        if (!forceShowBanner) {
+            if (Notification.permission === 'granted') {
+                if (pushBanner) pushBanner.classList.add('hidden');
+                showEnabled();
+                registerAndSubscribe();
+            } else if (Notification.permission === 'denied') {
+                if (pushBanner) pushBanner.classList.add('hidden');
+            } else {
+                try { if (sessionStorage.getItem('pushBannerDismissed') === '1') { if (pushBanner) pushBanner.classList.add('hidden'); } } catch (e) {}
+            }
+        }
         function showEnabled() {
             if (pushPromptWrap) pushPromptWrap.classList.add('hidden');
             if (pushEnabledWrap) pushEnabledWrap.classList.remove('hidden');
@@ -304,10 +316,7 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             if (pushBanner) pushBanner.classList.add('hidden');
             try { sessionStorage.setItem('pushBannerDismissed', '1'); } catch (e) {}
         }
-        if (Notification.permission === 'granted') {
-            showEnabled();
-            registerAndSubscribe();
-        } else if (Notification.permission === 'denied') {
+        if (Notification.permission === 'denied') {
             if (pushPromptWrap) pushPromptWrap.innerHTML = '<span class="text-gray-400">Bildirimler tarayıcıda engelli.</span>';
         }
         var swRegistration = null;
@@ -375,12 +384,9 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         if (pushBannerAllow) pushBannerAllow.addEventListener('click', requestPermissionAndSubscribe);
         if (pushBannerLater) pushBannerLater.addEventListener('click', hideBanner);
         fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(d) {
-            if (!d.publicKey) { hidePushRow(); return; }
+            if (!d.publicKey) return;
             if (Notification.permission === 'granted') { registerAndSubscribe(); return; }
-            if (Notification.permission === 'denied') return;
-            try { if (sessionStorage.getItem('pushBannerDismissed') === '1') return; } catch (e) {}
-            if (pushBanner) pushBanner.classList.remove('hidden');
-        }).catch(function() { hidePushRow(); });
+        }).catch(function() {});
     })();
     </script>
 </body>
