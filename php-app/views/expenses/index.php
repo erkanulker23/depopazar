@@ -116,7 +116,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
         <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
     <button type="submit" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
-    <?php if (!empty($categories) && (!empty($bankAccounts) || !empty($creditCards))): ?>
+    <?php if (!empty($categories)): ?>
     <button type="button" onclick="document.getElementById('addExpenseModal').classList.remove('hidden')" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Masraf Ekle
     </button>
@@ -222,6 +222,13 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
         <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('addExpenseModal').classList.add('hidden')"></div>
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Masraf Ekle</h3>
+            <?php if (empty($bankAccounts) && empty($creditCards)): ?>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Masraf ekleyebilmek için önce <strong>Ayarlar</strong> sayfasından en az bir banka hesabı veya kredi kartı eklemeniz gerekir.</p>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('addExpenseModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Kapat</button>
+                    <a href="/ayarlar" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 inline-block">Ayarlar'a Git</a>
+                </div>
+            <?php else: ?>
             <form method="post" action="/masraflar/ekle" class="space-y-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori <span class="text-red-500">*</span></label>
@@ -294,6 +301,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
                     <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
+            <?php endif; ?>
         </div>
     </div>
 </div>
