@@ -102,6 +102,16 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             .btn-touch { min-height: 44px; min-width: 44px; padding: 0.625rem 1rem; }
         }
         input, select, textarea { font-size: 16px !important; }
+        .touch-manipulation { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+        #pushBanner { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+        @media (max-width: 767px) {
+            #pushBanner { flex-direction: column; align-items: stretch; text-align: center; gap: 0.75rem; padding: 0.75rem max(1rem, env(safe-area-inset-left)) 0.75rem max(1rem, env(safe-area-inset-right)); }
+            #pushBanner .push-banner-text { flex: none; min-width: 0; width: 100%; word-wrap: break-word; overflow-wrap: break-word; }
+            #pushBanner .push-banner-btns { flex-wrap: nowrap; justify-content: center; align-items: center; gap: 0.5rem; width: 100%; }
+            #pushBanner .push-banner-btns button { min-width: 0; }
+            #pushBanner #pushBannerAllow { flex: 1; max-width: 200px; }
+            #pushBanner #pushBannerLater { flex: 0 0 auto; }
+        }
         .page-title { font-size: 1.5rem; line-height: 1.3; }
         @media (min-width: 768px) { .page-title { font-size: 1.875rem; } }
         .page-subtitle { color: rgb(107 114 128); }
@@ -158,8 +168,14 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             </div>
         </aside>
         <main class="flex-1 min-w-0 flex flex-col min-h-screen">
+            <?php $companyLogoUrl = $_SESSION['company_logo_url'] ?? null; ?>
             <div class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-4 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
-                <span class="md:hidden text-sm font-semibold text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($projectName) ?></span>
+                <div class="flex items-center gap-2 min-w-0 md:mr-auto">
+                    <?php if (!empty($companyLogoUrl)): ?>
+                        <img src="<?= htmlspecialchars($companyLogoUrl) ?>" alt="" class="h-8 w-auto object-contain flex-shrink-0 md:h-9" aria-hidden="true">
+                    <?php endif; ?>
+                    <span class="md:hidden text-sm font-semibold text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($projectName) ?></span>
+                </div>
                 <div class="flex items-center gap-1">
                     <button type="button" id="themeToggle" class="p-3 md:p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center" title="Koyu / Açık mod">
                         <i class="bi bi-moon-stars text-xl md:text-lg dark:hidden" aria-hidden="true"></i>
@@ -196,14 +212,15 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             </div>
             <!-- Push bildirim izni – sayfa ilk açıldığında görünür (mobil dahil); JS izin/dismiss durumuna göre gizler -->
             <div id="pushBanner" class="push-banner-default border-b border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap" role="region" aria-label="Bildirimlere izin verin">
-                <p class="text-sm text-gray-800 dark:text-gray-200 flex-1 min-w-0">
-                    <i class="bi bi-bell text-emerald-600 dark:text-emerald-400 mr-2" aria-hidden="true"></i>
+                <p class="push-banner-text text-sm text-gray-800 dark:text-gray-200 flex-1 min-w-0 leading-snug">
+                    <i class="bi bi-bell text-emerald-600 dark:text-emerald-400 mr-2 align-middle" aria-hidden="true"></i>
                     <strong>Bildirimlere izin verin</strong> – ödeme, sözleşme ve işlemlerde cihazınıza anlık bildirim gider.
                 </p>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                    <button type="button" id="pushBannerLater" class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Sonra</button>
-                    <button type="button" id="pushBannerAllow" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Bildirimlere izin ver</button>
+                <div class="push-banner-btns flex items-center gap-2 flex-shrink-0">
+                    <button type="button" id="pushBannerLater" class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 min-h-[44px] touch-manipulation rounded-lg">Sonra</button>
+                    <button type="button" id="pushBannerAllow" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 active:bg-emerald-800 min-h-[44px] min-w-[120px] md:min-w-[140px] touch-manipulation shrink-0" aria-label="Bildirimlere izin ver">Bildirimlere izin ver</button>
                 </div>
+                <p id="pushBannerHint" class="hidden w-full mt-2 text-xs text-amber-700 dark:text-amber-300 text-left break-words"></p>
             </div>
             <div class="flex-1 p-4 md:p-6 lg:p-8 pb-8 md:pb-6 min-h-0 main-content-wrap">
                 <?= $content ?? '' ?>
@@ -370,18 +387,50 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
             return outputArray;
         }
+        var pushBannerHint = document.getElementById('pushBannerHint');
         function requestPermissionAndSubscribe() {
             if (Notification.permission === 'granted') { registerAndSubscribe(); return; }
-            if (Notification.permission === 'denied') return;
-            Notification.requestPermission().then(function(p) {
+            if (Notification.permission === 'denied') {
+                if (pushBannerHint) { pushBannerHint.textContent = 'Bildirimler tarayıcıda engelli. Ayarlar \u2192 Site ayarları \u2192 Bildirimler ile açabilirsiniz.'; pushBannerHint.classList.remove('hidden'); }
+                return;
+            }
+            function onResult(p) {
                 if (p === 'granted') {
                     registerAndSubscribe();
                     hideBanner();
+                } else if (p === 'denied' && pushBannerHint) {
+                    pushBannerHint.textContent = 'Bildirimler reddedildi. Değiştirmek için tarayıcı/site ayarlarından bildirimlere izin verin.';
+                    pushBannerHint.classList.remove('hidden');
+                } else if (pushBannerHint && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                    pushBannerHint.textContent = 'İzin penceresi açılmadıysa: Safari\/Chrome ayarları \u2192 Bu site \u2192 Bildirimler \u2192 İzin ver.';
+                    pushBannerHint.classList.remove('hidden');
                 }
-            });
+            }
+            try {
+                var p = Notification.requestPermission();
+                if (p && typeof p.then === 'function') {
+                    p.then(onResult).catch(function() { if (pushBannerHint) { pushBannerHint.textContent = 'İzin alınamadı. Lütfen tarayıcı ayarlarından bildirimlere izin verin.'; pushBannerHint.classList.remove('hidden'); } });
+                } else if (typeof p === 'string') {
+                    onResult(p);
+                }
+            } catch (e) {
+                if (pushBannerHint) { pushBannerHint.textContent = 'Bu tarayıcı bildirim desteklemiyor veya izin kapalı. Ayarlardan kontrol edin.'; pushBannerHint.classList.remove('hidden'); }
+            }
         }
+        function bindPushAllow() {
+            if (!pushBannerAllow) return;
+            var didRequest = false;
+            function run() {
+                if (didRequest) return;
+                didRequest = true;
+                requestPermissionAndSubscribe();
+                setTimeout(function() { didRequest = false; }, 800);
+            }
+            pushBannerAllow.addEventListener('click', function(e) { e.preventDefault(); run(); });
+            pushBannerAllow.addEventListener('touchend', function(e) { e.preventDefault(); run(); }, { passive: false });
+        }
+        bindPushAllow();
         if (pushEnableBtn) pushEnableBtn.addEventListener('click', requestPermissionAndSubscribe);
-        if (pushBannerAllow) pushBannerAllow.addEventListener('click', requestPermissionAndSubscribe);
         if (pushBannerLater) pushBannerLater.addEventListener('click', hideBanner);
         fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(d) {
             if (!d.publicKey) return;

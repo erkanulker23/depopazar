@@ -97,6 +97,7 @@ class SettingsController
         Company::update($this->pdo, $companyId, $data);
         $company = Company::findOne($this->pdo, $companyId);
         $_SESSION['company_project_name'] = $company['project_name'] ?? $company['name'] ?? 'DepoPazar';
+        $_SESSION['company_logo_url'] = $company['logo_url'] ?? null;
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'Firma bilgileri güncellendi', 'Firma bilgileri ' . ($actorName ?: 'sistem') . ' tarafından güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Firma bilgileri güncellendi.';

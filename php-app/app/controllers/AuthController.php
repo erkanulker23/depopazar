@@ -53,6 +53,11 @@ class AuthController
         if (!empty($user['company_id'])) {
             $company = Company::findOne($this->pdo, $user['company_id']);
             $_SESSION['company_project_name'] = $company['project_name'] ?? $company['name'] ?? null;
+            $_SESSION['company_logo_url'] = $company['logo_url'] ?? null;
+        } else {
+            $brand = Company::getPublicBrand($this->pdo);
+            $_SESSION['company_project_name'] = $brand['project_name'] ?? null;
+            $_SESSION['company_logo_url'] = $brand['logo_url'] ?? null;
         }
         $this->redirectByRole();
     }

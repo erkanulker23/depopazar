@@ -70,6 +70,7 @@ Projede `PushService` zaten `vendor/autoload.php` dosyasını kendi içinde kont
 
 - **PHP panel**: Sayfa ilk açıldığında (giriş sonrası) üstte **"Bildirimlere izin verin"** bandı çıkar; **"Bildirimlere izin ver"** butonuna tıklayıp tarayıcıda izin verin. İsterseniz **"Sonra"** deyip bandı kapatabilirsiniz; bildirimleri daha sonra sağ üstteki **Bildirimler** (zil) menüsünü açıp alttaki **"Telefon/cihaz bildirimlerini aç"** linkinden de açabilirsiniz. İzin verdikten sonra aynı cihazda ve diğer cihazlarda işlem olduğunda push bildirim gelir.
 - **HTTPS**: Push bildirimleri için site **HTTPS** (veya localhost) üzerinden açılmalıdır.
+- **Mobil**: "Bildirimlere izin ver" butonuna dokunun. İzin penceresi açılmazsa tarayıcı ayarlarından (Safari/Chrome → Bu site → Bildirimler → İzin ver) açabilirsiniz. iOS’ta bazen ilk dokunuşta pencerenin çıkmaması normal; sayfayı yenileyip tekrar deneyin veya ayarlardan izin verin.
 
 ## Nerede tetikleniyor
 
