@@ -164,7 +164,7 @@ root /home/forge/your-domain.com/php-app/public;
 
 ---
 
-Deoplo## 9. Komut satırı (CLI)
+## 9. Komut satırı (CLI)
 
 Sunucuda SSH veya yerelde terminalden çalıştırabilirsiniz (proje kökü: repo root veya `/home/forge/general.awapanel.com`).
 
