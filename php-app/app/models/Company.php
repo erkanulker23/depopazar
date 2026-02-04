@@ -3,10 +3,12 @@ class Company
 {
     public static function getCompanyIdForUser(PDO $pdo, array $user): ?string
     {
-        if (!empty($user['company_id'])) {
-            return $user['company_id'];
+        $companyId = $user['company_id'] ?? null;
+        if ($companyId !== null && $companyId !== '') {
+            return $companyId;
         }
-        if (($user['role'] ?? '') === 'super_admin') {
+        $role = isset($user['role']) ? strtolower(trim((string) $user['role'])) : '';
+        if ($role === 'super_admin') {
             $stmt = $pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             return $row ? $row['id'] : null;

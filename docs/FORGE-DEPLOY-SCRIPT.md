@@ -111,7 +111,7 @@ return \$pdo;
 DBCONFIG
 chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 
-# 4) Veritabanı schema (ilk kurulum)
+# 4) Veritabanı schema + migrations (push_subscriptions, vehicle_plate vb.)
 if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
   if [ -n "$DB_PASSWORD" ]; then
     mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || true
@@ -119,13 +119,28 @@ if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
     mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || true
   fi
 fi
+if command -v mysql &> /dev/null && [ -d "$ROOT/php-app/sql/migrations" ]; then
+  for f in "$ROOT/php-app/sql/migrations"/*.sql; do
+    [ -f "$f" ] || continue
+    if [ -n "$DB_PASSWORD" ]; then
+      mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$f" 2>/dev/null || true
+    else
+      mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$f" 2>/dev/null || true
+    fi
+  done
+fi
 
-# 5) Super admin kullanıcı (yoksa oluştur: erkanulker0@gmail.com / password)
+# 5) Composer (php-app: web-push vb. – cihaz bildirimleri için)
+if command -v composer &> /dev/null && [ -f "$ROOT/php-app/composer.json" ]; then
+  (cd "$ROOT/php-app" && composer install --no-dev --optimize-autoloader) 2>/dev/null || true
+fi
+
+# 6) Super admin kullanıcı + varsayılan şirket (yoksa oluştur)
 if [ -f "$ROOT/php-app/seed.php" ] && [ -f "$ROOT/php-app/config/db.local.php" ]; then
   (cd "$ROOT/php-app" && php seed.php) 2>/dev/null || true
 fi
 
-# 6) Uploads dizini (logo vb. – php-app/public/uploads kullanılıyor)
+# 7) Uploads dizini (logo vb. – php-app/public/uploads kullanılıyor)
 mkdir -p "$ROOT/php-app/public/uploads/company"
 chmod -R 755 "$ROOT/php-app/public/uploads" 2>/dev/null || true
 ```
@@ -159,7 +174,16 @@ DB_PASSWORD=buraya_gercek_sifre_yazin
 
 # DB_DATABASE: Forge’da oluşturduğunuz veritabanı adı.
 # DB_USERNAME / DB_PASSWORD: Forge’da o veritabanı için tanımladığınız kullanıcı ve şifre.
+
+# --- Push bildirimleri (telefon/cihaz) – opsiyonel ---
+# Cihaz bildirimleri için VAPID anahtarları. Yoksa sadece panel bildirimleri çalışır.
+# Anahtar üretmek: sunucuda cd php-app && composer install && php scripts/generate-vapid-keys.php
+# VAPID_PUBLIC_KEY=...
+# VAPID_PRIVATE_KEY=...
+# PUSH_CONTACT_EMAIL=noreply@your-domain.com
 ```
+
+Push bildirimleri (telefon/cihaz) için isteğe bağlı olarak `VAPID_PUBLIC_KEY` ve `VAPID_PRIVATE_KEY` ekleyin; yoksa sadece panel bildirimleri çalışır (bkz. `docs/PUSH-BILDIRIMLER.md`).
 
 **Kontrol listesi:**
 

@@ -4,7 +4,7 @@ if (!isset($projectName)) $projectName = $_SESSION['company_project_name'] ?? 'D
 $user = Auth::user();
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
 if (($q = strpos($currentPath, '?')) !== false) $currentPath = substr($currentPath, 0, $q);
-$navIcons = ['Dashboard'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Bildirimler'=>'bell','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
+$navIcons = ['Dashboard'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Bildirimler'=>'bell','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
 $navItems = [
     ['name' => 'Dashboard', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
     ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
@@ -19,6 +19,7 @@ $navItems = [
     ['name' => 'Odalar', 'href' => '/odalar', 'active' => $currentPath === '/odalar'],
     ['name' => 'Müşteriler', 'href' => '/musteriler', 'active' => $currentPath === '/musteriler'],
     ['name' => 'Ödemeler', 'href' => '/odemeler', 'active' => $currentPath === '/odemeler'],
+    ['name' => 'Masraflar', 'href' => '/masraflar', 'active' => $currentPath === '/masraflar'],
     ['name' => 'Bildirimler', 'href' => '/bildirimler', 'active' => $currentPath === '/bildirimler'],
     ['name' => 'Raporlar', 'href' => '/raporlar', 'active' => $currentPath === '/raporlar'],
     ['name' => 'Ayarlar', 'href' => '/ayarlar', 'active' => $currentPath === '/ayarlar'],
@@ -175,13 +176,19 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                                 <a href="/bildirimler" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Tümü</a>
                             </div>
                             <div id="notifList" class="flex-1 overflow-y-auto px-4 py-3 text-sm text-gray-500 dark:text-gray-400 min-h-[4rem]">Yükleniyor…</div>
-                            <div class="flex-shrink-0 border-t border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-700/50">
-                                <form method="post" action="/bildirimler/okundu" class="inline" id="notifMarkAllForm">
-                                    <button type="submit" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">Tümü okundu</button>
-                                </form>
-                                <form method="post" action="/bildirimler/tumunu-sil" class="inline" id="notifDeleteAllForm" onsubmit="return confirm('Tüm bildirimleri silmek istediğinize emin misiniz?');">
-                                    <button type="submit" class="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Tümünü sil</button>
-                                </form>
+                            <div class="flex-shrink-0 border-t border-gray-100 dark:border-gray-700 px-4 py-2 space-y-2 bg-gray-50 dark:bg-gray-700/50">
+                                <div class="flex items-center justify-between gap-2">
+                                    <form method="post" action="/bildirimler/okundu" class="inline" id="notifMarkAllForm">
+                                        <button type="submit" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">Tümü okundu</button>
+                                    </form>
+                                    <form method="post" action="/bildirimler/tumunu-sil" class="inline" id="notifDeleteAllForm" onsubmit="return confirm('Tüm bildirimleri silmek istediğinize emin misiniz?');">
+                                        <button type="submit" class="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Tümünü sil</button>
+                                    </form>
+                                </div>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400" id="pushPromptWrap">
+                                    <button type="button" id="pushEnableBtn" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Telefon/cihaz bildirimlerini aç</button> – işlem olduğunda bildirim gider.
+                                </p>
+                                <p class="text-[11px] text-emerald-600 dark:text-emerald-400 hidden" id="pushEnabledWrap">Cihaz bildirimleri açık.</p>
                             </div>
                         </div>
                     </div>
@@ -259,6 +266,89 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         }
         loadNotifs();
         setInterval(loadNotifs, 60000);
+    })();
+    (function(){
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+        var pushPromptWrap = document.getElementById('pushPromptWrap');
+        var pushEnabledWrap = document.getElementById('pushEnabledWrap');
+        var pushEnableBtn = document.getElementById('pushEnableBtn');
+        function showEnabled() {
+            if (pushPromptWrap) pushPromptWrap.classList.add('hidden');
+            if (pushEnabledWrap) pushEnabledWrap.classList.remove('hidden');
+        }
+        function showPrompt() {
+            if (pushPromptWrap) pushPromptWrap.classList.remove('hidden');
+            if (pushEnabledWrap) pushEnabledWrap.classList.add('hidden');
+        }
+        function hidePushRow() {
+            if (pushPromptWrap) pushPromptWrap.classList.add('hidden');
+            if (pushEnabledWrap) pushEnabledWrap.classList.add('hidden');
+        }
+        if (Notification.permission === 'granted') {
+            showEnabled();
+            registerAndSubscribe();
+        } else if (Notification.permission === 'denied') {
+            if (pushPromptWrap) pushPromptWrap.innerHTML = '<span class="text-gray-400">Bildirimler tarayıcıda engelli.</span>';
+        }
+        function registerAndSubscribe() {
+            navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(data) {
+                    var publicKey = data.publicKey;
+                    if (!publicKey) {
+                        hidePushRow();
+                        return;
+                    }
+                    reg.pushManager.getSubscription().then(function(sub) {
+                        if (sub) {
+                            sendSubscriptionToServer(sub);
+                            showEnabled();
+                            return;
+                        }
+                        return reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(publicKey)
+                        });
+                    }).then(function(sub) {
+                        if (sub && !sub.endpoint) return;
+                        if (sub) sendSubscriptionToServer(sub);
+                    }).catch(function() { showPrompt(); });
+                });
+            }).catch(function() {});
+        }
+        function sendSubscriptionToServer(subscription) {
+            var body = JSON.stringify({
+                subscription: {
+                    endpoint: subscription.endpoint,
+                    keys: {
+                        p256dh: btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                        auth: btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+                    }
+                }
+            });
+            fetch('/api/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, credentials: 'same-origin' }).then(function(r) {
+                if (r.ok) showEnabled();
+            });
+        }
+        function urlBase64ToUint8Array(base64String) {
+            var padding = '='.repeat((4 - base64String.length % 4) % 4);
+            var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            var rawData = window.atob(base64);
+            var outputArray = new Uint8Array(rawData.length);
+            for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+            return outputArray;
+        }
+        if (pushEnableBtn) {
+            pushEnableBtn.addEventListener('click', function() {
+                if (Notification.permission === 'granted') { registerAndSubscribe(); return; }
+                if (Notification.permission === 'denied') return;
+                Notification.requestPermission().then(function(p) {
+                    if (p === 'granted') registerAndSubscribe();
+                });
+            });
+        }
+        fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(d) {
+            if (!d.publicKey) hidePushRow();
+        }).catch(function() { hidePushRow(); });
     })();
     </script>
 </body>

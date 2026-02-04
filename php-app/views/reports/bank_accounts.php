@@ -2,6 +2,8 @@
 $currentPage = 'raporlar';
 $bankAccounts = $bankAccounts ?? [];
 $rows = $rows ?? [];
+$expenseRows = $expenseRows ?? [];
+$bankBalances = $bankBalances ?? [];
 $bankAccountId = $bankAccountId ?? '';
 $startDate = $startDate ?? date('Y-m-01');
 $endDate = $endDate ?? date('Y-m-t');
@@ -38,6 +40,25 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     </div>
     <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
 </form>
+
+<!-- Banka hesabı bakiyeleri (bitiş tarihine kadar) -->
+<?php if (!empty($bankAccounts)): ?>
+<div class="mb-6 card-modern p-6">
+    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Hesap Bakiyeleri (<?= date('d.m.Y', strtotime($endDate)) ?> itibarıyla)</h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Açılış bakiyesi + Tahsilat - Masraflar</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <?php foreach ($bankAccounts as $ba):
+            $bal = $bankBalances[$ba['id'] ?? ''] ?? 0;
+        ?>
+            <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300"><?= htmlspecialchars($ba['bank_name'] ?? '') ?></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($ba['account_holder_name'] ?? '') ?></p>
+                <p class="text-xl font-bold mt-2 <?= $bal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' ?>"><?= fmtMoney($bal) ?> ₺</p>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
     <?php if (empty($rows)): ?>
@@ -78,6 +99,38 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
         </div>
     <?php endif; ?>
 </div>
+
+<?php if (!empty($expenseRows)): ?>
+<div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+    <?php $expTotal = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $expenseRows)); ?>
+    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Banka hesabından yapılan masraflar (<?= count($expenseRows) ?> adet)</span>
+        <span class="text-lg font-bold text-red-600 dark:text-red-400"><?= fmtMoney($expTotal) ?> ₺</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Kategori</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Açıklama</th>
+                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                <?php foreach ($expenseRows as $er): ?>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= $er['expense_date'] ? date('d.m.Y', strtotime($er['expense_date'])) : '-' ?></td>
+                        <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($er['category_name'] ?? '-') ?></td>
+                        <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($er['description'] ?? '-') ?></td>
+                        <td class="px-4 py-3 text-sm text-right font-medium text-red-600 dark:text-red-400"><?= fmtMoney($er['amount'] ?? 0) ?> ₺</td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php
 $content = ob_get_clean();

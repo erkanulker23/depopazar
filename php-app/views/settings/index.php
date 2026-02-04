@@ -4,6 +4,7 @@ $tabs = [
     'firma' => ['label' => 'Firma Bilgileri', 'icon' => 'building'],
     'paytr' => ['label' => 'PayTR', 'icon' => 'credit-card'],
     'banka' => ['label' => 'Banka Hesapları', 'icon' => 'bank'],
+    'kredi-karti' => ['label' => 'Kredi Kartları', 'icon' => 'credit-card-2-back'],
     'eposta' => ['label' => 'E-posta Ayarları', 'icon' => 'envelope'],
     'sablonlar' => ['label' => 'E-posta Şablonları', 'icon' => 'file-earmark-text'],
 ];
@@ -15,6 +16,11 @@ ob_start();
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Firma ve entegrasyon ayarları</p>
 </div>
 
+<?php if (empty($expensesMigrationOk ?? true)): ?>
+    <div class="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm">
+        <strong>Masraflar modülü için migration gerekli.</strong> Kredi kartları ve masraf özelliklerini kullanmak için <code>php-app/sql/migrations/add_expenses_and_credit_cards.sql</code> dosyasını MySQL ile çalıştırın.
+    </div>
+<?php endif; ?>
 <?php if (!empty($flashSuccess)): ?>
     <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
 <?php endif; ?>
@@ -194,6 +200,10 @@ ob_start();
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şube</label>
                             <input type="text" name="branch_name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açılış Bakiyesi (₺)</label>
+                            <input type="number" name="opening_balance" step="0.01" value="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="0">
+                        </div>
                         <label class="inline-flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" name="is_active" value="1" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
@@ -237,6 +247,10 @@ ob_start();
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şube</label>
                             <input type="text" name="branch_name" id="edit_branch_name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açılış Bakiyesi (₺)</label>
+                            <input type="number" name="opening_balance" id="edit_opening_balance" step="0.01" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
                         <label class="inline-flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" name="is_active" value="1" id="edit_bank_is_active" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
@@ -257,8 +271,132 @@ ob_start();
             document.getElementById('edit_account_number').value = ba.account_number || '';
             document.getElementById('edit_iban').value = ba.iban || '';
             document.getElementById('edit_branch_name').value = ba.branch_name || '';
+            document.getElementById('edit_opening_balance').value = parseFloat(ba.opening_balance || 0);
             document.getElementById('edit_bank_is_active').checked = !!ba.is_active;
             document.getElementById('editBankAccountModal').classList.remove('hidden');
+        }
+        </script>
+    <?php elseif ($activeTab === 'kredi-karti'): ?>
+        <div class="p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-credit-card-2-back text-emerald-600"></i> Kredi Kartları</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Masraf kaydı yaparken hangi kredi kartından ödeme yapıldığını seçebilirsiniz.</p>
+            <div class="mb-6">
+                <button type="button" onclick="document.getElementById('addCreditCardModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+                    <i class="bi bi-plus-lg mr-2"></i> Kredi Kartı Ekle
+                </button>
+            </div>
+            <?php $creditCards = $creditCards ?? []; ?>
+            <?php if (empty($creditCards)): ?>
+                <p class="text-gray-500 dark:text-gray-400">Henüz kredi kartı eklenmemiş. Yukarıdaki butonla ekleyebilirsiniz.</p>
+            <?php else: ?>
+                <ul class="space-y-4">
+                    <?php foreach ($creditCards as $cc): ?>
+                        <li class="border border-gray-100 dark:border-gray-600 rounded-xl p-4 flex flex-wrap items-start justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($cc['bank_name'] ?? '') ?></div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400 mt-1"><?= htmlspecialchars($cc['card_holder_name'] ?? '') ?></div>
+                                <?php if (!empty($cc['last_four_digits'])): ?><div class="text-sm text-gray-600 dark:text-gray-400">**** <?= htmlspecialchars($cc['last_four_digits']) ?></div><?php endif; ?>
+                                <?php if (!empty($cc['nickname'])): ?><div class="text-sm text-gray-500 dark:text-gray-500"><?= htmlspecialchars($cc['nickname']) ?></div><?php endif; ?>
+                                <span class="inline-block mt-2 px-2 py-0.5 text-xs rounded-full <?= !empty($cc['is_active']) ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300' ?>"><?= !empty($cc['is_active']) ? 'Aktif' : 'Pasif' ?></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick='openEditCreditCard(<?= json_encode($cc) ?>)' class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500">Düzenle</button>
+                                <form method="post" action="/ayarlar/kredi-karti-sil" class="inline" onsubmit="return confirm('Bu kredi kartını silmek istediğinize emin misiniz?');">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars($cc['id']) ?>">
+                                    <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
+                                </form>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+        <!-- Modal: Kredi kartı ekle -->
+        <div id="addCreditCardModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('addCreditCardModal').classList.add('hidden')"></div>
+                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Kredi Kartı Ekle</h3>
+                        <button type="button" onclick="document.getElementById('addCreditCardModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                    <form method="post" action="/ayarlar/kredi-karti-ekle" class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka Adı <span class="text-red-500">*</span></label>
+                            <input type="text" name="bank_name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="Örn: Garanti, İş Bankası">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kart Sahibi <span class="text-red-500">*</span></label>
+                            <input type="text" name="card_holder_name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Son 4 Hane</label>
+                            <input type="text" name="last_four_digits" maxlength="4" pattern="[0-9]{4}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="1234">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Takma Ad (isteğe bağlı)</label>
+                            <input type="text" name="nickname" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="Örn: İş Kartı">
+                        </div>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="is_active" value="1" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
+                        </label>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button type="button" onclick="document.getElementById('addCreditCardModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Modal: Kredi kartı düzenle -->
+        <div id="editCreditCardModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('editCreditCardModal').classList.add('hidden')"></div>
+                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Kredi Kartı Düzenle</h3>
+                        <button type="button" onclick="document.getElementById('editCreditCardModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                    <form method="post" action="/ayarlar/kredi-karti-guncelle" class="space-y-3">
+                        <input type="hidden" name="id" id="edit_cc_id">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka Adı <span class="text-red-500">*</span></label>
+                            <input type="text" name="bank_name" id="edit_cc_bank_name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kart Sahibi <span class="text-red-500">*</span></label>
+                            <input type="text" name="card_holder_name" id="edit_cc_card_holder_name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Son 4 Hane</label>
+                            <input type="text" name="last_four_digits" id="edit_cc_last_four_digits" maxlength="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Takma Ad</label>
+                            <input type="text" name="nickname" id="edit_cc_nickname" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="is_active" value="1" id="edit_cc_is_active" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
+                        </label>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button type="button" onclick="document.getElementById('editCreditCardModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script>
+        function openEditCreditCard(cc) {
+            document.getElementById('edit_cc_id').value = cc.id || '';
+            document.getElementById('edit_cc_bank_name').value = cc.bank_name || '';
+            document.getElementById('edit_cc_card_holder_name').value = cc.card_holder_name || '';
+            document.getElementById('edit_cc_last_four_digits').value = cc.last_four_digits || '';
+            document.getElementById('edit_cc_nickname').value = cc.nickname || '';
+            document.getElementById('edit_cc_is_active').checked = !!cc.is_active;
+            document.getElementById('editCreditCardModal').classList.remove('hidden');
         }
         </script>
     <?php elseif ($activeTab === 'eposta'): ?>

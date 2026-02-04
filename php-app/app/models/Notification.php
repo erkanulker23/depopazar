@@ -13,6 +13,7 @@ class Notification
             $message,
             $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : null,
         ]);
+        PushService::sendToUsers($pdo, [$userId], $title, $message);
     }
 
     /** Şirketteki tüm staff kullanıcılarına + super_admin kullanıcılarına bildirim ekler */
@@ -32,6 +33,7 @@ class Notification
         foreach ($userIds as $uid) {
             self::create($pdo, $uid, $type, $title, $message, $metadata);
         }
+        PushService::sendToUsers($pdo, $userIds, $title, $message);
     }
 
     /** Giriş yapan kullanıcıya ait bildirimleri getirir */

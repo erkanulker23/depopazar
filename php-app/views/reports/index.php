@@ -33,8 +33,8 @@ ob_start();
     </div>
 </form>
 
-<!-- Banka hesabı raporu kartı -->
-<div class="mb-8">
+<!-- Rapor kartları -->
+<div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
     <a href="/raporlar/banka-hesaplari" class="block p-6 card-modern hover:border-emerald-500/50 dark:hover:border-emerald-500/50 group">
         <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
@@ -43,6 +43,18 @@ ob_start();
             <div class="flex-1">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Banka Hesap Raporu</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Hangi banka hesabına ne kadar para girmiş – tüm detaylar</p>
+            </div>
+            <span class="text-emerald-600 dark:text-emerald-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
+        </div>
+    </a>
+    <a href="/raporlar/masraflar" class="block p-6 card-modern hover:border-emerald-500/50 dark:hover:border-emerald-500/50 group">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-amber-600 flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-wallet2 text-2xl text-white"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Masraf Raporu</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Kategoriye ve ödeme kaynağına göre harcamalar</p>
             </div>
             <span class="text-emerald-600 dark:text-emerald-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
         </div>
@@ -230,6 +242,9 @@ ob_start();
         <div class="flex flex-wrap gap-2">
             <a href="/raporlar/banka-hesaplari" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors">
                 <i class="bi bi-bank mr-2"></i> Banka Raporu
+            </a>
+            <a href="/raporlar/masraflar" class="inline-flex items-center px-4 py-2 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+                <i class="bi bi-wallet2 mr-2"></i> Masraf Raporu
             </a>
             <a href="/odemeler" class="inline-flex items-center px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 <i class="bi bi-credit-card mr-2"></i> Ödemeler

@@ -16,13 +16,13 @@ NC='\033[0m'
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-echo -e "${GREEN}[1/6] Deploy başlatıldı (ROOT=$ROOT)${NC}"
+echo -e "${GREEN}[1/8] Deploy başlatıldı (ROOT=$ROOT)${NC}"
 
 # -----------------------------------------------------------------------------
 # Git güncelleme
 # -----------------------------------------------------------------------------
 if [ "${SKIP_GIT}" != "1" ]; then
-  echo -e "${YELLOW}[2/6] Kod güncelleniyor...${NC}"
+  echo -e "${YELLOW}[2/8] Kod güncelleniyor...${NC}"
   git fetch origin
   if [ -n "${FORGE_SITE_BRANCH}" ]; then
     git reset --hard "origin/${FORGE_SITE_BRANCH}"
@@ -31,13 +31,13 @@ if [ "${SKIP_GIT}" != "1" ]; then
   fi
   cd "$ROOT"
 else
-  echo -e "${YELLOW}[2/6] Git atlandı (SKIP_GIT=1)${NC}"
+  echo -e "${YELLOW}[2/8] Git atlandı (SKIP_GIT=1)${NC}"
 fi
 
 # -----------------------------------------------------------------------------
 # .env yükleme ve db.local.php oluşturma
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[3/6] Yapılandırma kontrol ediliyor...${NC}"
+echo -e "${YELLOW}[3/8] Yapılandırma kontrol ediliyor...${NC}"
 
 if [ -f "$ROOT/.env" ]; then
   set -a
@@ -75,21 +75,46 @@ chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 # -----------------------------------------------------------------------------
 # Veritabanı schema (ilk kurulum - CREATE IF NOT EXISTS kullandığı için güvenli)
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[4/6] Veritabanı güncelleniyor...${NC}"
+echo -e "${YELLOW}[4/8] Veritabanı güncelleniyor...${NC}"
 if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
   if [ -n "$DB_PASSWORD" ]; then
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || echo "Schema import atlandı (tablolar mevcut olabilir)"
+    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || echo "  Schema import atlandı (tablolar mevcut olabilir)"
   else
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || echo "Schema import atlandı"
+    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || echo "  Schema import atlandı"
   fi
 else
   echo "  (MySQL client yok veya schema bulunamadı - atlanıyor)"
 fi
 
 # -----------------------------------------------------------------------------
-# Seed: Super admin kullanıcı (yoksa oluştur)
+# Migrations (push_subscriptions, vehicle_plate, proposal_addresses vb.)
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[5/6] Seed kontrol ediliyor...${NC}"
+if command -v mysql &> /dev/null && [ -d "$ROOT/php-app/sql/migrations" ]; then
+  for f in "$ROOT/php-app/sql/migrations"/*.sql; do
+    [ -f "$f" ] || continue
+    name=$(basename "$f")
+    if [ -n "$DB_PASSWORD" ]; then
+      mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$f" 2>/dev/null && echo "  Migration: $name" || true
+    else
+      mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$f" 2>/dev/null && echo "  Migration: $name" || true
+    fi
+  done
+fi
+
+# -----------------------------------------------------------------------------
+# Composer (php-app: web-push vb. bağımlılıklar)
+# -----------------------------------------------------------------------------
+echo -e "${YELLOW}[5/8] Composer (php-app)...${NC}"
+if command -v composer &> /dev/null && [ -f "$ROOT/php-app/composer.json" ]; then
+  (cd "$ROOT/php-app" && composer install --no-dev --optimize-autoloader 2>/dev/null) || echo "  (composer install atlandı)"
+else
+  echo "  (composer yok veya php-app/composer.json yok - atlanıyor)"
+fi
+
+# -----------------------------------------------------------------------------
+# Seed: Super admin kullanıcı + varsayılan şirket (yoksa oluştur)
+# -----------------------------------------------------------------------------
+echo -e "${YELLOW}[6/8] Seed kontrol ediliyor...${NC}"
 if [ -f "$ROOT/php-app/seed.php" ] && [ -f "$ROOT/php-app/config/db.local.php" ]; then
   cd "$ROOT/php-app" && php seed.php 2>/dev/null || true
   cd "$ROOT"
@@ -100,7 +125,7 @@ fi
 # -----------------------------------------------------------------------------
 # Dizinler ve izinler (uygulama php-app/public/uploads kullanıyor)
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[6/6] Dizin izinleri ayarlanıyor...${NC}"
+echo -e "${YELLOW}[7/8] Dizin izinleri ayarlanıyor...${NC}"
 mkdir -p "$ROOT/php-app/public/uploads/company"
 chmod -R 755 "$ROOT/php-app/public/uploads" 2>/dev/null || true
 
@@ -111,9 +136,19 @@ if id "$WEB_USER" &>/dev/null 2>&1; then
   chown -R "$WEB_USER:$WEB_USER" "$ROOT/php-app/public/uploads" 2>/dev/null || true
 fi
 
+# -----------------------------------------------------------------------------
+# VAPID (push bildirimleri) – .env'de tanımlı olmalı; yoksa bildirimler sadece panelde
+# -----------------------------------------------------------------------------
+echo -e "${YELLOW}[8/8] Kontrol: VAPID / push${NC}"
+if [ -n "$VAPID_PUBLIC_KEY" ] && [ -n "$VAPID_PRIVATE_KEY" ]; then
+  echo "  VAPID anahtarları .env'de tanımlı (cihaz bildirimleri açık)"
+else
+  echo "  VAPID yok – cihaz bildirimleri için .env'e VAPID_PUBLIC_KEY ve VAPID_PRIVATE_KEY ekleyin (bkz. docs/PUSH-BILDIRIMLER.md)"
+fi
+
 echo -e "${GREEN}Deploy tamamlandı.${NC}"
 echo ""
 echo "  Web Root:    php-app/public"
 echo "  Nginx:       root -> $ROOT/php-app/public"
-echo "  PHP:         8.0+ önerilir"
+echo "  PHP:         8.1+ (push için 8.1+ önerilir)"
 echo ""

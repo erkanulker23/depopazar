@@ -26,11 +26,37 @@ $pdo = require APP_ROOT . '/config/db.php';
 // 1) En az bir şirket yoksa varsayılan şirket oluştur (super_admin ayarlar sayfasına girebilsin diye)
 $seedCompanyId = 'b2c3d4e5-f6a7-8901-bcde-f23456789012';
 $stmt = $pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
-if (!$stmt->fetch()) {
+$companyRow = $stmt->fetch();
+if (!$companyRow) {
     $pdo->prepare(
         'INSERT INTO companies (id, name, slug, project_name, is_active) VALUES (?, ?, ?, ?, 1)'
     )->execute([$seedCompanyId, 'DepoPazar', 'depopazar', 'DepoPazar']);
     echo "Seed: Varsayilan sirket olusturuldu (DepoPazar).\n";
+} else {
+    $seedCompanyId = $companyRow['id'];
+}
+
+// 1b) Varsayılan masraf kategorileri (expense_categories tablosu varsa ve boşsa)
+try {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM expense_categories WHERE company_id = ? AND deleted_at IS NULL');
+    $stmt->execute([$seedCompanyId]);
+    if ((int) $stmt->fetchColumn() === 0) {
+        $categories = [
+            ['Kira', 'Ofis/depo kirası'],
+            ['Elektrik', 'Elektrik faturaları'],
+            ['Yakıt', 'Araç yakıt masrafları'],
+            ['Bakım', 'Bakım ve onarım'],
+            ['Diğer', 'Diğer masraflar'],
+        ];
+        foreach ($categories as $i => $c) {
+            $id = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x', mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0x0fff) | 0x4000, mt_rand(0, 0x3fff) | 0x8000, mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff));
+            $pdo->prepare('INSERT INTO expense_categories (id, company_id, name, description, sort_order) VALUES (?, ?, ?, ?, ?)')
+                ->execute([$id, $seedCompanyId, $c[0], $c[1], $i]);
+        }
+        echo "Seed: Varsayilan masraf kategorileri olusturuldu (" . count($categories) . " adet).\n";
+    }
+} catch (Throwable $e) {
+    // expense_categories tablosu yoksa (migration çalışmamışsa) sessizce atla
 }
 
 // 2) Super admin kullanıcı yoksa oluştur

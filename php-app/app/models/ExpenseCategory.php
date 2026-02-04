@@ -1,19 +1,19 @@
 <?php
-class BankAccount
+class ExpenseCategory
 {
     public static function findAll(PDO $pdo, string $companyId): array
     {
-        $stmt = $pdo->prepare('SELECT * FROM bank_accounts WHERE company_id = ? AND deleted_at IS NULL ORDER BY bank_name, account_holder_name');
+        $stmt = $pdo->prepare('SELECT * FROM expense_categories WHERE company_id = ? AND deleted_at IS NULL ORDER BY sort_order, name');
         $stmt->execute([$companyId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public static function findOne(PDO $pdo, string $id, ?string $companyId = null): ?array
     {
-        $sql = 'SELECT * FROM bank_accounts WHERE id = ? AND deleted_at IS NULL LIMIT 1';
+        $sql = 'SELECT * FROM expense_categories WHERE id = ? AND deleted_at IS NULL LIMIT 1';
         $params = [$id];
         if ($companyId !== null) {
-            $sql = 'SELECT * FROM bank_accounts WHERE id = ? AND company_id = ? AND deleted_at IS NULL LIMIT 1';
+            $sql = 'SELECT * FROM expense_categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL LIMIT 1';
             $params[] = $companyId;
         }
         $stmt = $pdo->prepare($sql);
@@ -24,41 +24,35 @@ class BankAccount
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
-        $openingBalance = isset($data['opening_balance']) ? (float) $data['opening_balance'] : 0;
         $stmt = $pdo->prepare(
-            'INSERT INTO bank_accounts (id, company_id, bank_name, account_holder_name, account_number, iban, branch_name, is_active, opening_balance) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO expense_categories (id, company_id, name, description, sort_order) VALUES (?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
             $data['company_id'],
-            trim($data['bank_name'] ?? ''),
-            trim($data['account_holder_name'] ?? ''),
-            trim($data['account_number'] ?? ''),
-            trim($data['iban'] ?? '') ?: null,
-            trim($data['branch_name'] ?? '') ?: null,
-            isset($data['is_active']) ? (int) $data['is_active'] : 1,
-            $openingBalance,
+            trim($data['name'] ?? ''),
+            trim($data['description'] ?? '') ?: null,
+            (int) ($data['sort_order'] ?? 0),
         ]);
         return self::findOne($pdo, $id, null);
     }
 
     public static function update(PDO $pdo, string $id, array $data, ?string $companyId = null): ?array
     {
-        $allowed = ['bank_name', 'account_holder_name', 'account_number', 'iban', 'branch_name', 'is_active', 'opening_balance'];
+        $allowed = ['name', 'description', 'sort_order'];
         $set = [];
         $params = [];
         foreach ($allowed as $k) {
             if (array_key_exists($k, $data)) {
                 $set[] = "`$k` = ?";
-                $params[] = $k === 'is_active' ? (int) $data[$k] : ($k === 'opening_balance' ? (float) ($data[$k] ?? 0) : ($data[$k] !== null ? $data[$k] : null));
+                $params[] = $k === 'sort_order' ? (int) $data[$k] : ($data[$k] !== null ? $data[$k] : null);
             }
         }
         if (empty($set)) {
             return self::findOne($pdo, $id, $companyId);
         }
         $params[] = $id;
-        $sql = 'UPDATE bank_accounts SET ' . implode(', ', $set) . ' WHERE id = ? AND deleted_at IS NULL';
+        $sql = 'UPDATE expense_categories SET ' . implode(', ', $set) . ' WHERE id = ? AND deleted_at IS NULL';
         if ($companyId !== null) {
             $sql .= ' AND company_id = ?';
             $params[] = $companyId;
@@ -69,13 +63,21 @@ class BankAccount
 
     public static function remove(PDO $pdo, string $id, ?string $companyId = null): void
     {
-        $sql = 'UPDATE bank_accounts SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL';
+        $sql = 'UPDATE expense_categories SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL';
         $params = [$id];
         if ($companyId !== null) {
             $sql .= ' AND company_id = ?';
             $params[] = $companyId;
         }
         $pdo->prepare($sql)->execute($params);
+    }
+
+    /** Kategoriye bağlı masraf var mı? */
+    public static function hasExpenses(PDO $pdo, string $categoryId): bool
+    {
+        $stmt = $pdo->prepare('SELECT 1 FROM expenses WHERE category_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$categoryId]);
+        return (bool) $stmt->fetchColumn();
     }
 
     private static function uuid(): string

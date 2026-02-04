@@ -14,7 +14,16 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı. Ayarlar yalnızca şirket kullanıcıları için geçerlidir.';
+            $role = strtolower(trim((string) ($user['role'] ?? '')));
+            if ($role === 'super_admin') {
+                $stmt = $this->pdo->query('SELECT COUNT(*) FROM companies WHERE deleted_at IS NULL');
+                $count = (int) $stmt->fetchColumn();
+                $_SESSION['flash_error'] = $count === 0
+                    ? 'Veritabanında aktif şirket yok. Lütfen php php-app/seed.php çalıştırın veya bir şirket ekleyin.'
+                    : 'Şirket eşleştirilemedi. Çıkış yapıp tekrar giriş yapmayı deneyin.';
+            } else {
+                $_SESSION['flash_error'] = 'Bu kullanıcının bir şirkete atanması gerekiyor. Kullanıcılar sayfasından kullanıcıyı düzenleyip şirket atayın.';
+            }
             header('Location: /genel-bakis');
             exit;
         }
@@ -25,6 +34,8 @@ class SettingsController
             exit;
         }
         $bankAccounts = BankAccount::findAll($this->pdo, $companyId);
+        $creditCards = $this->safeCreditCardsFindAll($companyId);
+        $expensesMigrationOk = $this->checkExpensesMigration();
         $mailSettings = $this->getMailSettings($companyId);
         $paytrSettings = $this->getPaytrSettings($companyId);
         $activeTab = $_GET['tab'] ?? 'firma';
@@ -123,6 +134,7 @@ class SettingsController
             'iban' => trim($_POST['iban'] ?? '') ?: null,
             'branch_name' => trim($_POST['branch_name'] ?? '') ?: null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
+            'opening_balance' => isset($_POST['opening_balance']) ? (float) $_POST['opening_balance'] : 0,
         ]);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı eklendi', $bankName . ' banka hesabı ' . ($actorName ?: 'sistem') . ' tarafından eklendi.', ['actor_name' => $actorName]);
@@ -157,6 +169,7 @@ class SettingsController
             'iban' => trim($_POST['iban'] ?? '') ?: null,
             'branch_name' => trim($_POST['branch_name'] ?? '') ?: null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
+            'opening_balance' => isset($_POST['opening_balance']) ? (float) $_POST['opening_balance'] : 0,
         ];
         BankAccount::update($this->pdo, $id, $data, $companyId);
         $_SESSION['flash_success'] = 'Banka hesabı güncellendi.';
@@ -184,6 +197,100 @@ class SettingsController
             $_SESSION['flash_success'] = 'Banka hesabı silindi.';
         }
         header('Location: /ayarlar?tab=banka');
+        exit;
+    }
+
+    public function createCreditCard(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        if (!$this->checkExpensesMigration()) {
+            $_SESSION['flash_error'] = 'Kredi kartları için migration çalıştırılmalı. php-app/sql/migrations/add_expenses_and_credit_cards.sql';
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /genel-bakis');
+            exit;
+        }
+        $bankName = trim($_POST['bank_name'] ?? '');
+        $cardHolder = trim($_POST['card_holder_name'] ?? '');
+        if ($bankName === '' || $cardHolder === '') {
+            $_SESSION['flash_error'] = 'Banka adı ve kart sahibi zorunludur.';
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        CreditCard::create($this->pdo, [
+            'company_id' => $companyId,
+            'bank_name' => $bankName,
+            'card_holder_name' => $cardHolder,
+            'last_four_digits' => trim($_POST['last_four_digits'] ?? '') ?: null,
+            'nickname' => trim($_POST['nickname'] ?? '') ?: null,
+            'is_active' => isset($_POST['is_active']) ? 1 : 0,
+        ]);
+        $_SESSION['flash_success'] = 'Kredi kartı eklendi.';
+        header('Location: /ayarlar?tab=kredi-karti');
+        exit;
+    }
+
+    public function updateCreditCard(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /genel-bakis');
+            exit;
+        }
+        $id = trim($_POST['id'] ?? '');
+        if (!$id) {
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        $data = [
+            'bank_name' => trim($_POST['bank_name'] ?? ''),
+            'card_holder_name' => trim($_POST['card_holder_name'] ?? ''),
+            'last_four_digits' => trim($_POST['last_four_digits'] ?? '') ?: null,
+            'nickname' => trim($_POST['nickname'] ?? '') ?: null,
+            'is_active' => isset($_POST['is_active']) ? 1 : 0,
+        ];
+        CreditCard::update($this->pdo, $id, $data, $companyId);
+        $_SESSION['flash_success'] = 'Kredi kartı güncellendi.';
+        header('Location: /ayarlar?tab=kredi-karti');
+        exit;
+    }
+
+    public function deleteCreditCard(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /genel-bakis');
+            exit;
+        }
+        $id = trim($_POST['id'] ?? '');
+        if ($id) {
+            CreditCard::remove($this->pdo, $id, $companyId);
+            $_SESSION['flash_success'] = 'Kredi kartı silindi.';
+        }
+        header('Location: /ayarlar?tab=kredi-karti');
         exit;
     }
 
@@ -396,6 +503,25 @@ class SettingsController
         $stmt = $this->pdo->prepare('SELECT * FROM company_mail_settings WHERE company_id = ? AND deleted_at IS NULL LIMIT 1');
         $stmt->execute([$companyId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function safeCreditCardsFindAll(string $companyId): array
+    {
+        try {
+            return CreditCard::findAll($this->pdo, $companyId);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    private function checkExpensesMigration(): bool
+    {
+        try {
+            $this->pdo->query('SELECT 1 FROM credit_cards LIMIT 1');
+            return true;
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     private function getPaytrSettings(string $companyId): ?array

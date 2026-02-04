@@ -136,8 +136,179 @@ class ReportsController
         $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-01');
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
         $rows = $this->fetchBankAccountPaymentRows($companyId, $bankAccountId ?: null, $startDate, $endDate);
+        $expenseRows = $this->safeFetchBankAccountExpenseRows($companyId, $bankAccountId ?: null, $startDate, $endDate);
+        $bankBalances = $this->safeComputeBankBalances($companyId, $bankAccounts, $endDate);
         $pageTitle = 'Banka Hesaplarına Göre Ödemeler';
         require __DIR__ . '/../../views/reports/bank_accounts.php';
+    }
+
+    /** Masraflar raporu */
+    public function expensesReport(): void
+    {
+        Auth::requireStaff();
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $categories = [];
+        $bankAccounts = [];
+        $creditCards = [];
+        if ($companyId) {
+            $categories = $this->safeExpenseCategoriesFindAll($companyId);
+            $bankAccounts = BankAccount::findAll($this->pdo, $companyId);
+            $creditCards = $this->safeCreditCardsFindAll($companyId);
+        }
+        $categoryId = isset($_GET['category_id']) ? trim($_GET['category_id']) : '';
+        $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-01');
+        $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
+        $paymentSourceType = isset($_GET['payment_source_type']) ? trim($_GET['payment_source_type']) : '';
+        $paymentSourceId = isset($_GET['payment_source_id']) ? trim($_GET['payment_source_id']) : '';
+        $rows = $this->safeFetchExpenseReportRows($companyId, $categoryId ?: null, $startDate, $endDate, $paymentSourceType ?: null, $paymentSourceId ?: null);
+        $totalAmount = array_sum(array_map(fn($r) => (float) ($r['amount'] ?? 0), $rows));
+        $byCategory = $this->groupExpensesByCategory($rows);
+        $pageTitle = 'Masraf Raporu';
+        require __DIR__ . '/../../views/reports/expenses.php';
+    }
+
+    private function groupExpensesByCategory(array $rows): array
+    {
+        $groups = [];
+        foreach ($rows as $r) {
+            $cat = $r['category_name'] ?? 'Diğer';
+            if (!isset($groups[$cat])) {
+                $groups[$cat] = ['total' => 0, 'count' => 0];
+            }
+            $groups[$cat]['total'] += (float) ($r['amount'] ?? 0);
+            $groups[$cat]['count']++;
+        }
+        return $groups;
+    }
+
+    private function fetchExpenseReportRows(?string $companyId, ?string $categoryId, string $startDate, string $endDate, ?string $paymentSourceType, ?string $paymentSourceId): array
+    {
+        $sql = 'SELECT e.*, ec.name AS category_name
+                FROM expenses e
+                INNER JOIN expense_categories ec ON ec.id = e.category_id AND ec.deleted_at IS NULL
+                WHERE e.deleted_at IS NULL
+                AND e.expense_date >= ? AND e.expense_date <= ? ';
+        $params = [$startDate, $endDate];
+        if ($companyId) {
+            $sql .= ' AND e.company_id = ? ';
+            $params[] = $companyId;
+        }
+        if ($categoryId) {
+            $sql .= ' AND e.category_id = ? ';
+            $params[] = $categoryId;
+        }
+        if ($paymentSourceType) {
+            $sql .= ' AND e.payment_source_type = ? ';
+            $params[] = $paymentSourceType;
+        }
+        if ($paymentSourceId) {
+            $sql .= ' AND e.payment_source_id = ? ';
+            $params[] = $paymentSourceId;
+        }
+        $sql .= ' ORDER BY e.expense_date DESC, e.created_at DESC ';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function safeFetchBankAccountExpenseRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate): array
+    {
+        try {
+            return $this->fetchBankAccountExpenseRows($companyId, $bankAccountId, $startDate, $endDate);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    private function safeComputeBankBalances(?string $companyId, array $bankAccounts, string $untilDate): array
+    {
+        try {
+            return $this->computeBankBalances($companyId, $bankAccounts, $untilDate);
+        } catch (Throwable $e) {
+            return array_fill_keys(array_column($bankAccounts, 'id'), 0);
+        }
+    }
+
+    private function safeFetchExpenseReportRows(?string $companyId, ?string $categoryId, string $startDate, string $endDate, ?string $paymentSourceType, ?string $paymentSourceId): array
+    {
+        try {
+            return $this->fetchExpenseReportRows($companyId, $categoryId, $startDate, $endDate, $paymentSourceType, $paymentSourceId);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    private function safeExpenseCategoriesFindAll(?string $companyId): array
+    {
+        try {
+            return $companyId ? ExpenseCategory::findAll($this->pdo, $companyId) : [];
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    private function safeCreditCardsFindAll(?string $companyId): array
+    {
+        try {
+            return $companyId ? CreditCard::findAll($this->pdo, $companyId) : [];
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    private function fetchBankAccountExpenseRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate): array
+    {
+        $sql = 'SELECT e.id, e.amount, e.expense_date, e.description, e.payment_source_id, ec.name AS category_name
+                FROM expenses e
+                INNER JOIN expense_categories ec ON ec.id = e.category_id AND ec.deleted_at IS NULL
+                WHERE e.deleted_at IS NULL AND e.payment_source_type = \'bank_account\'
+                AND e.expense_date >= ? AND e.expense_date <= ? ';
+        $params = [$startDate, $endDate];
+        if ($companyId) {
+            $sql .= ' AND e.company_id = ? ';
+            $params[] = $companyId;
+        }
+        if ($bankAccountId) {
+            $sql .= ' AND e.payment_source_id = ? ';
+            $params[] = $bankAccountId;
+        }
+        $sql .= ' ORDER BY e.expense_date DESC ';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Her banka hesabı için: açılış + tahsilat - masraflar = bakiye (bitiş tarihine kadar) */
+    private function computeBankBalances(?string $companyId, array $bankAccounts, string $untilDate): array
+    {
+        $result = [];
+        foreach ($bankAccounts as $ba) {
+            $id = $ba['id'] ?? '';
+            $opening = (float) ($ba['opening_balance'] ?? 0);
+            $payments = $this->sumPaymentsToBankAccount($companyId, $id, $untilDate);
+            $expenses = Expense::sumExpensesFromBankAccount($this->pdo, $id, $untilDate);
+            $result[$id] = $opening + $payments - $expenses;
+        }
+        return $result;
+    }
+
+    private function sumPaymentsToBankAccount(?string $companyId, string $bankAccountId, string $untilDate): float
+    {
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\'
+                AND p.bank_account_id = ? AND DATE(p.paid_at) <= ? ';
+        $params = [$bankAccountId, $untilDate];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
     }
 
     /** Ödeme yöntemine göre: Nakit, Kredi kartı, Banka hesabı (month=0: tüm yıl) */
