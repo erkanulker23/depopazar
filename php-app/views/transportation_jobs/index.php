@@ -45,10 +45,10 @@ ob_start();
 </div>
 
 <?php if (!empty($flashSuccess)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-green-50 text-green-800 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
 <?php endif; ?>
 <?php if (!empty($flashError)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-red-50 text-red-800 text-sm"><?= htmlspecialchars($flashError) ?></div>
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -117,10 +117,11 @@ ob_start();
                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $stClass ?>"><?= htmlspecialchars($stLabel) ?></span>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/nakliye-isler/<?= htmlspecialchars($j['id']) ?>/duzenle" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 mr-1">Düzenle</a>
+                                <a href="/nakliye-isler/<?= htmlspecialchars($j['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1" title="Detay"><i class="bi bi-eye"></i></a>
+                                <a href="/nakliye-isler/<?= htmlspecialchars($j['id']) ?>/duzenle" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></a>
                                 <form method="post" action="/nakliye-isler/sil" class="inline" onsubmit="return confirm('Bu nakliye işini silmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($j['id']) ?>">
-                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
+                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -230,9 +231,9 @@ ob_start();
                     <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Diğer Bilgiler</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hangi plakalı araç gitti</label>
-                                <input type="text" name="vehicle_plate" placeholder="Örn: 34 ABC 123" maxlength="20" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hangi plakalı araçlar gitti (virgülle ayırarak birden fazla ekleyebilirsiniz)</label>
+                                <input type="text" name="vehicle_plate" placeholder="Örn: 34 ABC 123, 06 XYZ 456" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">İşe giden personel</label>

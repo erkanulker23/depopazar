@@ -28,6 +28,44 @@ class WarehousesController
         require __DIR__ . '/../../views/warehouses/index.php';
     }
 
+    public function detail(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /depolar');
+            exit;
+        }
+        $warehouse = Warehouse::findOne($this->pdo, $id);
+        if (!$warehouse) {
+            $_SESSION['flash_error'] = 'Depo bulunamadı.';
+            header('Location: /depolar');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($user['role'] !== 'super_admin' && $warehouse['company_id'] !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu depoya erişim yetkiniz yok.';
+            header('Location: /depolar');
+            exit;
+        }
+        $rooms = Room::findAll($this->pdo, $id);
+        $roomCustomerCounts = [];
+        if (!empty($rooms)) {
+            $roomIds = array_column($rooms, 'id');
+            $placeholders = implode(',', array_fill(0, count($roomIds), '?'));
+            $stmt = $this->pdo->prepare("SELECT room_id, COUNT(DISTINCT customer_id) AS customer_count FROM contracts WHERE room_id IN ($placeholders) AND deleted_at IS NULL AND is_active = 1 GROUP BY room_id");
+            $stmt->execute($roomIds);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $roomCustomerCounts[$row['room_id']] = (int) $row['customer_count'];
+            }
+        }
+        $flashSuccess = $_SESSION['flash_success'] ?? null;
+        $flashError = $_SESSION['flash_error'] ?? null;
+        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        require __DIR__ . '/../../views/warehouses/detail.php';
+    }
+
     public function create(): void
     {
         Auth::requireStaff();
@@ -63,7 +101,8 @@ class WarehousesController
         ];
         try {
             Warehouse::create($this->pdo, $data);
-            Notification::createForCompany($this->pdo, $companyId, 'warehouse', 'Depo eklendi', $name . ' depo olarak eklendi.');
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'warehouse', 'Depo eklendi', $name . ' depo olarak eklendi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Depo eklendi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Depo eklenemedi: ' . $e->getMessage();
@@ -110,7 +149,8 @@ class WarehousesController
             'is_active'   => isset($_POST['is_active']) ? 1 : 0,
         ];
         Warehouse::update($this->pdo, $id, $data);
-        Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo güncellendi', ($data['name'] ?? $warehouse['name']) . ' depo bilgileri güncellendi.');
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo güncellendi', ($data['name'] ?? $warehouse['name']) . ' depo bilgileri güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Depo güncellendi.';
         header('Location: /depolar');
         exit;
@@ -146,7 +186,8 @@ class WarehousesController
                 continue;
             }
             Warehouse::remove($this->pdo, $id);
-            Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo silindi', ($warehouse['name'] ?? '') . ' depo silindi.');
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo silindi', ($warehouse['name'] ?? '') . ' depo silindi.', ['actor_name' => $actorName]);
             $deleted++;
         }
         if (!empty($errors)) {

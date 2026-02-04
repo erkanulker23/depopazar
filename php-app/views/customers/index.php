@@ -90,17 +90,14 @@ ob_start();
                         if (!empty($c['notes'])) $detail[] = 'Not: ' . $c['notes'];
                         $detailStr = implode("\n", $detail);
                     ?>
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 group relative" data-customer-id="<?= htmlspecialchars($c['id']) ?>">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50" data-customer-id="<?= htmlspecialchars($c['id']) ?>">
                             <td class="px-4 py-3">
                                 <button type="button" class="expand-row p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white" title="Detayı göster" aria-expanded="false">
                                     <i class="bi bi-chevron-down expand-icon"></i>
                                 </button>
                             </td>
-                            <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white relative">
+                            <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                                 <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"><?= htmlspecialchars($c['first_name'] . ' ' . $c['last_name']) ?></a>
-                                <?php if ($detailStr !== ''): ?>
-                                <div class="absolute left-0 top-full z-20 mt-1 p-3 bg-gray-900 text-white text-xs rounded-xl shadow-xl min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-pre-line pointer-events-none"><?= nl2br(htmlspecialchars($detailStr)) ?></div>
-                                <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['email'] ?? '') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['phone'] ?? '-') ?></td>

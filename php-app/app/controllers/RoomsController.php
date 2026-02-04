@@ -48,6 +48,17 @@ class RoomsController
             header('Location: /odalar');
             exit;
         }
+        $contracts = [];
+        $stmt = $this->pdo->prepare(
+            'SELECT c.*, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.id AS customer_id,
+             (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.contract_id = c.id AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')) AS debt
+             FROM contracts c
+             INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+             WHERE c.room_id = ? AND c.deleted_at IS NULL
+             ORDER BY c.is_active DESC, c.start_date DESC'
+        );
+        $stmt->execute([$id]);
+        $contracts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         require __DIR__ . '/../../views/rooms/detail.php';
     }
 
@@ -94,7 +105,8 @@ class RoomsController
         ];
         try {
             Room::create($this->pdo, $data);
-            Notification::createForCompany($this->pdo, $companyId, 'room', 'Oda eklendi', $roomNumber . ' numaralı oda ' . ($warehouse['name'] ?? '') . ' deposuna eklendi.');
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'room', 'Oda eklendi', $roomNumber . ' numaralı oda ' . ($warehouse['name'] ?? '') . ' deposuna eklendi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Oda eklendi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Oda eklenemedi: ' . $e->getMessage();
@@ -149,7 +161,8 @@ class RoomsController
             'notes'         => trim($_POST['notes'] ?? '') ?: null,
         ];
         Room::update($this->pdo, $id, $data);
-        Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda güncellendi', ($data['room_number'] ?? $room['room_number']) . ' oda bilgileri güncellendi.');
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda güncellendi', ($data['room_number'] ?? $room['room_number']) . ' oda bilgileri güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Oda güncellendi.';
         header('Location: /odalar');
         exit;
@@ -185,7 +198,8 @@ class RoomsController
                 continue;
             }
             Room::remove($this->pdo, $id);
-            Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda silindi', ($room['room_number'] ?? '') . ' numaralı oda silindi.');
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda silindi', ($room['room_number'] ?? '') . ' numaralı oda silindi.', ['actor_name' => $actorName]);
             $deleted++;
         }
         if (!empty($errors)) {

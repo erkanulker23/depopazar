@@ -47,7 +47,7 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                     surface: { 50: '#f8fafc', 100: '#f1f5f9', 800: '#1e293b', 900: '#0f172a' }
                 },
                 fontFamily: {
-                    sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
+                    sans: ['Ubuntu', 'system-ui', '-apple-system', 'sans-serif']
                 }
             }
         }
@@ -62,11 +62,11 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); --safe-left: env(safe-area-inset-left); --safe-right: env(safe-area-inset-right); }
-        html, body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+        html, body, input, select, textarea, button { font-family: 'Ubuntu', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
         .nav-active .nav-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: rgba(255,255,255,.9); border-radius: 0 3px 3px 0; }
         .sidebar-mobile { transform: translateX(-100%); transition: transform .3s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
@@ -103,6 +103,8 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         input, select, textarea { font-size: 16px !important; }
         .page-title { font-size: 1.5rem; line-height: 1.3; }
         @media (min-width: 768px) { .page-title { font-size: 1.875rem; } }
+        .page-subtitle { color: rgb(107 114 128); }
+        .dark .page-subtitle { color: rgb(156 163 175); }
         .gradient-title { background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .dark .gradient-title { background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .card-modern { border-radius: 1rem; border: 1px solid rgb(229 231 235); background: white; box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: all .2s; }
@@ -118,9 +120,6 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 antialiased" style="touch-action: manipulation;">
     <div class="flex min-h-screen">
-        <button type="button" id="menuToggle" class="md:hidden fixed z-50 p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-lg min-h-[44px] min-w-[44px] flex items-center justify-center" style="left: max(1rem, var(--safe-left)); top: max(1rem, var(--safe-top));" aria-label="Menüyü aç">
-            <i class="bi bi-list text-2xl text-gray-700 dark:text-gray-200"></i>
-        </button>
         <div id="sidebarOverlay" class="md:hidden fixed inset-0 bg-black/50 z-30 hidden transition-opacity" aria-hidden="true"></div>
         <aside id="sidebar" class="sidebar-mobile fixed md:static inset-y-0 left-0 z-40 w-72 flex flex-col pt-6 bg-white dark:bg-gray-800 border-r border-gray-200/50 dark:border-gray-700 overflow-y-auto overflow-x-hidden">
             <div class="flex items-center flex-shrink-0 px-6 mb-6">
@@ -158,7 +157,7 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             </div>
         </aside>
         <main class="flex-1 min-w-0 flex flex-col min-h-screen">
-            <div class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-14 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
+            <div class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-4 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
                 <span class="md:hidden text-sm font-semibold text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($projectName) ?></span>
                 <div class="flex items-center gap-1">
                     <button type="button" id="themeToggle" class="p-3 md:p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center" title="Koyu / Açık mod">
@@ -245,10 +244,11 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                 if (n.length === 0) { notifList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Bildirim bulunmuyor.</p>'; return; }
                 var html = '';
                 n.forEach(function(item) {
-                    var icon = item.type === 'payment' ? 'credit-card' : (item.type === 'contract' ? 'file-text' : 'bell');
+                    var icon = item.type === 'payment' ? 'credit-card' : (item.type === 'contract' ? 'file-text' : (item.type === 'warehouse' ? 'building' : (item.type === 'room' ? 'grid-3x3' : (item.type === 'user' ? 'person' : (item.type === 'transport' ? 'truck' : (item.type === 'bank' ? 'bank' : 'bell'))))));
                     var unreadClass = item.is_read ? '' : ' bg-emerald-50/50 dark:bg-emerald-900/10';
                     var dateStr = item.created_at ? new Date(item.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-                    html += '<div class="py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-0' + unreadClass + '"><p class="font-medium text-gray-900 dark:text-white text-sm">' + (item.title || '').replace(/</g, '&lt;') + '</p><p class="text-gray-600 dark:text-gray-400 text-xs mt-0.5">' + (item.message || '').replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</p><p class="text-gray-400 dark:text-gray-500 text-[10px] mt-1">' + dateStr + '</p></div>';
+                    var actorStr = (item.metadata && item.metadata.actor_name) ? '<span class="text-gray-500 dark:text-gray-400 text-[10px]"> · ' + String(item.metadata.actor_name).replace(/</g, '&lt;') + '</span>' : '';
+                    html += '<div class="py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-0' + unreadClass + '"><p class="font-medium text-gray-900 dark:text-white text-sm">' + (item.title || '').replace(/</g, '&lt;') + '</p><p class="text-gray-600 dark:text-gray-400 text-xs mt-0.5">' + (item.message || '').replace(/</g, '&lt;').replace(/\n/g, '<br>') + actorStr + '</p><p class="text-gray-400 dark:text-gray-500 text-[10px] mt-1">' + dateStr + '</p></div>';
                 });
                 notifList.innerHTML = html;
             }).catch(function() { if (notifList) notifList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Bildirimler yüklenemedi.</p>'; });

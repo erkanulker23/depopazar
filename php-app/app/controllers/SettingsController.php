@@ -59,9 +59,35 @@ class SettingsController
             'mersis_number' => trim($_POST['mersis_number'] ?? '') ?: null,
             'tax_office' => trim($_POST['tax_office'] ?? '') ?: null,
         ];
+        $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/company' : __DIR__ . '/../../public/uploads/company';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        if (!empty($_FILES['logo']['name']) && ($_FILES['logo']['error'] ?? 0) === UPLOAD_ERR_OK) {
+            $ext = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+                $filename = 'logo_' . $companyId . '_' . time() . '.' . $ext;
+                $path = $uploadDir . '/' . $filename;
+                if (move_uploaded_file($_FILES['logo']['tmp_name'], $path)) {
+                    $data['logo_url'] = '/uploads/company/' . $filename;
+                }
+            }
+        }
+        if (!empty($_FILES['contract_pdf']['name']) && ($_FILES['contract_pdf']['error'] ?? 0) === UPLOAD_ERR_OK) {
+            $ext = strtolower(pathinfo($_FILES['contract_pdf']['name'], PATHINFO_EXTENSION));
+            if ($ext === 'pdf') {
+                $filename = 'contract_' . $companyId . '_' . time() . '.pdf';
+                $path = $uploadDir . '/' . $filename;
+                if (move_uploaded_file($_FILES['contract_pdf']['tmp_name'], $path)) {
+                    $data['contract_template_url'] = '/uploads/company/' . $filename;
+                }
+            }
+        }
         Company::update($this->pdo, $companyId, $data);
         $company = Company::findOne($this->pdo, $companyId);
         $_SESSION['company_project_name'] = $company['project_name'] ?? $company['name'] ?? 'DepoPazar';
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'settings', 'Firma bilgileri güncellendi', 'Firma bilgileri ' . ($actorName ?: 'sistem') . ' tarafından güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Firma bilgileri güncellendi.';
         header('Location: /ayarlar?tab=firma');
         exit;
@@ -98,6 +124,8 @@ class SettingsController
             'branch_name' => trim($_POST['branch_name'] ?? '') ?: null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ]);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı eklendi', $bankName . ' banka hesabı ' . ($actorName ?: 'sistem') . ' tarafından eklendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Banka hesabı eklendi.';
         header('Location: /ayarlar?tab=banka');
         exit;
@@ -270,6 +298,97 @@ class SettingsController
             mt_rand(0, 0x3fff) | 0x8000,
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
+    }
+
+    public function testEmail(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /ayarlar?tab=eposta');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /ayarlar?tab=eposta');
+            exit;
+        }
+        $to = trim($_POST['test_email'] ?? '');
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['flash_error'] = 'Geçerli bir e-posta adresi girin.';
+            header('Location: /ayarlar?tab=eposta');
+            exit;
+        }
+        $mail = $this->getMailSettings($companyId);
+        if (!$mail || empty($mail['smtp_host'])) {
+            $_SESSION['flash_error'] = 'E-posta ayarları eksik. SMTP bilgilerini kaydedin.';
+            header('Location: /ayarlar?tab=eposta');
+            exit;
+        }
+        $subject = 'DepoPazar E-posta Testi';
+        $body = "Bu bir test e-postasıdır.\n\nE-posta ayarlarınız çalışıyor.";
+        $headers = "From: " . ($mail['from_name'] ?? 'DepoPazar') . " <" . ($mail['from_email'] ?? 'noreply@depopazar.com') . ">\r\nContent-Type: text/plain; charset=UTF-8";
+        $sent = @mail($to, $subject, $body, $headers);
+        if ($sent) {
+            $_SESSION['flash_success'] = 'Test e-postası gönderildi: ' . $to;
+        } else {
+            $_SESSION['flash_error'] = 'E-posta gönderilemedi. SMTP sunucusu ve port ayarlarını kontrol edin. Bazı sunucularda PHP mail() SMTP kullanmaz.';
+        }
+        header('Location: /ayarlar?tab=eposta');
+        exit;
+    }
+
+    public function updateEmailTemplates(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /ayarlar?tab=sablonlar');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /ayarlar?tab=sablonlar');
+            exit;
+        }
+        $mail = $this->getMailSettings($companyId);
+        $templates = [];
+        foreach (['contract_created_template', 'payment_received_template', 'payment_reminder_template', 'admin_contract_created_template', 'admin_payment_received_template'] as $k) {
+            $v = trim($_POST[$k] ?? '');
+            $templates[$k] = $v !== '' ? $v : null;
+        }
+        try {
+            if ($mail) {
+                $stmt = $this->pdo->prepare('UPDATE company_mail_settings SET contract_created_template = ?, payment_received_template = ?, payment_reminder_template = ?, admin_contract_created_template = ?, admin_payment_received_template = ? WHERE company_id = ?');
+                $stmt->execute([
+                    $templates['contract_created_template'] ?: null,
+                    $templates['payment_received_template'] ?: null,
+                    $templates['payment_reminder_template'] ?: null,
+                    $templates['admin_contract_created_template'] ?: null,
+                    $templates['admin_payment_received_template'] ?: null,
+                    $companyId,
+                ]);
+            } else {
+                $id = $this->uuid();
+                $stmt = $this->pdo->prepare('INSERT INTO company_mail_settings (id, company_id, contract_created_template, payment_received_template, payment_reminder_template, admin_contract_created_template, admin_payment_received_template) VALUES (?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([
+                    $id,
+                    $companyId,
+                    $templates['contract_created_template'] ?: null,
+                    $templates['payment_received_template'] ?: null,
+                    $templates['payment_reminder_template'] ?: null,
+                    $templates['admin_contract_created_template'] ?: null,
+                    $templates['admin_payment_received_template'] ?: null,
+                ]);
+            }
+            $_SESSION['flash_success'] = 'E-posta şablonları kaydedildi.';
+        } catch (Throwable $e) {
+            $_SESSION['flash_error'] = 'Kaydedilemedi: ' . $e->getMessage();
+        }
+        header('Location: /ayarlar?tab=sablonlar');
+        exit;
     }
 
     private function getMailSettings(string $companyId): ?array

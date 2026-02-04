@@ -31,7 +31,7 @@ class Company
 
     public static function update(PDO $pdo, string $id, array $data): ?array
     {
-        $allowed = ['name', 'project_name', 'email', 'phone', 'whatsapp_number', 'address', 'mersis_number', 'tax_office'];
+        $allowed = ['name', 'project_name', 'logo_url', 'contract_template_url', 'email', 'phone', 'whatsapp_number', 'address', 'mersis_number', 'tax_office'];
         $set = [];
         $params = [];
         foreach ($allowed as $k) {

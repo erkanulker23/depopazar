@@ -2,6 +2,7 @@
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
 $barcodeCode = strtoupper(substr($customer['id'], 0, 8));
 $items = $items ?? [];
+$paidMonths = $paidMonths ?? [];
 $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 $currentYear = (int)date('Y');
 ?>
@@ -84,11 +85,15 @@ $currentYear = (int)date('Y');
                     </tr>
                 </thead>
                 <tbody>
-                    <?php for ($i = 0; $i < 12; $i++): ?>
+                    <?php for ($i = 0; $i < 12; $i++):
+                        $m = str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT);
+                        $key = $currentYear . '-' . $m;
+                        $isPaid = !empty($paidMonths[$key]);
+                    ?>
                         <tr>
                             <td class="border border-gray-300 px-3 py-2"><?= $monthNames[$i] ?> <?= $currentYear ?></td>
-                            <td class="border border-gray-300 px-3 py-2 text-center">[  ]</td>
-                            <td class="border border-gray-300 px-3 py-2 text-center">[  ]</td>
+                            <td class="border border-gray-300 px-3 py-2 text-center"><?= $isPaid ? '[ ✓ ]' : '[  ]' ?></td>
+                            <td class="border border-gray-300 px-3 py-2 text-center"><?= !$isPaid ? '[ ✓ ]' : '[  ]' ?></td>
                             <td class="border border-gray-300 px-3 py-2"></td>
                         </tr>
                     <?php endfor; ?>

@@ -66,6 +66,7 @@ class ProposalsController
             exit;
         }
         $proposal['items'] = ProposalItem::findByProposalId($this->pdo, $id);
+        $company = !empty($proposal['company_id']) ? Company::findOne($this->pdo, $proposal['company_id']) : null;
         $statusLabels = ['draft' => 'Taslak', 'sent' => 'Gönderildi', 'accepted' => 'Kabul', 'rejected' => 'Red'];
         require __DIR__ . '/../../views/proposals/print_one.php';
     }

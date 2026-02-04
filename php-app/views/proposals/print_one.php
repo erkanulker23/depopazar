@@ -27,14 +27,29 @@ if (!function_exists('fmtPrice')) {
     </style>
 </head>
 <body class="bg-white text-gray-900 p-6 max-w-4xl mx-auto">
-    <div class="no-print mb-4 flex justify-between items-center">
+    <div class="no-print mb-4 flex flex-wrap justify-between items-center gap-2">
         <a href="/teklifler/<?= htmlspecialchars($p['id'] ?? '') ?>/duzenle" class="text-emerald-600 hover:underline">&larr; Teklife dön</a>
-        <button type="button" onclick="window.print()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
-            Yazdır / PDF olarak kaydet
-        </button>
+        <div class="flex gap-2">
+            <a href="/teklifler/<?= htmlspecialchars($p['id'] ?? '') ?>/duzenle" class="px-4 py-2 border border-gray-300 rounded-xl font-medium hover:bg-gray-50">Detay / Düzenle</a>
+            <a href="mailto:<?= htmlspecialchars($p['customer_email'] ?? '') ?>?subject=<?= rawurlencode('Teklif: ' . ($p['title'] ?? '')) ?>&body=<?= rawurlencode('Sayın Müşterimiz,\n\n' . ($p['title'] ?? 'Teklif') . ' teklifiniz ekteki linkten görüntüleyebilirsiniz.\n\n' . (isset($_SERVER['HTTP_HOST']) ? 'https://' . $_SERVER['HTTP_HOST'] : '') . '/teklifler/' . ($p['id'] ?? '') . '/yazdir') ?>" class="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700">Teklifi E-posta Gönder</a>
+            <button type="button" onclick="window.print()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
+                Yazdır / PDF
+            </button>
+        </div>
     </div>
 
     <div class="border-2 border-gray-200 rounded-xl p-6 print:border-gray-400">
+        <?php $company = $company ?? null; if ($company): ?>
+        <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+            <?php if (!empty($company['logo_url'])): ?><img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-12 object-contain"><?php endif; ?>
+            <div class="text-right text-sm text-gray-600">
+                <p class="font-bold text-gray-900"><?= htmlspecialchars($company['name'] ?? '') ?></p>
+                <?php if (!empty($company['address'])): ?><p><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
+                <?php if (!empty($company['phone'])): ?><p><?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
+                <?php if (!empty($company['email'])): ?><p><?= htmlspecialchars($company['email']) ?></p><?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
         <h1 class="text-xl font-bold text-center text-gray-900 mb-1"><?= htmlspecialchars($p['title'] ?? 'Teklif') ?></h1>
         <p class="text-center text-sm text-gray-500 mb-4">Teklif No: <?= htmlspecialchars(substr($p['id'] ?? '', 0, 8)) ?> · Oluşturulma: <?= !empty($p['created_at']) ? date('d.m.Y H:i', strtotime($p['created_at'])) : date('d.m.Y H:i') ?></p>
 

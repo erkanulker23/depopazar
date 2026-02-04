@@ -77,11 +77,11 @@ ob_start();
                                 </form>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/teklifler/<?= htmlspecialchars($p['id'] ?? '') ?>/yazdir" target="_blank" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1">Yazdır</a>
-                                <a href="/teklifler/<?= htmlspecialchars($p['id'] ?? '') ?>/duzenle" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1">Düzenle</a>
+                                <a href="/teklifler/<?= htmlspecialchars($p['id'] ?? '') ?>/yazdir" target="_blank" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1" title="Görüntüle / Yazdır / PDF"><i class="bi bi-eye mr-1"></i> Detay</a>
+                                <a href="/teklifler/<?= htmlspecialchars($p['id'] ?? '') ?>/duzenle" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></a>
                                 <form method="post" action="/teklifler/sil" class="inline" onsubmit="return confirm('Bu teklifi silmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($p['id'] ?? '') ?>">
-                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
+                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                         </tr>

@@ -25,8 +25,9 @@ ob_start();
     <div>
         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Ay</label>
         <select name="month" onchange="this.form.submit()" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+            <option value="0" <?= ($monthDisplay ?? 0) === 0 ? 'selected' : '' ?>>Tüm Aylar</option>
             <?php foreach ($monthNames as $i => $m): ?>
-                <option value="<?= $i + 1 ?>" <?= $month === $i + 1 ? 'selected' : '' ?>><?= $m ?></option>
+                <option value="<?= $i + 1 ?>" <?= ($monthDisplay ?? 0) === $i + 1 ? 'selected' : '' ?>><?= $m ?></option>
             <?php endforeach; ?>
         </select>
     </div>
@@ -48,6 +49,43 @@ ob_start();
     </a>
 </div>
 
+<?php $paymentBreakdown = $paymentBreakdown ?? ['cash' => 0, 'credit_card' => 0, 'bank' => 0]; $monthDisplay = $monthDisplay ?? (int)date('n'); ?>
+<!-- Ödeme yöntemine göre: Nakit, Kredi kartı, Banka -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="stat-card">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <i class="bi bi-cash-coin text-amber-600 dark:text-amber-400 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Nakit Alınanlar (<?= ($monthDisplay ?? 0) === 0 ? 'Yıllık ' . $year : ($monthNames[($monthDisplay ?? 1) - 1] ?? '') . ' ' . $year ?>)</p>
+                <p class="text-xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($paymentBreakdown['cash'] ?? 0) ?> ₺</p>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <i class="bi bi-credit-card text-blue-600 dark:text-blue-400 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kredi Kartı Alınanlar</p>
+                <p class="text-xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($paymentBreakdown['credit_card'] ?? 0) ?> ₺</p>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <i class="bi bi-bank text-emerald-600 dark:text-emerald-400 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Banka Hesabına Alınanlar</p>
+                <p class="text-xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($paymentBreakdown['bank'] ?? 0) ?> ₺</p>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Özet kartlar -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     <div class="stat-card">
@@ -124,7 +162,7 @@ ob_start();
 
     <div class="card-modern p-6">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <i class="bi bi-currency-exchange text-emerald-600 dark:text-emerald-400"></i> Gelir Raporu (<?= $monthNames[$month - 1] ?? '' ?> <?= $year ?>)
+            <i class="bi bi-currency-exchange text-emerald-600 dark:text-emerald-400"></i> Gelir Raporu (<?= ($monthDisplay ?? 0) === 0 ? 'Tüm Yıl ' . $year : ($monthNames[($monthDisplay ?? 1) - 1] ?? '') . ' ' . $year ?>)
         </h2>
         <div class="space-y-3">
             <div class="flex justify-between items-center">
@@ -159,13 +197,29 @@ ob_start();
             <i class="bi bi-hourglass-split text-emerald-600 dark:text-emerald-400"></i> Ödeme Durumu
         </h2>
         <ul class="space-y-3">
-            <li class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-gray-600 dark:text-gray-400">Bekleyen ödeme</span>
-                <span class="font-semibold text-gray-900 dark:text-white"><?= (int) ($pendingCount ?? 0) ?></span>
+            <li class="py-2 border-b border-gray-100 dark:border-gray-700">
+                <button type="button" onclick="document.getElementById('pendingCustomers').classList.toggle('hidden')" class="w-full flex justify-between items-center text-left">
+                    <span class="text-gray-600 dark:text-gray-400">Bekleyen ödeme</span>
+                    <span class="font-semibold text-gray-900 dark:text-white"><?= (int) ($pendingCount ?? 0) ?></span>
+                </button>
+                <div id="pendingCustomers" class="hidden mt-2 pl-4 border-l-2 border-amber-200 dark:border-amber-800 space-y-1 max-h-40 overflow-y-auto">
+                    <?php $pendingCustomers = $pendingCustomers ?? []; foreach ($pendingCustomers as $pc): ?>
+                    <a href="/musteriler/<?= htmlspecialchars($pc['id']) ?>" class="block text-sm text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"><?= htmlspecialchars(trim(($pc['first_name'] ?? '') . ' ' . ($pc['last_name'] ?? ''))) ?> – <?= number_format((float)($pc['total_debt'] ?? 0), 2, ',', '.') ?> ₺</a>
+                    <?php endforeach; ?>
+                    <?php if (empty($pendingCustomers)): ?><p class="text-sm text-gray-500 dark:text-gray-400">Müşteri yok</p><?php endif; ?>
+                </div>
             </li>
-            <li class="flex justify-between items-center py-2">
-                <span class="text-gray-600 dark:text-gray-400">Gecikmiş ödeme</span>
-                <span class="font-semibold text-red-600 dark:text-red-400"><?= (int) ($overdueCount ?? 0) ?></span>
+            <li class="py-2">
+                <button type="button" onclick="document.getElementById('overdueCustomers').classList.toggle('hidden')" class="w-full flex justify-between items-center text-left">
+                    <span class="text-gray-600 dark:text-gray-400">Gecikmiş ödeme</span>
+                    <span class="font-semibold text-red-600 dark:text-red-400"><?= (int) ($overdueCount ?? 0) ?></span>
+                </button>
+                <div id="overdueCustomers" class="hidden mt-2 pl-4 border-l-2 border-red-200 dark:border-red-800 space-y-1 max-h-40 overflow-y-auto">
+                    <?php $overdueCustomers = $overdueCustomers ?? []; foreach ($overdueCustomers as $oc): ?>
+                    <a href="/musteriler/<?= htmlspecialchars($oc['id']) ?>" class="block text-sm text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"><?= htmlspecialchars(trim(($oc['first_name'] ?? '') . ' ' . ($oc['last_name'] ?? ''))) ?> – <?= number_format((float)($oc['total_debt'] ?? 0), 2, ',', '.') ?> ₺</a>
+                    <?php endforeach; ?>
+                    <?php if (empty($overdueCustomers)): ?><p class="text-sm text-gray-500 dark:text-gray-400">Müşteri yok</p><?php endif; ?>
+                </div>
             </li>
         </ul>
     </div>

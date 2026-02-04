@@ -1,49 +1,76 @@
-# Laravel Forge Deploy – DepoPazar (PHP)
+# Laravel Forge ile DepoPazar (PHP) Kurulumu
 
-DepoPazar PHP uygulaması Laravel Forge ile deploy edilir. Bu dokümanda Forge kurulumu adım adım açıklanır.
-
----
-
-## 1. GitHub Repo
-
-- Repo: `https://github.com/erkanulker23/depopazar`
-- Branch: `main` (veya Forge'da seçeceğiniz branch)
+Bu doküman, DepoPazar PHP uygulamasını Laravel Forge üzerinde sıfırdan kurmak için gereken adımları açıklar.
 
 ---
 
-## 2. Forge Site Oluşturma
+## 1. Ön Gereksinimler
 
-1. **Server** seçin veya yeni bir server ekleyin
-2. **Sites** → **Create Site**
-3. **Domain**: `your-domain.com` (veya alt domain)
-4. **Project Type**: PHP
-5. **Web Directory**: `php-app/public` ← **Önemli**
-6. **PHP Version**: 8.0 veya üzeri önerilir
-
----
-
-## 3. GitHub Bağlantısı
-
-1. **Source Control** → GitHub hesabınızı bağlayın
-2. **Repository**: `erkanulker23/depopazar`
-3. **Branch**: `main`
-4. **Deploy Script**: Aşağıdaki metni kullanın veya proje kökündeki `deploy.sh` kullanılacak
+| Gereksinim | Açıklama |
+|------------|----------|
+| **GitHub** | Repo erişimi: `https://github.com/erkanulker23/depopazar` |
+| **Forge** | Laravel Forge hesabı ve en az bir server |
+| **MySQL** | Forge üzerinde oluşturulacak veritabanı |
+| **Domain** | Site için kullanılacak domain (örn. `depopazar.com` veya `app.awapanel.com`) |
 
 ---
 
-## 4. Deploy Script (Forge’a yapıştır)
+## 2. Forge’da Site Oluşturma
 
-**Önce** site path’ini kontrol edin (Forge’da site ayarlarında görünür). Genelde `general.awapanel.com` için path: `/home/forge/general.awapanel.com`. Aşağıdaki script’te `ROOT=` satırını kendi path’inize göre değiştirin.
+Forge panelinde sırayla şunları yapın:
+
+1. **Server** sayfasına gidin, site kuracağınız sunucuyu seçin.
+2. **Sites** sekmesine tıklayın → **Create Site**.
+3. Açılan formda alanları şöyle doldurun:
+
+| Alan | Ne yazılacak | Not |
+|------|---------------------|-----|
+| **Domain** | `your-domain.com` veya `app.yourdomain.com` | SSL sonra eklenebilir. |
+| **Project Type** | **PHP** | Listeden "PHP" seçin. |
+| **Web Directory** | `php-app/public` | **Mutlaka** bu değer olmalı; yanlış olursa 403/404 alırsınız. |
+| **PHP Version** | **8.0** veya **8.1** / **8.2** | 8.0 ve üzeri önerilir. |
+
+4. **Add Site** (veya **Create Site**) ile kaydedin.
+
+**Önemli:** Site oluştuktan sonra Forge size **site path** gösterir. Genelde şu formattadır:
+
+- `/home/forge/your-domain.com`
+
+Bu path’i not alın; deploy script ve Nginx ayarlarında kullanacaksınız.
+
+---
+
+## 3. GitHub (Source Control) Bağlantısı
+
+1. Oluşturduğunuz sitenin sayfasında **Source Control** sekmesine gidin.
+2. **Install Git Repository** veya **Connect Repository** ile GitHub hesabınızı bağlayın (henüz bağlı değilse).
+3. Repository bilgilerini girin:
+
+| Alan | Değer |
+|------|--------|
+| **Provider** | GitHub |
+| **Repository** | `erkanulker23/depopazar` |
+| **Branch** | `main` |
+
+4. **Deploy Script** alanına ya proje kökündeki `deploy.sh` kullanılacak şekilde bırakın ya da bu dokümandaki **Tam Deploy Script** bölümündeki script’i yapıştırın (tercih edilen: dokümandaki script, çünkü `ROOT` path’i sizin site path’inize göre düzenlenir).
+
+---
+
+## 4. Tam Deploy Script (Forge’a yapıştırılacak)
+
+Aşağıdaki script’i Forge’daki **Deploy Script** alanına kopyalayın. **Sadece** `ROOT=` satırındaki path’i kendi site path’inizle değiştirin (Forge’da site detayında “Path” olarak görünür).
+
+**Değiştirilecek:** `ROOT=/home/forge/your-domain.com` → kendi path’iniz, örn. `ROOT=/home/forge/general.awapanel.com`
 
 ```bash
-cd /home/forge/general.awapanel.com
+# DepoPazar – Forge Deploy Script
+# ROOT'u kendi site path'inizle değiştirin (örn. /home/forge/general.awapanel.com)
+ROOT=/home/forge/your-domain.com
 set -e
 
-# ROOT'u açıkça ver (Forge'da $0 güvenilir olmayabilir)
-ROOT=/home/forge/general.awapanel.com
 cd "$ROOT"
 
-# Git güncelleme
+# 1) Kod güncelleme
 git fetch origin
 if [ -n "${FORGE_SITE_BRANCH}" ]; then
   git reset --hard "origin/${FORGE_SITE_BRANCH}"
@@ -52,7 +79,7 @@ else
 fi
 cd "$ROOT"
 
-# .env'den değişkenleri yükle (Forge Environment otomatik .env yazar)
+# 2) .env yükle (Forge Environment .env yazar)
 if [ -f "$ROOT/.env" ]; then
   set -a
   source "$ROOT/.env" 2>/dev/null || true
@@ -65,7 +92,7 @@ DB_DATABASE="${DB_DATABASE:-depotakip}"
 DB_USERNAME="${DB_USERNAME:-root}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 
-# db.local.php oluştur (şifrede özel karakter olsa da güvenli)
+# 3) db.local.php oluştur (şifrede özel karakter güvenliği – tek tırnak escape)
 mkdir -p "$ROOT/php-app/config"
 DB_PASS_ESC=$(echo "$DB_PASSWORD" | sed "s/'/'\\\\''/g")
 cat > "$ROOT/php-app/config/db.local.php" << DBCONFIG
@@ -82,10 +109,9 @@ cat > "$ROOT/php-app/config/db.local.php" << DBCONFIG
 ]);
 return \$pdo;
 DBCONFIG
-
 chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 
-# Schema (ilk kurulum)
+# 4) Veritabanı schema (ilk kurulum)
 if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
   if [ -n "$DB_PASSWORD" ]; then
     mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || true
@@ -94,125 +120,185 @@ if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
   fi
 fi
 
-# Seed: Super admin (erkanulker0@gmail.com / password) yoksa oluştur
+# 5) Super admin kullanıcı (yoksa oluştur: erkanulker0@gmail.com / password)
 if [ -f "$ROOT/php-app/seed.php" ] && [ -f "$ROOT/php-app/config/db.local.php" ]; then
   (cd "$ROOT/php-app" && php seed.php) 2>/dev/null || true
 fi
 
-# Uploads dizini
-mkdir -p "$ROOT/php-app/uploads"
-chmod -R 755 "$ROOT/php-app/uploads" 2>/dev/null || true
+# 6) Uploads dizini (logo vb. – php-app/public/uploads kullanılıyor)
+mkdir -p "$ROOT/php-app/public/uploads/company"
+chmod -R 755 "$ROOT/php-app/public/uploads" 2>/dev/null || true
 ```
 
-**Not:** Farklı bir domain/path kullanıyorsanız yalnızca `cd` ve `ROOT=` satırlarındaki `/home/forge/general.awapanel.com` kısmını kendi path’inizle değiştirin.
+**Not:** Farklı domain/path kullanıyorsanız sadece script’in en üstündeki `ROOT=` satırını kendi site path’inizle değiştirin. Proje kökündeki `deploy.sh` da Forge’da kullanılabilir; o script `ROOT`’u otomatik bulur, ancak uploads dizini için `php-app/public/uploads` path’ini kullandığınızdan emin olun.
 
 ---
 
-## 5. Environment (.env)
+## 5. Environment (.env) Değişkenleri
 
-Forge **Environment** sekmesinde aşağıdaki değişkenleri tanımlayın:
+Forge’da ilgili siteyi açın → **Environment** sekmesi. Aşağıdaki değişkenleri ekleyin veya düzenleyin. Forge bu değerleri repo köküne `.env` dosyasına yazar; deploy script bu dosyayı okuyup `db.local.php` üretir.
 
-```
+Aşağıdaki blokları **olduğu gibi** Environment kutusuna yapıştırıp kendi değerlerinizle değiştirebilirsiniz:
+
+```env
+# --- Uygulama ---
 APP_NAME=DepoPazar
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://your-domain.com
 
+# APP_URL: Tarayıcıda açacağınız tam adres (https ile, sonunda / yok).
+# Örnek: https://depopazar.com veya https://app.awapanel.com
+
+# --- Veritabanı (Forge Databases’te oluşturduğunuz MySQL) ---
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=depotakip
 DB_USERNAME=forge
-DB_PASSWORD=your_db_password
+DB_PASSWORD=buraya_gercek_sifre_yazin
+
+# DB_DATABASE: Forge’da oluşturduğunuz veritabanı adı.
+# DB_USERNAME / DB_PASSWORD: Forge’da o veritabanı için tanımladığınız kullanıcı ve şifre.
 ```
 
-Forge bu değerleri `.env` dosyasına yazar. Deploy script bu dosyayı okur ve `db.local.php` oluşturur.
+**Kontrol listesi:**
+
+- `APP_URL` → Sitenin gerçek adresi (https, sonunda `/` yok).
+- `DB_DATABASE` → Forge **Databases**’te oluşturduğunuz veritabanı adı.
+- `DB_USERNAME` / `DB_PASSWORD` → Aynı veritabanına Forge’da atadığınız kullanıcı ve şifre.
+
+Environment’ı kaydettikten sonra bir kez **Deploy Now** yapın; `.env` yazılır ve deploy script `db.local.php`’yi üretir.
 
 ---
 
-## 6. MySQL Veritabanı
+## 6. MySQL Veritabanı (Forge’da)
 
-1. Forge **Databases** → **Create Database**
-2. Database adı: `depotakip` (veya farklı bir ad – `.env`'deki `DB_DATABASE` ile eşleşmeli)
-3. Kullanıcı ve şifre oluşturun
-4. Bu bilgileri `.env` (Environment) içine yazın
+1. Forge’da **Databases** sekmesine gidin (sunucu veya site seviyesinde, kullandığınız yapıya göre).
+2. **Create Database** ile yeni veritabanı ekleyin.
+3. **Database name:** `depotakip` (veya kullanmak istediğiniz ad – `.env`’deki `DB_DATABASE` ile aynı olmalı).
+4. Kullanıcı ve şifre oluşturun; bu bilgileri **Environment**’taki `DB_USERNAME` ve `DB_PASSWORD` ile aynı yapın.
 
 ---
 
-## 7. Nginx Ayarları
+## 7. Nginx Yapılandırması
 
-Forge genelde otomatik ayarlar. Özel gereksinim varsa:
+Forge, **Web Directory**’yi `php-app/public` yaptığınızda genelde gerekli Nginx ayarını kendisi yapar. Özel düzenleme yapmanız gerekirse Forge’da **Files** veya **Nginx Configuration** ile aşağıdaki yapıyı referans alabilirsiniz.
 
-**Web Directory** mutlaka `php-app/public` olmalı:
+**Önemli:** `root` mutlaka `.../php-app/public` olmalı.
 
 ```nginx
-root /home/forge/your-domain.com/php-app/public;
+# DepoPazar – PHP (Forge)
+# root path'i kendi site path'inize göre değiştirin: /home/forge/SITE_PATH/php-app/public
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name your-domain.com;
+    root /home/forge/your-domain.com/php-app/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+        fastcgi_read_timeout 60;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
 ```
 
-**PHP** ve **index.php** yönlendirmesi Forge varsayılanı ile çalışır.
+**Düzenlemeniz gerekenler:**
+
+| Değer | Açıklama |
+|-------|----------|
+| `server_name` | Sitenizin domain’i (örn. `general.awapanel.com`). |
+| `root` | `/home/forge/SITE_PATH/php-app/public` (SITE_PATH = Forge’da gördüğünüz site path). |
+| `fastcgi_pass` | Sunucudaki PHP-FPM socket. Forge’da PHP sürümüne göre `php8.0-fpm.sock`, `php8.2-fpm.sock` vb. olabilir; Forge varsayılan config’teki ile aynı yapın. |
+
+SSL (HTTPS) Forge üzerinden **SSL** sekmesinden “Let’s Encrypt” ile eklenir; Nginx’e 443 server bloğu Forge tarafından eklenir.
 
 ---
 
-## 8. İlk Deploy
+## 8. İlk Deploy ve Giriş
 
-1. **Deploy Now** butonuna tıklayın
-2. Hata yoksa site `https://your-domain.com` adresinde açılır
-3. **İlk giriş:** Deploy sırasında otomatik olarak bir **süper admin** kullanıcı oluşturulur (yoksa):
+1. Forge’da **Deploy Now** butonuna tıklayın.
+2. Log’da hata yoksa site `APP_URL`’deki adreste açılır.
+3. **İlk giriş** (seed ile oluşturulan süper admin):
+   - **URL:** `https://your-domain.com/giris`
    - **E-posta:** `erkanulker0@gmail.com`
    - **Şifre:** `password`
-   - Giriş adresi: `/giris`
-4. Başka kullanıcı şifresi sıfırlamak için sunucuda: `php php-app/set-password.php <email> <yeni_sifre>`
+4. İlk girişten sonra şifreyi mutlaka değiştirin. Başka kullanıcı şifresi için sunucuda:  
+   `php php-app/set-password.php <email> <yeni_sifre>`
 
 ---
 
-## 9. Komut satırı (CLI)
+## 9. Komut Satırı (CLI) Özeti
 
-Sunucuda SSH veya yerelde terminalden çalıştırabilirsiniz (proje kökü: repo root veya `/home/forge/general.awapanel.com`).
+Sunucuda proje köküne gidin (örn. `cd /home/forge/your-domain.com`), sonra:
 
 | Komut | Açıklama |
 |--------|----------|
-| `php php-app/seed.php` | Super admin yoksa oluşturur (erkanulker0@gmail.com / password). Var ise atlar. |
+| `php php-app/seed.php` | Super admin yoksa oluşturur (erkanulker0@gmail.com / password). Varsa atlar. |
 | `php php-app/set-password.php <email> <yeni_sifre>` | Belirtilen e-postanın şifresini günceller. |
 
-Örnek (sunucuda):
+Örnek:
 
 ```bash
-cd /home/forge/general.awapanel.com
+cd /home/forge/your-domain.com
 php php-app/seed.php
 php php-app/set-password.php erkanulker0@gmail.com yeniSifre123
 ```
 
 ---
 
-## 10. Özet
+## 10. Kurulum Özeti
 
-| Ayar           | Değer                |
-|----------------|----------------------|
-| Web Directory  | `php-app/public`     |
-| PHP            | 8.0+                 |
-| Deploy Script  | Yukarıdaki script    |
-| Branch         | `main`               |
-| Seed (manuel)  | `php php-app/seed.php` |
+| Ayar | Değer |
+|------|--------|
+| **Web Directory** | `php-app/public` |
+| **PHP** | 8.0 veya üzeri |
+| **Branch** | `main` |
+| **Deploy script** | Yukarıdaki tam script (ROOT path’i kendi sitenize göre değiştirilmiş) |
+| **İlk giriş** | `/giris` → erkanulker0@gmail.com / password |
 
 ---
 
 ## Sorun Giderme
 
-### HTTP 500 – "Bu isteği işleme alamıyor"
+### HTTP 500 – “Bu isteği işleme alamıyor”
 
-1. **Sağlık kontrolü sayfasını açın**  
-   Tarayıcıda şu adrese gidin:  
-   `https://general.awapanel.com/health.php`  
-   Bu sayfa hangi adımda hata veriyorsa (config, db.local.php yok, veritabanı bağlantısı vb.) onu gösterir.
+1. **Sağlık kontrolü:** Tarayıcıda `https://your-domain.com/health.php` açın. Hangi adımda hata varsa (config, db.local.php, veritabanı) sayfa yazar.
+2. **Sık nedenler:**
+   - **`db.local.php` yok:** Environment doldurulup **Deploy Now** yapılmamış. Environment’ı kaydedip tekrar **Deploy Now** çalıştırın.
+   - **Veritabanı bilgisi hatalı:** Environment’ta `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` Forge’daki MySQL bilgileriyle aynı olmalı. Sonra tekrar **Deploy Now**.
+   - **Web Directory yanlış:** Site ayarlarında **Web Directory** mutlaka `php-app/public` olmalı.
+   - **PHP eklentisi:** Sunucuda `pdo_mysql` açık olmalı (Forge → PHP → Extensions).
+3. **Log:** Forge **Logs** veya sunucuda Nginx/PHP-FPM hata loglarına bakın.
+4. **Güvenlik:** Sorun bittikten sonra `php-app/public/health.php` dosyasını silebilir veya erişimi kapatabilirsiniz.
 
-2. **Sık nedenler**
-   - **`db.local.php` yok**: Deploy script çalışmamış demektir. Forge'da **Deploy Now** yapın. Deploy script `.env` değişkenlerinden `php-app/config/db.local.php` dosyasını oluşturur.
-   - **Veritabanı bilgileri yanlış**: Forge **Environment** sekmesinde `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` doğru olmalı. Değiştirdikten sonra tekrar **Deploy Now** yapın.
-   - **Web Directory yanlış**: Forge site ayarlarında **Web Directory** mutlaka `php-app/public` olmalı.
-   - **PHP eklentisi**: Sunucuda `pdo_mysql` (PHP → Extensions) açık olmalı.
+### 403 Forbidden
 
-3. **Loglara bakma**
-   - Forge'da site **Logs** veya sunucuda: `~/general.awapanel.com/logs/` (veya Forge'un gösterdiği path), Nginx: `/var/log/nginx/error.log`, PHP-FPM error log.
+- **Web Directory**’nin `php-app/public` olduğundan emin olun. Nginx `root` değeri `.../php-app/public` olmalı.
 
-4. **Güvenlik**: Sorun çözüldükten sonra `php-app/public/health.php` dosyasını sunucudan silebilir veya erişimi kapatabilirsiniz.
+### 404 – index.php bulunamıyor
 
-- **403 Forbidden**: Web Directory'nin `php-app/public` olduğundan emin olun.
+- Nginx’te `root` tam olarak `.../php-app/public` ve `try_files ... /index.php?$query_string;` satırı mevcut olmalı.

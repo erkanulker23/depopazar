@@ -54,7 +54,7 @@ ob_start();
                     <?php foreach ($warehouses as $w): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="wh-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($w['id']) ?>"></label></td>
-                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($w['name']) ?></td>
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/depolar/<?= htmlspecialchars($w['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($w['name']) ?></a></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                                 <?= htmlspecialchars(trim($w['address'] ?? '') ?: '-') ?>
                                 <?php if (!empty($w['city'])): ?>
@@ -70,7 +70,8 @@ ob_start();
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/odalar?warehouse=<?= urlencode($w['id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 mr-1">Odalar</a>
+                                <a href="/odalar?warehouse_id=<?= urlencode($w['id']) ?>&add=1" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 mr-1" title="Oda Ekle"><i class="bi bi-plus-circle mr-1"></i> Oda Ekle</a>
+                                <a href="/odalar?warehouse_id=<?= urlencode($w['id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1">Odalar</a>
                                 <button type="button" onclick='openEditWarehouse(<?= json_encode([
                                     'id' => $w['id'],
                                     'name' => $w['name'],
@@ -80,10 +81,10 @@ ob_start();
                                     'total_floors' => (int)($w['total_floors'] ?? 0),
                                     'description' => $w['description'] ?? '',
                                     'is_active' => !empty($w['is_active']),
-                                ]) ?>)' class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1">Düzenle</button>
+                                ]) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
                                 <form method="post" action="/depolar/sil" class="inline" onsubmit="return confirm('Bu depoyu silmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($w['id']) ?>">
-                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Sil</button>
+                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                         </tr>

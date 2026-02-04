@@ -44,6 +44,14 @@ class ContractsController
         }
         $openNewSale = isset($_GET['newSale']) && $_GET['newSale'] !== '0';
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
+        $contractDebt = [];
+        foreach ($contracts as $c) {
+            $cid = $c['id'] ?? '';
+            $stmt = $this->pdo->prepare('SELECT SUM(CASE WHEN status = \'overdue\' THEN 1 ELSE 0 END) AS overdue_cnt, SUM(CASE WHEN status = \'pending\' THEN 1 ELSE 0 END) AS pending_cnt FROM payments WHERE contract_id = ? AND deleted_at IS NULL');
+            $stmt->execute([$cid]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $contractDebt[$cid] = ['overdue' => (int)($row['overdue_cnt'] ?? 0), 'pending' => (int)($row['pending_cnt'] ?? 0)];
+        }
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
@@ -149,7 +157,8 @@ class ContractsController
                 Room::update($this->pdo, $roomId, ['status' => 'occupied']);
             }
             $contractNumber = $created['contract_number'] ?? $contractId ?? '';
-            Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId]);
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Sözleşme oluşturuldu.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Kayıt oluşturulamadı: ' . $e->getMessage();
@@ -254,11 +263,58 @@ class ContractsController
             header('Location: /girisler');
             exit;
         }
-        $monthlyPrices = Contract::getMonthlyPricesByContractId($this->pdo, $id);
         $payments = Payment::findByContractId($this->pdo, $id);
+        $monthlyPrices = Contract::getMonthlyPricesByContractId($this->pdo, $id);
+        $monthNames = ['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
+        if (empty($monthlyPrices)) {
+            foreach ($payments as $p) {
+                $due = $p['due_date'] ?? '';
+                if ($due) {
+                    $m = date('m', strtotime($due));
+                    $y = date('Y', strtotime($due));
+                    $monthlyPrices[] = ['month' => ($monthNames[$m] ?? $m) . ' ' . $y, 'price' => $p['amount'] ?? $contract['monthly_price'] ?? 0];
+                }
+            }
+        } else {
+            foreach ($monthlyPrices as &$mp) {
+                $ym = $mp['month'] ?? '';
+                if (preg_match('/^(\d{4})-(\d{2})$/', $ym, $m)) {
+                    $mp['month'] = ($monthNames[$m[2]] ?? $m[2]) . ' ' . $m[1];
+                }
+            }
+            unset($mp);
+        }
         $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
         $pageTitle = 'Sözleşme: ' . ($contract['contract_number'] ?? $id);
         require __DIR__ . '/../../views/contracts/detail.php';
+    }
+
+    /** Sözleşme yazdır – barkod gibi özel yazdırma sayfası */
+    public function printPage(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /girisler');
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            header('Location: /girisler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            header('Location: /girisler');
+            exit;
+        }
+        $payments = Payment::findByContractId($this->pdo, $id);
+        $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
+        $soldByName = trim(($contract['sold_by_first_name'] ?? '') . ' ' . ($contract['sold_by_last_name'] ?? '')) ?: '-';
+        require __DIR__ . '/../../views/contracts/print.php';
     }
 
     public function terminate(): void

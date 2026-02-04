@@ -55,6 +55,35 @@ class CustomersController
         require __DIR__ . '/../../views/customers/detail.php';
     }
 
+    /** Müşteri detay – özel yazdırma sayfası */
+    public function printPage(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
+        $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
+        $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
+        $company = !empty($customer['company_id']) ? Company::findOne($this->pdo, $customer['company_id']) : null;
+        require __DIR__ . '/../../views/customers/print.php';
+    }
+
     /** Liste sayfasında satır genişletildiğinde gösterilecek HTML fragment (AJAX) */
     public function rowFragment(array $params): void
     {
@@ -105,6 +134,13 @@ class CustomersController
             exit;
         }
         $items = Item::findByCustomerId($this->pdo, $id);
+        $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
+        $paidMonths = [];
+        foreach ($payments as $p) {
+            if (($p['status'] ?? '') === 'paid' && !empty($p['due_date'])) {
+                $paidMonths[date('Y-m', strtotime($p['due_date']))] = true;
+            }
+        }
         require __DIR__ . '/../../views/customers/barcode.php';
     }
 
@@ -136,19 +172,47 @@ class CustomersController
             }
             exit;
         }
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '') ?: null;
+        $identityNumber = trim($_POST['identity_number'] ?? '') ?: null;
+        if ($identityNumber !== null && !validateTcIdentity($identityNumber)) {
+            $_SESSION['flash_error'] = 'TC Kimlik No 11 haneli rakam olmalıdır.';
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+            exit;
+        }
+        if ($phone !== null && !validatePhone($phone)) {
+            $_SESSION['flash_error'] = 'Telefon formatı geçersiz. Örn: 05551234567';
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+            exit;
+        }
+        if ($email !== '' && !validateEmail($email)) {
+            $_SESSION['flash_error'] = 'E-posta formatı geçersiz.';
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+            exit;
+        }
+        if ($email === '') {
+            $email = 'musteri-' . bin2hex(random_bytes(4)) . '@depopazar.local';
+        }
         $data = [
             'company_id'      => $companyId,
             'first_name'      => $firstName,
             'last_name'       => $lastName,
-            'email'           => trim($_POST['email'] ?? ''),
-            'phone'           => trim($_POST['phone'] ?? '') ?: null,
-            'identity_number' => trim($_POST['identity_number'] ?? '') ?: null,
+            'email'           => $email,
+            'phone'           => formatPhoneInput($phone),
+            'identity_number' => $identityNumber,
             'address'         => trim($_POST['address'] ?? '') ?: null,
             'notes'           => trim($_POST['notes'] ?? '') ?: null,
         ];
-        $customer = Customer::create($this->pdo, $data);
+        try {
+            $customer = Customer::create($this->pdo, $data);
+        } catch (Throwable $e) {
+            $_SESSION['flash_error'] = 'Müşteri eklenemedi: ' . $e->getMessage();
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+            exit;
+        }
         $name = trim($firstName . ' ' . $lastName);
-        Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri eklendi', $name . ' müşterisi eklendi.', ['customer_id' => $customer['id']]);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri eklendi', $name . ' müşterisi eklendi.', ['customer_id' => $customer['id'], 'actor_name' => $actorName]);
         $redirectTo = $_POST['redirect_to'] ?? '';
         if ($redirectTo === 'new_sale') {
             $_SESSION['flash_success'] = 'Müşteri eklendi. Yeni satış formunda seçebilirsiniz.';
@@ -158,6 +222,18 @@ class CustomersController
             header('Location: /nakliye-isler?newCustomerId=' . urlencode($customer['id']));
         } else {
             $_SESSION['flash_success'] = 'Müşteri eklendi.';
+            header('Location: /musteriler');
+        }
+        exit;
+    }
+
+    private function redirectAfterCreate(string $redirectTo, ?array $customer): void
+    {
+        if ($redirectTo === 'new_sale') {
+            header('Location: /girisler?newSale=1');
+        } elseif ($redirectTo === 'new_job') {
+            header('Location: /nakliye-isler');
+        } else {
             header('Location: /musteriler');
         }
         exit;
@@ -346,7 +422,8 @@ class CustomersController
         fclose($handle);
 
         if ($added > 0) {
-            Notification::createForCompany($this->pdo, $companyId, 'customer', 'Toplu müşteri ekleme', $added . ' müşteri Excel ile eklendi.' . ($skipped > 0 ? ' ' . $skipped . ' kayıt atlandı.' : ''));
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'customer', 'Toplu müşteri ekleme', $added . ' müşteri Excel ile eklendi.' . ($skipped > 0 ? ' ' . $skipped . ' kayıt atlandı.' : ''), ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = $added . ' müşteri eklendi.';
             if ($skipped > 0) {
                 $_SESSION['flash_success'] .= ' ' . $skipped . ' kayıt atlandı.';

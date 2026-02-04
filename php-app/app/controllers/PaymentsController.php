@@ -26,6 +26,14 @@ class PaymentsController
         } elseif ($statusFilter !== '') {
             $payments = array_filter($payments, fn($p) => ($p['status'] ?? '') === $statusFilter);
         }
+        $dateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
+        $dateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
+        if ($dateFrom !== '') {
+            $payments = array_filter($payments, fn($p) => (strtotime($p['due_date'] ?? '') >= strtotime($dateFrom . ' 00:00:00')));
+        }
+        if ($dateTo !== '') {
+            $payments = array_filter($payments, fn($p) => (strtotime($p['due_date'] ?? '') <= strtotime($dateTo . ' 23:59:59')));
+        }
         $searchQ = isset($_GET['q']) ? trim($_GET['q']) : '';
         if ($searchQ !== '') {
             $q = mb_strtolower($searchQ);
@@ -40,19 +48,8 @@ class PaymentsController
             });
         }
         $payments = array_values($payments);
-        $collectMode = isset($_GET['collect']) && $_GET['collect'] !== '0';
-        $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
-        $bankAccounts = [];
-        $unpaidPaymentsByCustomer = [];
-        if ($companyId) {
-            $stmt = $this->pdo->prepare('SELECT * FROM bank_accounts WHERE company_id = ? AND deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
-            $stmt->execute([$companyId]);
-            $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } elseif (($user['role'] ?? '') === 'super_admin') {
-            $stmt = $this->pdo->query('SELECT * FROM bank_accounts WHERE deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
-            $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
         $unpaid = array_filter($payments, fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue']));
+        $unpaidPaymentsByCustomer = [];
         foreach ($unpaid as $p) {
             $cid = $p['customer_id'] ?? '';
             if ($cid === '') continue;
@@ -64,9 +61,27 @@ class PaymentsController
             $first = $list[0];
             $customersWithDebt[] = ['id' => $cid, 'customer_first_name' => $first['customer_first_name'] ?? '', 'customer_last_name' => $first['customer_last_name'] ?? '', 'payments' => $list];
         }
+        $totalPayments = count($payments);
+        $perPage = 25;
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $offset = ($page - 1) * $perPage;
+        $payments = array_slice($payments, $offset, $perPage);
+        $totalPages = $totalPayments > 0 ? (int)ceil($totalPayments / $perPage) : 1;
+        $collectMode = isset($_GET['collect']) && $_GET['collect'] !== '0';
+        $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
+        $bankAccounts = [];
+        if ($companyId) {
+            $stmt = $this->pdo->prepare('SELECT * FROM bank_accounts WHERE company_id = ? AND deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
+            $stmt->execute([$companyId]);
+            $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $stmt = $this->pdo->query('SELECT * FROM bank_accounts WHERE deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
+            $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        $totalPayments = $totalPayments ?? count($payments);
         require __DIR__ . '/../../views/payments/index.php';
     }
 
@@ -150,5 +165,31 @@ class PaymentsController
         $company = !empty($payment['company_id']) ? Company::findOne($this->pdo, $payment['company_id']) : null;
         $pageTitle = 'Ödeme: ' . ($payment['payment_number'] ?? $id);
         require __DIR__ . '/../../views/payments/detail.php';
+    }
+
+    public function printPage(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /odemeler');
+            exit;
+        }
+        $payment = Payment::findOne($this->pdo, $id);
+        if (!$payment) {
+            $_SESSION['flash_error'] = 'Ödeme kaydı bulunamadı.';
+            header('Location: /odemeler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($payment['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu ödemeye erişim yetkiniz yok.';
+            header('Location: /odemeler');
+            exit;
+        }
+        $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
+        $company = !empty($payment['company_id']) ? Company::findOne($this->pdo, $payment['company_id']) : null;
+        require __DIR__ . '/../../views/payments/print.php';
     }
 }

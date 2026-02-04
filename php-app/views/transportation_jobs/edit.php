@@ -103,9 +103,9 @@ ob_start();
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">KDV Oranı (%)</label>
                         <input type="number" name="vat_rate" value="<?= htmlspecialchars($job['vat_rate'] ?? '20') ?>" step="0.01" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hangi plakalı araç gitti</label>
-                        <input type="text" name="vehicle_plate" value="<?= htmlspecialchars($job['vehicle_plate'] ?? '') ?>" placeholder="Örn: 34 ABC 123" maxlength="20" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hangi plakalı araçlar gitti (virgülle ayırarak birden fazla ekleyebilirsiniz)</label>
+                        <input type="text" name="vehicle_plate" value="<?= htmlspecialchars($job['vehicle_plate'] ?? '') ?>" placeholder="Örn: 34 ABC 123, 06 XYZ 456" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Durum</label>

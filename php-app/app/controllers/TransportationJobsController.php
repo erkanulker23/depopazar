@@ -50,6 +50,38 @@ class TransportationJobsController
         require __DIR__ . '/../../views/transportation_jobs/index.php';
     }
 
+    public function show(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /nakliye-isler');
+            exit;
+        }
+        $job = TransportationJob::findOne($this->pdo, $id);
+        if (!$job) {
+            $_SESSION['flash_error'] = 'Nakliye işi bulunamadı.';
+            header('Location: /nakliye-isler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($job['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu işe erişim yetkiniz yok.';
+            header('Location: /nakliye-isler');
+            exit;
+        }
+        $company = !empty($job['company_id']) ? Company::findOne($this->pdo, $job['company_id']) : null;
+        $staffNames = [];
+        if (!empty($job['staff_ids'])) {
+            $placeholders = implode(',', array_fill(0, count($job['staff_ids']), '?'));
+            $stmt = $this->pdo->prepare("SELECT CONCAT(first_name, ' ', last_name) AS name FROM users WHERE id IN ($placeholders) AND deleted_at IS NULL");
+            $stmt->execute($job['staff_ids']);
+            $staffNames = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        }
+        require __DIR__ . '/../../views/transportation_jobs/detail.php';
+    }
+
     public function edit(array $params): void
     {
         Auth::requireStaff();
@@ -149,7 +181,8 @@ class TransportationJobsController
                 'staff_ids' => isset($_POST['staff_ids']) && is_array($_POST['staff_ids']) ? array_filter($_POST['staff_ids']) : [],
                 'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
             ]);
-            Notification::createForCompany($this->pdo, $companyId, 'transport', 'Nakliye işi eklendi', 'Yeni nakliye işi oluşturuldu.');
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'transport', 'Nakliye işi eklendi', 'Yeni nakliye işi oluşturuldu.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Nakliye işi eklendi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Kayıt oluşturulamadı: ' . $e->getMessage();
@@ -204,6 +237,8 @@ class TransportationJobsController
                 'staff_ids' => isset($_POST['staff_ids']) && is_array($_POST['staff_ids']) ? array_filter($_POST['staff_ids']) : [],
                 'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
             ]);
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $job['company_id'] ?? null, 'transport', 'Nakliye işi güncellendi', 'Nakliye işi güncellendi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Nakliye işi güncellendi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Güncellenemedi: ' . $e->getMessage();
@@ -237,7 +272,8 @@ class TransportationJobsController
             if (!$job) continue;
             if ($companyId && ($job['company_id'] ?? '') !== $companyId) continue;
             TransportationJob::remove($this->pdo, $id);
-            Notification::createForCompany($this->pdo, $job['company_id'] ?? null, 'transport', 'Nakliye işi silindi', 'Nakliye işi silindi.');
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $job['company_id'] ?? null, 'transport', 'Nakliye işi silindi', 'Nakliye işi silindi.', ['actor_name' => $actorName]);
             $deleted++;
         }
         if ($deleted > 0) {

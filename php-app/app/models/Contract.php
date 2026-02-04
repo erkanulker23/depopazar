@@ -66,11 +66,13 @@ class Contract
         $stmt = $pdo->prepare(
             'SELECT c.*, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.id AS customer_id, cu.email AS customer_email, cu.phone AS customer_phone, cu.address AS customer_address,
              r.room_number, r.id AS room_id, r.monthly_price AS room_monthly_price,
-             w.name AS warehouse_name, w.id AS warehouse_id, w.company_id
+             w.name AS warehouse_name, w.id AS warehouse_id, w.company_id,
+             sb.first_name AS sold_by_first_name, sb.last_name AS sold_by_last_name
              FROM contracts c 
              INNER JOIN customers cu ON cu.id = c.customer_id 
              INNER JOIN rooms r ON r.id = c.room_id 
              INNER JOIN warehouses w ON w.id = r.warehouse_id 
+             LEFT JOIN users sb ON sb.id = c.sold_by_user_id AND sb.deleted_at IS NULL
              WHERE c.id = ? AND c.deleted_at IS NULL LIMIT 1'
         );
         $stmt->execute([$id]);

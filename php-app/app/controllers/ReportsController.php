@@ -14,7 +14,9 @@ class ReportsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $year = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : (int) date('Y');
-        $month = isset($_GET['month']) && $_GET['month'] !== '' ? (int) $_GET['month'] : (int) date('n');
+        $monthRaw = isset($_GET['month']) && $_GET['month'] !== '' ? (int) $_GET['month'] : (int) date('n');
+        $month = ($monthRaw === 0) ? (int) date('n') : $monthRaw;
+        $allMonths = ($monthRaw === 0);
         if ($companyId) {
             $totalUnpaid = Payment::sumUnpaidByCompany($this->pdo, $companyId);
             $paidThisMonth = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
@@ -30,7 +32,11 @@ class ReportsController
         }
         $paidInYear = $this->sumPaidInYear($companyId, $year);
         $occupancy = $this->getOccupancy($companyId);
-        $revenueByMonth = $this->getRevenueByMonth($companyId, $year, $month);
+        $revenueByMonth = $this->getRevenueByMonth($companyId, $year, $allMonths ? 0 : $month);
+        $paymentBreakdown = $this->getPaymentBreakdownByMethod($companyId, $year, $allMonths ? 0 : $month);
+        $monthDisplay = $monthRaw;
+        $pendingCustomers = $this->getCustomersWithPaymentsByStatus($companyId, 'pending');
+        $overdueCustomers = $this->getCustomersWithPaymentsByStatus($companyId, 'overdue');
         $pageTitle = 'Raporlar';
         require __DIR__ . '/../../views/reports/index.php';
     }
@@ -64,11 +70,11 @@ class ReportsController
         ];
     }
 
-    /** Seçilen yıl/ay için gelir raporu: toplam tutar, ödeme sayısı, ödeme listesi */
+    /** Seçilen yıl/ay için gelir raporu: toplam tutar, ödeme sayısı, ödeme listesi (month=0: tüm yıl) */
     private function getRevenueByMonth(?string $companyId, int $year, int $month): array
     {
-        $start = sprintf('%04d-%02d-01', $year, $month);
-        $end = date('Y-m-t', strtotime($start));
+        $start = $month === 0 ? sprintf('%04d-01-01', $year) : sprintf('%04d-%02d-01', $year, $month);
+        $end = $month === 0 ? sprintf('%04d-12-31', $year) : date('Y-m-t', strtotime($start));
         $sql = 'SELECT p.id, p.amount, p.paid_at, p.payment_number, c.contract_number
                 FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
@@ -132,6 +138,59 @@ class ReportsController
         $rows = $this->fetchBankAccountPaymentRows($companyId, $bankAccountId ?: null, $startDate, $endDate);
         $pageTitle = 'Banka Hesaplarına Göre Ödemeler';
         require __DIR__ . '/../../views/reports/bank_accounts.php';
+    }
+
+    /** Ödeme yöntemine göre: Nakit, Kredi kartı, Banka hesabı (month=0: tüm yıl) */
+    private function getPaymentBreakdownByMethod(?string $companyId, int $year, int $month): array
+    {
+        $start = $month === 0 ? sprintf('%04d-01-01', $year) : sprintf('%04d-%02d-01', $year, $month);
+        $end = $month === 0 ? sprintf('%04d-12-31', $year) : date('Y-m-t', strtotime($start));
+        $base = 'FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\'
+                AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
+        $params = [$start, $end];
+        if ($companyId) {
+            $base .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(p.amount), 0) AS t ' . $base . ' AND LOWER(TRIM(COALESCE(p.payment_method,""))) IN ("nakit", "cash")');
+        $stmt->execute($params);
+        $cashTotal = (float) $stmt->fetchColumn();
+        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(p.amount), 0) AS t ' . $base . ' AND (LOWER(TRIM(COALESCE(p.payment_method,""))) LIKE "%kredi%" OR LOWER(TRIM(COALESCE(p.payment_method,""))) = "credit_card")');
+        $stmt->execute($params);
+        $creditTotal = (float) $stmt->fetchColumn();
+        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(p.amount), 0) AS t ' . $base . ' AND (p.bank_account_id IS NOT NULL OR LOWER(TRIM(COALESCE(p.payment_method,""))) IN ("havale","bank_transfer","banka"))');
+        $stmt->execute($params);
+        $bankTotal = (float) $stmt->fetchColumn();
+        return [
+            'cash' => $cashTotal,
+            'credit_card' => $creditTotal,
+            'bank' => $bankTotal,
+        ];
+    }
+
+    /** Bekleyen veya gecikmiş ödemesi olan müşteriler (isim + borç) */
+    private function getCustomersWithPaymentsByStatus(?string $companyId, string $status): array
+    {
+        $sql = 'SELECT cu.id, cu.first_name, cu.last_name, SUM(p.amount) AS total_debt
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = ? ';
+        $params = [$status];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY cu.id, cu.first_name, cu.last_name ORDER BY total_debt DESC LIMIT 50';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     private function fetchBankAccountPaymentRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate): array

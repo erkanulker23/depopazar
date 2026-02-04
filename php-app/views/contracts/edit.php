@@ -9,12 +9,12 @@ ob_start();
         <i class="bi bi-chevron-right"></i>
         <span class="text-gray-700 font-medium">Düzenle</span>
     </div>
-    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Sözleşme Düzenle</h1>
-    <p class="text-xs text-gray-500 uppercase tracking-widest font-bold"><?= htmlspecialchars($contract['contract_number'] ?? '') ?></p>
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Sözleşme Düzenle</h1>
+    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($contract['contract_number'] ?? '') ?></p>
 </div>
 
 <?php if (!empty($_SESSION['flash_error'])): ?>
-    <div class="mb-4 p-3 rounded-xl bg-red-50 text-red-800 text-sm"><?= htmlspecialchars($_SESSION['flash_error']) ?></div>
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($_SESSION['flash_error']) ?></div>
     <?php unset($_SESSION['flash_error']); ?>
 <?php endif; ?>
 

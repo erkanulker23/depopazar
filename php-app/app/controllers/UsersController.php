@@ -169,7 +169,8 @@ class UsersController
         ];
         User::create($this->pdo, $data);
         $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $newCompanyId, 'user', 'Personel eklendi', $fullName . ' kullanıcı olarak eklendi.');
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $newCompanyId, 'user', 'Personel eklendi', $fullName . ' kullanıcı olarak eklendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Kullanıcı eklendi.';
         header('Location: /kullanicilar');
         exit;
@@ -224,9 +225,44 @@ class UsersController
         }
         User::update($this->pdo, $id, $data);
         $fullName = trim(($data['first_name'] ?? $profile['first_name'] ?? '') . ' ' . ($data['last_name'] ?? $profile['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.');
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Kullanıcı güncellendi.';
         header('Location: /kullanicilar/' . $id);
+        exit;
+    }
+
+    public function changePassword(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /kullanicilar');
+            exit;
+        }
+        $id = trim($_POST['id'] ?? '');
+        $password = trim($_POST['password'] ?? '');
+        if (!$id || !$password) {
+            $_SESSION['flash_error'] = 'Kullanıcı ve şifre gerekli.';
+            header('Location: /kullanicilar');
+            exit;
+        }
+        $profile = User::findOne($this->pdo, $id);
+        if (!$profile) {
+            $_SESSION['flash_error'] = 'Kullanıcı bulunamadı.';
+            header('Location: /kullanicilar');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
+        if (!$canManage || ($companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin')) {
+            $_SESSION['flash_error'] = 'Bu kullanıcının şifresini değiştirme yetkiniz yok.';
+            header('Location: /kullanicilar');
+            exit;
+        }
+        User::update($this->pdo, $id, ['password' => $password]);
+        $_SESSION['flash_success'] = 'Şifre güncellendi.';
+        header('Location: /kullanicilar');
         exit;
     }
 
@@ -263,7 +299,8 @@ class UsersController
         }
         $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
         User::remove($this->pdo, $id);
-        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.');
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Kullanıcı silindi.';
         header('Location: /kullanicilar');
         exit;

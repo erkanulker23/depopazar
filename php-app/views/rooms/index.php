@@ -25,15 +25,15 @@ ob_start();
 </div>
 
 <?php if (!empty($flashSuccess)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-green-50 text-green-800 text-sm flex items-center justify-between">
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm flex items-center justify-between">
         <span><?= htmlspecialchars($flashSuccess) ?></span>
-        <button type="button" onclick="this.parentElement.remove()" class="text-green-600 hover:text-green-800"><i class="bi bi-x-lg"></i></button>
+        <button type="button" onclick="this.parentElement.remove()" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"><i class="bi bi-x-lg"></i></button>
     </div>
 <?php endif; ?>
 <?php if (!empty($flashError)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-red-50 text-red-800 text-sm flex items-center justify-between">
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm flex items-center justify-between">
         <span><?= htmlspecialchars($flashError) ?></span>
-        <button type="button" onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800"><i class="bi bi-x-lg"></i></button>
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"><i class="bi bi-x-lg"></i></button>
     </div>
 <?php endif; ?>
 
@@ -54,14 +54,14 @@ ob_start();
                     <tr>
                         <th class="px-4 py-3 text-left"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="selectAllRooms" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" title="Tümünü seç"></label></th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Oda No</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Depo</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Alan (m²)</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Aylık Fiyat</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Durum</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-widest">İşlem</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Depo</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Alan (m²)</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Fiyat</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                     <?php foreach ($rooms as $r): ?>
                         <?php
                         $status = $r['status'] ?? 'empty';
@@ -77,7 +77,7 @@ ob_start();
                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $badgeClass ?>"><?= $statusLabels[$status] ?? $status ?></span>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 mr-1">Detay</a>
+                                <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 mr-1" title="Detay"><i class="bi bi-eye"></i></a>
                                 <button type="button" onclick='openEditRoom(<?= json_encode([
                                     'id' => $r['id'],
                                     'room_number' => $r['room_number'],
@@ -90,10 +90,10 @@ ob_start();
                                     'corridor' => $r['corridor'] ?? '',
                                     'description' => $r['description'] ?? '',
                                     'notes' => $r['notes'] ?? '',
-                                ]) ?>)' class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1">Düzenle</button>
+                                ]) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
                                 <form method="post" action="/odalar/sil" class="inline" onsubmit="return confirm('Bu odayı silmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($r['id']) ?>">
-                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Sil</button>
+                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -108,9 +108,9 @@ ob_start();
 <div id="addRoomModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" onclick="closeModal('addRoomModal')"></div>
-        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Yeni Oda</h3>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Yeni Oda</h3>
                 <button type="button" onclick="closeModal('addRoomModal')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><i class="bi bi-x-lg"></i></button>
             </div>
             <form method="post" action="/odalar/ekle">
@@ -170,7 +170,7 @@ ob_start();
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-2">
-                    <button type="button" onclick="closeModal('addRoomModal')" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50">İptal</button>
+                    <button type="button" onclick="closeModal('addRoomModal')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">İptal</button>
                     <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
@@ -182,9 +182,9 @@ ob_start();
 <div id="editRoomModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" onclick="closeModal('editRoomModal')"></div>
-        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Oda Düzenle</h3>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Oda Düzenle</h3>
                 <button type="button" onclick="closeModal('editRoomModal')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><i class="bi bi-x-lg"></i></button>
             </div>
             <form method="post" action="/odalar/guncelle">
@@ -245,7 +245,7 @@ ob_start();
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-2">
-                    <button type="button" onclick="closeModal('editRoomModal')" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50">İptal</button>
+                    <button type="button" onclick="closeModal('editRoomModal')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">İptal</button>
                     <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
                 </div>
             </form>
@@ -294,6 +294,18 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
     });
     document.querySelectorAll('.room-cb').forEach(function(cb) { cb.addEventListener('change', update); });
     if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.room-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); update(); });
+})();
+(function() {
+    var url = new URL(window.location.href);
+    if (url.searchParams.get('add') === '1') {
+        var whId = url.searchParams.get('warehouse_id');
+        if (whId) {
+            var sel = document.querySelector('#addRoomModal select[name="warehouse_id"]');
+            if (sel) { sel.value = whId; }
+        }
+        openModal('addRoomModal');
+        history.replaceState({}, '', '/odalar' + (whId ? '?warehouse_id=' + whId : ''));
+    }
 })();
 </script>
 <?php

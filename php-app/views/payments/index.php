@@ -18,10 +18,16 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 <?php
 $payStatus = isset($_GET['status']) ? $_GET['status'] : '';
 $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
+$dateFrom = isset($_GET['date_from']) ? $_GET['date_from'] : '';
+$dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : '';
+$totalPages = $totalPages ?? 1;
+$page = $page ?? 1;
 ?>
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <form method="get" action="/odemeler" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <input type="search" name="q" value="<?= htmlspecialchars($payQ) ?>" placeholder="Ödeme no, sözleşme, müşteri ara..." class="flex-1 min-w-0 sm:w-48 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="date" name="date_from" value="<?= htmlspecialchars($dateFrom) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi başlangıç">
+        <input type="date" name="date_to" value="<?= htmlspecialchars($dateTo) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi bitiş">
         <select name="status" class="btn-touch flex-1 min-w-0 sm:w-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
             <option value="">Tüm Durumlar</option>
             <option value="unpaid" <?= $payStatus === 'unpaid' ? 'selected' : '' ?>>Bekleyen / Gecikmiş</option>
@@ -31,7 +37,7 @@ $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
             <option value="cancelled" <?= $payStatus === 'cancelled' ? 'selected' : '' ?>>İptal</option>
         </select>
         <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
-        <?php if ($payStatus !== '' || $payQ !== ''): ?><a href="/odemeler" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
+        <?php if ($payStatus !== '' || $payQ !== '' || $dateFrom !== '' || $dateTo !== ''): ?><a href="/odemeler" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
     </form>
     <button type="button" onclick="openCollectModal()" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
         <i class="bi bi-bank mr-2"></i> Ödeme Al
@@ -39,10 +45,10 @@ $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
 </div>
 
 <?php if ($flashSuccess): ?>
-    <div class="mb-4 p-3 rounded-xl bg-green-50 text-green-800 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
 <?php endif; ?>
 <?php if ($flashError): ?>
-    <div class="mb-4 p-3 rounded-xl bg-red-50 text-red-800 text-sm"><?= htmlspecialchars($flashError) ?></div>
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -97,6 +103,19 @@ $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
                 </tbody>
             </table>
         </div>
+        <?php if ($totalPages > 1): ?>
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-600 flex flex-wrap items-center justify-between gap-2">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Sayfa <?= $page ?> / <?= $totalPages ?> (<?= $totalPayments ?? count($payments) ?> kayıt)</span>
+            <div class="flex gap-1">
+                <?php
+                $qp = array_filter(['q' => $payQ, 'status' => $payStatus, 'date_from' => $dateFrom, 'date_to' => $dateTo]);
+                $base = '/odemeler' . (empty($qp) ? '' : '?' . http_build_query($qp));
+                $sep = strpos($base, '?') !== false ? '&' : '?';
+                if ($page > 1): ?><a href="<?= $base . $sep ?>page=<?= $page - 1 ?>" class="px-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">← Önceki</a><?php endif; ?>
+                <?php if ($page < $totalPages): ?><a href="<?= $base . $sep ?>page=<?= $page + 1 ?>" class="px-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">Sonraki →</a><?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 
@@ -107,13 +126,13 @@ $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-600">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Ödeme Al</h3>
-                <button type="button" onclick="closeCollectModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><i class="bi bi-x-lg"></i></button>
+                <button type="button" onclick="closeCollectModal()" class="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><i class="bi bi-x-lg"></i></button>
             </div>
-            <div id="collectError" class="hidden mb-4 p-3 rounded-xl bg-red-50 text-red-800 text-sm"></div>
+            <div id="collectError" class="hidden mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"></div>
 
             <!-- Adım 1: Müşteri seç -->
             <div id="stepCustomer" class="step-content">
-                <p class="text-sm text-gray-600 mb-4">Ödeme almak istediğiniz müşteriyi seçin.</p>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme almak istediğiniz müşteriyi seçin.</p>
                 <input type="text" id="customerSearch" placeholder="Müşteri ara..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm mb-4 focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                 <div class="max-h-64 overflow-y-auto space-y-2" id="customerList">
                     <?php foreach ($customersWithDebt as $c): ?>
@@ -122,48 +141,48 @@ $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
                         $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));
                         ?>
                         <button type="button" onclick="selectCustomer('<?= htmlspecialchars($c['id']) ?>', <?= htmlspecialchars(json_encode($c['payments'])) ?>)" class="w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between">
-                            <span class="font-medium text-gray-900"><?= htmlspecialchars($name) ?></span>
-                            <span class="text-sm font-semibold text-amber-700"><?= fmtMoney($total) ?> ₺</span>
+                            <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($name) ?></span>
+                            <span class="text-sm font-semibold text-amber-700 dark:text-amber-300"><?= fmtMoney($total) ?> ₺</span>
                         </button>
                     <?php endforeach; ?>
                     <?php if (empty($customersWithDebt)): ?>
-                        <p class="text-center text-gray-500 py-4">Borcu olan müşteri yok.</p>
+                        <p class="text-center text-gray-500 dark:text-gray-400 py-4">Borcu olan müşteri yok.</p>
                     <?php endif; ?>
                 </div>
             </div>
 
             <!-- Adım 2: Ödeme seç -->
             <div id="stepPayment" class="step-content hidden">
-                <button type="button" onclick="collectStep(1)" class="text-sm text-emerald-600 hover:underline mb-4">← Müşteri seç</button>
-                <p class="text-sm text-gray-600 mb-4">Ödemeyi seçin.</p>
+                <button type="button" onclick="collectStep(1)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline mb-4">← Müşteri seç</button>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödemeyi seçin.</p>
                 <div id="paymentList" class="space-y-2 max-h-48 overflow-y-auto"></div>
             </div>
 
             <!-- Adım 3: Ödeme yöntemi -->
             <div id="stepMethod" class="step-content hidden">
-                <button type="button" onclick="collectStep(2)" class="text-sm text-emerald-600 hover:underline mb-4">← Ödeme seç</button>
-                <div id="selectedAmountSummary" class="mb-4 p-4 rounded-xl bg-blue-50 text-blue-800 text-sm font-medium"></div>
-                <p class="text-sm text-gray-600 mb-4">Ödeme yöntemini seçin.</p>
+                <button type="button" onclick="collectStep(2)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline mb-4">← Ödeme seç</button>
+                <div id="selectedAmountSummary" class="mb-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-sm font-medium"></div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme yöntemini seçin.</p>
                 <div class="space-y-3">
                     <button type="button" onclick="setPaymentMethod('cash')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 flex items-center gap-3 text-left" data-method="cash">
                         <i class="bi bi-cash-stack text-2xl text-green-600"></i>
                         <div>
                             <p class="font-semibold text-gray-900 dark:text-white">Nakit</p>
-                            <p class="text-xs text-gray-500">Nakit ödeme al</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Nakit ödeme al</p>
                         </div>
                     </button>
                     <button type="button" onclick="setPaymentMethod('bank_transfer')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 flex items-center gap-3 text-left" data-method="bank_transfer">
                         <i class="bi bi-bank text-2xl text-blue-600"></i>
                         <div>
                             <p class="font-semibold text-gray-900 dark:text-white">Havale</p>
-                            <p class="text-xs text-gray-500">Banka havalesi ile ödeme al</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Banka havalesi ile ödeme al</p>
                         </div>
                     </button>
                     <button type="button" onclick="setPaymentMethod('credit_card')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 flex items-center gap-3 text-left" data-method="credit_card">
                         <i class="bi bi-credit-card text-2xl text-purple-600"></i>
                         <div>
                             <p class="font-semibold text-gray-900 dark:text-white">Kredi Kartı</p>
-                            <p class="text-xs text-gray-500">PayTR ile online ödeme</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">PayTR ile online ödeme</p>
                         </div>
                     </button>
                 </div>
@@ -177,9 +196,9 @@ $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
                     <div id="collectFormIds"></div>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Banka Hesabı <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka Hesabı <span class="text-red-500">*</span></label>
                             <?php if (empty($bankAccounts)): ?>
-                                <p class="text-sm text-amber-700 bg-amber-50 p-3 rounded-xl">Aktif banka hesabı yok. Ayarlar → Banka Hesaplarından ekleyin.</p>
+                                <p class="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">Aktif banka hesabı yok. Ayarlar → Banka Hesaplarından ekleyin.</p>
                             <?php else: ?>
                                 <select name="bank_account_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                                     <option value="">Seçin</option>
@@ -190,11 +209,11 @@ $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
                             <?php endif; ?>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">İşlem No (opsiyonel)</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İşlem No (opsiyonel)</label>
                             <input type="text" name="transaction_id" placeholder="Havale işlem numarası" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Not (opsiyonel)</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not (opsiyonel)</label>
                             <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                         </div>
                         <div class="flex gap-2 pt-2">
@@ -207,19 +226,19 @@ $payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
 
             <!-- Nakit / Kredi kartı için tek butonla gönderim -->
             <div id="stepSubmitSimple" class="step-content hidden">
-                <button type="button" onclick="collectStep(3)" class="text-sm text-emerald-600 hover:underline mb-4">← Ödeme yöntemi</button>
+                <button type="button" onclick="collectStep(3)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline mb-4">← Ödeme yöntemi</button>
                 <form id="collectFormSimple" method="post" action="/odemeler/odeme-al">
                     <input type="hidden" name="payment_method" id="form_payment_method_simple" value="">
                     <div id="collectFormSimpleIds"></div>
                     <div class="flex gap-2 pt-2">
-                        <button type="button" onclick="collectStep(3)" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">İptal</button>
+                        <button type="button" onclick="collectStep(3)" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">İptal</button>
                         <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
                     </div>
                 </form>
             </div>
             <div id="stepCreditCardNote" class="step-content hidden">
-                <button type="button" onclick="collectStep(3)" class="text-sm text-emerald-600 hover:underline mb-4">← Ödeme yöntemi</button>
-                <p class="text-amber-700 bg-amber-50 p-4 rounded-xl text-sm">Kredi kartı ile ödeme için PayTR entegrasyonu gereklidir. Ayarlar sayfasından PayTR bilgilerinizi girip aktif edin. Şu an sadece Nakit veya Havale ile kayıt yapabilirsiniz.</p>
+                <button type="button" onclick="collectStep(3)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline mb-4">← Ödeme yöntemi</button>
+                <p class="text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl text-sm">Kredi kartı ile ödeme için PayTR entegrasyonu gereklidir. Ayarlar sayfasından PayTR bilgilerinizi girip aktif edin. Şu an sadece Nakit veya Havale ile kayıt yapabilirsiniz.</p>
             </div>
         </div>
     </div>
@@ -261,8 +280,8 @@ function selectCustomer(customerId, payments) {
         total += parseFloat(p.amount || 0);
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'w-full text-left p-4 border border-gray-200 rounded-xl hover:bg-gray-50 flex justify-between items-center';
-        btn.innerHTML = '<div><span class="font-medium">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="font-semibold">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
+        btn.className = 'w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center';
+        btn.innerHTML = '<div><span class="font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500 dark:text-gray-400">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="font-semibold text-gray-900 dark:text-white">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
         btn.onclick = function() { selectOnePayment(p); };
         list.appendChild(btn);
     });
@@ -276,9 +295,9 @@ function selectOnePayment(p) {
     document.getElementById('stepMethod').classList.remove('hidden');
 }
 function setPaymentMethod(method) {
-    document.querySelectorAll('.collect-method').forEach(function(b) { b.classList.remove('border-emerald-500', 'bg-emerald-50'); b.classList.add('border-gray-200'); });
+    document.querySelectorAll('.collect-method').forEach(function(b) { b.classList.remove('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-900/20'); b.classList.add('border-gray-200', 'dark:border-gray-600'); });
     var btn = document.querySelector('.collect-method[data-method="' + method + '"]');
-    if (btn) { btn.classList.add('border-emerald-500', 'bg-emerald-50'); btn.classList.remove('border-gray-200'); }
+    if (btn) { btn.classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-900/20'); btn.classList.remove('border-gray-200', 'dark:border-gray-600'); }
     if (method === 'bank_transfer') {
         document.getElementById('stepMethod').classList.add('hidden');
         document.getElementById('stepBankTransfer').classList.remove('hidden');
@@ -322,8 +341,8 @@ function buildPaymentListForSelect() {
         total += parseFloat(p.amount || 0);
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'w-full text-left p-4 border border-gray-200 rounded-xl hover:bg-gray-50 flex justify-between items-center';
-        btn.innerHTML = '<div><span class="font-medium">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="font-semibold">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
+        btn.className = 'w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center';
+        btn.innerHTML = '<div><span class="font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500 dark:text-gray-400">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="font-semibold text-gray-900 dark:text-white">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
         btn.onclick = function() { selectOnePayment(p); };
         list.appendChild(btn);
     });

@@ -98,17 +98,17 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Dizinler ve izinler
+# Dizinler ve izinler (uygulama php-app/public/uploads kullanıyor)
 # -----------------------------------------------------------------------------
 echo -e "${YELLOW}[6/6] Dizin izinleri ayarlanıyor...${NC}"
-mkdir -p "$ROOT/php-app/uploads"
-chmod -R 755 "$ROOT/php-app/uploads" 2>/dev/null || true
+mkdir -p "$ROOT/php-app/public/uploads/company"
+chmod -R 755 "$ROOT/php-app/public/uploads" 2>/dev/null || true
 
 # Forge'da PHP-FPM kullanıcısı (forge veya www-data)
 WEB_USER="${WEB_USER:-$FORGE_SSH_USER}"
 WEB_USER="${WEB_USER:-www-data}"
 if id "$WEB_USER" &>/dev/null 2>&1; then
-  chown -R "$WEB_USER:$WEB_USER" "$ROOT/php-app/uploads" 2>/dev/null || true
+  chown -R "$WEB_USER:$WEB_USER" "$ROOT/php-app/public/uploads" 2>/dev/null || true
 fi
 
 echo -e "${GREEN}Deploy tamamlandı.${NC}"

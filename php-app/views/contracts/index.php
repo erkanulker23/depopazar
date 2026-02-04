@@ -42,15 +42,15 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
 </div>
 
 <?php if (!empty($flashSuccess)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-green-50 text-green-800 text-sm flex items-center justify-between">
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm flex items-center justify-between">
         <span><?= htmlspecialchars($flashSuccess) ?></span>
-        <button type="button" onclick="this.parentElement.remove()" class="text-green-600 hover:text-green-800"><i class="bi bi-x-lg"></i></button>
+        <button type="button" onclick="this.parentElement.remove()" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"><i class="bi bi-x-lg"></i></button>
     </div>
 <?php endif; ?>
 <?php if (!empty($flashError)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-red-50 text-red-800 text-sm flex items-center justify-between">
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm flex items-center justify-between">
         <span><?= htmlspecialchars($flashError) ?></span>
-        <button type="button" onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800"><i class="bi bi-x-lg"></i></button>
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"><i class="bi bi-x-lg"></i></button>
     </div>
 <?php endif; ?>
 
@@ -101,25 +101,27 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Müşteri</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Depo / Oda</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Başlangıç</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Bitiş</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Fiyat</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                    <?php foreach ($contracts as $c): ?>
+                    <?php $contractDebt = $contractDebt ?? []; foreach ($contracts as $c): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="contract-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($c['id'] ?? '') ?>"></label></td>
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? '')) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($c['start_date'] ?? '')) ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($c['end_date'] ?? '')) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($c['monthly_price'] ?? 0) ?></td>
                             <td class="px-4 py-3">
-                                <?php if (!empty($c['is_active'])): ?>
+                                <?php
+                                $debt = $contractDebt[$c['id'] ?? ''] ?? ['overdue' => 0, 'pending' => 0];
+                                if (!empty($c['is_active'])): ?>
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
+                                    <?php if ($debt['overdue'] > 0): ?><span class="ml-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">Gecikmiş</span><?php endif; ?>
+                                    <?php if ($debt['overdue'] === 0 && $debt['pending'] > 0): ?><span class="ml-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">Ödenmedi</span><?php endif; ?>
                                 <?php else: ?>
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-300">Sonlandı</span>
                                 <?php endif; ?>

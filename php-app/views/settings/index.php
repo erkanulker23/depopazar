@@ -5,20 +5,21 @@ $tabs = [
     'paytr' => ['label' => 'PayTR', 'icon' => 'credit-card'],
     'banka' => ['label' => 'Banka Hesapları', 'icon' => 'bank'],
     'eposta' => ['label' => 'E-posta Ayarları', 'icon' => 'envelope'],
+    'sablonlar' => ['label' => 'E-posta Şablonları', 'icon' => 'file-earmark-text'],
 ];
 $activeTab = $activeTab ?? 'firma';
 ob_start();
 ?>
 <div class="mb-6">
-    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Ayarlar</h1>
-    <p class="text-xs text-gray-500 uppercase tracking-widest font-bold">Firma ve entegrasyon ayarları</p>
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Ayarlar</h1>
+    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Firma ve entegrasyon ayarları</p>
 </div>
 
 <?php if (!empty($flashSuccess)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-green-50 text-green-800 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
 <?php endif; ?>
 <?php if (!empty($flashError)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-red-50 text-red-800 text-sm"><?= htmlspecialchars($flashError) ?></div>
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
 <!-- Sekmeler - mobilde yatay scroll -->
@@ -38,7 +39,17 @@ ob_start();
         <div class="p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-building text-emerald-600"></i> Firma Bilgileri</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Proje adı uygulama başlığında ve SEO’da kullanılır.</p>
-            <form method="post" action="/ayarlar/firma-guncelle" class="space-y-4">
+            <form method="post" action="/ayarlar/firma-guncelle" enctype="multipart/form-data" class="space-y-4">
+                <?php if (!empty($company['logo_url'])): ?>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Mevcut Firma Logosu</label>
+                    <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-16 object-contain">
+                </div>
+                <?php endif; ?>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Firma Logosu</label>
+                    <input type="file" name="logo" accept="image/jpeg,image/png,image/gif,image/webp" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Firma Adı</label>
@@ -71,6 +82,13 @@ ob_start();
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Adres</label>
                         <textarea name="address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($company['address'] ?? '') ?></textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Şirketin Sözleşmesi (PDF)</label>
+                        <?php if (!empty($company['contract_template_url'])): ?>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Mevcut: <a href="<?= htmlspecialchars($company['contract_template_url']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline">Sözleşmeyi görüntüle</a></p>
+                        <?php endif; ?>
+                        <input type="file" name="contract_pdf" accept=".pdf,application/pdf" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">
                     </div>
                 </div>
                 <div class="pt-2">
@@ -311,11 +329,129 @@ ob_start();
                         <span class="text-sm text-gray-700 dark:text-gray-300">E-posta bildirimleri aktif</span>
                     </label>
                 </div>
-                <div class="pt-4">
+                <div class="pt-4 flex flex-wrap gap-3">
                     <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
+            <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">E-posta Bağlantı Testi</h3>
+                <form method="post" action="/ayarlar/eposta-test" class="flex flex-wrap items-end gap-2">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Test e-postası gönderilecek adres</label>
+                        <input type="email" name="test_email" required placeholder="test@example.com" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Test Et</button>
+                </form>
+            </div>
         </div>
+    <?php elseif ($activeTab === 'sablonlar'):
+        $tplDefaults = [
+            'contract_created_template' => "Sayın {musteri_adi},\n\nSözleşmeniz oluşturuldu. Sözleşme No: {sozlesme_no}\n\nİyi günler dileriz.",
+            'payment_received_template' => "Sayın {musteri_adi},\n\n{tutar} tutarındaki ödemeniz alınmıştır.\n\nTeşekkür ederiz.",
+            'payment_reminder_template' => "Sayın {musteri_adi},\n\nVadesi {vade} olan {tutar} tutarındaki ödemenizin geciktiğini hatırlatırız.\n\nLütfen en kısa sürede ödeme yapınız.",
+            'admin_contract_created_template' => "Yeni sözleşme: {sozlesme_no} - {musteri_adi}",
+            'admin_payment_received_template' => "Ödeme alındı: {musteri_adi} - {tutar}",
+        ];
+        $tplContractCreated = !empty(trim($mailSettings['contract_created_template'] ?? '')) ? $mailSettings['contract_created_template'] : $tplDefaults['contract_created_template'];
+        $tplPaymentReceived = !empty(trim($mailSettings['payment_received_template'] ?? '')) ? $mailSettings['payment_received_template'] : $tplDefaults['payment_received_template'];
+        $tplPaymentReminder = !empty(trim($mailSettings['payment_reminder_template'] ?? '')) ? $mailSettings['payment_reminder_template'] : $tplDefaults['payment_reminder_template'];
+        $tplAdminContract = !empty(trim($mailSettings['admin_contract_created_template'] ?? '')) ? $mailSettings['admin_contract_created_template'] : $tplDefaults['admin_contract_created_template'];
+        $tplAdminPayment = !empty(trim($mailSettings['admin_payment_received_template'] ?? '')) ? $mailSettings['admin_payment_received_template'] : $tplDefaults['admin_payment_received_template'];
+        $fromName = $mailSettings['from_name'] ?? $company['name'] ?? 'DepoPazar';
+        $fromEmail = $mailSettings['from_email'] ?? $company['email'] ?? 'bildirim@firma.com';
+    ?>
+        <div class="p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-file-earmark-text text-emerald-600"></i> E-posta Şablonları</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Müşteriye ve yöneticiye gidecek e-postaların metinlerini düzenleyebilirsiniz. Kullanılabilir değişkenler: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{musteri_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{tutar}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{vade}</code></p>
+            <form method="post" action="/ayarlar/sablonlar-guncelle" class="space-y-6">
+                <div class="space-y-4">
+                    <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                        <h4 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3"><i class="bi bi-person"></i> Müşteriye Giden</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme oluşturuldu</label>
+                                    <button type="button" onclick="openPreviewModal('contract_created_template', 'Sözleşme Oluşturuldu')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
+                                </div>
+                                <textarea name="contract_created_template" id="contract_created_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplContractCreated) ?></textarea>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödeme alındı</label>
+                                    <button type="button" onclick="openPreviewModal('payment_received_template', 'Ödeme Alındı')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
+                                </div>
+                                <textarea name="payment_received_template" id="payment_received_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplPaymentReceived) ?></textarea>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Gecikme hatırlatması</label>
+                                    <button type="button" onclick="openPreviewModal('payment_reminder_template', 'Gecikme Hatırlatması')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
+                                </div>
+                                <textarea name="payment_reminder_template" id="payment_reminder_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplPaymentReminder) ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                        <h4 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3"><i class="bi bi-shield-check"></i> Yöneticiye Giden</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme bildirimi</label>
+                                    <button type="button" onclick="openPreviewModal('admin_contract_created_template', 'Sözleşme Bildirimi')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
+                                </div>
+                                <textarea name="admin_contract_created_template" id="admin_contract_created_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplAdminContract) ?></textarea>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödeme bildirimi</label>
+                                    <button type="button" onclick="openPreviewModal('admin_payment_received_template', 'Ödeme Bildirimi')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
+                                </div>
+                                <textarea name="admin_payment_received_template" id="admin_payment_received_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplAdminPayment) ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Şablonları Kaydet</button>
+            </form>
+        </div>
+
+        <!-- Modal: E-posta önizleme -->
+        <div id="emailPreviewModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('emailPreviewModal').classList.add('hidden')"></div>
+                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">E-posta Önizleme</h3>
+                        <button type="button" onclick="document.getElementById('emailPreviewModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                    <div id="emailPreviewContent" class="p-6 overflow-y-auto flex-1">
+                        <!-- İçerik JS ile doldurulacak -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+        var fromName = <?= json_encode($fromName) ?>;
+        var fromEmail = <?= json_encode($fromEmail) ?>;
+        var sampleVars = { musteri_adi: 'Ahmet Yılmaz', sozlesme_no: 'SOZ-2026-0001', tutar: '1.500,00 ₺', vade: '15.02.2026' };
+        function openPreviewModal(textareaId, subject) {
+            var ta = document.getElementById(textareaId);
+            if (!ta) return;
+            var body = (ta.value || '').replace(/\{musteri_adi\}/g, sampleVars.musteri_adi).replace(/\{sozlesme_no\}/g, sampleVars.sozlesme_no).replace(/\{tutar\}/g, sampleVars.tutar).replace(/\{vade\}/g, sampleVars.vade);
+            var html = '<div class="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden shadow-sm">' +
+                '<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">' +
+                '<div class="flex items-center gap-2 mb-2"><span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"><i class="bi bi-envelope text-sm"></i></span>' +
+                '<div><div class="text-sm font-medium text-gray-900 dark:text-white">' + escapeHtml(subject) + '</div>' +
+                '<div class="text-xs text-gray-500 dark:text-gray-400">' + escapeHtml(fromName) + ' &lt;' + escapeHtml(fromEmail) + '&gt;</div></div></div>' +
+                '</div>' +
+                '<div class="p-5 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-sans leading-relaxed bg-white dark:bg-gray-800 min-h-[120px]">' + escapeHtml(body) + '</div>' +
+                '</div>' +
+                '<p class="text-xs text-gray-500 dark:text-gray-400 mt-3 flex items-center gap-1"><i class="bi bi-info-circle"></i> Değişkenler örnek verilerle doldurulmuştur.</p>';
+            document.getElementById('emailPreviewContent').innerHTML = html;
+            document.getElementById('emailPreviewModal').classList.remove('hidden');
+        }
+        function escapeHtml(s) { var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+        </script>
     <?php endif; ?>
 </div>
 

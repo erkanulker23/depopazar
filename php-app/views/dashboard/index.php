@@ -3,91 +3,91 @@ $currentPage = 'genel-bakis';
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 ?>
-<div class="mb-6">
-    <h1 class="page-title gradient-title">Dashboard</h1>
-    <p class="page-subtitle uppercase tracking-widest font-bold">Sistem özeti</p>
+<div class="mb-8">
+    <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent">Genel Bakış</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Sistem özeti ve hızlı erişim</p>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="stat-card min-h-[100px]">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <a href="/depolar" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300 group block">
         <div class="flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Toplam Depo</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $warehousesCount ?></p>
             </div>
-            <div class="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex-shrink-0">
-                <i class="bi bi-building text-emerald-600 dark:text-emerald-400 text-xl"></i>
+            <div class="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex-shrink-0 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-building text-white text-xl"></i>
             </div>
         </div>
-    </div>
-    <div class="stat-card min-h-[100px]">
+    </a>
+    <a href="/odalar" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 group block">
         <div class="flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Toplam Oda</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $roomsCount ?></p>
                 <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-bold"><?= (int) $occupiedRooms ?> Dolu / <?= (int) $emptyRooms ?> Boş</p>
             </div>
-            <div class="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex-shrink-0">
-                <i class="bi bi-grid-3x3 text-blue-600 dark:text-blue-400 text-xl"></i>
+            <div class="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex-shrink-0 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-grid-3x3 text-white text-xl"></i>
             </div>
         </div>
-    </div>
-    <div class="stat-card min-h-[100px]">
+    </a>
+    <a href="/musteriler" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 group block">
         <div class="flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Toplam Müşteri</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $customersCount ?></p>
                 <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-bold"><?= (int) $activeContracts ?> Aktif Sözleşme</p>
             </div>
-            <div class="p-2.5 bg-purple-50 dark:bg-purple-900/30 rounded-xl flex-shrink-0">
-                <i class="bi bi-people text-purple-600 dark:text-purple-400 text-xl"></i>
+            <div class="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex-shrink-0 shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-people text-white text-xl"></i>
             </div>
         </div>
-    </div>
-    <div class="stat-card min-h-[100px]">
+    </a>
+    <div class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300 group">
         <div class="flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Bu Ay Gelir</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($monthlyRevenue) ?> ₺</p>
+                <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400"><?= fmtMoney($monthlyRevenue) ?> ₺</p>
             </div>
-            <div class="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex-shrink-0">
-                <i class="bi bi-bank text-emerald-600 dark:text-emerald-400 text-xl"></i>
+            <div class="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex-shrink-0 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-currency-dollar text-white text-xl"></i>
             </div>
         </div>
     </div>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <a href="/odemeler" class="block stat-card border-l-4 border-yellow-500 min-h-[100px] hover:scale-[1.01] active:scale-[0.99] transition-transform">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+    <a href="/odemeler?status=pending" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 group block">
         <div class="flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 overflow-hidden">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Bekleyen Ödeme</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $pendingPayments ?></p>
             </div>
-            <div class="p-2.5 bg-yellow-50 dark:bg-yellow-900/30 rounded-xl flex-shrink-0">
-                <i class="bi bi-credit-card text-yellow-600 dark:text-yellow-400 text-xl"></i>
+            <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-credit-card text-white text-xl"></i>
             </div>
         </div>
     </a>
-    <a href="/odemeler" class="block stat-card border-l-4 border-red-500 min-h-[100px] hover:scale-[1.01] active:scale-[0.99] transition-transform">
+    <a href="/odemeler?status=overdue" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-red-500/10 transition-all duration-300 group block">
         <div class="flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 overflow-hidden">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Geciken Ödeme</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $overduePayments ?></p>
             </div>
-            <div class="p-2.5 bg-red-50 dark:bg-red-900/30 rounded-xl flex-shrink-0">
-                <i class="bi bi-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+            <div class="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex-shrink-0 shadow-lg shadow-red-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-exclamation-triangle text-white text-xl"></i>
             </div>
         </div>
     </a>
-    <a href="/odemeler" class="block stat-card border-l-4 border-gray-900 dark:border-gray-500 min-h-[100px] hover:scale-[1.01] active:scale-[0.99] transition-transform">
+    <a href="/odemeler" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-rose-500/10 transition-all duration-300 group block">
         <div class="flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 overflow-hidden">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Toplam Borç</p>
-                <p class="text-2xl font-bold text-red-600 dark:text-red-400"><?= fmtMoney($totalDebt) ?> ₺</p>
+                <p class="text-2xl font-bold text-red-600 dark:text-red-400 break-words"><?= fmtMoney($totalDebt) ?> ₺</p>
             </div>
-            <div class="p-2.5 bg-gray-100 dark:bg-gray-700 rounded-xl flex-shrink-0">
-                <i class="bi bi-bar-chart text-gray-600 dark:text-gray-400 text-xl"></i>
+            <div class="p-3 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl flex-shrink-0 shadow-lg shadow-rose-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-cash-stack text-white text-xl"></i>
             </div>
         </div>
     </a>
@@ -95,9 +95,9 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 
 <?php $upcomingPayments = $upcomingPayments ?? []; $expiringContracts = $expiringContracts ?? []; ?>
 <?php if (!empty($upcomingPayments) || !empty($expiringContracts)): ?>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-6">
     <?php if (!empty($upcomingPayments)): ?>
-    <div class="card-modern p-5">
+    <div class="card-modern p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
         <h2 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
             <i class="bi bi-calendar-event text-amber-600 dark:text-amber-400"></i> Önümüzdeki 10 Gün Vadesi Gelen Ödemeler
         </h2>
@@ -113,7 +113,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     </div>
     <?php endif; ?>
     <?php if (!empty($expiringContracts)): ?>
-    <div class="card-modern p-5">
+    <div class="card-modern p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
         <h2 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
             <i class="bi bi-file-earmark-x text-blue-600 dark:text-blue-400"></i> 30 Gün İçinde Süresi Dolan Sözleşmeler
         </h2>
