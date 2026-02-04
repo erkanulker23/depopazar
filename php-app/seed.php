@@ -1,7 +1,8 @@
 #!/usr/bin/env php
 <?php
 /**
- * İlk kurulum seed: Super admin kullanıcı yoksa oluşturur.
+ * İlk kurulum seed: En az bir şirket ve super admin kullanıcı oluşturur.
+ * Super_admin ayarlar sayfasına girebilmek için en az bir şirket gerekir (getCompanyIdForUser ilk şirketi döner).
  * Deploy sırasında deploy.sh tarafından çalıştırılır.
  *
  * Komut satırından (proje kökünden):
@@ -22,6 +23,17 @@ if (!is_readable(APP_ROOT . '/config/db.php')) {
 
 $pdo = require APP_ROOT . '/config/db.php';
 
+// 1) En az bir şirket yoksa varsayılan şirket oluştur (super_admin ayarlar sayfasına girebilsin diye)
+$seedCompanyId = 'b2c3d4e5-f6a7-8901-bcde-f23456789012';
+$stmt = $pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
+if (!$stmt->fetch()) {
+    $pdo->prepare(
+        'INSERT INTO companies (id, name, slug, project_name, is_active) VALUES (?, ?, ?, ?, 1)'
+    )->execute([$seedCompanyId, 'DepoPazar', 'depopazar', 'DepoPazar']);
+    echo "Seed: Varsayilan sirket olusturuldu (DepoPazar).\n";
+}
+
+// 2) Super admin kullanıcı yoksa oluştur
 $seedEmail = 'erkanulker0@gmail.com';
 $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND deleted_at IS NULL');
 $stmt->execute([$seedEmail]);
