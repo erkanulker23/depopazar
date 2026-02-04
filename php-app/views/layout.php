@@ -194,6 +194,17 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                     </div>
                 </div>
             </div>
+            <!-- Push bildirim izni – sayfa ilk açıldığında görünür (mobil dahil) -->
+            <div id="pushBanner" class="hidden border-b border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                <p class="text-sm text-gray-800 dark:text-gray-200 flex-1 min-w-0">
+                    <i class="bi bi-bell text-emerald-600 dark:text-emerald-400 mr-2"></i>
+                    <strong>Bildirimlere izin verin</strong> – ödeme, sözleşme ve işlemlerde cihazınıza anlık bildirim gider.
+                </p>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button type="button" id="pushBannerLater" class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Sonra</button>
+                    <button type="button" id="pushBannerAllow" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Bildirimlere izin ver</button>
+                </div>
+            </div>
             <div class="flex-1 p-4 md:p-6 lg:p-8 pb-8 md:pb-6 min-h-0 main-content-wrap">
                 <?= $content ?? '' ?>
             </div>
@@ -272,9 +283,13 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         var pushPromptWrap = document.getElementById('pushPromptWrap');
         var pushEnabledWrap = document.getElementById('pushEnabledWrap');
         var pushEnableBtn = document.getElementById('pushEnableBtn');
+        var pushBanner = document.getElementById('pushBanner');
+        var pushBannerAllow = document.getElementById('pushBannerAllow');
+        var pushBannerLater = document.getElementById('pushBannerLater');
         function showEnabled() {
             if (pushPromptWrap) pushPromptWrap.classList.add('hidden');
             if (pushEnabledWrap) pushEnabledWrap.classList.remove('hidden');
+            if (pushBanner) pushBanner.classList.add('hidden');
         }
         function showPrompt() {
             if (pushPromptWrap) pushPromptWrap.classList.remove('hidden');
@@ -283,6 +298,11 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         function hidePushRow() {
             if (pushPromptWrap) pushPromptWrap.classList.add('hidden');
             if (pushEnabledWrap) pushEnabledWrap.classList.add('hidden');
+            if (pushBanner) pushBanner.classList.add('hidden');
+        }
+        function hideBanner() {
+            if (pushBanner) pushBanner.classList.add('hidden');
+            try { sessionStorage.setItem('pushBannerDismissed', '1'); } catch (e) {}
         }
         if (Notification.permission === 'granted') {
             showEnabled();
@@ -290,8 +310,12 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         } else if (Notification.permission === 'denied') {
             if (pushPromptWrap) pushPromptWrap.innerHTML = '<span class="text-gray-400">Bildirimler tarayıcıda engelli.</span>';
         }
+        var swRegistration = null;
+        navigator.serviceWorker.register('/sw.js').then(function(reg) { swRegistration = reg; }).catch(function() {});
         function registerAndSubscribe() {
-            navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            var regPromise = swRegistration ? Promise.resolve(swRegistration) : navigator.serviceWorker.register('/sw.js');
+            regPromise.then(function(reg) {
+                if (!swRegistration) swRegistration = reg;
                 fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(data) {
                     var publicKey = data.publicKey;
                     if (!publicKey) {
@@ -337,17 +361,25 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
             return outputArray;
         }
-        if (pushEnableBtn) {
-            pushEnableBtn.addEventListener('click', function() {
-                if (Notification.permission === 'granted') { registerAndSubscribe(); return; }
-                if (Notification.permission === 'denied') return;
-                Notification.requestPermission().then(function(p) {
-                    if (p === 'granted') registerAndSubscribe();
-                });
+        function requestPermissionAndSubscribe() {
+            if (Notification.permission === 'granted') { registerAndSubscribe(); return; }
+            if (Notification.permission === 'denied') return;
+            Notification.requestPermission().then(function(p) {
+                if (p === 'granted') {
+                    registerAndSubscribe();
+                    hideBanner();
+                }
             });
         }
+        if (pushEnableBtn) pushEnableBtn.addEventListener('click', requestPermissionAndSubscribe);
+        if (pushBannerAllow) pushBannerAllow.addEventListener('click', requestPermissionAndSubscribe);
+        if (pushBannerLater) pushBannerLater.addEventListener('click', hideBanner);
         fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(d) {
-            if (!d.publicKey) hidePushRow();
+            if (!d.publicKey) { hidePushRow(); return; }
+            if (Notification.permission === 'granted') { registerAndSubscribe(); return; }
+            if (Notification.permission === 'denied') return;
+            try { if (sessionStorage.getItem('pushBannerDismissed') === '1') return; } catch (e) {}
+            if (pushBanner) pushBanner.classList.remove('hidden');
         }).catch(function() { hidePushRow(); });
     })();
     </script>

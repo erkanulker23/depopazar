@@ -68,8 +68,8 @@ Projede `PushService` zaten `vendor/autoload.php` dosyasını kendi içinde kont
 
 ## Kullanıcı tarafı
 
-- **PHP panel**: Giriş sonrası sağ üstteki **Bildirimler** (zil) menüsünü açın. Altta **"Telefon/cihaz bildirimlerini aç"** linkine tıklayıp tarayıcıda bildirim iznini verin. İzin verdikten sonra aynı cihazda ve diğer açtığınız cihazlarda işlem olduğunda push bildirim gelir.
-- **HTTPS**: Push bildirimleri çalışması için site **HTTPS** (veya localhost) üzerinden açılmalıdır.
+- **PHP panel**: Sayfa ilk açıldığında (giriş sonrası) üstte **"Bildirimlere izin verin"** bandı çıkar; **"Bildirimlere izin ver"** butonuna tıklayıp tarayıcıda izin verin. İsterseniz **"Sonra"** deyip bandı kapatabilirsiniz; bildirimleri daha sonra sağ üstteki **Bildirimler** (zil) menüsünü açıp alttaki **"Telefon/cihaz bildirimlerini aç"** linkinden de açabilirsiniz. İzin verdikten sonra aynı cihazda ve diğer cihazlarda işlem olduğunda push bildirim gelir.
+- **HTTPS**: Push bildirimleri için site **HTTPS** (veya localhost) üzerinden açılmalıdır.
 
 ## Nerede tetikleniyor
 
@@ -96,5 +96,5 @@ Aşağıdaki işlemlerde hem panel bildirimi hem de (abonelik varsa) push gönde
 | `php-app/app/models/Notification.php` | Bildirim oluşturulunca PushService çağrısı |
 | `php-app/app/controllers/NotificationsController.php` | `apiVapidPublic`, `apiPushSubscribe` |
 | `php-app/public/sw.js` | Service Worker (push event, bildirim gösterme) |
-| `php-app/views/layout.php` | "Telefon/cihaz bildirimlerini aç" + abonelik scripti |
+| `php-app/views/layout.php` | Sayfa açılışında "Bildirimlere izin verin" bandı + zil menüsünde "Telefon/cihaz bildirimlerini aç" + abonelik scripti |
 | `php-app/scripts/generate-vapid-keys.php` | VAPID anahtarı üretme |
