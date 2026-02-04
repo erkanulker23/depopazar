@@ -26,6 +26,16 @@ Ayrıntılı adımlar için: [docs/FORGE-DEPLOY-SCRIPT.md](docs/FORGE-DEPLOY-SCR
 - **Deploy Script**: `./deploy.sh`
 - **Environment**: `.env.example` içindeki değişkenleri Forge Environment'a ekleyin
 
+### Komut satırı (CLI)
+
+```bash
+# Super admin yoksa oluşturur (erkanulker0@gmail.com / password)
+php php-app/seed.php
+
+# Kullanıcı şifresi sıfırlama
+php php-app/set-password.php <email> <yeni_sifre>
+```
+
 ## Proje Yapısı
 
 ```

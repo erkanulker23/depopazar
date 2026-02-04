@@ -16,13 +16,13 @@ NC='\033[0m'
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-echo -e "${GREEN}[1/5] Deploy başlatıldı (ROOT=$ROOT)${NC}"
+echo -e "${GREEN}[1/6] Deploy başlatıldı (ROOT=$ROOT)${NC}"
 
 # -----------------------------------------------------------------------------
 # Git güncelleme
 # -----------------------------------------------------------------------------
 if [ "${SKIP_GIT}" != "1" ]; then
-  echo -e "${YELLOW}[2/5] Kod güncelleniyor...${NC}"
+  echo -e "${YELLOW}[2/6] Kod güncelleniyor...${NC}"
   git fetch origin
   if [ -n "${FORGE_SITE_BRANCH}" ]; then
     git reset --hard "origin/${FORGE_SITE_BRANCH}"
@@ -31,13 +31,13 @@ if [ "${SKIP_GIT}" != "1" ]; then
   fi
   cd "$ROOT"
 else
-  echo -e "${YELLOW}[2/5] Git atlandı (SKIP_GIT=1)${NC}"
+  echo -e "${YELLOW}[2/6] Git atlandı (SKIP_GIT=1)${NC}"
 fi
 
 # -----------------------------------------------------------------------------
 # .env yükleme ve db.local.php oluşturma
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[3/5] Yapılandırma kontrol ediliyor...${NC}"
+echo -e "${YELLOW}[3/6] Yapılandırma kontrol ediliyor...${NC}"
 
 if [ -f "$ROOT/.env" ]; then
   set -a
@@ -75,7 +75,7 @@ chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 # -----------------------------------------------------------------------------
 # Veritabanı schema (ilk kurulum - CREATE IF NOT EXISTS kullandığı için güvenli)
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[4/5] Veritabanı güncelleniyor...${NC}"
+echo -e "${YELLOW}[4/6] Veritabanı güncelleniyor...${NC}"
 if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
   if [ -n "$DB_PASSWORD" ]; then
     mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || echo "Schema import atlandı (tablolar mevcut olabilir)"
@@ -87,9 +87,20 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# Seed: Super admin kullanıcı (yoksa oluştur)
+# -----------------------------------------------------------------------------
+echo -e "${YELLOW}[5/6] Seed kontrol ediliyor...${NC}"
+if [ -f "$ROOT/php-app/seed.php" ] && [ -f "$ROOT/php-app/config/db.local.php" ]; then
+  cd "$ROOT/php-app" && php seed.php 2>/dev/null || true
+  cd "$ROOT"
+else
+  echo "  (seed.php veya db.local.php yok - atlanıyor)"
+fi
+
+# -----------------------------------------------------------------------------
 # Dizinler ve izinler
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[5/5] Dizin izinleri ayarlanıyor...${NC}"
+echo -e "${YELLOW}[6/6] Dizin izinleri ayarlanıyor...${NC}"
 mkdir -p "$ROOT/php-app/uploads"
 chmod -R 755 "$ROOT/php-app/uploads" 2>/dev/null || true
 
