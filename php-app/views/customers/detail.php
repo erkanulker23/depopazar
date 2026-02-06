@@ -76,9 +76,9 @@ ob_start();
             <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/borclandir" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
                 <i class="bi bi-currency-dollar"></i> Borçlandır
             </a>
-            <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($customer['id']) ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
+            <button type="button" onclick="document.getElementById('paymentModal').classList.remove('hidden')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
                 <i class="bi bi-currency-dollar"></i> Ödeme Gir
-            </a>
+            </button>
             <a href="/girisler?newSale=1&newCustomerId=<?= htmlspecialchars($customer['id']) ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors">
                 <i class="bi bi-bag-plus"></i> Depo Girişi Ekle
             </a>
@@ -172,7 +172,7 @@ ob_start();
             <?php endif; ?>
         </div>
 
-        <!-- Aylar takvimi: Ocak, Şubat, Mart... hangi ay ödendi / ödenmedi -->
+        <!-- Aylar takvimi: Ocak, Şubat, Mart... hangi ay ödendi / ödenmedi (ay bazında tüm ödemeler birleştirilir, Ödeme Takvimi ile tutarlı) -->
         <?php
         $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
         $monthsStatus = [];
@@ -181,8 +181,18 @@ ob_start();
             if ($due === '') continue;
             $key = date('Y-m', strtotime($due));
             $status = $p['status'] ?? 'pending';
-            $label = $status === 'paid' ? 'Ödendi' : ($status === 'overdue' ? 'Gecikmede' : 'Ödenmedi');
-            $monthsStatus[$key] = ['status' => $status, 'label' => $label, 'amount' => $p['amount'] ?? 0, 'contract_number' => $p['contract_number'] ?? ''];
+            if (!isset($monthsStatus[$key])) {
+                $monthsStatus[$key] = ['statuses' => [], 'amount' => 0, 'contract_number' => $p['contract_number'] ?? ''];
+            }
+            $monthsStatus[$key]['statuses'][] = $status;
+            $monthsStatus[$key]['amount'] += (float)($p['amount'] ?? 0);
+        }
+        foreach ($monthsStatus as $k => $v) {
+            $statuses = $v['statuses'];
+            $allPaid = count(array_filter($statuses, fn($s) => $s === 'paid')) === count($statuses);
+            $anyOverdue = in_array('overdue', $statuses, true);
+            $monthsStatus[$k]['status'] = $allPaid ? 'paid' : ($anyOverdue ? 'overdue' : 'pending');
+            $monthsStatus[$k]['label'] = $monthsStatus[$k]['status'] === 'paid' ? 'Ödendi' : ($monthsStatus[$k]['status'] === 'overdue' ? 'Gecikmede' : 'Ödenmedi');
         }
         $minYear = date('Y');
         $maxYear = date('Y');
@@ -300,9 +310,9 @@ ob_start();
             </div>
             <p class="text-sm text-gray-600 dark:text-gray-400">Sözleşme sayısı: <strong><?= count($contracts) ?></strong></p>
             <?php if ($debt > 0): ?>
-            <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($customer['id']) ?>" class="mt-4 block w-full text-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+            <button type="button" onclick="document.getElementById('paymentModal').classList.remove('hidden')" class="mt-4 w-full text-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
                 <i class="bi bi-bank mr-2"></i> Ödeme Al
-            </a>
+            </button>
             <?php endif; ?>
         </div>
         <?php $documents = $documents ?? []; if (!empty($documents)): ?>
@@ -346,6 +356,104 @@ ob_start();
                     <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<?php $unpaidPayments = array_filter($payments ?? [], fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue'])); $bankAccounts = $bankAccounts ?? []; ?>
+<!-- Modal: Ödeme Gir -->
+<div id="paymentModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('paymentModal').classList.add('hidden')"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i class="bi bi-currency-dollar text-emerald-600 mr-2"></i> Ödeme Gir – <?= htmlspecialchars($customerName) ?></h3>
+                <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <?php if (empty($unpaidPayments)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4">Bu müşteriye ait bekleyen ödeme yok.</p>
+                <div class="flex justify-end">
+                    <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Kapat</button>
+                </div>
+            <?php else: ?>
+                <form method="post" action="/odemeler/odeme-al" id="paymentModalForm">
+                    <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">Ödeme alınacak kalemleri işaretleyin.</p>
+                    <div class="max-h-48 overflow-y-auto space-y-2 mb-4">
+                        <?php foreach ($unpaidPayments as $p): ?>
+                            <label class="flex items-center justify-between gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                                <span class="flex items-center gap-2">
+                                    <input type="checkbox" name="payment_ids[]" value="<?= htmlspecialchars($p['id']) ?>" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
+                                    <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Vade: <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></span>
+                                </span>
+                                <span class="font-semibold text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="space-y-3 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme yöntemi <span class="text-red-500">*</span></label>
+                            <select name="payment_method" required class="payment-method-select w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                <option value="cash">Nakit</option>
+                                <option value="bank_transfer">Havale</option>
+                                <option value="credit_card">Kredi Kartı</option>
+                            </select>
+                        </div>
+                        <div class="payment-bank-field hidden">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka hesabı <span class="text-red-500">*</span></label>
+                            <?php if (empty($bankAccounts)): ?>
+                                <p class="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg">Aktif banka hesabı yok. Ayarlar → Banka Hesaplarından ekleyin.</p>
+                            <?php else: ?>
+                                <select name="bank_account_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <option value="">Seçin</option>
+                                    <?php foreach ($bankAccounts as $ba): ?>
+                                        <option value="<?= htmlspecialchars($ba['id']) ?>"><?= htmlspecialchars($ba['bank_name']) ?> – <?= htmlspecialchars($ba['account_number']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php endif; ?>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İşlem no (opsiyonel)</label>
+                            <input type="text" name="transaction_id" placeholder="Havale işlem no" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not (opsiyonel)</label>
+                            <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
+                    </div>
+                </form>
+                <script>
+                (function() {
+                    var form = document.getElementById('paymentModalForm');
+                    var methodSelect = form && form.querySelector('.payment-method-select');
+                    var bankField = form && form.querySelector('.payment-bank-field');
+                    var bankSelect = form && form.querySelector('select[name="bank_account_id"]');
+                    if (methodSelect && bankField) {
+                        function toggleBank() {
+                            var isTransfer = methodSelect.value === 'bank_transfer';
+                            bankField.classList.toggle('hidden', !isTransfer);
+                            if (bankSelect) bankSelect.required = isTransfer;
+                        }
+                        methodSelect.addEventListener('change', toggleBank);
+                        toggleBank();
+                    }
+                    if (form) {
+                        form.addEventListener('submit', function(e) {
+                            var checked = form.querySelectorAll('input[name="payment_ids[]"]:checked');
+                            if (checked.length === 0) {
+                                e.preventDefault();
+                                alert('En az bir ödeme kalemi seçin.');
+                            }
+                        });
+                    }
+                })();
+                </script>
+            <?php endif; ?>
         </div>
     </div>
 </div>

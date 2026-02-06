@@ -97,11 +97,42 @@ class SettingsController
         }
         Company::update($this->pdo, $companyId, $data);
         $company = Company::findOne($this->pdo, $companyId);
-        $_SESSION['company_project_name'] = $company['project_name'] ?? $company['name'] ?? 'DepoPazar';
+        $_SESSION['company_project_name'] = trim($company['project_name'] ?? '') !== '' ? $company['project_name'] : null;
+        $_SESSION['company_name'] = trim($company['name'] ?? '') !== '' ? $company['name'] : null;
         $_SESSION['company_logo_url'] = $company['logo_url'] ?? null;
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'Firma bilgileri güncellendi', 'Firma bilgileri ' . ($actorName ?: 'sistem') . ' tarafından güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Firma bilgileri güncellendi.';
+        header('Location: /ayarlar?tab=firma');
+        exit;
+    }
+
+    public function deleteCompanyLogo(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /ayarlar?tab=firma');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /genel-bakis');
+            exit;
+        }
+        $company = Company::findOne($this->pdo, $companyId);
+        if ($company && !empty($company['logo_url'])) {
+            $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/company' : __DIR__ . '/../../public/uploads/company';
+            $path = $uploadDir . '/' . basename($company['logo_url']);
+            if (is_file($path)) {
+                @unlink($path);
+            }
+            Company::update($this->pdo, $companyId, ['logo_url' => null]);
+            $company = Company::findOne($this->pdo, $companyId);
+            $_SESSION['company_logo_url'] = $company['logo_url'] ?? null;
+            $_SESSION['flash_success'] = 'Firma logosu kaldırıldı.';
+        }
         header('Location: /ayarlar?tab=firma');
         exit;
     }
@@ -210,7 +241,7 @@ class SettingsController
             exit;
         }
         if (!$this->checkExpensesMigration()) {
-            $_SESSION['flash_error'] = 'Kredi kartları için migration çalıştırılmalı. php-app/sql/migrations/add_expenses_and_credit_cards.sql';
+            $_SESSION['flash_error'] = 'Kredi kartları özelliği şu an kullanılamıyor.';
             header('Location: /ayarlar?tab=kredi-karti');
             exit;
         }
@@ -473,7 +504,9 @@ class SettingsController
             header('Location: /ayarlar?tab=sms');
             exit;
         }
-        $result = SmsService::send($this->pdo, $companyId, $phone, 'DepoPazar SMS testi. Bu mesaj ayarlarınızı doğrulamak için gönderilmiştir.');
+        $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../../config/config.php';
+        $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
+        $result = SmsService::send($this->pdo, $companyId, $phone, $appName . ' SMS testi. Bu mesaj ayarlarınızı doğrulamak için gönderilmiştir.');
         if ($result['success']) {
             $_SESSION['flash_success'] = 'Test SMS gönderildi: ' . $phone;
         } else {
@@ -520,14 +553,15 @@ class SettingsController
             header('Location: /ayarlar?tab=eposta');
             exit;
         }
-        $subject = 'DepoPazar E-posta Testi';
+        $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../../config/config.php';
+        $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
+        $subject = $appName . ' E-posta Testi';
         $body = "Bu bir test e-postasıdır.\n\nE-posta ayarlarınız çalışıyor.";
-        $headers = "From: " . ($mail['from_name'] ?? 'DepoPazar') . " <" . ($mail['from_email'] ?? 'noreply@depopazar.com') . ">\r\nContent-Type: text/plain; charset=UTF-8";
-        $sent = @mail($to, $subject, $body, $headers);
-        if ($sent) {
+        $result = MailService::sendSmtp($mail, $to, $subject, $body);
+        if ($result['success']) {
             $_SESSION['flash_success'] = 'Test e-postası gönderildi: ' . $to;
         } else {
-            $_SESSION['flash_error'] = 'E-posta gönderilemedi. SMTP sunucusu ve port ayarlarını kontrol edin. Bazı sunucularda PHP mail() SMTP kullanmaz.';
+            $_SESSION['flash_error'] = 'E-posta gönderilemedi: ' . ($result['error'] ?? 'SMTP sunucusu ve port ayarlarını kontrol edin.');
         }
         header('Location: /ayarlar?tab=eposta');
         exit;
@@ -605,7 +639,8 @@ class SettingsController
     {
         try {
             $this->pdo->query('SELECT 1 FROM credit_cards LIMIT 1');
-            return true;
+            $stmt = $this->pdo->query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'expenses' AND COLUMN_NAME = 'transportation_job_id' LIMIT 1");
+            return $stmt && $stmt->fetch();
         } catch (Throwable $e) {
             return false;
         }

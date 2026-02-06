@@ -97,6 +97,15 @@ class CustomersController
                 $exitDone = !empty($contracts[0]['terminated_at']);
             }
         }
+        $bankAccounts = [];
+        if ($companyId) {
+            $stmt = $this->pdo->prepare('SELECT * FROM bank_accounts WHERE company_id = ? AND deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
+            $stmt->execute([$companyId]);
+            $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $stmt = $this->pdo->query('SELECT * FROM bank_accounts WHERE deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
+            $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         $pageTitle = 'Müşteri: ' . trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
         require __DIR__ . '/../../views/customers/detail.php';
     }

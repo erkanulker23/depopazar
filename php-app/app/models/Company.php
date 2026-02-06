@@ -26,7 +26,7 @@ class Company
 
     public static function getPublicBrand(PDO $pdo): ?array
     {
-        $stmt = $pdo->query('SELECT project_name, logo_url FROM companies WHERE deleted_at IS NULL AND is_active = 1 LIMIT 1');
+        $stmt = $pdo->query('SELECT name, project_name, logo_url FROM companies WHERE deleted_at IS NULL AND is_active = 1 LIMIT 1');
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }

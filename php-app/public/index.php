@@ -131,6 +131,7 @@ $router->post('/masraflar/kategori-guncelle', fn() => (new ExpensesController($p
 $router->post('/masraflar/kategori-sil', fn() => (new ExpensesController($pdo))->deleteCategory());
 $router->get('/ayarlar', fn() => (new SettingsController($pdo))->index());
 $router->post('/ayarlar/firma-guncelle', fn() => (new SettingsController($pdo))->updateCompany());
+$router->post('/ayarlar/logo-sil', fn() => (new SettingsController($pdo))->deleteCompanyLogo());
 $router->post('/ayarlar/banka-ekle', fn() => (new SettingsController($pdo))->createBankAccount());
 $router->post('/ayarlar/banka-guncelle', fn() => (new SettingsController($pdo))->updateBankAccount());
 $router->post('/ayarlar/banka-sil', fn() => (new SettingsController($pdo))->deleteBankAccount());

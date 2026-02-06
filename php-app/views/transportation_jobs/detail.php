@@ -28,13 +28,17 @@ function fmtMoneyDetail($n) {
     $f = (float) $n;
     return ($f == (int)$f ? number_format((int)$f, 0, '', '.') : number_format($f, 2, ',', '.')) . ' ₺';
 }
+$seoAppName = trim($_SESSION['company_project_name'] ?? '') !== '' ? $_SESSION['company_project_name'] : 'Depo ve Nakliye Takip';
+$seoCn = trim($_SESSION['company_name'] ?? '');
+$seoDescription = ($seoCn !== '' && $seoAppName !== '') ? ($seoCn . ' - ' . $seoAppName . '. Depo ve nakliye yönetimi.') : ($seoAppName . '. Depo ve nakliye işlemlerinizi tek panelden yönetin.');
 ?>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nakliye İşi - <?= htmlspecialchars($customerName) ?></title>
+    <meta name="description" content="<?= htmlspecialchars($seoDescription) ?>">
+    <title>Nakliye İşi - <?= htmlspecialchars($customerName) ?> - <?= htmlspecialchars($seoAppName) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -109,9 +113,7 @@ function fmtMoneyDetail($n) {
         <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
             <i class="bi bi-cash-stack text-emerald-600"></i> Nakliye masrafları ve kar/zarar
         </h2>
-        <?php if (!$expensesMigrationOk): ?>
-            <p class="text-amber-700 bg-amber-50 p-3 rounded-lg text-sm">Nakliye masraflarını kaydetmek için masraflar modülü migration'ı çalıştırılmalıdır: <code class="bg-amber-100 px-1 rounded">php scripts/run-migrations.php</code></p>
-        <?php else: ?>
+        <?php if ($expensesMigrationOk): ?>
             <div class="flex flex-wrap items-center gap-2 mb-4">
                 <button type="button" onclick="openAddJobExpenseModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
                     <i class="bi bi-plus-lg mr-2"></i> Nakliye masrafı oluştur
@@ -236,9 +238,8 @@ function fmtMoneyDetail($n) {
                     </div>
                 </form>
                 <?php else: ?>
-                <div class="py-4 text-gray-600 text-sm space-y-2">
-                    <p>Masraf girebilmek için veritabanı migration'ı çalıştırın:</p>
-                    <p><code class="bg-gray-100 px-1 rounded">php scripts/run-migrations.php</code></p>
+                <div class="py-4 text-gray-600 text-sm">
+                    <p>Masraf girişi şu an kullanılamıyor.</p>
                 </div>
                 <div class="flex justify-end pt-2">
                     <button type="button" class="btnMasrafModalKapat px-4 py-2 rounded-xl border border-gray-300 text-gray-700">Kapat</button>

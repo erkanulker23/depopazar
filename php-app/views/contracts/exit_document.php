@@ -2,6 +2,9 @@
 $contract = $contract ?? null;
 $company = $company ?? null;
 $customerName = $customerName ?? '';
+$seoAppName = trim($_SESSION['company_project_name'] ?? '') !== '' ? $_SESSION['company_project_name'] : 'Depo ve Nakliye Takip';
+$seoCn = trim($_SESSION['company_name'] ?? '');
+$seoDescription = ($seoCn !== '' && $seoAppName !== '') ? ($seoCn . ' - ' . $seoAppName . '. Depo ve nakliye yönetimi.') : ($seoAppName . '. Depo ve nakliye işlemlerinizi tek panelden yönetin.');
 if (!function_exists('fmtPrice')) {
     function fmtPrice($n) {
         if ($n === null || $n === '') return '';
@@ -15,7 +18,8 @@ if (!function_exists('fmtPrice')) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Çıkış Belgesi - <?= htmlspecialchars($contract['contract_number'] ?? '') ?></title>
+    <meta name="description" content="<?= htmlspecialchars($seoDescription) ?>">
+    <title>Çıkış Belgesi - <?= htmlspecialchars($contract['contract_number'] ?? '') ?> - <?= htmlspecialchars($seoAppName) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -51,12 +55,31 @@ if (!function_exists('fmtPrice')) {
             </div>
         </div>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Sözleşme / Depo Bilgisi</h2>
-        <table class="min-w-full border border-gray-300 text-sm mb-6">
+        <table class="min-w-full border border-gray-300 text-sm mb-4">
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-48">Sözleşme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['contract_number'] ?? '-') ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
+            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Giriş Tarihi</td><td class="border border-gray-300 px-3 py-2"><?= !empty($contract['start_date']) ? date('d.m.Y', strtotime($contract['start_date'])) : '-' ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Sözleşme Dönemi</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Çıkış Tarihi</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y') ?></td></tr>
         </table>
+
+        <?php $contractPayments = $contractPayments ?? []; if (!empty($contractPayments)): ?>
+        <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2 mt-6">Ödeme Geçmişi (Ne Zaman Girmiş / Ne Zaman Ödemiş)</h2>
+        <table class="min-w-full border border-gray-300 text-sm mb-4">
+            <thead><tr class="bg-gray-100"><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Ödenme Tarihi</th></tr></thead>
+            <tbody>
+            <?php foreach ($contractPayments as $p): ?>
+                <tr>
+                    <td class="border border-gray-300 px-3 py-2"><?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></td>
+                    <td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td>
+                    <td class="border border-gray-300 px-3 py-2"><?= (($p['status'] ?? '') === 'paid') ? 'Ödendi' : (($p['status'] ?? '') === 'overdue' ? 'Gecikmiş' : 'Bekliyor') ?></td>
+                    <td class="border border-gray-300 px-3 py-2"><?= !empty($p['paid_at']) ? date('d.m.Y H:i', strtotime($p['paid_at'])) : '–' ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+
         <p class="text-sm text-gray-600 mb-4">Yukarıda bilgileri yer alan depo sözleşmesi sona ermiş olup, müşteri eşyalarını teslim almıştır. Bu belge çıkış işleminin yapıldığını teyit eder.</p>
         <p class="text-xs text-gray-500 mt-4">Belge tarihi: <?= date('d.m.Y H:i') ?></p>
     </div>

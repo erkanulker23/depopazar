@@ -17,11 +17,6 @@ ob_start();
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Firma ve entegrasyon ayarları</p>
 </div>
 
-<?php if (empty($expensesMigrationOk ?? true)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm">
-        <strong>Masraflar modülü için migration gerekli.</strong> Kredi kartları ve masraf özelliklerini kullanmak için proje kökünden şu komutu çalıştırın: <code class="block mt-2 p-2 bg-amber-100 dark:bg-amber-900/40 rounded">php php-app/scripts/run-migrations.php</code>
-    </div>
-<?php endif; ?>
 <?php if (!empty($flashSuccess)): ?>
     <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
 <?php endif; ?>
@@ -48,9 +43,14 @@ ob_start();
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Proje adı uygulama başlığında ve SEO’da kullanılır.</p>
             <form method="post" action="/ayarlar/firma-guncelle" enctype="multipart/form-data" class="space-y-4">
                 <?php if (!empty($company['logo_url'])): ?>
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Mevcut Firma Logosu</label>
-                    <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-16 object-contain">
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Mevcut Firma Logosu</label>
+                        <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-16 object-contain">
+                    </div>
+                    <form method="post" action="/ayarlar/logo-sil" class="inline" onsubmit="return confirm('Firma logosunu kaldırmak istediğinize emin misiniz?');">
+                        <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Logoyu kaldır</button>
+                    </form>
                 </div>
                 <?php endif; ?>
                 <div>
@@ -64,7 +64,7 @@ ob_start();
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Proje Adı (uygulama başlığı)</label>
-                        <input type="text" name="project_name" value="<?= htmlspecialchars($company['project_name'] ?? '') ?>" placeholder="Örn: DepoPazar" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <input type="text" name="project_name" value="<?= htmlspecialchars($company['project_name'] ?? '') ?>" placeholder="Örn: Depo ve Nakliye Takip" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">E-posta</label>
@@ -428,7 +428,7 @@ ob_start();
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Gönderen Adı</label>
-                        <input type="text" name="from_name" value="<?= htmlspecialchars($mailSettings['from_name'] ?? '') ?>" placeholder="DepoPazar" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <input type="text" name="from_name" value="<?= htmlspecialchars($mailSettings['from_name'] ?? '') ?>" placeholder="Depo ve Nakliye Takip" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
                 </div>
                 <div class="pt-2">
@@ -547,7 +547,7 @@ ob_start();
         $tplPaymentReminder = !empty(trim($mailSettings['payment_reminder_template'] ?? '')) ? $mailSettings['payment_reminder_template'] : $tplDefaults['payment_reminder_template'];
         $tplAdminContract = !empty(trim($mailSettings['admin_contract_created_template'] ?? '')) ? $mailSettings['admin_contract_created_template'] : $tplDefaults['admin_contract_created_template'];
         $tplAdminPayment = !empty(trim($mailSettings['admin_payment_received_template'] ?? '')) ? $mailSettings['admin_payment_received_template'] : $tplDefaults['admin_payment_received_template'];
-        $fromName = $mailSettings['from_name'] ?? $company['name'] ?? 'DepoPazar';
+        $fromName = $mailSettings['from_name'] ?? $company['name'] ?? 'Depo ve Nakliye Takip';
         $fromEmail = $mailSettings['from_email'] ?? $company['email'] ?? 'bildirim@firma.com';
     ?>
         <div class="p-6">

@@ -1,6 +1,6 @@
 <?php
 return [
-    'app_name'     => 'DepoPazar',
+    'app_name'     => 'Depo ve Nakliye Takip',
     'timezone'     => 'Europe/Istanbul',
     'session_name' => 'depopazar_session',
 

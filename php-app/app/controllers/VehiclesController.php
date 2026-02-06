@@ -73,12 +73,14 @@ class VehiclesController
             if (!empty($row['kasko_date'])) {
                 $diff = (strtotime($row['kasko_date']) - strtotime($today)) / 86400;
                 if ($diff >= 0 && $diff <= $daysAlert) {
+                    $row['days_left'] = (int) round($diff);
                     $upcomingKasko[] = $row;
                 }
             }
             if (!empty($row['inspection_date'])) {
                 $diff = (strtotime($row['inspection_date']) - strtotime($today)) / 86400;
                 if ($diff >= 0 && $diff <= $daysAlert) {
+                    $row['days_left'] = (int) round($diff);
                     $upcomingInspection[] = $row;
                 }
             }
@@ -103,7 +105,7 @@ class VehiclesController
             exit;
         }
         if (!$this->vehiclesTableExists()) {
-            $_SESSION['flash_error'] = 'Araçlar tablosu bulunamadı. Lütfen php-app/sql/migrations/01_add_vehicles_table.sql çalıştırın.';
+            $_SESSION['flash_error'] = 'Araçlar tablosu bulunamadı. Deploy sırasında migration\'lar otomatik çalışır. Sorun devam ederse yöneticinize başvurun.';
             http_response_code(303);
             header('Location: /araclar');
             exit;

@@ -1,6 +1,18 @@
 <?php
-if (!isset($pageTitle)) $pageTitle = 'DepoPazar';
-if (!isset($projectName)) $projectName = $_SESSION['company_project_name'] ?? 'DepoPazar';
+$seoDefaultAppName = 'Depo ve Nakliye Takip';
+if (!isset($pageTitle)) $pageTitle = 'Ana Sayfa';
+if (!isset($projectName)) $projectName = $_SESSION['company_project_name'] ?? $seoDefaultAppName;
+$fullTitle = htmlspecialchars($pageTitle) . ' - ' . htmlspecialchars($projectName);
+// SEO description: firma/uygulama bilgisi varsa ona göre, yoksa varsayılan
+$companyName = trim($_SESSION['company_name'] ?? '');
+$appName = trim($projectName);
+if ($companyName !== '' && $appName !== '') {
+    $seoDescription = $companyName . ' - ' . $appName . '. Depo ve nakliye yönetimi.';
+} elseif ($appName !== '') {
+    $seoDescription = $appName . '. Depo ve nakliye işlemlerinizi tek panelden yönetin.';
+} else {
+    $seoDescription = $seoDefaultAppName . '. Depo ve nakliye işlemlerinizi tek panelden yönetin.';
+}
 $user = Auth::user();
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
 if (($q = strpos($currentPath, '?')) !== false) $currentPath = substr($currentPath, 0, $q);
@@ -36,8 +48,12 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <meta name="description" content="<?= htmlspecialchars($seoDescription) ?>">
+    <meta property="og:title" content="<?= $fullTitle ?>">
+    <meta property="og:description" content="<?= htmlspecialchars($seoDescription) ?>">
+    <meta property="og:type" content="website">
     <link rel="icon" href="data:,">
-    <title><?= htmlspecialchars($pageTitle) ?> - <?= htmlspecialchars($projectName) ?></title>
+    <title><?= $fullTitle ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {

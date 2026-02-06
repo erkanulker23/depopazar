@@ -4,6 +4,9 @@ $company = $company ?? null;
 $statusLabels = $statusLabels ?? [];
 $status = $payment['status'] ?? 'pending';
 $statusLabel = $statusLabels[$status] ?? $status;
+$seoAppName = trim($_SESSION['company_project_name'] ?? '') !== '' ? $_SESSION['company_project_name'] : 'Depo ve Nakliye Takip';
+$seoCn = trim($_SESSION['company_name'] ?? '');
+$seoDescription = ($seoCn !== '' && $seoAppName !== '') ? ($seoCn . ' - ' . $seoAppName . '. Depo ve nakliye yönetimi.') : ($seoAppName . '. Depo ve nakliye işlemlerinizi tek panelden yönetin.');
 if (!function_exists('fmtPrice')) {
     function fmtPrice($n) {
         if ($n === null || $n === '') return '';
@@ -17,7 +20,8 @@ if (!function_exists('fmtPrice')) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ödeme Makbuzu - <?= htmlspecialchars($payment['payment_number'] ?? '') ?></title>
+    <meta name="description" content="<?= htmlspecialchars($seoDescription) ?>">
+    <title>Ödeme Makbuzu - <?= htmlspecialchars($payment['payment_number'] ?? '') ?> - <?= htmlspecialchars($seoAppName) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>

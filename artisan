@@ -1,0 +1,163 @@
+#!/usr/bin/env php
+<?php
+/**
+ * DepoPazar – Artisan (migrate komutu)
+ * Sunucuda eksik tablo/sütunları eklemek için: php artisan migrate
+ * Proje kökünden veya php-app içinden çalıştırılabilir.
+ */
+$command = $argv[1] ?? '';
+
+if ($command !== 'migrate') {
+    echo "Kullanım: php artisan migrate\n";
+    echo "  Eksik tabloları ve sütunları eklemek için schema + tüm migration'ları çalıştırır.\n";
+    exit($command === '--help' || $command === '-h' ? 0 : 1);
+}
+
+// Proje kökü: artisan dosyası kökte veya php-app içinde olabilir
+$root = __DIR__;
+if (basename($root) === 'php-app') {
+    $root = dirname($root);
+}
+$phpApp = $root . '/php-app';
+
+$envFile = file_exists($root . '/.env') ? $root . '/.env' : (file_exists($phpApp . '/.env') ? $phpApp . '/.env' : null);
+if ($envFile) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+        if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/', $line, $m)) {
+            putenv(trim($m[1]) . '=' . trim($m[2], " \t\"'"));
+        }
+    }
+}
+
+$host     = getenv('DB_HOST') ?: '127.0.0.1';
+$port     = getenv('DB_PORT') ?: '3306';
+$database = getenv('DB_DATABASE') ?: 'depotakip';
+$username = getenv('DB_USERNAME') ?: 'root';
+$password = getenv('DB_PASSWORD') ?: '';
+
+// db.local.php varsa oradan da okuyabiliriz (deploy sonrası sunucuda .env yoksa)
+if (empty($password) && file_exists($phpApp . '/config/db.local.php')) {
+    $code = file_get_contents($phpApp . '/config/db.local.php');
+    if (preg_match("/\\\$host\s*=\s*'([^']*)'/", $code, $m)) $host = $m[1];
+    if (preg_match("/\\\$port\s*=\s*'([^']*)'/", $code, $m)) $port = $m[1];
+    if (preg_match("/\\\$db\s*=\s*'([^']*)'/", $code, $m)) $database = $m[1];
+    if (preg_match("/\\\$user\s*=\s*'([^']*)'/", $code, $m)) $username = $m[1];
+    if (preg_match("/\\\$pass\s*=\s*'([^']*)'/", $code, $m)) $password = $m[1];
+}
+
+$schemaPath    = $phpApp . '/sql/schema.sql';
+$migrationsDir = $phpApp . '/sql/migrations';
+
+if (!is_file($schemaPath)) {
+    fwrite(STDERR, "Hata: schema.sql bulunamadı: $schemaPath\n");
+    exit(1);
+}
+if (!is_dir($migrationsDir)) {
+    fwrite(STDERR, "Hata: migrations dizini yok: $migrationsDir\n");
+    exit(1);
+}
+
+function run_mysql_file($mysqlCmd, $host, $port, $username, $password, $database, $file) {
+    $args = [
+        '-h', $host,
+        '-P', $port,
+        '-u', $username,
+    ];
+    if ($password !== '') {
+        $args[] = '-p' . $password;
+    }
+    $args[] = $database;
+    $cmd = escapeshellcmd($mysqlCmd);
+    foreach ($args as $a) {
+        $cmd .= ' ' . escapeshellarg($a);
+    }
+    $cmd .= ' < ' . escapeshellarg($file);
+    $out = [];
+    $ret = -1;
+    exec($cmd . ' 2>&1', $out, $ret);
+    return [$ret === 0, implode("\n", $out)];
+}
+
+function run_mysql_file_pdo(PDO $pdo, $file) {
+    $sql = file_get_contents($file);
+    if (trim($sql) === '') return [true, ''];
+    try {
+        $pdo->exec($sql);
+        return [true, ''];
+    } catch (Throwable $e) {
+        return [false, $e->getMessage()];
+    }
+}
+
+$useMysqlCli = false;
+$mysqlCmd = 'mysql';
+$which = trim((string) shell_exec('which mysql 2>/dev/null'));
+if ($which !== '') {
+    $mysqlCmd = $which;
+    $useMysqlCli = true;
+}
+
+$pdo = null;
+if (!$useMysqlCli) {
+    try {
+        $dsn = "mysql:host=$host;port=$port;dbname=$database;charset=utf8mb4";
+        $pdo = new PDO($dsn, $username, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        echo "MySQL CLI bulunamadı; PDO ile çalıştırılıyor (DELIMITER içeren migration'lar atlanabilir).\n";
+    } catch (Throwable $e) {
+        fwrite(STDERR, "Veritabanı bağlantı hatası: " . $e->getMessage() . "\n");
+        fwrite(STDERR, "Sunucuda 'mysql' komutunun yüklü olduğundan emin olun: apt install mysql-client\n");
+        exit(1);
+    }
+}
+
+echo "Veritabanı: $database @ $host:$port\n";
+
+// 1) Schema (temel tablolar)
+echo "Schema yükleniyor... ";
+if ($useMysqlCli) {
+    list($ok, $err) = run_mysql_file($mysqlCmd, $host, $port, $username, $password, $database, $schemaPath);
+} else {
+    list($ok, $err) = run_mysql_file_pdo($pdo, $schemaPath);
+}
+if ($ok) {
+    echo "OK\n";
+} else {
+    echo "uyarı (tablolar mevcut olabilir)\n";
+    if ($err !== '') echo trim($err) . "\n";
+}
+
+// 2) Migration'lar (sırayla)
+$files = glob($migrationsDir . '/*.sql');
+sort($files);
+$done = 0;
+$failed = [];
+foreach ($files as $f) {
+    $name = basename($f);
+    if (trim(file_get_contents($f)) === '') continue;
+    if ($useMysqlCli) {
+        list($ok, $err) = run_mysql_file($mysqlCmd, $host, $port, $username, $password, $database, $f);
+    } else {
+        list($ok, $err) = run_mysql_file_pdo($pdo, $f);
+    }
+    if ($ok) {
+        echo "  Migration: $name\n";
+        $done++;
+    } else {
+        $failed[] = [$name, $err];
+    }
+}
+
+if (!empty($failed)) {
+    foreach ($failed as list($name, $err)) {
+        fwrite(STDERR, "  Uyarı/Hata: $name - " . trim($err) . "\n");
+    }
+}
+
+echo "Toplam $done migration çalıştırıldı.\n";
+if (!empty($failed)) {
+    echo count($failed) . " dosya hata/uyarı verdi (zaten uygulanmış veya DELIMITER kullanıyorsa mysql CLI gerekir).\n";
+}
+exit(0);

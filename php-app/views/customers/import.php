@@ -1,6 +1,6 @@
 <?php
 $currentPage = 'musteriler';
-$pageTitle = 'Müşteriler Excel İçe Aktar - DepoPazar';
+$pageTitle = 'Müşteriler Excel İçe Aktar';
 ob_start();
 ?>
 <div class="mb-6">

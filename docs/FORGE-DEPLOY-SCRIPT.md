@@ -19,6 +19,14 @@ Bu script:
 
 Böylece "tablo yok" veya "sütun yok" hatalarının önüne geçilir.
 
+**Sunucuda migration (eksik tablo/sütunları eklemek):** Deploy otomatik çalıştırır; manuel çalıştırmak için sunucuda proje kökünde:
+
+```bash
+php artisan migrate
+```
+
+Bu komut `.env` veya `php-app/config/db.local.php` üzerinden veritabanına bağlanır, `schema.sql` ve `php-app/sql/migrations/*.sql` dosyalarını sırayla uygular. Eksik tablolar ve sütunlar eklenir. Sunucuda `mysql` komutu yüklüyse (örn. `apt install mysql-client`) DELIMITER içeren migration'lar da sorunsuz çalışır.
+
 ---
 
 ## 1. Ön Gereksinimler
@@ -128,23 +136,9 @@ return \$pdo;
 DBCONFIG
 chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 
-# 4) Veritabanı schema + migrations (push_subscriptions, vehicle_plate, vehicles vb.)
-if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
-  if [ -n "$DB_PASSWORD" ]; then
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || true
-  else
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || true
-  fi
-fi
-if command -v mysql &> /dev/null && [ -d "$ROOT/php-app/sql/migrations" ]; then
-  for f in "$ROOT/php-app/sql/migrations"/*.sql; do
-    [ -f "$f" ] || continue
-    if [ -n "$DB_PASSWORD" ]; then
-      mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$f" 2>/dev/null || true
-    else
-      mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$f" 2>/dev/null || true
-    fi
-  done
+# 4) Veritabanı: schema + migrations (eksik tablo/sütunları ekler)
+if [ -f "$ROOT/artisan" ]; then
+  (cd "$ROOT" && php artisan migrate 2>/dev/null) || true
 fi
 
 # 5) Composer (php-app: web-push vb. – cihaz bildirimleri için)

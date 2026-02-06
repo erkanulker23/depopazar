@@ -9,7 +9,7 @@ $error = $error ?? null;
     <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
     <link rel="icon" href="data:,">
-    <title>Giriş - <?= htmlspecialchars($projectName ?? 'DepoPazar') ?></title>
+    <title>Giriş - <?= htmlspecialchars($projectName ?? 'Depo ve Nakliye Takip') ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {
@@ -50,7 +50,7 @@ $error = $error ?? null;
             <div class="inline-flex items-center justify-center rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 mb-3 w-16 h-16">
                 <i class="bi bi-box-seam text-3xl"></i>
             </div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white"><?= htmlspecialchars($projectName ?? 'DepoPazar') ?></h1>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white"><?= htmlspecialchars($projectName ?? 'Depo ve Nakliye Takip') ?></h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold mt-1">Depo yönetim sistemi</p>
         </div>
         <div class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg shadow-gray-200/50 dark:shadow-none p-6">
@@ -69,7 +69,7 @@ $error = $error ?? null;
                 <button type="submit" class="btn-submit w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors">Giriş Yap</button>
             </form>
         </div>
-        <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">© <?= date('Y') ?> <?= htmlspecialchars($projectName ?? 'DepoPazar') ?></p>
+        <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">© <?= date('Y') ?> <?= htmlspecialchars($projectName ?? 'Depo ve Nakliye Takip') ?></p>
     </div>
     <script>
     (function(){

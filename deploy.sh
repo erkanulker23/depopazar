@@ -73,40 +73,18 @@ DBCONFIG
 chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
-# Veritabanı schema (ilk kurulum - CREATE IF NOT EXISTS kullandığı için güvenli)
+# Veritabanı: schema + migrations (php artisan migrate = eksik tablo/sütunları ekler)
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[4/8] Veritabanı güncelleniyor...${NC}"
-if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
-  if [ -n "$DB_PASSWORD" ]; then
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || echo "  Schema import atlandı (tablolar mevcut olabilir)"
+echo -e "${YELLOW}[4/8] Veritabanı güncelleniyor (schema + migrations)...${NC}"
+if [ -f "$ROOT/artisan" ]; then
+  if (cd "$ROOT" && php artisan migrate 2>/dev/null); then
+    echo -e "  ${GREEN}Artisan migrate tamamlandı${NC}"
   else
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || echo "  Schema import atlandı"
+    echo -e "  ${YELLOW}Uyarı: php artisan migrate hata verdi (mysql client gerekebilir)${NC}" >&2
+    echo "  Sunucuda manuel: cd $ROOT && php artisan migrate" >&2
   fi
 else
-  echo "  (MySQL client yok veya schema bulunamadı - atlanıyor)"
-fi
-
-# -----------------------------------------------------------------------------
-# Migrations (push_subscriptions, vehicle_plate, vehicles, proposal_addresses vb.)
-# -----------------------------------------------------------------------------
-if command -v mysql &> /dev/null && [ -d "$ROOT/php-app/sql/migrations" ]; then
-  for f in "$ROOT/php-app/sql/migrations"/*.sql; do
-    [ -f "$f" ] || continue
-    name=$(basename "$f")
-    if [ -n "$DB_PASSWORD" ]; then
-      if mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$f" 2>/dev/null; then
-        echo -e "  ${GREEN}Migration: $name${NC}"
-      else
-        echo -e "  ${RED}Migration FAILED: $name${NC}" >&2
-      fi
-    else
-      if mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$f" 2>/dev/null; then
-        echo -e "  ${GREEN}Migration: $name${NC}"
-      else
-        echo -e "  ${RED}Migration FAILED: $name${NC}" >&2
-      fi
-    fi
-  done
+  echo "  (artisan bulunamadı - atlanıyor)"
 fi
 
 # -----------------------------------------------------------------------------

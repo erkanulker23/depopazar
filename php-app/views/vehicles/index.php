@@ -16,8 +16,7 @@ ob_start();
 
 <?php if (!$tableExists): ?>
     <div class="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
-        <strong>Araç kaydı eklemek için</strong> veritabanında <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-800">vehicles</code> tablosu oluşturulmalı. Deploy sırasında migrations otomatik çalışır; manuel için:<br>
-        <code class="block mt-2 p-2 rounded bg-gray-100 dark:bg-gray-800 text-xs">mysql -u kullanici -p veritabani &lt; php-app/sql/migrations/01_add_vehicles_table.sql</code>
+        <strong>Araç kaydı eklemek için</strong> veritabanında <code class="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-800">vehicles</code> tablosu gerekli. Deploy sırasında migration'lar otomatik çalışır. Sorun devam ederse yöneticinize başvurun.
     </div>
 <?php endif; ?>
 
@@ -28,18 +27,45 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
+<?php
+if (!empty($upcomingKasko) || !empty($upcomingInspection)) {
+    $fmtExpiry = function ($daysLeft, $dateStr) {
+        $d = !empty($dateStr) ? date('d.m.Y', strtotime($dateStr)) : '';
+        if ($daysLeft === 0) {
+            return 'Bugün süresi doluyor' . ($d ? ' (' . $d . ').' : '.');
+        }
+        if ($daysLeft === 1) {
+            return 'Yarın süresi dolacak' . ($d ? ' (' . $d . ').' : '.');
+        }
+        return $daysLeft . ' gün içinde süresi dolacak' . ($d ? ' (' . $d . ').' : '.');
+    };
+}
+?>
 <?php if (!empty($upcomingKasko) || !empty($upcomingInspection)): ?>
     <div class="mb-6 space-y-3">
+        <p class="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-1">Yaklaşan son tarihler (30 gün içinde)</p>
         <?php foreach ($upcomingKasko as $row): ?>
-            <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm flex items-center gap-2">
-                <i class="bi bi-shield-check"></i>
-                <strong>Kasko:</strong> <?= htmlspecialchars($row['plate']) ?> – <?= htmlspecialchars($row['kasko_date']) ?> (önceki 30 gün)
+            <?php $daysLeft = (int)($row['days_left'] ?? 0); ?>
+            <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="bi bi-shield-check"></i>
+                    <strong>Kasko poliçesi</strong>
+                </div>
+                <p class="text-gray-700 dark:text-gray-200">
+                    <strong><?= htmlspecialchars($row['plate']) ?></strong> plakalı aracın kasko poliçesi <?= $fmtExpiry($daysLeft, $row['kasko_date'] ?? '') ?> Yenilemeyi unutmayın.
+                </p>
             </div>
         <?php endforeach; ?>
         <?php foreach ($upcomingInspection as $row): ?>
-            <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm flex items-center gap-2">
-                <i class="bi bi-clipboard-check"></i>
-                <strong>Muayene:</strong> <?= htmlspecialchars($row['plate']) ?> – <?= htmlspecialchars($row['inspection_date']) ?> (önceki 30 gün)
+            <?php $daysLeft = (int)($row['days_left'] ?? 0); ?>
+            <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="bi bi-clipboard-check"></i>
+                    <strong>Muayene</strong>
+                </div>
+                <p class="text-gray-700 dark:text-gray-200">
+                    <strong><?= htmlspecialchars($row['plate']) ?></strong> plakalı aracın muayene süresi <?= $fmtExpiry($daysLeft, $row['inspection_date'] ?? '') ?> Muayene randevusu almayı unutmayın.
+                </p>
             </div>
         <?php endforeach; ?>
     </div>

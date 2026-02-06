@@ -32,11 +32,6 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Harcamalar ve masraf kategorileri</p>
 </div>
 
-<?php if (empty($expensesMigrationOk ?? true)): ?>
-    <div class="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm">
-        <strong>Masraflar modülü için migration gerekli.</strong> Proje kökünden şu komutu çalıştırın: <code class="block mt-2 p-2 bg-amber-100 dark:bg-amber-900/40 rounded">php php-app/scripts/run-migrations.php</code>
-    </div>
-<?php endif; ?>
 <?php if (!empty($flashSuccess)): ?>
     <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
 <?php endif; ?>

@@ -398,6 +398,7 @@ class ContractsController
         }
         $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
         $customerName = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
+        $contractPayments = Payment::findByContractId($this->pdo, $id);
         $pageTitle = 'Çıkış belgesi: ' . ($contract['contract_number'] ?? '');
         require __DIR__ . '/../../views/contracts/exit_document.php';
     }

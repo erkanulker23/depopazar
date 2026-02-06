@@ -63,13 +63,14 @@ class TransportationJobsController
         }
         try {
             $this->pdo->query('SELECT 1 FROM expenses LIMIT 1');
-            $expensesMigrationOk = true;
-            if ($expenseCompanyId) {
+            $stmt = $this->pdo->query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'expenses' AND COLUMN_NAME = 'transportation_job_id' LIMIT 1");
+            $expensesMigrationOk = $stmt && $stmt->fetch();
+            if ($expensesMigrationOk && $expenseCompanyId) {
                 $bankAccounts = BankAccount::findAll($this->pdo, $expenseCompanyId);
                 $creditCards = CreditCard::findAll($this->pdo, $expenseCompanyId);
             }
         } catch (Throwable $e) {
-            // masraflar tablosu yoksa modal gösterilmez
+            // masraflar tablosu veya transportation_job_id kolonu yoksa modal gösterilmez
         }
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
@@ -123,13 +124,16 @@ class TransportationJobsController
         $expenseCompanyId = $companyId ?: ($job['company_id'] ?? null);
         if ($expenseCompanyId) {
             try {
-                $categories = ExpenseCategory::findAll($this->pdo, $expenseCompanyId);
-                $bankAccounts = BankAccount::findAll($this->pdo, $expenseCompanyId);
-                $creditCards = CreditCard::findAll($this->pdo, $expenseCompanyId);
                 $this->pdo->query('SELECT 1 FROM expenses LIMIT 1');
-                $expensesMigrationOk = true;
+                $stmt = $this->pdo->query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'expenses' AND COLUMN_NAME = 'transportation_job_id' LIMIT 1");
+                if ($stmt && $stmt->fetch()) {
+                    $expensesMigrationOk = true;
+                    $categories = ExpenseCategory::findAll($this->pdo, $expenseCompanyId);
+                    $bankAccounts = BankAccount::findAll($this->pdo, $expenseCompanyId);
+                    $creditCards = CreditCard::findAll($this->pdo, $expenseCompanyId);
+                }
             } catch (Throwable $e) {
-                // masraflar modülü yoksa formu göstermeyiz
+                // masraflar modülü veya transportation_job_id kolonu yoksa formu göstermeyiz
             }
         }
         $flashSuccess = $_SESSION['flash_success'] ?? null;

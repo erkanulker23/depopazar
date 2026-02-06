@@ -138,7 +138,12 @@ class PaymentsController
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Kayıt yapılamadı: ' . $e->getMessage();
         }
-        header('Location: /odemeler');
+        $redirect = trim($_POST['redirect'] ?? '');
+        if ($redirect !== '' && preg_match('#^/[a-z0-9/\-]+$#i', $redirect)) {
+            header('Location: ' . $redirect);
+        } else {
+            header('Location: /odemeler');
+        }
         exit;
     }
 

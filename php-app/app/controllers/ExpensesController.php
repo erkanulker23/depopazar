@@ -44,7 +44,7 @@ class ExpensesController
             exit;
         }
         if (!$this->checkExpensesMigration()) {
-            $_SESSION['flash_error'] = 'Masraflar modülü için migration çalıştırılmalı. php-app/sql/migrations/add_expenses_and_credit_cards.sql';
+            $_SESSION['flash_error'] = 'Masraflar modülü şu an kullanılamıyor.';
             header('Location: /masraflar');
             exit;
         }
@@ -273,8 +273,9 @@ class ExpensesController
     private function checkExpensesMigration(): bool
     {
         try {
-            $this->pdo->query('SELECT 1 FROM expense_categories LIMIT 1');
-            return true;
+            $this->pdo->query('SELECT 1 FROM credit_cards LIMIT 1');
+            $stmt = $this->pdo->query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'expenses' AND COLUMN_NAME = 'transportation_job_id' LIMIT 1");
+            return $stmt && $stmt->fetch();
         } catch (Throwable $e) {
             return false;
         }
