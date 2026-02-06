@@ -327,7 +327,7 @@ php php-app/set-password.php erkanulker0@gmail.com yeniSifre123
 
 ### HTTP 500 – “Bu isteği işleme alamıyor”
 
-1. **Sağlık kontrolü:** Tarayıcıda `https://your-domain.com/health.php` açın. Hangi adımda hata varsa (config, db.local.php, veritabanı) sayfa yazar.
+1. **Sağlık kontrolü:** Tarayıcıda `https://your-domain.com/health.php` açın. Hangi adımda hata varsa (config, db.local.php, veritabanı, vendor, bootstrap) sayfa detaylı yazar.
 2. **Sık nedenler:**
    - **`db.local.php` yok:** Environment doldurulup **Deploy Now** yapılmamış. Environment’ı kaydedip tekrar **Deploy Now** çalıştırın.
    - **Veritabanı bilgisi hatalı:** Environment’ta `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` Forge’daki MySQL bilgileriyle aynı olmalı. Sonra tekrar **Deploy Now**.

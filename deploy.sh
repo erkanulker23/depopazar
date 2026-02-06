@@ -114,7 +114,12 @@ fi
 # -----------------------------------------------------------------------------
 echo -e "${YELLOW}[5/8] Composer (php-app)...${NC}"
 if command -v composer &> /dev/null && [ -f "$ROOT/php-app/composer.json" ]; then
-  (cd "$ROOT/php-app" && composer install --no-dev --optimize-autoloader 2>/dev/null) || echo "  (composer install atlandı)"
+  if (cd "$ROOT/php-app" && composer install --no-dev --optimize-autoloader); then
+    echo -e "  ${GREEN}Composer OK${NC}"
+  else
+    echo -e "  ${RED}Composer HATASI - vendor/ eksik olabilir, 500 hatası alırsınız!${NC}" >&2
+    echo "  Sunucuda manuel: cd php-app && composer install --no-dev --optimize-autoloader" >&2
+  fi
 else
   echo "  (composer yok veya php-app/composer.json yok - atlanıyor)"
 fi
