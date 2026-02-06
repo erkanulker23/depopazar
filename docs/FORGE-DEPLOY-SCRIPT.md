@@ -319,6 +319,16 @@ php php-app/set-password.php erkanulker0@gmail.com yeniSifre123
 
 ## Sorun Giderme
 
+### Deployment failed: chown "Operation not permitted" (vendor veya bin)
+
+Forge deploy sırasında `chown` hataları alıyorsanız (özellikle `php-app/vendor` veya `vendor/bin` için):
+
+- **Neden:** Forge’da deploy `forge` kullanıcısıyla çalışır; bu kullanıcı `chown` yapamaz (sadece root yapabilir).
+- **Ne yapın:**
+  1. Forge’da **Deploy Script** alanında proje kökündeki `deploy.sh` kullanılıyorsa, repo’daki güncel script’i kullanın (içinde artık `chown` yok).
+  2. Forge’a yapıştırdığınız özel bir script kullanıyorsanız, **`chown -R`** içeren satırları tamamen kaldırın (özellikle tüm site path’i veya `vendor` üzerinde chown yapan satırlar).
+- Composer `vendor` dizinini `forge` kullanıcısı zaten oluşturduğu için sahiplik sorunu olmaz; ekstra chown gerekmez.
+
 ### HTTP 500 – “Bu isteği işleme alamıyor”
 
 1. **Sağlık kontrolü:** Tarayıcıda `https://your-domain.com/health.php` açın. Hangi adımda hata varsa (config, db.local.php, veritabanı, vendor, bootstrap) sayfa detaylı yazar.

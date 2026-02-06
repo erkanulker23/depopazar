@@ -120,12 +120,8 @@ echo -e "${YELLOW}[7/8] Dizin izinleri ayarlanıyor...${NC}"
 mkdir -p "$ROOT/php-app/public/uploads/company"
 chmod -R 755 "$ROOT/php-app/public/uploads" 2>/dev/null || true
 
-# Forge'da PHP-FPM kullanıcısı (forge veya www-data)
-WEB_USER="${WEB_USER:-$FORGE_SSH_USER}"
-WEB_USER="${WEB_USER:-www-data}"
-if id "$WEB_USER" &>/dev/null 2>&1; then
-  chown -R "$WEB_USER:$WEB_USER" "$ROOT/php-app/public/uploads" 2>/dev/null || true
-fi
+# Forge'da forge kullanıcısı chown yapamaz (Operation not permitted).
+# Sadece izinler yeterli; chown atlanıyor (uploads dizini zaten forge tarafından oluşturuluyor).
 
 # -----------------------------------------------------------------------------
 # VAPID (push bildirimleri) – .env'de tanımlı olmalı; yoksa bildirimler sadece panelde
