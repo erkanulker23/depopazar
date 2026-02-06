@@ -41,18 +41,18 @@ ob_start();
         <div class="p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-building text-emerald-600"></i> Firma Bilgileri</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Proje adı uygulama başlığında ve SEO’da kullanılır.</p>
-            <form method="post" action="/ayarlar/firma-guncelle" enctype="multipart/form-data" class="space-y-4">
-                <?php if (!empty($company['logo_url'])): ?>
-                <div class="mb-4 flex flex-wrap items-center gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Mevcut Firma Logosu</label>
-                        <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-16 object-contain">
-                    </div>
-                    <form method="post" action="/ayarlar/logo-sil" class="inline" onsubmit="return confirm('Firma logosunu kaldırmak istediğinize emin misiniz?');">
-                        <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Logoyu kaldır</button>
-                    </form>
+            <?php if (!empty($company['logo_url'])): ?>
+            <div class="mb-4 flex flex-wrap items-center gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Mevcut Firma Logosu</label>
+                    <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-16 object-contain">
                 </div>
-                <?php endif; ?>
+                <form method="post" action="/ayarlar/logo-sil" class="inline" onsubmit="return confirm('Firma logosunu kaldırmak istediğinize emin misiniz?');">
+                    <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Logoyu kaldır</button>
+                </form>
+            </div>
+            <?php endif; ?>
+            <form method="post" action="/ayarlar/firma-guncelle" enctype="multipart/form-data" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Firma Logosu</label>
                     <input type="file" name="logo" accept="image/jpeg,image/png,image/gif,image/webp" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">

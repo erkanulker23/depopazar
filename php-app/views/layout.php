@@ -449,7 +449,21 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             pushBannerAllow.addEventListener('touchstart', function(e) { run(e); }, { passive: false });
         }
         bindPushAllow();
-        if (pushEnableBtn) pushEnableBtn.addEventListener('click', requestPermissionAndSubscribe);
+        if (pushEnableBtn) {
+            var didRequestEnable = false;
+            function runEnable(e) {
+                if (e) { e.preventDefault(); e.stopPropagation(); }
+                if (didRequestEnable) return;
+                didRequestEnable = true;
+                requestPermissionAndSubscribe();
+                setTimeout(function() { didRequestEnable = false; }, 1500);
+            }
+            pushEnableBtn.addEventListener('click', runEnable, { passive: false });
+            pushEnableBtn.addEventListener('touchend', runEnable, { passive: false });
+            pushEnableBtn.style.cursor = 'pointer';
+            pushEnableBtn.style.touchAction = 'manipulation';
+            pushEnableBtn.style.webkitTapHighlightColor = 'transparent';
+        }
         if (pushBannerLater) pushBannerLater.addEventListener('click', hideBanner);
         fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(d) {
             if (!d.publicKey) return;
