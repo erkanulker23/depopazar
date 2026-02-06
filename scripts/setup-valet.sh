@@ -9,7 +9,7 @@ if ! command -v valet &>/dev/null; then
   exit 1
 fi
 
-# Eski Nginx config'i kaldır (React/frontend build'e yönlendiren)
+# Eski Nginx config'i kaldır (varsa)
 rm -f "$HOME/.config/valet/Nginx/depotakip-v1.test" 2>/dev/null || true
 
 cd "$PUBLIC"

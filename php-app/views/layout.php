@@ -4,13 +4,14 @@ if (!isset($projectName)) $projectName = $_SESSION['company_project_name'] ?? 'D
 $user = Auth::user();
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
 if (($q = strpos($currentPath, '?')) !== false) $currentPath = substr($currentPath, 0, $q);
-$navIcons = ['Dashboard'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Bildirimler'=>'bell','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
+$navIcons = ['Dashboard'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Araçlar'=>'car-front','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Bildirimler'=>'bell','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
 $navItems = [
     ['name' => 'Dashboard', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
     ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
     ['name' => 'Ödeme Al', 'href' => '/odemeler?collect=1', 'highlight' => true, 'active' => false],
     ['name' => 'Tüm Girişler', 'href' => '/girisler', 'active' => $currentPath === '/girisler'],
     ['name' => 'Nakliye İşler', 'href' => '/nakliye-isler', 'active' => $currentPath === '/nakliye-isler'],
+    ['name' => 'Araçlar', 'href' => '/araclar', 'active' => $currentPath === '/araclar' || (strpos($currentPath, '/araclar/') === 0)],
     ['name' => 'Hizmetler', 'href' => '/hizmetler', 'active' => $currentPath === '/hizmetler'],
     ['name' => 'Teklifler', 'href' => '/teklifler', 'active' => $currentPath === '/teklifler'],
     ['name' => 'Kullanıcılar', 'href' => '/kullanicilar', 'active' => $currentPath === '/kullanicilar'],
@@ -210,15 +211,15 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                     </div>
                 </div>
             </div>
-            <!-- Push bildirim izni – sayfa ilk açıldığında görünür (mobil dahil); JS izin/dismiss durumuna göre gizler -->
-            <div id="pushBanner" class="push-banner-default border-b border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap" role="region" aria-label="Bildirimlere izin verin">
+            <!-- Push bildirim izni – sayfa ilk açıldığında görünür (mobil dahil); JS izin/dismiss durumuna göre gizler. z-index ile mobilde üstte kalır. -->
+            <div id="pushBanner" class="push-banner-default relative z-40 border-b border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap" role="region" aria-label="Bildirimlere izin verin">
                 <p class="push-banner-text text-sm text-gray-800 dark:text-gray-200 flex-1 min-w-0 leading-snug">
                     <i class="bi bi-bell text-emerald-600 dark:text-emerald-400 mr-2 align-middle" aria-hidden="true"></i>
                     <strong>Bildirimlere izin verin</strong> – ödeme, sözleşme ve işlemlerde cihazınıza anlık bildirim gider.
                 </p>
                 <div class="push-banner-btns flex items-center gap-2 flex-shrink-0">
-                    <button type="button" id="pushBannerLater" class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 min-h-[44px] touch-manipulation rounded-lg">Sonra</button>
-                    <button type="button" id="pushBannerAllow" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 active:bg-emerald-800 min-h-[44px] min-w-[120px] md:min-w-[140px] touch-manipulation shrink-0" aria-label="Bildirimlere izin ver">Bildirimlere izin ver</button>
+                    <button type="button" id="pushBannerLater" class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 min-h-[44px] min-w-[44px] touch-manipulation rounded-lg">Sonra</button>
+                    <button type="button" id="pushBannerAllow" class="px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 active:bg-emerald-800 min-h-[48px] min-w-[140px] touch-manipulation shrink-0 cursor-pointer select-none" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;" aria-label="Bildirimlere izin ver">Bildirimlere izin ver</button>
                 </div>
                 <p id="pushBannerHint" class="hidden w-full mt-2 text-xs text-amber-700 dark:text-amber-300 text-left break-words"></p>
             </div>
@@ -420,14 +421,16 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         function bindPushAllow() {
             if (!pushBannerAllow) return;
             var didRequest = false;
-            function run() {
+            function run(e) {
+                if (e) { e.preventDefault(); e.stopPropagation(); }
                 if (didRequest) return;
                 didRequest = true;
                 requestPermissionAndSubscribe();
-                setTimeout(function() { didRequest = false; }, 800);
+                setTimeout(function() { didRequest = false; }, 1500);
             }
-            pushBannerAllow.addEventListener('click', function(e) { e.preventDefault(); run(); });
-            pushBannerAllow.addEventListener('touchend', function(e) { e.preventDefault(); run(); }, { passive: false });
+            pushBannerAllow.addEventListener('click', function(e) { run(e); }, { passive: false });
+            pushBannerAllow.addEventListener('touchend', function(e) { run(e); }, { passive: false });
+            pushBannerAllow.addEventListener('touchstart', function(e) { run(e); }, { passive: false });
         }
         bindPushAllow();
         if (pushEnableBtn) pushEnableBtn.addEventListener('click', requestPermissionAndSubscribe);

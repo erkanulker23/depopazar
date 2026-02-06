@@ -15,22 +15,28 @@ class ContractsController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $statusFilter = isset($_GET['durum']) && in_array($_GET['durum'], ['active', 'inactive'], true) ? $_GET['durum'] : null;
         $debtFilter = isset($_GET['borc']) && in_array($_GET['borc'], ['with_debt', 'no_debt'], true) ? $_GET['borc'] : null;
+        $perPage = 50;
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $offset = ($page - 1) * $perPage;
+
         if ($companyId) {
-            $contracts = Contract::findAll($this->pdo, $companyId, $statusFilter, $debtFilter);
+            $contractsTotal = Contract::count($this->pdo, $companyId, $statusFilter, $debtFilter);
+            $contracts = Contract::findAll($this->pdo, $companyId, $statusFilter, $debtFilter, $perPage, $offset);
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
-            $customers = Customer::findAll($this->pdo, $companyId);
+            $customers = Customer::findAll($this->pdo, $companyId, null, 500);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $contracts = Contract::findAll($this->pdo, null, $statusFilter, $debtFilter);
+            $contractsTotal = Contract::count($this->pdo, null, $statusFilter, $debtFilter);
+            $contracts = Contract::findAll($this->pdo, null, $statusFilter, $debtFilter, $perPage, $offset);
             $warehouses = Warehouse::findAll($this->pdo, null);
-            $customers = Customer::findAll($this->pdo, null);
+            $customers = Customer::findAll($this->pdo, null, null, 500);
         } else {
+            $contractsTotal = 0;
             $contracts = $warehouses = $customers = [];
         }
         $rooms = Room::findAll($this->pdo, null);
         if ($companyId) {
             $rooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
         }
-        // Yeni satışta sadece boş odalar listelensin
         $roomsEmpty = array_values(array_filter($rooms, fn($r) => ($r['status'] ?? '') === 'empty'));
         $staff = [];
         $owners = [];
@@ -44,19 +50,39 @@ class ContractsController
         }
         $openNewSale = isset($_GET['newSale']) && $_GET['newSale'] !== '0';
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
-        $contractDebt = [];
-        foreach ($contracts as $c) {
-            $cid = $c['id'] ?? '';
-            $stmt = $this->pdo->prepare('SELECT SUM(CASE WHEN status = \'overdue\' THEN 1 ELSE 0 END) AS overdue_cnt, SUM(CASE WHEN status = \'pending\' THEN 1 ELSE 0 END) AS pending_cnt FROM payments WHERE contract_id = ? AND deleted_at IS NULL');
-            $stmt->execute([$cid]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $contractDebt[$cid] = ['overdue' => (int)($row['overdue_cnt'] ?? 0), 'pending' => (int)($row['pending_cnt'] ?? 0)];
-        }
+        $contractDebt = $this->getContractDebtCounts($contracts);
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
-        $rooms = $roomsEmpty; // modalda sadece boş odalar
+        $rooms = $roomsEmpty;
         require __DIR__ . '/../../views/contracts/index.php';
+    }
+
+    /** Birden fazla sözleşme için borç sayılarını tek sorguda alır (N+1 önleme) */
+    private function getContractDebtCounts(array $contracts): array
+    {
+        if (empty($contracts)) {
+            return [];
+        }
+        $ids = array_map(fn($c) => $c['id'] ?? '', array_filter($contracts, fn($c) => !empty($c['id'])));
+        if (empty($ids)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->pdo->prepare(
+            "SELECT contract_id, SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) AS overdue_cnt, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_cnt FROM payments WHERE contract_id IN ($placeholders) AND deleted_at IS NULL GROUP BY contract_id"
+        );
+        $stmt->execute($ids);
+        $result = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $result[$row['contract_id']] = ['overdue' => (int) ($row['overdue_cnt'] ?? 0), 'pending' => (int) ($row['pending_cnt'] ?? 0)];
+        }
+        foreach ($ids as $id) {
+            if (!isset($result[$id])) {
+                $result[$id] = ['overdue' => 0, 'pending' => 0];
+            }
+        }
+        return $result;
     }
 
     public function create(): void
@@ -346,6 +372,34 @@ class ContractsController
         $_SESSION['flash_success'] = 'Sözleşme sonlandırıldı.';
         header('Location: /girisler');
         exit;
+    }
+
+    /** Çıkış belgesi yazdır */
+    public function exitDocumentPrint(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /girisler');
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            header('Location: /girisler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            header('Location: /girisler');
+            exit;
+        }
+        $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
+        $customerName = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
+        $pageTitle = 'Çıkış belgesi: ' . ($contract['contract_number'] ?? '');
+        require __DIR__ . '/../../views/contracts/exit_document.php';
     }
 
     public function delete(): void

@@ -5,7 +5,11 @@ $years = $years ?? [];
 $customers = $customers ?? [];
 $services = $services ?? [];
 $staff = $staff ?? [];
+$vehicles = $vehicles ?? [];
 $newCustomerId = $newCustomerId ?? '';
+$bankAccounts = $bankAccounts ?? [];
+$creditCards = $creditCards ?? [];
+$expensesMigrationOk = $expensesMigrationOk ?? false;
 $currentQ = isset($_GET['q']) ? trim($_GET['q']) : '';
 $currentYear = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : '';
 $currentMonth = isset($_GET['month']) && $_GET['month'] !== '' ? (int) $_GET['month'] : '';
@@ -118,6 +122,7 @@ ob_start();
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <a href="/nakliye-isler/<?= htmlspecialchars($j['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1" title="Detay"><i class="bi bi-eye"></i></a>
+                                <button type="button" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 mr-1 open-masraf-modal" data-job-id="<?= htmlspecialchars($j['id']) ?>" title="Masraf gir"><i class="bi bi-cash-stack mr-0.5"></i> Masraf gir</button>
                                 <a href="/nakliye-isler/<?= htmlspecialchars($j['id']) ?>/duzenle" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></a>
                                 <form method="post" action="/nakliye-isler/sil" class="inline" onsubmit="return confirm('Bu nakliye işini silmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($j['id']) ?>">
@@ -131,6 +136,81 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
+
+<?php if ($expensesMigrationOk): ?>
+<!-- Modal: Masraf gir (liste sayfasında açılır) -->
+<div id="listMasrafModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" id="listMasrafModalBackdrop"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Nakliye masrafları gir</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Bu işe yapılan masrafları girin. Tutarlar sadece seçilen nakliye işine bağlanır.</p>
+            <form method="post" id="listMasrafForm" class="space-y-4" action="">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-200 dark:border-gray-600">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 w-40">Personel masrafı (₺)</label>
+                        <input type="number" name="amount_personel" step="0.01" min="0" placeholder="0" class="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-right">
+                    </div>
+                    <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-200 dark:border-gray-600">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 w-40">Mazot masrafı (₺)</label>
+                        <input type="number" name="amount_mazot" step="0.01" min="0" placeholder="0" class="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-right">
+                    </div>
+                    <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-200 dark:border-gray-600">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 w-40">Paketleme masrafı (₺)</label>
+                        <input type="number" name="amount_paketleme" step="0.01" min="0" placeholder="0" class="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-right">
+                    </div>
+                    <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-200 dark:border-gray-600">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 w-40">Diğer masraf (₺)</label>
+                        <input type="number" name="amount_diger" step="0.01" min="0" placeholder="0" class="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-right">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tarih <span class="text-red-500">*</span></label>
+                    <input type="date" name="expense_date" value="<?= date('Y-m-d') ?>" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme kaynağı <span class="text-red-500">*</span></label>
+                    <div class="flex flex-wrap gap-3 mb-2">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="payment_source_type" value="nakit" checked class="rounded border-gray-300 text-emerald-600" onchange="toggleListMasrafPayment('nakit')">
+                            <span>Nakit (işten alınan ödeme)</span>
+                        </label>
+                        <?php if (!empty($bankAccounts)): ?>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="payment_source_type" value="bank_account" class="rounded border-gray-300 text-emerald-600" onchange="toggleListMasrafPayment('bank_account')">
+                            <span>Banka</span>
+                        </label>
+                        <?php endif; ?>
+                        <?php if (!empty($creditCards)): ?>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="payment_source_type" value="credit_card" class="rounded border-gray-300 text-emerald-600" onchange="toggleListMasrafPayment('credit_card')">
+                            <span>Kredi kartı</span>
+                        </label>
+                        <?php endif; ?>
+                    </div>
+                    <select name="payment_source_id" id="listMasrafPaymentSource" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">Nakit (işten alınan ödeme)</option>
+                        <?php foreach ($bankAccounts as $ba): ?>
+                        <option value="<?= htmlspecialchars($ba['id']) ?>"><?= htmlspecialchars($ba['bank_name'] . ' - ' . ($ba['account_holder_name'] ?? '')) ?></option>
+                        <?php endforeach; ?>
+                        <?php foreach ($creditCards as $cc): ?>
+                        <option value="<?= htmlspecialchars($cc['id']) ?>"><?= htmlspecialchars(CreditCard::getDisplayName($cc)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not (isteğe bağlı)</label>
+                    <input type="text" name="notes" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="Bu işe ait not">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" class="listMasrafModalKapat px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Modal: Yeni Nakliye İşi Ekle (eski sistemle uyumlu) -->
 <div id="newJobModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
@@ -232,8 +312,19 @@ ob_start();
                         <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Diğer Bilgiler</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hangi plakalı araçlar gitti (virgülle ayırarak birden fazla ekleyebilirsiniz)</label>
-                                <input type="text" name="vehicle_plate" placeholder="Örn: 34 ABC 123, 06 XYZ 456" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Araç (plaka)</label>
+                                <?php if (!empty($vehicles)): ?>
+                                    <select name="vehicle_plate" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">Araç seçin</option>
+                                        <?php foreach ($vehicles as $v): ?>
+                                            <option value="<?= htmlspecialchars($v['plate']) ?>"><?= htmlspecialchars($v['plate']) ?><?= !empty($v['model_year']) ? ' (' . (int)$v['model_year'] . ')' : '' ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Liste <a href="/araclar" class="text-emerald-600 dark:text-emerald-400 hover:underline">Araçlar</a> sayfasından gelir.</p>
+                                <?php else: ?>
+                                    <input type="text" name="vehicle_plate" placeholder="Plaka (Araçlar sayfasından araç ekleyerek seçim yapabilirsiniz)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><a href="/araclar" class="text-emerald-600 dark:text-emerald-400 hover:underline">Araçlar</a> sayfasından araç ekleyin; nakliye eklerken listeden seçebilirsiniz.</p>
+                                <?php endif; ?>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">İşe giden personel</label>
@@ -395,6 +486,63 @@ function closeNewJobCustomer() {
     document.querySelectorAll('.job-cb').forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
     if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.job-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); updateBulkBar(); });
 })();
+
+<?php if ($expensesMigrationOk): ?>
+(function(){
+    var modal = document.getElementById('listMasrafModal');
+    var form = document.getElementById('listMasrafForm');
+    var backdrop = document.getElementById('listMasrafModalBackdrop');
+    var paymentSel = document.getElementById('listMasrafPaymentSource');
+    var bankOpts = <?= json_encode(array_map(fn($ba) => ['id' => $ba['id'], 'label' => $ba['bank_name'] . ' - ' . ($ba['account_holder_name'] ?? '')], $bankAccounts)) ?>;
+    var cardOpts = <?= json_encode(array_map(fn($cc) => ['id' => $cc['id'], 'label' => CreditCard::getDisplayName($cc)], $creditCards)) ?>;
+    function closeListMasrafModal() {
+        if (modal) modal.classList.add('hidden');
+    }
+    function openListMasrafModal(jobId) {
+        if (!form || !jobId) return;
+        form.action = '/nakliye-isler/' + jobId + '/masraf-ekle';
+        if (modal) modal.classList.remove('hidden');
+    }
+    if (backdrop) backdrop.addEventListener('click', closeListMasrafModal);
+    document.querySelectorAll('.listMasrafModalKapat').forEach(function(b){ b.addEventListener('click', closeListMasrafModal); });
+    document.querySelectorAll('.open-masraf-modal').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var jobId = this.getAttribute('data-job-id');
+            if (jobId) openListMasrafModal(jobId);
+        });
+    });
+    window.toggleListMasrafPayment = function(type) {
+        if (!paymentSel) return;
+        if (type === 'nakit') { paymentSel.value = ''; return; }
+        paymentSel.innerHTML = '';
+        var opt0 = document.createElement('option');
+        opt0.value = '';
+        opt0.textContent = 'Nakit (işten alınan ödeme)';
+        paymentSel.appendChild(opt0);
+        var opts = type === 'bank_account' ? bankOpts : cardOpts;
+        opts.forEach(function(o) {
+            var opt = document.createElement('option');
+            opt.value = o.id;
+            opt.textContent = o.label;
+            paymentSel.appendChild(opt);
+        });
+        if (opts.length) paymentSel.value = opts[0].id;
+    };
+    if (form) form.addEventListener('submit', function(e) {
+        var a = parseFloat(form.querySelector('input[name="amount_personel"]').value) || 0;
+        var b = parseFloat(form.querySelector('input[name="amount_mazot"]').value) || 0;
+        var c = parseFloat(form.querySelector('input[name="amount_paketleme"]').value) || 0;
+        var d = parseFloat(form.querySelector('input[name="amount_diger"]').value) || 0;
+        if (a + b + c + d <= 0) {
+            e.preventDefault();
+            alert('En az bir masraf türüne tutar girin.');
+            return false;
+        }
+    });
+})();
+<?php endif; ?>
+
 var newJobCustomerId = <?= json_encode($newCustomerId) ?>;
 if (newJobCustomerId && document.getElementById('newJob_customer_id')) {
     var sel = document.getElementById('newJob_customer_id');

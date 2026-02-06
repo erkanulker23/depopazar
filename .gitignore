@@ -43,12 +43,10 @@ Thumbs.db
 *.db
 
 # Uploads (logo, PDF, etc.)
-backend/uploads/
 php-app/uploads/
 
-# Logs (backend PM2 izolasyonu: backend/logs/depopazar-*-*.log)
+# Logs
 logs/
-backend/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*

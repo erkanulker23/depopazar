@@ -4,6 +4,7 @@ $job = $job ?? [];
 $customers = $customers ?? [];
 $services = $services ?? [];
 $staff = $staff ?? [];
+$vehicles = $vehicles ?? [];
 $staffIds = isset($job['staff_ids']) && is_array($job['staff_ids']) ? $job['staff_ids'] : [];
 $flashSuccess = $flashSuccess ?? null;
 $flashError = $flashError ?? null;
@@ -104,8 +105,27 @@ ob_start();
                         <input type="number" name="vat_rate" value="<?= htmlspecialchars($job['vat_rate'] ?? '20') ?>" step="0.01" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hangi plakalı araçlar gitti (virgülle ayırarak birden fazla ekleyebilirsiniz)</label>
-                        <input type="text" name="vehicle_plate" value="<?= htmlspecialchars($job['vehicle_plate'] ?? '') ?>" placeholder="Örn: 34 ABC 123, 06 XYZ 456" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Araç (plaka)</label>
+                        <?php
+                        $currentPlate = trim($job['vehicle_plate'] ?? '');
+                        $vehiclePlates = array_map(fn($v) => $v['plate'], $vehicles);
+                        $currentInList = $currentPlate !== '' && in_array($currentPlate, $vehiclePlates, true);
+                        ?>
+                        <?php if (!empty($vehicles) || $currentPlate !== ''): ?>
+                            <select name="vehicle_plate" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                <option value="">Araç seçin</option>
+                                <?php if ($currentPlate !== '' && !$currentInList): ?>
+                                    <option value="<?= htmlspecialchars($currentPlate) ?>" selected>Mevcut: <?= htmlspecialchars($currentPlate) ?></option>
+                                <?php endif; ?>
+                                <?php foreach ($vehicles as $v): ?>
+                                    <option value="<?= htmlspecialchars($v['plate']) ?>" <?= ($currentPlate !== '' && $v['plate'] === $currentPlate) ? 'selected' : '' ?>><?= htmlspecialchars($v['plate']) ?><?= !empty($v['model_year']) ? ' (' . (int)$v['model_year'] . ')' : '' ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Liste <a href="/araclar" class="text-emerald-600 dark:text-emerald-400 hover:underline">Araçlar</a> sayfasından gelir.</p>
+                        <?php else: ?>
+                            <input type="text" name="vehicle_plate" value="<?= htmlspecialchars($currentPlate) ?>" placeholder="Plaka" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><a href="/araclar" class="text-emerald-600 dark:text-emerald-400 hover:underline">Araçlar</a> sayfasından araç ekleyin; düzenlerken listeden seçebilirsiniz.</p>
+                        <?php endif; ?>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Durum</label>

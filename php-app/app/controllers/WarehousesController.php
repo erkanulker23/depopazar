@@ -51,6 +51,7 @@ class WarehousesController
         }
         $rooms = Room::findAll($this->pdo, $id);
         $roomCustomerCounts = [];
+        $roomCustomers = [];
         if (!empty($rooms)) {
             $roomIds = array_column($rooms, 'id');
             $placeholders = implode(',', array_fill(0, count($roomIds), '?'));
@@ -59,6 +60,50 @@ class WarehousesController
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $roomCustomerCounts[$row['room_id']] = (int) $row['customer_count'];
             }
+            $stmt2 = $this->pdo->prepare(
+                "SELECT c.room_id, c.id AS contract_id, c.contract_number, c.customer_id, c.is_active,
+                 cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
+                 FROM contracts c
+                 INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                 WHERE c.room_id IN ($placeholders) AND c.deleted_at IS NULL AND c.is_active = 1
+                 ORDER BY cu.last_name, cu.first_name"
+            );
+            $stmt2->execute($roomIds);
+            while ($row = $stmt2->fetch(PDO::FETCH_ASSOC)) {
+                $roomCustomers[$row['room_id']][] = $row;
+            }
+            $roomById = [];
+            foreach ($rooms as $r) {
+                $roomById[$r['id']] = $r;
+            }
+            $warehouseCustomers = [];
+            foreach ($roomCustomers as $roomId => $list) {
+                $room = $roomById[$roomId] ?? null;
+                $roomNumber = $room['room_number'] ?? '-';
+                foreach ($list as $cu) {
+                    $cid = $cu['customer_id'];
+                    if (!isset($warehouseCustomers[$cid])) {
+                        $warehouseCustomers[$cid] = [
+                            'customer_id'   => $cid,
+                            'first_name'    => $cu['customer_first_name'] ?? '',
+                            'last_name'     => $cu['customer_last_name'] ?? '',
+                            'rooms'         => [],
+                        ];
+                    }
+                    $warehouseCustomers[$cid]['rooms'][] = [
+                        'room_id'         => $roomId,
+                        'room_number'     => $roomNumber,
+                        'contract_id'     => $cu['contract_id'] ?? null,
+                        'contract_number' => $cu['contract_number'] ?? null,
+                    ];
+                }
+            }
+            $warehouseCustomers = array_values($warehouseCustomers);
+            usort($warehouseCustomers, function ($a, $b) {
+                return strcasecmp(trim($a['last_name'] . ' ' . $a['first_name']), trim($b['last_name'] . ' ' . $b['first_name']));
+            });
+        } else {
+            $warehouseCustomers = [];
         }
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;

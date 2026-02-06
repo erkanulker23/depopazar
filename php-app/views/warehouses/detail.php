@@ -3,6 +3,8 @@ $currentPage = 'depolar';
 $warehouse = $warehouse ?? [];
 $rooms = $rooms ?? [];
 $roomCustomerCounts = $roomCustomerCounts ?? [];
+$roomCustomers = $roomCustomers ?? [];
+$warehouseCustomers = $warehouseCustomers ?? [];
 $statusLabels = ['empty' => 'Boş', 'occupied' => 'Dolu', 'reserved' => 'Rezerve', 'locked' => 'Kilitli'];
 ob_start();
 ?>
@@ -39,7 +41,52 @@ ob_start();
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Adres</dt><dd class="mt-1 text-gray-600 dark:text-gray-400"><?= nl2br(htmlspecialchars($warehouse['address'] ?? '-')) ?></dd></div>
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İl / İlçe</dt><dd class="mt-1 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(trim(($warehouse['city'] ?? '') . ' / ' . ($warehouse['district'] ?? '')) ?: '-') ?></dd></div>
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Oda Sayısı</dt><dd class="mt-1 text-gray-900 dark:text-white"><?= count($rooms) ?></dd></div>
+                <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Müşteri Sayısı</dt><dd class="mt-1 text-gray-900 dark:text-white"><?= count($warehouseCustomers) ?></dd></div>
             </dl>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+                <i class="bi bi-people text-emerald-600"></i> Depodaki Müşteriler
+            </h2>
+            <?php if (empty($warehouseCustomers)): ?>
+                <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu depoda aktif sözleşmeli müşteri yok.</div>
+            <?php else: ?>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Oda / Sözleşme</th>
+                                <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                            <?php foreach ($warehouseCustomers as $wc): $name = trim(($wc['first_name'] ?? '') . ' ' . ($wc['last_name'] ?? '')); ?>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                    <a href="/musteriler/<?= htmlspecialchars($wc['customer_id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($name) ?></a>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                    <?php
+                                    $roomParts = [];
+                                    foreach ($wc['rooms'] ?? [] as $ro):
+                                        $rNum = htmlspecialchars($ro['room_number'] ?? '-');
+                                        $rLink = '<a href="/odalar/' . htmlspecialchars($ro['room_id']) . '" class="text-emerald-600 dark:text-emerald-400 hover:underline">' . $rNum . '</a>';
+                                        $cLink = $ro['contract_id'] ? '<a href="/girisler/' . htmlspecialchars($ro['contract_id']) . '" class="text-gray-600 dark:text-gray-400 hover:underline">' . htmlspecialchars($ro['contract_number'] ?? '-') . '</a>' : '-';
+                                        $roomParts[] = $rLink . ' / ' . $cLink;
+                                    endforeach;
+                                    echo implode('<br>', $roomParts) ?: '—';
+                                    ?>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <a href="/musteriler/<?= htmlspecialchars($wc['customer_id']) ?>" class="text-sm text-emerald-600 hover:underline">Müşteri Detay</a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
@@ -66,7 +113,21 @@ ob_start();
                                 <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="text-emerald-600 hover:underline"><?= htmlspecialchars($r['room_number']) ?></a></td>
                                 <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"><?= number_format((float)($r['area_m2'] ?? 0), 2, ',', '.') ?></td>
                                 <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"><?= fmtPrice($r['monthly_price'] ?? 0) ?></td>
-                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"><?= (int)($roomCustomerCounts[$r['id']] ?? 0) ?></td>
+                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                    <?php
+                                    $custList = $roomCustomers[$r['id']] ?? [];
+                                    if (empty($custList)): ?>
+                                        <span class="text-gray-400 dark:text-gray-500">—</span>
+                                    <?php else:
+                                        $links = [];
+                                        foreach ($custList as $cu):
+                                            $name = trim(($cu['customer_first_name'] ?? '') . ' ' . ($cu['customer_last_name'] ?? ''));
+                                            $links[] = '<a href="/musteriler/' . htmlspecialchars($cu['customer_id']) . '" class="text-emerald-600 dark:text-emerald-400 hover:underline">' . htmlspecialchars($name) . '</a>';
+                                        endforeach;
+                                        echo implode(', ', $links);
+                                    endif;
+                                    ?>
+                                </td>
                                 <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $st === 'empty' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ($st === 'occupied' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-300') ?>"><?= $statusLabels[$st] ?? $st ?></span></td>
                                 <td class="px-4 py-3 text-right">
                                     <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="text-sm text-emerald-600 hover:underline">Detay</a>
@@ -80,7 +141,7 @@ ob_start();
         </div>
     </div>
     <div>
-        <a href="/odalar?warehouse_id=<?= urlencode($warehouse['id']) ?>&add=1" class="block w-full p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-center">
+        <a href="/odalar?warehouse_id=<?= urlencode($warehouse['id']) ?>&add=1" class="block w-full p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-center mb-4">
             <i class="bi bi-plus-circle text-xl block mb-2"></i> Oda Ekle
         </a>
     </div>

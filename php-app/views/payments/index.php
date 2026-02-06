@@ -354,7 +354,14 @@ document.getElementById('customerSearch').addEventListener('input', function() {
         btn.style.display = !q || name.toLowerCase().indexOf(q) >= 0 ? 'block' : 'none';
     });
 });
-<?php if ($collectMode): ?>document.addEventListener('DOMContentLoaded', function() { openCollectModal(); });<?php endif; ?>
+var preselectedCustomerId = <?= json_encode($preselectedCustomerId ?? '') ?>;
+<?php if ($collectMode): ?>document.addEventListener('DOMContentLoaded', function() {
+    openCollectModal();
+    if (preselectedCustomerId && customersWithDebt && customersWithDebt.length) {
+        var c = customersWithDebt.find(function(x) { return x.id === preselectedCustomerId; });
+        if (c && c.payments && c.payments.length) selectCustomer(c.id, c.payments);
+    }
+});<?php endif; ?>
 </script>
 <?php
 $content = ob_get_clean();

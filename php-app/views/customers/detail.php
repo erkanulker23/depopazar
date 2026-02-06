@@ -22,6 +22,81 @@ ob_start();
         </a>
     </div>
 </div>
+<?php if (!empty($_SESSION['flash_success'])): ?>
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($_SESSION['flash_success']) ?></div>
+    <?php unset($_SESSION['flash_success']); ?>
+<?php endif; ?>
+<?php if (!empty($_SESSION['flash_error'])): ?>
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($_SESSION['flash_error']) ?></div>
+    <?php unset($_SESSION['flash_error']); ?>
+<?php endif; ?>
+
+<!-- BAKİYE DURUM kartı -->
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+    <div class="bg-rose-500/10 dark:bg-rose-500/20 border-b border-rose-200/50 dark:border-rose-800/50 px-4 py-3">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <i class="bi bi-bar-chart-fill text-rose-600 dark:text-rose-400"></i> BAKİYE DURUM
+        </h2>
+    </div>
+    <div class="p-4 space-y-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="font-bold text-gray-900 dark:text-white"><?= htmlspecialchars($customerName) ?></span>
+            <a href="#" class="text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" title="Düzenle (yakında)"><i class="bi bi-pencil"></i></a>
+        </div>
+        <div>
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                <span class="font-semibold text-gray-900 dark:text-white"><?= number_format((float)$debt, 2, ',', '.') ?> ₺</span>
+                <?php if ($debt > 0): ?><span class="text-red-600 dark:text-red-400">(Müşteri Borçlu)</span><?php endif; ?>
+            </p>
+        </div>
+        <div>
+            <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Son Ödeme</p>
+            <?php if ($lastPayment): ?>
+            <p class="text-sm <?= (time() - strtotime($lastPayment['paid_at'])) > 90 * 86400 ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300' ?>">
+                <?= htmlspecialchars(timeAgoTr($lastPayment['paid_at'])) ?>
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Tarih: <?= date('d-m-Y', strtotime($lastPayment['paid_at'])) ?> · Tutar: <?= fmtPrice($lastPayment['amount'] ?? 0) ?></p>
+            <?php else: ?>
+            <p class="text-sm text-red-600 dark:text-red-400">Ödeme kaydı yok.</p>
+            <?php endif; ?>
+        </div>
+        <div>
+            <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Kira Tutarı</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)$monthlyRent, 2, ',', '.') ?> ₺</p>
+        </div>
+        <?php if ($primaryWarehouse !== null): ?>
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"><?= htmlspecialchars($primaryWarehouse) ?></span>
+            <?php if ($exitDone): ?>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">Çıkış İşlemi Yapıldı</span>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+        <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/borclandir" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+                <i class="bi bi-currency-dollar"></i> Borçlandır
+            </a>
+            <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($customer['id']) ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
+                <i class="bi bi-currency-dollar"></i> Ödeme Gir
+            </a>
+            <a href="/girisler?newSale=1&newCustomerId=<?= htmlspecialchars($customer['id']) ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors">
+                <i class="bi bi-bag-plus"></i> Depo Girişi Ekle
+            </a>
+            <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/belge-ekle" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+                <i class="bi bi-file-earmark-plus"></i> Belge Ekle
+            </a>
+            <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/cikis-belgesi" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+                <i class="bi bi-download"></i> Çıkış Belgesi Oluştur
+            </a>
+            <button type="button" onclick="document.getElementById('noteModal').classList.remove('hidden')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors">
+                <i class="bi bi-chat-left-text"></i> Bilgi Notu Ekle
+            </button>
+            <button type="button" onclick="document.getElementById('smsModal').classList.remove('hidden')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors">
+                <i class="bi bi-chat-dots"></i> SMS Gönder
+            </button>
+        </div>
+    </div>
+</div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Sol: Profil -->
@@ -229,6 +304,73 @@ ob_start();
                 <i class="bi bi-bank mr-2"></i> Ödeme Al
             </a>
             <?php endif; ?>
+        </div>
+        <?php $documents = $documents ?? []; if (!empty($documents)): ?>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <i class="bi bi-file-earmark text-emerald-600"></i> Belgeler
+            </h3>
+            <ul class="space-y-2">
+                <?php foreach ($documents as $doc): ?>
+                <li class="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <a href="<?= htmlspecialchars(strpos($doc['file_path'] ?? '', '/') === 0 ? $doc['file_path'] : '/' . $doc['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= htmlspecialchars($doc['name'] ?? 'Belge') ?></a>
+                    <form method="post" action="/musteriler/belge-sil" class="inline" onsubmit="return confirm('Bu belgeyi silmek istediğinize emin misiniz?');">
+                        <input type="hidden" name="id" value="<?= htmlspecialchars($doc['id']) ?>">
+                        <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
+                        <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-sm">Sil</button>
+                    </form>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Modal: Bilgi Notu -->
+<div id="noteModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('noteModal').classList.add('hidden')"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i class="bi bi-chat-left-text text-emerald-600 mr-2"></i> Bilgi Notu</h3>
+                <button type="button" onclick="document.getElementById('noteModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form method="post" action="/musteriler/<?= htmlspecialchars($customer['id']) ?>/not-guncelle" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not</label>
+                    <textarea name="notes" rows="5" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="Müşteri hakkında not..."><?= htmlspecialchars($customer['notes'] ?? '') ?></textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="document.getElementById('noteModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: SMS Gönder -->
+<div id="smsModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('smsModal').classList.add('hidden')"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i class="bi bi-chat-dots text-emerald-600 mr-2"></i> SMS Gönder</h3>
+                <button type="button" onclick="document.getElementById('smsModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">SMS, Ayarlar &rarr; SMS (Netgsm) bölümündeki ayarlara göre gönderilir. Alıcı: <strong><?= htmlspecialchars($customer['phone'] ?? '') ?></strong></p>
+            <form method="post" action="/musteriler/<?= htmlspecialchars($customer['id']) ?>/sms-gonder" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mesaj <span class="text-red-500">*</span></label>
+                    <textarea name="message" required rows="4" maxlength="160" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="SMS metnini yazın (tek mesaj 160 karakter)"></textarea>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Tek SMS en fazla 160 karakter. Uzun metinler birden fazla SMS olarak gönderilir.</p>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="document.getElementById('smsModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Gönder</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

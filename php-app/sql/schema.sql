@@ -395,6 +395,133 @@ CREATE TABLE IF NOT EXISTS `transportation_job_staff` (
   CONSTRAINT `fk_tjs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- vehicles (araçlar: plaka, kasko/muayene tarihi, kasa m³)
+CREATE TABLE IF NOT EXISTS `vehicles` (
+  `id` CHAR(36) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at` DATETIME DEFAULT NULL,
+  `company_id` CHAR(36) NOT NULL,
+  `plate` VARCHAR(20) NOT NULL,
+  `model_year` INT DEFAULT NULL,
+  `kasko_date` DATE DEFAULT NULL,
+  `inspection_date` DATE DEFAULT NULL,
+  `cargo_volume_m3` DECIMAL(6,2) DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_vehicles_company_plate` (`company_id`, `plate`),
+  KEY `idx_vehicles_company_id` (`company_id`),
+  KEY `idx_vehicles_deleted_at` (`deleted_at`),
+  KEY `idx_vehicles_kasko_date` (`kasko_date`),
+  KEY `idx_vehicles_inspection_date` (`inspection_date`),
+  CONSTRAINT `fk_vehicles_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- vehicle_traffic_insurances
+CREATE TABLE IF NOT EXISTS `vehicle_traffic_insurances` (
+  `id` CHAR(36) NOT NULL,
+  `vehicle_id` CHAR(36) NOT NULL,
+  `policy_number` VARCHAR(100) DEFAULT NULL,
+  `insurer_name` VARCHAR(150) DEFAULT NULL,
+  `start_date` DATE NOT NULL,
+  `end_date` DATE NOT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_vti_vehicle_id` (`vehicle_id`),
+  KEY `idx_vti_deleted_at` (`deleted_at`),
+  KEY `idx_vti_end_date` (`end_date`),
+  CONSTRAINT `fk_vti_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- vehicle_kaskos
+CREATE TABLE IF NOT EXISTS `vehicle_kaskos` (
+  `id` CHAR(36) NOT NULL,
+  `vehicle_id` CHAR(36) NOT NULL,
+  `policy_number` VARCHAR(100) DEFAULT NULL,
+  `insurer_name` VARCHAR(150) DEFAULT NULL,
+  `start_date` DATE NOT NULL,
+  `end_date` DATE NOT NULL,
+  `premium_amount` DECIMAL(12,2) DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_vk_vehicle_id` (`vehicle_id`),
+  KEY `idx_vk_deleted_at` (`deleted_at`),
+  KEY `idx_vk_end_date` (`end_date`),
+  CONSTRAINT `fk_vk_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- vehicle_accidents
+CREATE TABLE IF NOT EXISTS `vehicle_accidents` (
+  `id` CHAR(36) NOT NULL,
+  `vehicle_id` CHAR(36) NOT NULL,
+  `accident_date` DATE NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `damage_info` TEXT DEFAULT NULL,
+  `repair_cost` DECIMAL(12,2) DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_va_vehicle_id` (`vehicle_id`),
+  KEY `idx_va_deleted_at` (`deleted_at`),
+  KEY `idx_va_accident_date` (`accident_date`),
+  CONSTRAINT `fk_va_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- vehicle_traffic_insurance_documents
+CREATE TABLE IF NOT EXISTS `vehicle_traffic_insurance_documents` (
+  `id` CHAR(36) NOT NULL,
+  `traffic_insurance_id` CHAR(36) NOT NULL,
+  `file_path` VARCHAR(500) NOT NULL,
+  `file_name` VARCHAR(255) DEFAULT NULL,
+  `file_size` INT DEFAULT NULL,
+  `mime_type` VARCHAR(100) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `deleted_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_vtid_traffic_insurance_id` (`traffic_insurance_id`),
+  CONSTRAINT `fk_vtid_traffic_insurance` FOREIGN KEY (`traffic_insurance_id`) REFERENCES `vehicle_traffic_insurances` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- vehicle_kasko_documents
+CREATE TABLE IF NOT EXISTS `vehicle_kasko_documents` (
+  `id` CHAR(36) NOT NULL,
+  `kasko_id` CHAR(36) NOT NULL,
+  `file_path` VARCHAR(500) NOT NULL,
+  `file_name` VARCHAR(255) DEFAULT NULL,
+  `file_size` INT DEFAULT NULL,
+  `mime_type` VARCHAR(100) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `deleted_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_vkd_kasko_id` (`kasko_id`),
+  CONSTRAINT `fk_vkd_kasko` FOREIGN KEY (`kasko_id`) REFERENCES `vehicle_kaskos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- vehicle_accident_documents
+CREATE TABLE IF NOT EXISTS `vehicle_accident_documents` (
+  `id` CHAR(36) NOT NULL,
+  `accident_id` CHAR(36) NOT NULL,
+  `document_kind` VARCHAR(30) NOT NULL DEFAULT 'diger',
+  `file_path` VARCHAR(500) NOT NULL,
+  `file_name` VARCHAR(255) DEFAULT NULL,
+  `file_size` INT DEFAULT NULL,
+  `mime_type` VARCHAR(100) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `deleted_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_vad_accident_id` (`accident_id`),
+  KEY `idx_vad_document_kind` (`document_kind`),
+  CONSTRAINT `fk_vad_accident` FOREIGN KEY (`accident_id`) REFERENCES `vehicle_accidents` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- service_categories
 CREATE TABLE IF NOT EXISTS `service_categories` (
   `id` CHAR(36) NOT NULL,

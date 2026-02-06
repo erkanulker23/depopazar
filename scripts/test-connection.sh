@@ -1,19 +1,16 @@
 #!/bin/bash
-# Yerel API ve frontend bağlantı testi
+# PHP uygulaması ve Valet bağlantı testi
 echo "🔍 DepoPazar bağlantı testleri"
 echo ""
 
-for port in 3180 4100; do
-  if curl -s "http://localhost:$port" > /dev/null 2>&1 || curl -s "http://localhost:$port/api" > /dev/null 2>&1; then
-    echo "   ✅ localhost:$port yanıt veriyor"
+# Valet ile çalışıyorsa site adresi üzerinden test et
+if valet links 2>/dev/null | grep -q "depotakip-v1\|depopazar"; then
+  if curl -s -o /dev/null -w "%{http_code}" "http://depotakip-v1.test" 2>/dev/null | grep -q "200\|302"; then
+    echo "   ✅ Site yanıt veriyor (Valet)"
   else
-    echo "   ❌ localhost:$port yanıt vermiyor"
+    echo "   ❌ Site yanıt vermiyor"
   fi
-done
-
-if valet links 2>/dev/null | grep -q "depotakip-v1"; then
-  echo "   ✅ Valet link: depotakip-v1.test"
 else
-  echo "   ⚠️  Valet link yok (opsiyonel)"
+  echo "   ⚠️  Valet link yok; php-app/public için Valet/Laragon veya php -S kullanın"
 fi
 echo ""

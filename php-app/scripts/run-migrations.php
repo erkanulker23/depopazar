@@ -1,68 +1,67 @@
 #!/usr/bin/env php
 <?php
 /**
- * Migrations çalıştırır. db.local.php veya .env'deki DB bilgilerini kullanır.
- * Kullanım: php php-app/scripts/run-migrations.php
+ * Tüm migration'ları sırayla çalıştırır (php-app/config/db veya .env kullanır).
+ * Kullanım: php scripts/run-migrations.php   veya  cd php-app && php scripts/run-migrations.php
  */
-if (php_sapi_name() !== 'cli') {
-    die('Sadece CLI\'dan calistirilir.');
+$root = dirname(__DIR__);
+if (!is_file($root . '/config/config.php')) {
+    fwrite(STDERR, "Hata: php-app/config/config.php bulunamadı.\n");
+    exit(1);
 }
 
-define('APP_ROOT', dirname(__DIR__));
-$migrationsDir = APP_ROOT . '/sql/migrations';
+$config = require $root . '/config/config.php';
+date_default_timezone_set($config['timezone'] ?? 'Europe/Istanbul');
 
-// DB bilgilerini al (db.local.php veya .env)
-$host = '127.0.0.1';
-$port = '3306';
-$database = 'depotakip';
-$username = 'root';
-$password = '';
-
-if (file_exists(APP_ROOT . '/config/db.local.php')) {
-    $content = file_get_contents(APP_ROOT . '/config/db.local.php');
-    if (preg_match('/host=([^;]+)/', $content, $m)) $host = trim($m[1], " '\"");
-    if (preg_match('/port=(\d+)/', $content, $m)) $port = $m[1];
-    if (preg_match('/dbname=([^;]+)/', $content, $m)) $database = trim($m[1], " '\"");
-    if (preg_match('/new PDO\(\s*[^,]+,\s*[\'"]([^\'"]+)[\'"]/', $content, $m)) $username = $m[1];
-    if (preg_match('/new PDO\(\s*[^,]+,\s*[^,]+,\s*[\'"]([^\'"]*)[\'"]/', $content, $m)) $password = $m[1];
-}
-
-if (file_exists(dirname(APP_ROOT) . '/.env')) {
-    $env = parse_ini_file(dirname(APP_ROOT) . '/.env', false, INI_SCANNER_RAW);
-    if (!empty($env['DB_HOST'])) $host = $env['DB_HOST'];
-    if (!empty($env['DB_PORT'])) $port = $env['DB_PORT'];
-    if (!empty($env['DB_DATABASE'])) $database = $env['DB_DATABASE'];
-    if (!empty($env['DB_USERNAME'])) $username = $env['DB_USERNAME'];
-    if (!empty($env['DB_PASSWORD'])) $password = $env['DB_PASSWORD'];
-}
-
-if (!is_dir($migrationsDir)) {
-    echo "Migrations klasörü bulunamadı.\n";
-    exit(0);
-}
-
-$files = glob($migrationsDir . '/*.sql');
-sort($files);
-
-$passArg = $password !== '' ? "-p" . escapeshellarg($password) : '';
-
-foreach ($files as $f) {
-    $name = basename($f);
-    $cmd = sprintf(
-        'mysql -h %s -P %s -u %s %s %s < %s 2>/dev/null',
-        escapeshellarg($host),
-        escapeshellarg($port),
-        escapeshellarg($username),
-        $passArg,
-        escapeshellarg($database),
-        escapeshellarg($f)
-    );
-    exec($cmd, $out, $code);
-    if ($code === 0) {
-        echo "  [OK] $name\n";
-    } else {
-        echo "  [atla/uyari] $name (exit $code)\n";
+$envFile = file_exists($root . '/.env') ? $root . '/.env' : (file_exists(dirname($root) . '/.env') ? dirname($root) . '/.env' : null);
+if ($envFile) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/', $line, $m)) {
+            putenv(trim($m[1]) . '=' . trim($m[2], " \t\"'"));
+        }
     }
 }
 
-echo "Migrations tamamlandi.\n";
+if (file_exists($root . '/config/db.local.php')) {
+    $pdo = require $root . '/config/db.local.php';
+} else {
+    $host = getenv('DB_HOST') ?: '127.0.0.1';
+    $port = getenv('DB_PORT') ?: '3306';
+    $db   = getenv('DB_DATABASE') ?: 'depotakip';
+    $user = getenv('DB_USERNAME') ?: 'root';
+    $pass = getenv('DB_PASSWORD') ?: '';
+    $dsn  = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
+    try {
+        $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    } catch (PDOException $e) {
+        fwrite(STDERR, "Veritabanı bağlantı hatası: " . $e->getMessage() . "\n");
+        exit(1);
+    }
+}
+
+$dir = $root . '/sql/migrations';
+if (!is_dir($dir)) {
+    fwrite(STDERR, "Migrations dizini yok: $dir\n");
+    exit(1);
+}
+
+$files = glob($dir . '/*.sql');
+sort($files);
+$ok = 0;
+foreach ($files as $f) {
+    $name = basename($f);
+    $sql = file_get_contents($f);
+    if (trim($sql) === '') continue;
+    try {
+        $pdo->exec($sql);
+        echo "  Migration: $name\n";
+        $ok++;
+    } catch (PDOException $e) {
+        fwrite(STDERR, "  HATA: $name - " . $e->getMessage() . "\n");
+        exit(1);
+    }
+}
+
+echo "Toplam $ok migration çalıştırıldı.\n";

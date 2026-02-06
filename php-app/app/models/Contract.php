@@ -1,7 +1,7 @@
 <?php
 class Contract
 {
-    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $statusFilter = null, ?string $debtFilter = null): array
+    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $statusFilter = null, ?string $debtFilter = null, ?int $limit = null, int $offset = 0): array
     {
         $sql = 'SELECT c.*, 
           cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.email AS customer_email,
@@ -28,9 +28,38 @@ class Contract
             $sql .= ' AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.contract_id = c.id AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')) ';
         }
         $sql .= ' ORDER BY c.created_at DESC ';
+        if ($limit !== null) {
+            $sql .= ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
+        }
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function count(PDO $pdo, ?string $companyId = null, ?string $statusFilter = null, ?string $debtFilter = null): int
+    {
+        $sql = 'SELECT COUNT(*) FROM contracts c
+          INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+          INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+          WHERE c.deleted_at IS NULL ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        if ($statusFilter === 'active') {
+            $sql .= ' AND c.is_active = 1 ';
+        } elseif ($statusFilter === 'inactive') {
+            $sql .= ' AND c.is_active = 0 ';
+        }
+        if ($debtFilter === 'with_debt') {
+            $sql .= ' AND EXISTS (SELECT 1 FROM payments p WHERE p.contract_id = c.id AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')) ';
+        } elseif ($debtFilter === 'no_debt') {
+            $sql .= ' AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.contract_id = c.id AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')) ';
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
     }
 
     public static function create(PDO $pdo, array $data): array
@@ -178,8 +207,13 @@ class Contract
 
     public static function setActive(PDO $pdo, string $id, int $isActive): void
     {
-        $stmt = $pdo->prepare('UPDATE contracts SET is_active = ? WHERE id = ? AND deleted_at IS NULL');
-        $stmt->execute([$isActive ? 1 : 0, $id]);
+        if ($isActive) {
+            $stmt = $pdo->prepare('UPDATE contracts SET is_active = 1, terminated_at = NULL WHERE id = ? AND deleted_at IS NULL');
+            $stmt->execute([$id]);
+        } else {
+            $stmt = $pdo->prepare('UPDATE contracts SET is_active = 0, terminated_at = NOW() WHERE id = ? AND deleted_at IS NULL');
+            $stmt->execute([$id]);
+        }
     }
 
     public static function softDelete(PDO $pdo, string $id): void

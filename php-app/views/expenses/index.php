@@ -34,7 +34,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
 
 <?php if (empty($expensesMigrationOk ?? true)): ?>
     <div class="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm">
-        <strong>Masraflar modülü için migration gerekli.</strong> <code>php-app/sql/migrations/add_expenses_and_credit_cards.sql</code> dosyasını MySQL ile çalıştırın. Detay: <code>docs/MASRAFLAR-MIGRATION.md</code>
+        <strong>Masraflar modülü için migration gerekli.</strong> Proje kökünden şu komutu çalıştırın: <code class="block mt-2 p-2 bg-amber-100 dark:bg-amber-900/40 rounded">php php-app/scripts/run-migrations.php</code>
     </div>
 <?php endif; ?>
 <?php if (!empty($flashSuccess)): ?>

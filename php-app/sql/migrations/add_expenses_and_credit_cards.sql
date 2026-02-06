@@ -1,9 +1,22 @@
 -- Masraflar, masraf kategorileri ve kredi kartları tabloları
 -- bank_accounts'a opening_balance kolonu eklenir (cari bakiye hesabı için)
+-- Bu dosya idempotent: birden fazla çalıştırıldığında hata vermez.
 
--- bank_accounts: açılış bakiyesi (mevcut bakiyeyi başlangıçta buradan alır)
--- Eğer kolon zaten varsa bu satırı yoruma alın
-ALTER TABLE `bank_accounts` ADD COLUMN `opening_balance` DECIMAL(12,2) DEFAULT 0 COMMENT 'Açılış bakiyesi' AFTER `is_active`;
+-- bank_accounts: opening_balance kolonu yoksa ekle
+DELIMITER //
+DROP PROCEDURE IF EXISTS add_opening_balance_if_missing//
+CREATE PROCEDURE add_opening_balance_if_missing()
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bank_accounts' AND COLUMN_NAME = 'opening_balance'
+  ) THEN
+    ALTER TABLE `bank_accounts` ADD COLUMN `opening_balance` DECIMAL(12,2) DEFAULT 0 COMMENT 'Açılış bakiyesi' AFTER `is_active`;
+  END IF;
+END//
+DELIMITER ;
+CALL add_opening_balance_if_missing();
+DROP PROCEDURE IF EXISTS add_opening_balance_if_missing;
 
 -- credit_cards: kredi kartı bilgileri (ayarlarda)
 CREATE TABLE IF NOT EXISTS `credit_cards` (

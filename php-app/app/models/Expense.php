@@ -57,8 +57,8 @@ class Expense
     {
         $id = self::uuid();
         $stmt = $pdo->prepare(
-            'INSERT INTO expenses (id, company_id, category_id, amount, expense_date, payment_source_type, payment_source_id, description, notes, created_by_user_id) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO expenses (id, company_id, category_id, amount, expense_date, payment_source_type, payment_source_id, description, notes, created_by_user_id, transportation_job_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
@@ -71,13 +71,34 @@ class Expense
             trim($data['description'] ?? '') ?: null,
             trim($data['notes'] ?? '') ?: null,
             $data['created_by_user_id'] ?? null,
+            !empty($data['transportation_job_id']) ? $data['transportation_job_id'] : null,
         ]);
         return self::findOne($pdo, $id, null);
     }
 
+    /** Nakliye işine bağlı tüm masrafları getirir (kar/zarar için) */
+    public static function findByTransportationJob(PDO $pdo, string $transportationJobId): array
+    {
+        $sql = 'SELECT e.*, ec.name AS category_name
+                FROM expenses e
+                INNER JOIN expense_categories ec ON ec.id = e.category_id AND ec.deleted_at IS NULL
+                WHERE e.transportation_job_id = ? AND e.deleted_at IS NULL
+                ORDER BY e.expense_date DESC, e.created_at DESC';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$transportationJobId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function sumByTransportationJob(PDO $pdo, string $transportationJobId): float
+    {
+        $stmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE transportation_job_id = ? AND deleted_at IS NULL');
+        $stmt->execute([$transportationJobId]);
+        return (float) $stmt->fetchColumn();
+    }
+
     public static function update(PDO $pdo, string $id, array $data, ?string $companyId = null): ?array
     {
-        $allowed = ['category_id', 'amount', 'expense_date', 'payment_source_type', 'payment_source_id', 'description', 'notes'];
+        $allowed = ['category_id', 'amount', 'expense_date', 'payment_source_type', 'payment_source_id', 'description', 'notes', 'transportation_job_id'];
         $set = [];
         $params = [];
         foreach ($allowed as $k) {
@@ -130,7 +151,7 @@ class Expense
     /** Banka hesabı için: açılış + tahsilat - masraflar = bakiye */
     public static function sumExpensesFromBankAccount(PDO $pdo, string $bankAccountId, ?string $untilDate = null): float
     {
-        $sql = 'SELECT COALESCE(SUM(amount), 0) FROM expenses 
+        $sql = 'SELECT COALESCE(SUM(amount), 0) FROM expenses
                 WHERE payment_source_type = \'bank_account\' AND payment_source_id = ? AND deleted_at IS NULL ';
         $params = [$bankAccountId];
         if ($untilDate) {

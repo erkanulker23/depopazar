@@ -33,8 +33,7 @@ class DashboardController
             $roomsCount = count($companyRooms);
             $occupiedRooms = count(array_filter($companyRooms, fn($r) => ($r['status'] ?? '') === 'occupied'));
             $emptyRooms = count(array_filter($companyRooms, fn($r) => ($r['status'] ?? '') === 'empty'));
-            $customers = Customer::findAll($this->pdo, $companyId);
-            $customersCount = count($customers);
+            $customersCount = Customer::count($this->pdo, $companyId);
             $activeContracts = Contract::countActiveByCompany($this->pdo, $companyId);
             $monthlyRevenue = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
             $pendingPayments = Payment::countByStatus($this->pdo, $companyId, 'pending');
@@ -46,7 +45,7 @@ class DashboardController
             $roomsCount = count($rooms);
             $occupiedRooms = count(array_filter($rooms, fn($r) => ($r['status'] ?? '') === 'occupied'));
             $emptyRooms = count(array_filter($rooms, fn($r) => ($r['status'] ?? '') === 'empty'));
-            $customersCount = count(Customer::findAll($this->pdo, null));
+            $customersCount = Customer::count($this->pdo, null);
             $activeContracts = Contract::countActiveGlobal($this->pdo);
             $monthlyRevenue = Payment::sumPaidThisMonthGlobal($this->pdo);
             $pendingPayments = Payment::countByStatusGlobal($this->pdo, 'pending');

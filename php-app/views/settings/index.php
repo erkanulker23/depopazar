@@ -6,6 +6,7 @@ $tabs = [
     'banka' => ['label' => 'Banka Hesapları', 'icon' => 'bank'],
     'kredi-karti' => ['label' => 'Kredi Kartları', 'icon' => 'credit-card-2-back'],
     'eposta' => ['label' => 'E-posta Ayarları', 'icon' => 'envelope'],
+    'sms' => ['label' => 'SMS (Netgsm)', 'icon' => 'chat-dots'],
     'sablonlar' => ['label' => 'E-posta Şablonları', 'icon' => 'file-earmark-text'],
 ];
 $activeTab = $activeTab ?? 'firma';
@@ -18,7 +19,7 @@ ob_start();
 
 <?php if (empty($expensesMigrationOk ?? true)): ?>
     <div class="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm">
-        <strong>Masraflar modülü için migration gerekli.</strong> Kredi kartları ve masraf özelliklerini kullanmak için <code>php-app/sql/migrations/add_expenses_and_credit_cards.sql</code> dosyasını MySQL ile çalıştırın.
+        <strong>Masraflar modülü için migration gerekli.</strong> Kredi kartları ve masraf özelliklerini kullanmak için proje kökünden şu komutu çalıştırın: <code class="block mt-2 p-2 bg-amber-100 dark:bg-amber-900/40 rounded">php php-app/scripts/run-migrations.php</code>
     </div>
 <?php endif; ?>
 <?php if (!empty($flashSuccess)): ?>
@@ -481,6 +482,57 @@ ob_start();
                     <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Test Et</button>
                 </form>
             </div>
+        </div>
+    <?php elseif ($activeTab === 'sms'): ?>
+        <div class="p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-chat-dots text-emerald-600"></i> Netgsm SMS Ayarları</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Müşterilere SMS göndermek için Netgsm API bilgilerinizi girin. Ayarlar kaydedildikten sonra müşteri detayından ve bildirimlerde bu ayarlara göre SMS gönderilir.</p>
+            <form method="post" action="/ayarlar/sms-guncelle" class="space-y-4 max-w-2xl">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Kullanıcı Kodu (Usercode)</label>
+                        <input type="text" name="username" value="<?= htmlspecialchars($smsSettings['username'] ?? '') ?>" placeholder="Netgsm abone numaranız" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Şifre</label>
+                        <input type="password" name="password" value="" placeholder="<?= !empty($smsSettings['password']) ? '•••••••• (değiştirmek için yazın)' : 'API alt kullanıcı şifresi' ?>" autocomplete="new-password" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Gönderici Adı (Başlık)</label>
+                        <input type="text" name="sender_id" value="<?= htmlspecialchars($smsSettings['sender_id'] ?? '') ?>" placeholder="Onaylı SMS başlığınız veya abone no" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">API URL (isteğe bağlı)</label>
+                        <input type="url" name="api_url" value="<?= htmlspecialchars($smsSettings['api_url'] ?? '') ?>" placeholder="https://api.netgsm.com.tr/sms/send/get" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Boş bırakılırsa Netgsm varsayılan adresi kullanılır.</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-6 pt-2">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="is_active" value="1" <?= !empty($smsSettings['is_active']) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">SMS gönderimi aktif</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="test_mode" value="1" <?= !empty($smsSettings['test_mode']) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Test modu (gerçek gönderim yapılmaz)</span>
+                    </label>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                </div>
+            </form>
+            <?php if (!empty($smsSettings['username']) && !empty($smsSettings['sender_id'])): ?>
+            <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">SMS Testi</h3>
+                <form method="post" action="/ayarlar/sms-test" class="flex flex-wrap items-end gap-2">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Test SMS gönderilecek numara (5xxxxxxxxx)</label>
+                        <input type="text" name="test_phone" required placeholder="5xxxxxxxxx" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white" maxlength="15">
+                    </div>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Test SMS Gönder</button>
+                </form>
+            </div>
+            <?php endif; ?>
         </div>
     <?php elseif ($activeTab === 'sablonlar'):
         $tplDefaults = [

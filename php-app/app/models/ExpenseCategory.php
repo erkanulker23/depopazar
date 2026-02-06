@@ -72,6 +72,29 @@ class ExpenseCategory
         $pdo->prepare($sql)->execute($params);
     }
 
+    /** Şirkete göre isimle kategori bulur (deleted_at IS NULL). */
+    public static function findByName(PDO $pdo, string $companyId, string $name): ?array
+    {
+        $stmt = $pdo->prepare('SELECT * FROM expense_categories WHERE company_id = ? AND name = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$companyId, trim($name)]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /** Şirkette varsa döndürür, yoksa oluşturur. */
+    public static function findOrCreateByName(PDO $pdo, string $companyId, string $name, ?string $description = null): array
+    {
+        $existing = self::findByName($pdo, $companyId, $name);
+        if ($existing !== null) {
+            return $existing;
+        }
+        return self::create($pdo, [
+            'company_id' => $companyId,
+            'name' => trim($name),
+            'description' => $description,
+            'sort_order' => 0,
+        ]);
+    }
+
     /** Kategoriye bağlı masraf var mı? */
     public static function hasExpenses(PDO $pdo, string $categoryId): bool
     {

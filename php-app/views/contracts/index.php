@@ -145,6 +145,13 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                 </tbody>
             </table>
         </div>
+        <?php
+        $contractsTotal = $contractsTotal ?? 0;
+        $perPage = $perPage ?? 50;
+        $page = $page ?? max(1, (int) ($_GET['page'] ?? 1));
+        $keepParams = array_filter(['durum' => $durumGet ?? '', 'borc' => $borcGet ?? '', 'newSale' => ($openNewSale ?? false) ? '1' : '']);
+        echo renderPagination($contractsTotal, $perPage, $page, '/girisler', $keepParams);
+        ?>
     <?php endif; ?>
 </div>
 

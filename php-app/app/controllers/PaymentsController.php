@@ -68,6 +68,7 @@ class PaymentsController
         $payments = array_slice($payments, $offset, $perPage);
         $totalPages = $totalPayments > 0 ? (int)ceil($totalPayments / $perPage) : 1;
         $collectMode = isset($_GET['collect']) && $_GET['collect'] !== '0';
+        $preselectedCustomerId = isset($_GET['customer']) ? trim($_GET['customer']) : '';
         $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
         $bankAccounts = [];
         if ($companyId) {
@@ -82,6 +83,7 @@ class PaymentsController
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
         $totalPayments = $totalPayments ?? count($payments);
+        $preselectedCustomerId = $preselectedCustomerId ?? '';
         require __DIR__ . '/../../views/payments/index.php';
     }
 

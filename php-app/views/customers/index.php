@@ -117,6 +117,12 @@ ob_start();
                 </tbody>
             </table>
         </div>
+        <?php
+        $customersTotal = $customersTotal ?? 0;
+        $perPage = $perPage ?? 50;
+        $page = $page ?? max(1, (int) ($_GET['page'] ?? 1));
+        echo renderPagination($customersTotal, $perPage, $page, '/musteriler', array_filter(['q' => $q ?? '']));
+        ?>
     <?php endif; ?>
 </div>
 

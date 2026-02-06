@@ -38,6 +38,7 @@ class SettingsController
         $expensesMigrationOk = $this->checkExpensesMigration();
         $mailSettings = $this->getMailSettings($companyId);
         $paytrSettings = $this->getPaytrSettings($companyId);
+        $smsSettings = $this->getSmsSettings($companyId);
         $activeTab = $_GET['tab'] ?? 'firma';
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
@@ -397,6 +398,91 @@ class SettingsController
         exit;
     }
 
+    public function updateSmsSettings(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /ayarlar?tab=sms');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /genel-bakis');
+            exit;
+        }
+        $existing = $this->getSmsSettings($companyId);
+        $username = trim($_POST['username'] ?? '') ?: null;
+        $password = trim($_POST['password'] ?? '') ?: null;
+        if ($password === '' && $existing && !empty($existing['password'])) {
+            $password = $existing['password'];
+        } else {
+            $password = $password ?: null;
+        }
+        $senderId = trim($_POST['sender_id'] ?? '') ?: null;
+        $apiUrl = trim($_POST['api_url'] ?? '') ?: null;
+        $isActive = isset($_POST['is_active']) ? 1 : 0;
+        $testMode = isset($_POST['test_mode']) ? 1 : 0;
+
+        if ($existing) {
+            $this->pdo->prepare('UPDATE company_sms_settings SET username = ?, password = ?, sender_id = ?, api_url = ?, is_active = ?, test_mode = ? WHERE id = ?')
+                ->execute([$username, $password, $senderId, $apiUrl, $isActive, $testMode, $existing['id']]);
+        } else {
+            $id = $this->uuid();
+            $this->pdo->prepare('INSERT INTO company_sms_settings (id, company_id, username, password, sender_id, api_url, is_active, test_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                ->execute([$id, $companyId, $username, $password, $senderId, $apiUrl, $isActive, $testMode]);
+        }
+        $_SESSION['flash_success'] = 'SMS (Netgsm) ayarları güncellendi.';
+        header('Location: /ayarlar?tab=sms');
+        exit;
+    }
+
+    public function testSms(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /ayarlar?tab=sms');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /ayarlar?tab=sms');
+            exit;
+        }
+        $phone = preg_replace('/\D/', '', trim($_POST['test_phone'] ?? ''));
+        if (strlen($phone) < 10) {
+            $_SESSION['flash_error'] = 'Geçerli bir cep telefonu numarası girin (5xxxxxxxxx).';
+            header('Location: /ayarlar?tab=sms');
+            exit;
+        }
+        if (strlen($phone) === 10 && $phone[0] === '5') {
+            $phone = '90' . $phone;
+        } elseif (strlen($phone) === 11 && substr($phone, 0, 2) === '05') {
+            $phone = '9' . $phone;
+        } elseif (strlen($phone) === 12 && substr($phone, 0, 2) === '90') {
+            // ok
+        } else {
+            $phone = '90' . ltrim($phone, '0');
+        }
+        $sms = $this->getSmsSettings($companyId);
+        if (!$sms || empty($sms['username']) || empty($sms['sender_id'])) {
+            $_SESSION['flash_error'] = 'SMS ayarları eksik. Kullanıcı kodu ve gönderici adını kaydedin.';
+            header('Location: /ayarlar?tab=sms');
+            exit;
+        }
+        $result = SmsService::send($this->pdo, $companyId, $phone, 'DepoPazar SMS testi. Bu mesaj ayarlarınızı doğrulamak için gönderilmiştir.');
+        if ($result['success']) {
+            $_SESSION['flash_success'] = 'Test SMS gönderildi: ' . $phone;
+        } else {
+            $_SESSION['flash_error'] = 'SMS gönderilemedi: ' . ($result['error'] ?? 'Bilinmeyen hata');
+        }
+        header('Location: /ayarlar?tab=sms');
+        exit;
+    }
+
     private function uuid(): string
     {
         return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
@@ -528,6 +614,13 @@ class SettingsController
     private function getPaytrSettings(string $companyId): ?array
     {
         $stmt = $this->pdo->prepare('SELECT * FROM company_paytr_settings WHERE company_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$companyId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function getSmsSettings(string $companyId): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM company_sms_settings WHERE company_id = ? AND deleted_at IS NULL LIMIT 1');
         $stmt->execute([$companyId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }

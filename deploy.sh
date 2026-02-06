@@ -87,16 +87,24 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Migrations (push_subscriptions, vehicle_plate, proposal_addresses vb.)
+# Migrations (push_subscriptions, vehicle_plate, vehicles, proposal_addresses vb.)
 # -----------------------------------------------------------------------------
 if command -v mysql &> /dev/null && [ -d "$ROOT/php-app/sql/migrations" ]; then
   for f in "$ROOT/php-app/sql/migrations"/*.sql; do
     [ -f "$f" ] || continue
     name=$(basename "$f")
     if [ -n "$DB_PASSWORD" ]; then
-      mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$f" 2>/dev/null && echo "  Migration: $name" || true
+      if mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$f" 2>/dev/null; then
+        echo -e "  ${GREEN}Migration: $name${NC}"
+      else
+        echo -e "  ${RED}Migration FAILED: $name${NC}" >&2
+      fi
     else
-      mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$f" 2>/dev/null && echo "  Migration: $name" || true
+      if mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" "$DB_DATABASE" < "$f" 2>/dev/null; then
+        echo -e "  ${GREEN}Migration: $name${NC}"
+      else
+        echo -e "  ${RED}Migration FAILED: $name${NC}" >&2
+      fi
     fi
   done
 fi

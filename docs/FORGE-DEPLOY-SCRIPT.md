@@ -4,6 +4,23 @@ Bu doküman, DepoPazar PHP uygulamasını Laravel Forge üzerinde sıfırdan kur
 
 ---
 
+## Sunucuya atmadan önce (Pre-Deploy)
+
+Projeyi sunucuya push etmeden önce yerelde şu scripti çalıştırın:
+
+```bash
+./scripts/pre-deploy.sh
+```
+
+Bu script:
+- `composer install` ve `composer dump-autoload` çalıştırır
+- Migration dosyalarının sırasını kontrol eder (vehicles tablosu önce olmalı)
+- Varsa yerel veritabanına migration dener (opsiyonel)
+
+Böylece "tablo yok" veya "sütun yok" hatalarının önüne geçilir.
+
+---
+
 ## 1. Ön Gereksinimler
 
 | Gereksinim | Açıklama |
@@ -111,7 +128,7 @@ return \$pdo;
 DBCONFIG
 chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 
-# 4) Veritabanı schema + migrations (push_subscriptions, vehicle_plate vb.)
+# 4) Veritabanı schema + migrations (push_subscriptions, vehicle_plate, vehicles vb.)
 if [ -f "$ROOT/php-app/sql/schema.sql" ] && command -v mysql &> /dev/null; then
   if [ -n "$DB_PASSWORD" ]; then
     mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" < "$ROOT/php-app/sql/schema.sql" 2>/dev/null || true

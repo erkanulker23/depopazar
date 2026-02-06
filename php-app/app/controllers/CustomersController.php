@@ -14,13 +14,21 @@ class CustomersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $perPage = 50;
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $offset = ($page - 1) * $perPage;
+
         if ($companyId) {
-            $customers = Customer::findAll($this->pdo, $companyId, $search);
+            $customersTotal = Customer::count($this->pdo, $companyId, $search);
+            $customers = Customer::findAll($this->pdo, $companyId, $search, $perPage, $offset);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $customers = Customer::findAll($this->pdo, null, $search);
+            $customersTotal = Customer::count($this->pdo, null, $search);
+            $customers = Customer::findAll($this->pdo, null, $search, $perPage, $offset);
         } else {
+            $customersTotal = 0;
             $customers = [];
         }
+
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
@@ -51,8 +59,355 @@ class CustomersController
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
         $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
+        try {
+            $debt += CustomerCharge::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
+        } catch (Throwable $e) {
+            // customer_charges tablosu yoksa yoksay
+        }
+        $documents = [];
+        try {
+            $documents = CustomerDocument::findByCustomerId($this->pdo, $id, $companyId);
+        } catch (Throwable $e) {
+            // customer_documents tablosu yoksa yoksay
+        }
+        $lastPayment = null;
+        foreach ($payments as $p) {
+            if (($p['status'] ?? '') === 'paid' && !empty($p['paid_at'])) {
+                if ($lastPayment === null || strtotime($p['paid_at']) > strtotime($lastPayment['paid_at'])) {
+                    $lastPayment = $p;
+                }
+            }
+        }
+        $monthlyRent = 0;
+        $primaryWarehouse = null;
+        $exitDone = false;
+        foreach ($contracts as $c) {
+            if (!empty($c['is_active']) && empty($c['terminated_at'])) {
+                $monthlyRent += (float) ($c['monthly_price'] ?? 0);
+            }
+            if ($primaryWarehouse === null && !empty($c['warehouse_name'])) {
+                $primaryWarehouse = $c['warehouse_name'];
+                $exitDone = !empty($c['terminated_at']);
+            }
+        }
+        if ($monthlyRent == 0 && !empty($contracts[0])) {
+            $monthlyRent = (float) ($contracts[0]['monthly_price'] ?? 0);
+            if ($primaryWarehouse === null) {
+                $primaryWarehouse = $contracts[0]['warehouse_name'] ?? null;
+                $exitDone = !empty($contracts[0]['terminated_at']);
+            }
+        }
         $pageTitle = 'Müşteri: ' . trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
         require __DIR__ . '/../../views/customers/detail.php';
+    }
+
+    /** Müşteriye SMS gönder (Ayarlar > SMS ayarlarına göre). */
+    public function sendSms(array $params): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /musteriler');
+            exit;
+        }
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $phone = trim($customer['phone'] ?? '');
+        if ($phone === '') {
+            $_SESSION['flash_error'] = 'Müşteride telefon numarası kayıtlı değil.';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        $message = trim($_POST['message'] ?? '');
+        if ($message === '') {
+            $_SESSION['flash_error'] = 'Mesaj metni girin.';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        $result = SmsService::send($this->pdo, $customer['company_id'], $phone, $message);
+        if ($result['success']) {
+            $_SESSION['flash_success'] = 'SMS gönderildi.';
+        } else {
+            $_SESSION['flash_error'] = $result['error'] ?? 'SMS gönderilemedi.';
+        }
+        header('Location: /musteriler/' . $id);
+        exit;
+    }
+
+    /** Borçlandır formu */
+    public function borclandirForm(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
+        $pageTitle = 'Borçlandır: ' . $customerName;
+        $currentPage = 'musteriler';
+        require __DIR__ . '/../../views/customers/borclandir.php';
+    }
+
+    /** Borçlandır – manuel borç kaydı oluştur */
+    public function borclandir(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customerId = trim($_POST['customer_id'] ?? '');
+        $amount = isset($_POST['amount']) ? (float) str_replace(',', '.', $_POST['amount']) : 0;
+        if (!$customerId || $amount <= 0) {
+            $_SESSION['flash_error'] = 'Müşteri ve tutar (0\'dan büyük) zorunludur.';
+            header('Location: /musteriler/' . $customerId);
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $customerId);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        CustomerCharge::create($this->pdo, [
+            'customer_id' => $customerId,
+            'company_id' => $customer['company_id'],
+            'amount' => $amount,
+            'description' => trim($_POST['description'] ?? '') ?: null,
+            'due_date' => trim($_POST['due_date'] ?? '') ?: null,
+            'notes' => trim($_POST['notes'] ?? '') ?: null,
+        ]);
+        $_SESSION['flash_success'] = 'Borç kaydı eklendi.';
+        header('Location: /musteriler/' . $customerId);
+        exit;
+    }
+
+    /** Belge yükleme formu */
+    public function documentUploadForm(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
+        $pageTitle = 'Belge Ekle: ' . $customerName;
+        $currentPage = 'musteriler';
+        require __DIR__ . '/../../views/customers/belge_ekle.php';
+    }
+
+    /** Belge yükle – POST */
+    public function documentUpload(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customerId = trim($_POST['customer_id'] ?? '');
+        if (!$customerId) {
+            $_SESSION['flash_error'] = 'Müşteri gerekli.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $customerId);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $file = $_FILES['document'] ?? null;
+        if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
+            $_SESSION['flash_error'] = 'Lütfen bir dosya seçin veya yükleme hatası oluştu.';
+            header('Location: /musteriler/' . $customerId);
+            exit;
+        }
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, $allowedExt, true)) {
+            $_SESSION['flash_error'] = 'İzin verilen formatlar: ' . implode(', ', $allowedExt);
+            header('Location: /musteriler/' . $customerId);
+            exit;
+        }
+        $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/customer_documents' : __DIR__ . '/../../public/uploads/customer_documents';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        $filename = $customerId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+        $filePath = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $filePath)) {
+            $_SESSION['flash_error'] = 'Dosya kaydedilemedi.';
+            header('Location: /musteriler/' . $customerId);
+            exit;
+        }
+        $relativePath = '/uploads/customer_documents/' . $filename;
+        CustomerDocument::create($this->pdo, [
+            'customer_id' => $customerId,
+            'company_id' => $customer['company_id'],
+            'name' => trim($_POST['name'] ?? '') ?: pathinfo($file['name'], PATHINFO_FILENAME),
+            'file_path' => $relativePath,
+            'file_size' => $file['size'] ?? null,
+            'mime_type' => $file['type'] ?? null,
+            'notes' => trim($_POST['notes'] ?? '') ?: null,
+        ]);
+        $_SESSION['flash_success'] = 'Belge eklendi.';
+        header('Location: /musteriler/' . $customerId);
+        exit;
+    }
+
+    /** Belge sil */
+    public function documentDelete(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /musteriler');
+            exit;
+        }
+        $docId = trim($_POST['id'] ?? '');
+        $redirect = trim($_POST['redirect'] ?? '/musteriler');
+        if (!$docId) {
+            $_SESSION['flash_error'] = 'Belge seçilmedi.';
+            header('Location: ' . $redirect);
+            exit;
+        }
+        $doc = CustomerDocument::findOne($this->pdo, $docId);
+        if (!$doc) {
+            $_SESSION['flash_error'] = 'Belge bulunamadı.';
+            header('Location: ' . $redirect);
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($doc['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Yetkisiz.';
+            header('Location: /musteriler');
+            exit;
+        }
+        CustomerDocument::softDelete($this->pdo, $docId);
+        $_SESSION['flash_success'] = 'Belge silindi.';
+        header('Location: /musteriler/' . ($doc['customer_id'] ?? ''));
+        exit;
+    }
+
+    /** Bilgi notu güncelle */
+    public function noteUpdate(array $params): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /musteriler');
+            exit;
+        }
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $notes = trim($_POST['notes'] ?? '');
+        Customer::update($this->pdo, $id, ['notes' => $notes]);
+        $_SESSION['flash_success'] = 'Not güncellendi.';
+        header('Location: /musteriler/' . $id);
+        exit;
+    }
+
+    /** Çıkış belgesi – müşterinin sözleşmelerini listele, her biri için çıkış belgesi linki */
+    public function cikisBelgesiList(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
+        $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
+        $customerId = $id;
+        $pageTitle = 'Çıkış belgesi: ' . $customerName;
+        $currentPage = 'musteriler';
+        require __DIR__ . '/../../views/customers/cikis_belgesi_list.php';
     }
 
     /** Müşteri detay – özel yazdırma sayfası */
