@@ -61,6 +61,12 @@ ob_start();
     <div class="p-6">
         <!-- Panel: Araç Bilgileri -->
         <div id="panel-bilgi" role="tabpanel" aria-labelledby="tab-bilgi" class="vehicle-panel">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Plaka, model yılı, muayene ve kasa bilgileri</span>
+                <button type="button" onclick="openEditVehicle(<?= htmlspecialchars(json_encode($vehicle), ENT_QUOTES, 'UTF-8') ?>)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm bg-emerald-600 text-white hover:bg-emerald-700">
+                    <i class="bi bi-pencil-square mr-1"></i> Araç bilgilerini düzenle
+                </button>
+            </div>
             <dl class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Plaka</dt><dd class="mt-1 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($vehicle['plate'] ?? '–') ?></dd></div>
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Model Yılı</dt><dd class="mt-1 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($vehicle['model_year'] ?? '–') ?></dd></div>
@@ -245,6 +251,57 @@ ob_start();
                     </table>
                 <?php endif; ?>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Araç Bilgilerini Düzenle -->
+<div id="editVehicleModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog" aria-labelledby="editVehicleModalTitle">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 z-0 bg-black/50" onclick="document.getElementById('editVehicleModal').classList.add('hidden')" aria-hidden="true"></div>
+        <div class="relative z-10 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col border border-gray-200 dark:border-gray-600">
+            <div class="flex flex-shrink-0 items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700">
+                <h3 id="editVehicleModalTitle" class="text-lg font-bold text-gray-900 dark:text-white">Araç bilgilerini düzenle</h3>
+                <button type="button" onclick="document.getElementById('editVehicleModal').classList.add('hidden')" class="p-2 -m-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700" aria-label="Kapat">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+            <form method="post" action="/araclar/guncelle" class="flex flex-col min-h-0">
+                <input type="hidden" name="id" id="edit_vehicle_id">
+                <input type="hidden" name="redirect_id" value="<?= htmlspecialchars($vid) ?>">
+                <div class="space-y-4 px-6 py-4 overflow-y-auto flex-1">
+                    <div>
+                        <label for="edit_vehicle_plate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Plaka <span class="text-red-500">*</span></label>
+                        <input type="text" name="plate" id="edit_vehicle_plate" required class="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label for="edit_vehicle_model_year" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model Yılı</label>
+                        <input type="number" name="model_year" id="edit_vehicle_model_year" min="1990" max="2030" class="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="edit_vehicle_kasko_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kasko Tarihi</label>
+                            <input type="date" name="kasko_date" id="edit_vehicle_kasko_date" class="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div>
+                            <label for="edit_vehicle_inspection_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Muayene Tarihi</label>
+                            <input type="date" name="inspection_date" id="edit_vehicle_inspection_date" class="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="edit_vehicle_cargo_volume_m3" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kasa (m³)</label>
+                        <input type="number" step="0.01" min="0" name="cargo_volume_m3" id="edit_vehicle_cargo_volume_m3" class="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label for="edit_vehicle_notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not</label>
+                        <textarea name="notes" id="edit_vehicle_notes" rows="2" class="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 resize-none"></textarea>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 flex gap-3 justify-end px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-2xl">
+                    <button type="button" onclick="document.getElementById('editVehicleModal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium">Güncelle</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -620,6 +677,16 @@ ob_start();
         }
     });
 })();
+function openEditVehicle(row) {
+    document.getElementById('edit_vehicle_id').value = row.id || '';
+    document.getElementById('edit_vehicle_plate').value = row.plate || '';
+    document.getElementById('edit_vehicle_model_year').value = row.model_year || '';
+    document.getElementById('edit_vehicle_kasko_date').value = row.kasko_date || '';
+    document.getElementById('edit_vehicle_inspection_date').value = row.inspection_date || '';
+    document.getElementById('edit_vehicle_cargo_volume_m3').value = row.cargo_volume_m3 ?? '';
+    document.getElementById('edit_vehicle_notes').value = row.notes || '';
+    document.getElementById('editVehicleModal').classList.remove('hidden');
+}
 function openAddTrafficInsurance() { document.getElementById('addTrafficInsuranceModal').classList.remove('hidden'); }
 function openAddTrafficInsuranceDoc(trafficInsuranceId) {
     document.getElementById('ati_doc_traffic_insurance_id').value = trafficInsuranceId;

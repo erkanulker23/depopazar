@@ -134,6 +134,7 @@ class WarehousesController
             header('Location: /depolar');
             exit;
         }
+        $monthlyFee = trim($_POST['monthly_base_fee'] ?? '');
         $data = [
             'name'        => $name,
             'company_id'  => $companyId,
@@ -143,6 +144,7 @@ class WarehousesController
             'total_floors'=> isset($_POST['total_floors']) ? (int) $_POST['total_floors'] : null,
             'description'=> trim($_POST['description'] ?? '') ?: null,
             'is_active'   => 1,
+            'monthly_base_fee' => $monthlyFee !== '' ? (float) str_replace(',', '.', $monthlyFee) : null,
         ];
         try {
             Warehouse::create($this->pdo, $data);
@@ -184,6 +186,7 @@ class WarehousesController
                 exit;
             }
         }
+        $monthlyFee = trim($_POST['monthly_base_fee'] ?? '');
         $data = [
             'name'        => trim($_POST['name'] ?? $warehouse['name']),
             'address'     => trim($_POST['address'] ?? '') ?: null,
@@ -192,6 +195,7 @@ class WarehousesController
             'total_floors'=> isset($_POST['total_floors']) && $_POST['total_floors'] !== '' ? (int) $_POST['total_floors'] : null,
             'description' => trim($_POST['description'] ?? '') ?: null,
             'is_active'   => isset($_POST['is_active']) ? 1 : 0,
+            'monthly_base_fee' => $monthlyFee !== '' ? (float) str_replace(',', '.', $monthlyFee) : null,
         ];
         Warehouse::update($this->pdo, $id, $data);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));

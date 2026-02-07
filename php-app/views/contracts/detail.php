@@ -38,6 +38,21 @@ ob_start();
         <a href="mailto:<?= htmlspecialchars($contract['customer_email'] ?? '') ?>?subject=Sözleşme%20<?= urlencode($contract['contract_number'] ?? '') ?>" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
             <i class="bi bi-envelope mr-2"></i> E-posta Gönder
         </a>
+        <?php
+        $printUrl = (isset($_SERVER['REQUEST_SCHEME']) && isset($_SERVER['HTTP_HOST']) ? $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] : '') . '/girisler/' . ($contract['id'] ?? '') . '/yazdir';
+        $waPhone = preg_replace('/[^0-9]/', '', $contract['customer_phone'] ?? '');
+        if (substr($waPhone, 0, 1) === '0') $waPhone = '90' . substr($waPhone, 1);
+        elseif (strlen($waPhone) === 10) $waPhone = '90' . $waPhone;
+        $waText = rawurlencode('Sözleşme PDF: ' . $printUrl);
+        if ($waPhone): ?>
+        <a href="https://wa.me/<?= htmlspecialchars($waPhone) ?>?text=<?= $waText ?>" target="_blank" rel="noopener" class="inline-flex items-center px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700" title="WhatsApp ile PDF gönder">
+            <i class="bi bi-whatsapp mr-2"></i> WhatsApp Gönder
+        </a>
+        <?php else: ?>
+        <a href="https://wa.me/?text=<?= $waText ?>" target="_blank" rel="noopener" class="inline-flex items-center px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700" title="WhatsApp ile PDF paylaş (numara seçin)">
+            <i class="bi bi-whatsapp mr-2"></i> WhatsApp Gönder
+        </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -162,7 +177,7 @@ ob_start();
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= !empty($p['paid_at']) ? date('d.m.Y', strtotime($p['paid_at'])) : '–' ?></td>
                                     <td class="px-4 py-3">
                                         <?php if (($p['status'] ?? '') === 'pending' || ($p['status'] ?? '') === 'overdue'): ?>
-                                            <a href="/odemeler?payment=<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</a>
+                                            <button type="button" onclick="openCollectModal(<?= htmlspecialchars(json_encode([['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']])) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</button>
                                         <?php else: ?>
                                             <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm">Detay</a>
                                         <?php endif; ?>
@@ -197,6 +212,108 @@ ob_start();
         </div>
     </div>
 </div>
+
+<!-- Ödeme Al Modal (aynı sayfada) -->
+<?php if (!empty($collectPayments)): ?>
+<div id="collectModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeCollectModal()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-600">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Ödeme Al</h3>
+                <button type="button" onclick="closeCollectModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div id="collectError" class="hidden mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 text-sm"></div>
+            <div id="collectStepMethod">
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme yöntemini seçin.</p>
+                <div class="space-y-3 mb-4">
+                    <button type="button" onclick="setCollectMethod('cash')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 flex items-center gap-3 text-left" data-method="cash">
+                        <i class="bi bi-cash-stack text-2xl text-green-600"></i>
+                        <div><p class="font-semibold text-gray-900 dark:text-white">Nakit</p><p class="text-xs text-gray-500">Nakit ödeme al</p></div>
+                    </button>
+                    <button type="button" onclick="setCollectMethod('bank_transfer')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 flex items-center gap-3 text-left" data-method="bank_transfer">
+                        <i class="bi bi-bank text-2xl text-blue-600"></i>
+                        <div><p class="font-semibold text-gray-900 dark:text-white">Havale</p><p class="text-xs text-gray-500">Banka havalesi ile ödeme al</p></div>
+                    </button>
+                </div>
+            </div>
+            <div id="collectStepBank" class="hidden">
+                <form method="post" action="/odemeler/odeme-al">
+                    <input type="hidden" name="redirect" value="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>">
+                    <div id="collectFormIds"></div>
+                    <div class="space-y-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka Hesabı <span class="text-red-500">*</span></label>
+                            <?php if (empty($bankAccounts)): ?>
+                                <p class="text-sm text-amber-700 bg-amber-50 p-3 rounded-xl">Aktif banka hesabı yok. Ayarlar → Banka Hesaplarından ekleyin.</p>
+                            <?php else: ?>
+                                <select name="bank_account_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
+                                    <option value="">Seçin</option>
+                                    <?php foreach ($bankAccounts as $ba): ?>
+                                        <option value="<?= htmlspecialchars($ba['id']) ?>"><?= htmlspecialchars($ba['bank_name']) ?> - <?= htmlspecialchars($ba['account_number']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php endif; ?>
+                        </div>
+                        <input type="text" name="transaction_id" placeholder="İşlem no (opsiyonel)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
+                        <textarea name="notes" rows="2" placeholder="Not (opsiyonel)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="backCollectMethod()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700">← Geri</button>
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Ödemeyi Kaydet</button>
+                    </div>
+                </form>
+            </div>
+            <div id="collectStepCash" class="hidden">
+                <form method="post" action="/odemeler/odeme-al">
+                    <input type="hidden" name="payment_method" value="cash">
+                    <input type="hidden" name="redirect" value="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>">
+                    <div id="collectFormIdsCash"></div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="backCollectMethod()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700">← Geri</button>
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Ödemeyi Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+var collectPayments = <?= json_encode(array_map(fn($p) => ['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? ''], $collectPayments)) ?>;
+function openCollectModal(payments) {
+    collectPayments = Array.isArray(payments) && payments.length ? payments : collectPayments;
+    document.getElementById('collectModal').classList.remove('hidden');
+    document.getElementById('collectStepMethod').classList.remove('hidden');
+    document.getElementById('collectStepBank').classList.add('hidden');
+    document.getElementById('collectStepCash').classList.add('hidden');
+    document.querySelectorAll('.collect-method').forEach(function(b) { b.classList.remove('border-emerald-500', 'bg-emerald-50'); });
+}
+function closeCollectModal() { document.getElementById('collectModal').classList.add('hidden'); }
+function setCollectMethod(method) {
+    document.querySelectorAll('.collect-method').forEach(function(b) { b.classList.remove('border-emerald-500', 'bg-emerald-50'); });
+    var btn = document.querySelector('.collect-method[data-method="' + method + '"]'); if (btn) btn.classList.add('border-emerald-500', 'bg-emerald-50');
+    var ids = collectPayments.map(function(p) { return p.id; });
+    if (method === 'bank_transfer') {
+        document.getElementById('collectStepMethod').classList.add('hidden');
+        document.getElementById('collectStepBank').classList.remove('hidden');
+        var c = document.getElementById('collectFormIds'); c.innerHTML = '';
+        ids.forEach(function(id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'payment_ids[]'; i.value = id; c.appendChild(i); });
+    } else {
+        document.getElementById('collectStepMethod').classList.add('hidden');
+        document.getElementById('collectStepCash').classList.remove('hidden');
+        var c = document.getElementById('collectFormIdsCash'); c.innerHTML = '';
+        ids.forEach(function(id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'payment_ids[]'; i.value = id; c.appendChild(i); });
+    }
+}
+function backCollectMethod() {
+    document.getElementById('collectStepMethod').classList.remove('hidden');
+    document.getElementById('collectStepBank').classList.add('hidden');
+    document.getElementById('collectStepCash').classList.add('hidden');
+}
+document.getElementById('collectModal').addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCollectModal(); });
+<?php if (!empty($_GET['collectPay'])): ?>document.addEventListener('DOMContentLoaded', function() { openCollectModal(); });<?php endif; ?>
+</script>
+<?php endif; ?>
 
 <?php
 $content = ob_get_clean();

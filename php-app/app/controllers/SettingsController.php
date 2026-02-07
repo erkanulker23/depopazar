@@ -555,9 +555,15 @@ class SettingsController
         }
         $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../../config/config.php';
         $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
-        $subject = $appName . ' E-posta Testi';
-        $body = "Bu bir test e-postasıdır.\n\nE-posta ayarlarınız çalışıyor.";
-        $result = MailService::sendSmtp($mail, $to, $subject, $body);
+        $subject = $appName . ' – E-posta Testi';
+        $bodyPlain = "Bu bir test e-postasıdır.\n\nE-posta ayarlarınız çalışıyor.";
+        $bodyHtml = MailService::wrapInHtmlTemplate(
+            $appName,
+            'E-posta Testi',
+            "Bu bir test e-postasıdır.\n\nE-posta ayarlarınız doğru yapılandırıldı ve SMTP bağlantınız çalışıyor. Müşterilerinize göndereceğiniz bildirimler bu ayarlar üzerinden iletilecektir.",
+            ''
+        );
+        $result = MailService::sendSmtp($mail, $to, $subject, $bodyPlain, $bodyHtml);
         if ($result['success']) {
             $_SESSION['flash_success'] = 'Test e-postası gönderildi: ' . $to;
         } else {
@@ -659,4 +665,5 @@ class SettingsController
         $stmt->execute([$companyId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
+
 }

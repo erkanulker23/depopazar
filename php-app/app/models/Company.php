@@ -49,4 +49,13 @@ class Company
         $pdo->prepare('UPDATE companies SET ' . implode(', ', $set) . ' WHERE id = ? AND deleted_at IS NULL')->execute($params);
         return self::findOne($pdo, $id);
     }
+
+    /** Şirketin e-posta ayarlarını döndürür (e-posta gönderimi için). */
+    public static function getMailSettings(PDO $pdo, string $companyId): ?array
+    {
+        $stmt = $pdo->prepare('SELECT * FROM company_mail_settings WHERE company_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$companyId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
 }

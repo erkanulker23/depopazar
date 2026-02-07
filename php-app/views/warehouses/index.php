@@ -81,6 +81,7 @@ ob_start();
                                     'total_floors' => (int)($w['total_floors'] ?? 0),
                                     'description' => $w['description'] ?? '',
                                     'is_active' => !empty($w['is_active']),
+                                    'monthly_base_fee' => $w['monthly_base_fee'] ?? null,
                                 ]) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
                                 <form method="post" action="/depolar/sil" class="inline" onsubmit="return confirm('Bu depoyu silmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($w['id']) ?>">
@@ -127,6 +128,10 @@ ob_start();
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Kat Sayısı</label>
                         <input type="number" name="total_floors" min="1" placeholder="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Varsayılan Aylık Depo Ücreti (₺)</label>
+                        <input type="text" name="monthly_base_fee" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama</label>
@@ -177,6 +182,10 @@ ob_start();
                         <input type="number" name="total_floors" id="edit_floors" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aylık Depo Ücreti (₺)</label>
+                        <input type="text" name="monthly_base_fee" id="edit_monthly_base_fee" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama</label>
                         <textarea name="description" id="edit_desc" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
@@ -204,6 +213,7 @@ function openEditWarehouse(d) {
     document.getElementById('edit_city').value = d.city || '';
     document.getElementById('edit_district').value = d.district || '';
     document.getElementById('edit_floors').value = d.total_floors || '';
+    document.getElementById('edit_monthly_base_fee').value = d.monthly_base_fee != null && d.monthly_base_fee !== '' ? d.monthly_base_fee : '';
     document.getElementById('edit_desc').value = d.description || '';
     document.getElementById('edit_active').checked = !!d.is_active;
     openModal('editWarehouseModal');

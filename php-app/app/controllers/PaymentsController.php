@@ -128,6 +128,7 @@ class PaymentsController
                     $contract = Contract::findOne($this->pdo, $firstPayment['contract_id']);
                     if ($contract) {
                         Notification::createForCompany($this->pdo, $contract['company_id'] ?? null, 'payment', 'Ödeme alındı', 'Sözleşme ' . ($contract['contract_number'] ?? '') . ' için ödeme alındı.', ['contract_id' => $firstPayment['contract_id']]);
+                        $this->sendPaymentReceivedEmails($firstPayment);
                     }
                 }
             } else {
@@ -198,5 +199,50 @@ class PaymentsController
         $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
         $company = !empty($payment['company_id']) ? Company::findOne($this->pdo, $payment['company_id']) : null;
         require __DIR__ . '/../../views/payments/print.php';
+    }
+
+    /**
+     * Ödeme alındı bildirim e-postaları (müşteri + yönetici). Modern HTML şablon kullanır.
+     */
+    private function sendPaymentReceivedEmails(array $payment): void
+    {
+        $companyId = $payment['company_id'] ?? null;
+        if (!$companyId) {
+            return;
+        }
+        $mail = Company::getMailSettings($this->pdo, $companyId);
+        if (!$mail || empty($mail['smtp_host']) || empty($mail['is_active'])) {
+            return;
+        }
+        $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../../config/config.php';
+        $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
+        $musteriAdi = trim(($payment['customer_first_name'] ?? '') . ' ' . ($payment['customer_last_name'] ?? ''));
+        $tutar = number_format((float) ($payment['amount'] ?? 0), 2, ',', '.') . ' ₺';
+        $defaultCustomer = "Sayın {musteri_adi},\n\n{tutar} tutarındaki ödemeniz alınmıştır.\n\nTeşekkür ederiz.";
+        $defaultAdmin = "Ödeme alındı: {musteri_adi} - {tutar}";
+        $tplCustomer = !empty(trim($mail['payment_received_template'] ?? '')) ? $mail['payment_received_template'] : $defaultCustomer;
+        $tplAdmin = !empty(trim($mail['admin_payment_received_template'] ?? '')) ? $mail['admin_payment_received_template'] : $defaultAdmin;
+        $replace = ['{musteri_adi}' => $musteriAdi, '{tutar}' => $tutar];
+
+        if (!empty($mail['notify_customer_on_payment'])) {
+            $customerEmail = trim($payment['customer_email'] ?? '');
+            if ($customerEmail !== '' && filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
+                $bodyPlain = str_replace(array_keys($replace), array_values($replace), $tplCustomer);
+                $bodyHtml = MailService::wrapInHtmlTemplate($appName, 'Ödeme Alındı', $bodyPlain, $tutar);
+                MailService::sendSmtp($mail, $customerEmail, $appName . ' – Ödeme Alındı', $bodyPlain, $bodyHtml);
+            }
+        }
+
+        if (!empty($mail['notify_admin_on_payment'])) {
+            $staff = User::findStaff($this->pdo, $companyId);
+            $adminBodyPlain = str_replace(array_keys($replace), array_values($replace), $tplAdmin);
+            $adminBodyHtml = MailService::wrapInHtmlTemplate($appName, 'Ödeme Bildirimi', $adminBodyPlain, $musteriAdi . ' – ' . $tutar);
+            foreach ($staff as $u) {
+                $email = trim($u['email'] ?? '');
+                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    MailService::sendSmtp($mail, $email, $appName . ' – Ödeme alındı: ' . $musteriAdi, $adminBodyPlain, $adminBodyHtml);
+                }
+            }
+        }
     }
 }

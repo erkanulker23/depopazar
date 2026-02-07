@@ -82,6 +82,13 @@ class Vehicle
         return $stmt->rowCount() > 0;
     }
 
+    public static function existsByCompanyAndPlate(PDO $pdo, string $companyId, string $plate): bool
+    {
+        $stmt = $pdo->prepare('SELECT 1 FROM vehicles WHERE company_id = ? AND plate = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$companyId, self::normalizePlate($plate)]);
+        return (bool) $stmt->fetch();
+    }
+
     public static function normalizePlate(string $plate): string
     {
         $plate = trim(preg_replace('/\s+/', ' ', $plate));

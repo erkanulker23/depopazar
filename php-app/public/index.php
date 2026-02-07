@@ -20,6 +20,7 @@ $router->get('/cikis', fn() => (new AuthController($pdo))->logout());
 $router->post('/cikis', fn() => (new AuthController($pdo))->logout());
 
 $router->get('/genel-bakis', fn() => (new DashboardController($pdo))->index());
+$router->post('/genel-bakis', function () { header('Location: /genel-bakis', true, 303); exit; });
 
 $router->get('/depolar', fn() => (new WarehousesController($pdo))->index());
 $router->get('/depolar/{id}', fn(array $p) => (new WarehousesController($pdo))->detail($p));
@@ -75,6 +76,7 @@ $router->post('/nakliye-isler/ekle', fn() => (new TransportationJobsController($
 $router->post('/nakliye-isler/guncelle', fn() => (new TransportationJobsController($pdo))->update());
 $router->post('/nakliye-isler/sil', fn() => (new TransportationJobsController($pdo))->delete());
 $router->get('/araclar', fn() => (new VehiclesController($pdo))->index());
+$router->post('/araclar', function () { header('Location: /araclar', true, 303); exit; });
 $router->get('/araclar/ekle', function () { header('Location: /araclar'); exit; });
 $router->get('/araclar/{id}', fn(array $p) => (new VehiclesController($pdo))->show($p));
 $router->post('/araclar/ekle', fn() => (new VehiclesController($pdo))->create());
@@ -150,6 +152,13 @@ $router->get('/api/push-vapid-public', fn() => (new NotificationsController($pdo
 $router->post('/api/push-subscribe', fn() => (new NotificationsController($pdo))->apiPushSubscribe());
 $router->post('/bildirimler/okundu', fn() => (new NotificationsController($pdo))->markAllRead());
 $router->post('/bildirimler/tumunu-sil', fn() => (new NotificationsController($pdo))->deleteAll());
+
+$router->get('/favicon.ico', function () {
+    header('Content-Type: image/gif');
+    header('Cache-Control: public, max-age=86400');
+    echo base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+    exit;
+});
 
 $router->get('/', function () {
     if (!Auth::isAuthenticated()) { header('Location: /giris'); exit; }

@@ -117,6 +117,12 @@ class VehiclesController
             header('Location: /araclar');
             exit;
         }
+        if (Vehicle::existsByCompanyAndPlate($this->pdo, $companyId, $plate)) {
+            $_SESSION['flash_error'] = sprintf('Bu plaka (%s) zaten kayıtlı. Farklı bir plaka girin veya listeden mevcut aracı düzenleyin.', $plate);
+            http_response_code(303);
+            header('Location: /araclar');
+            exit;
+        }
         try {
             Vehicle::create($this->pdo, [
                 'company_id' => $companyId,
@@ -146,17 +152,18 @@ class VehiclesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $id = trim($_POST['id'] ?? '');
+        $redirectId = trim($_POST['redirect_id'] ?? '');
         if ($id === '') {
             $_SESSION['flash_error'] = 'Araç bulunamadı.';
             http_response_code(303);
-            header('Location: /araclar');
+            header('Location: ' . ($redirectId !== '' ? '/araclar/' . $redirectId : '/araclar'));
             exit;
         }
         $plate = Vehicle::normalizePlate($_POST['plate'] ?? '');
         if ($plate === '') {
             $_SESSION['flash_error'] = 'Plaka girin.';
             http_response_code(303);
-            header('Location: /araclar');
+            header('Location: ' . ($redirectId !== '' ? '/araclar/' . $redirectId : '/araclar'));
             exit;
         }
         try {
@@ -178,7 +185,11 @@ class VehiclesController
             $_SESSION['flash_error'] = $this->friendlyVehicleError($e, $plate, 'güncelleme');
         }
         http_response_code(303);
-        header('Location: /araclar');
+        if ($redirectId !== '') {
+            header('Location: /araclar/' . $redirectId);
+        } else {
+            header('Location: /araclar');
+        }
         exit;
     }
 

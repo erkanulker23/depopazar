@@ -38,6 +38,13 @@ class ContractsController
             $rooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
         }
         $roomsEmpty = array_values(array_filter($rooms, fn($r) => ($r['status'] ?? '') === 'empty'));
+        $vehicles = [];
+        try {
+            $this->pdo->query("SELECT 1 FROM vehicles LIMIT 1");
+            $vehicles = Vehicle::findAll($this->pdo, $companyId ?? null);
+        } catch (Throwable $e) {
+            // vehicles tablosu yoksa boş bırak
+        }
         $staff = [];
         $owners = [];
         if ($companyId) {
@@ -132,6 +139,31 @@ class ContractsController
         $transportationFee = isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? (float) str_replace(',', '.', $_POST['transportation_fee']) : 0;
         $discount = isset($_POST['discount']) && $_POST['discount'] !== '' ? (float) str_replace(',', '.', $_POST['discount']) : 0;
         $soldBy = trim($_POST['sold_by_user_id'] ?? '') ?: null;
+        $vehiclePlate = trim($_POST['vehicle_plate'] ?? '');
+        if ($vehiclePlate === '' && !empty($_POST['vehicle_id'])) {
+            $vid = trim($_POST['vehicle_id'] ?? '');
+            if ($vid) {
+                $v = Vehicle::findById($this->pdo, $vid, $companyId);
+                if ($v && !empty($v['plate'])) {
+                    $vehiclePlate = $v['plate'];
+                }
+            }
+        }
+        $contractPdfUrl = null;
+        if (!empty($_FILES['contract_pdf']['name']) && ($_FILES['contract_pdf']['error'] ?? 0) === UPLOAD_ERR_OK) {
+            $ext = strtolower(pathinfo($_FILES['contract_pdf']['name'], PATHINFO_EXTENSION));
+            if ($ext === 'pdf') {
+                $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/contracts' : __DIR__ . '/../../public/uploads/contracts';
+                if (!is_dir($uploadDir)) {
+                    @mkdir($uploadDir, 0755, true);
+                }
+                $filename = 'contract_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.pdf';
+                $path = $uploadDir . '/' . $filename;
+                if (move_uploaded_file($_FILES['contract_pdf']['tmp_name'], $path)) {
+                    $contractPdfUrl = '/uploads/contracts/' . $filename;
+                }
+            }
+        }
         $data = [
             'customer_id' => $customerId,
             'room_id' => $roomId,
@@ -144,7 +176,8 @@ class ContractsController
             'discount' => $discount,
             'driver_name' => trim($_POST['driver_name'] ?? '') ?: null,
             'driver_phone' => trim($_POST['driver_phone'] ?? '') ?: null,
-            'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
+            'vehicle_plate' => $vehiclePlate ?: null,
+            'contract_pdf_url' => $contractPdfUrl,
             'notes' => trim($_POST['notes'] ?? '') ?: null,
         ];
         try {
@@ -185,6 +218,7 @@ class ContractsController
             $contractNumber = $created['contract_number'] ?? $contractId ?? '';
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName]);
+            $this->sendContractCreatedEmails($created);
             $_SESSION['flash_success'] = 'Sözleşme oluşturuldu.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Kayıt oluşturulamadı: ' . $e->getMessage();
@@ -311,6 +345,17 @@ class ContractsController
             unset($mp);
         }
         $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
+        $collectPayments = array_values(array_filter($payments, fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue'])));
+        $bankAccounts = [];
+        $cid = $contract['company_id'] ?? $companyId;
+        if ($cid) {
+            $stmt = $this->pdo->prepare('SELECT * FROM bank_accounts WHERE company_id = ? AND deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
+            $stmt->execute([$cid]);
+            $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $stmt = $this->pdo->query('SELECT * FROM bank_accounts WHERE deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
+            $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         $pageTitle = 'Sözleşme: ' . ($contract['contract_number'] ?? $id);
         require __DIR__ . '/../../views/contracts/detail.php';
     }
@@ -441,6 +486,51 @@ class ContractsController
         }
         header('Location: /girisler');
         exit;
+    }
+
+    /**
+     * Sözleşme oluşturuldu bildirim e-postaları (müşteri + yönetici). Modern HTML şablon kullanır.
+     */
+    private function sendContractCreatedEmails(array $contract): void
+    {
+        $companyId = $contract['company_id'] ?? null;
+        if (!$companyId) {
+            return;
+        }
+        $mail = Company::getMailSettings($this->pdo, $companyId);
+        if (!$mail || empty($mail['smtp_host']) || empty($mail['is_active'])) {
+            return;
+        }
+        $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../../config/config.php';
+        $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
+        $musteriAdi = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
+        $sozlesmeNo = $contract['contract_number'] ?? '';
+        $defaultCustomer = "Sayın {musteri_adi},\n\nSözleşmeniz oluşturuldu. Sözleşme No: {sozlesme_no}\n\nİyi günler dileriz.";
+        $defaultAdmin = "Yeni sözleşme: {sozlesme_no} - {musteri_adi}";
+        $tplCustomer = !empty(trim($mail['contract_created_template'] ?? '')) ? $mail['contract_created_template'] : $defaultCustomer;
+        $tplAdmin = !empty(trim($mail['admin_contract_created_template'] ?? '')) ? $mail['admin_contract_created_template'] : $defaultAdmin;
+        $replace = ['{musteri_adi}' => $musteriAdi, '{sozlesme_no}' => $sozlesmeNo];
+
+        if (!empty($mail['notify_customer_on_contract'])) {
+            $customerEmail = trim($contract['customer_email'] ?? '');
+            if ($customerEmail !== '' && filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
+                $bodyPlain = str_replace(array_keys($replace), array_values($replace), $tplCustomer);
+                $bodyHtml = MailService::wrapInHtmlTemplate($appName, 'Sözleşme Oluşturuldu', $bodyPlain, 'Sözleşme No: ' . $sozlesmeNo);
+                MailService::sendSmtp($mail, $customerEmail, $appName . ' – Sözleşme Oluşturuldu', $bodyPlain, $bodyHtml);
+            }
+        }
+
+        if (!empty($mail['notify_admin_on_contract'])) {
+            $staff = User::findStaff($this->pdo, $companyId);
+            $adminBodyPlain = str_replace(array_keys($replace), array_values($replace), $tplAdmin);
+            $adminBodyHtml = MailService::wrapInHtmlTemplate($appName, 'Yeni Sözleşme Bildirimi', $adminBodyPlain, $sozlesmeNo . ' – ' . $musteriAdi);
+            foreach ($staff as $u) {
+                $email = trim($u['email'] ?? '');
+                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    MailService::sendSmtp($mail, $email, $appName . ' – Yeni sözleşme: ' . $sozlesmeNo, $adminBodyPlain, $adminBodyHtml);
+                }
+            }
+        }
     }
 
     private static function uuid(): string

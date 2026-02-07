@@ -67,8 +67,8 @@ class Contract
         $id = self::uuid();
         $contractNumber = $data['contract_number'] ?? self::generateContractNumber($pdo);
         $stmt = $pdo->prepare(
-            'INSERT INTO contracts (id, contract_number, customer_id, room_id, start_date, end_date, monthly_price, payment_frequency_months, is_active, sold_by_user_id, transportation_fee, pickup_location, discount, driver_name, driver_phone, vehicle_plate, notes) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO contracts (id, contract_number, customer_id, room_id, start_date, end_date, monthly_price, payment_frequency_months, is_active, sold_by_user_id, transportation_fee, pickup_location, discount, driver_name, driver_phone, vehicle_plate, contract_pdf_url, notes) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
@@ -85,6 +85,7 @@ class Contract
             $data['driver_name'] ?? null,
             $data['driver_phone'] ?? null,
             $data['vehicle_plate'] ?? null,
+            $data['contract_pdf_url'] ?? null,
             $data['notes'] ?? null,
         ]);
         return self::findOne($pdo, $id);

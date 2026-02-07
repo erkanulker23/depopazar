@@ -16,9 +16,9 @@ if ($companyName !== '' && $appName !== '') {
 $user = Auth::user();
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
 if (($q = strpos($currentPath, '?')) !== false) $currentPath = substr($currentPath, 0, $q);
-$navIcons = ['Dashboard'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Araçlar'=>'car-front','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Bildirimler'=>'bell','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
+$navIcons = ['Genel Bakış'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Araçlar'=>'car-front','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
 $navItems = [
-    ['name' => 'Dashboard', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
+    ['name' => 'Genel Bakış', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
     ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
     ['name' => 'Ödeme Al', 'href' => '/odemeler?collect=1', 'highlight' => true, 'active' => false],
     ['name' => 'Tüm Girişler', 'href' => '/girisler', 'active' => $currentPath === '/girisler'],
@@ -33,7 +33,6 @@ $navItems = [
     ['name' => 'Müşteriler', 'href' => '/musteriler', 'active' => $currentPath === '/musteriler'],
     ['name' => 'Ödemeler', 'href' => '/odemeler', 'active' => $currentPath === '/odemeler'],
     ['name' => 'Masraflar', 'href' => '/masraflar', 'active' => $currentPath === '/masraflar'],
-    ['name' => 'Bildirimler', 'href' => '/bildirimler', 'active' => $currentPath === '/bildirimler'],
     ['name' => 'Raporlar', 'href' => '/raporlar', 'active' => $currentPath === '/raporlar'],
     ['name' => 'Ayarlar', 'href' => '/ayarlar', 'active' => $currentPath === '/ayarlar'],
 ];
@@ -198,46 +197,7 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                         <i class="bi bi-moon-stars text-xl md:text-lg dark:hidden" aria-hidden="true"></i>
                         <i class="bi bi-sun text-xl md:text-lg hidden dark:inline" aria-hidden="true"></i>
                     </button>
-                    <div class="relative">
-                        <button type="button" id="notifBtn" class="p-3 md:p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors relative min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center" title="Bildirimler" aria-expanded="false" aria-haspopup="true">
-                            <i class="bi bi-bell text-xl md:text-lg"></i>
-                            <span id="notifBadge" class="hidden absolute top-2 right-2 md:top-1.5 md:right-1.5 w-2.5 h-2.5 md:w-2 md:h-2 bg-red-500 rounded-full"></span>
-                        </button>
-                        <div id="notifDropdown" class="hidden absolute right-0 top-full mt-1 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl z-50 py-0 max-h-[70vh] overflow-hidden flex flex-col" onclick="event.stopPropagation()">
-                            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                                <span class="font-semibold text-gray-900 dark:text-white">Bildirimler</span>
-                                <a href="/bildirimler" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Tümü</a>
-                            </div>
-                            <div id="notifList" class="flex-1 overflow-y-auto px-4 py-3 text-sm text-gray-500 dark:text-gray-400 min-h-[4rem]">Yükleniyor…</div>
-                            <div class="flex-shrink-0 border-t border-gray-100 dark:border-gray-700 px-4 py-2 space-y-2 bg-gray-50 dark:bg-gray-700/50">
-                                <div class="flex items-center justify-between gap-2">
-                                    <form method="post" action="/bildirimler/okundu" class="inline" id="notifMarkAllForm">
-                                        <button type="submit" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">Tümü okundu</button>
-                                    </form>
-                                    <form method="post" action="/bildirimler/tumunu-sil" class="inline" id="notifDeleteAllForm" onsubmit="return confirm('Tüm bildirimleri silmek istediğinize emin misiniz?');">
-                                        <button type="submit" class="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Tümünü sil</button>
-                                    </form>
-                                </div>
-                                <p class="text-[11px] text-gray-500 dark:text-gray-400" id="pushPromptWrap">
-                                    <button type="button" id="pushEnableBtn" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Telefon/cihaz bildirimlerini aç</button> – işlem olduğunda bildirim gider.
-                                </p>
-                                <p class="text-[11px] text-emerald-600 dark:text-emerald-400 hidden" id="pushEnabledWrap">Cihaz bildirimleri açık.</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-            </div>
-            <!-- Push bildirim izni – sayfa ilk açıldığında görünür (mobil dahil); JS izin/dismiss durumuna göre gizler. z-index ile mobilde üstte kalır. -->
-            <div id="pushBanner" class="push-banner-default relative z-40 border-b border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap" role="region" aria-label="Bildirimlere izin verin">
-                <p class="push-banner-text text-sm text-gray-800 dark:text-gray-200 flex-1 min-w-0 leading-snug">
-                    <i class="bi bi-bell text-emerald-600 dark:text-emerald-400 mr-2 align-middle" aria-hidden="true"></i>
-                    <strong>Bildirimlere izin verin</strong> – ödeme, sözleşme ve işlemlerde cihazınıza anlık bildirim gider.
-                </p>
-                <div class="push-banner-btns flex items-center gap-2 flex-shrink-0">
-                    <button type="button" id="pushBannerLater" class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 min-h-[44px] min-w-[44px] touch-manipulation rounded-lg">Sonra</button>
-                    <button type="button" id="pushBannerAllow" class="px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 active:bg-emerald-800 min-h-[48px] min-w-[140px] touch-manipulation shrink-0 cursor-pointer select-none" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;" aria-label="Bildirimlere izin ver">Bildirimlere izin ver</button>
-                </div>
-                <p id="pushBannerHint" class="hidden w-full mt-2 text-xs text-amber-700 dark:text-amber-300 text-left break-words"></p>
             </div>
             <div class="flex-1 p-4 md:p-6 lg:p-8 pb-8 md:pb-6 min-h-0 main-content-wrap">
                 <?= $content ?? '' ?>
@@ -286,189 +246,6 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                 localStorage.setItem('theme', isDark ? 'dark' : 'light');
             });
         }
-        var notifBtn = document.getElementById('notifBtn'), notifDrop = document.getElementById('notifDropdown'), notifList = document.getElementById('notifList'), notifBadge = document.getElementById('notifBadge');
-        function loadNotifs() {
-            if (!notifList) return;
-            fetch('/api/bildirimler').then(function(r) { return r.json(); }).then(function(data) {
-                var n = data.notifications || [];
-                var unread = data.unread_count || 0;
-                if (notifBadge) { notifBadge.classList.toggle('hidden', unread === 0); }
-                if (n.length === 0) { notifList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Bildirim bulunmuyor.</p>'; return; }
-                var html = '';
-                n.forEach(function(item) {
-                    var icon = item.type === 'payment' ? 'credit-card' : (item.type === 'contract' ? 'file-text' : (item.type === 'warehouse' ? 'building' : (item.type === 'room' ? 'grid-3x3' : (item.type === 'user' ? 'person' : (item.type === 'transport' ? 'truck' : (item.type === 'bank' ? 'bank' : 'bell'))))));
-                    var unreadClass = item.is_read ? '' : ' bg-emerald-50/50 dark:bg-emerald-900/10';
-                    var dateStr = item.created_at ? new Date(item.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-                    var actorStr = (item.metadata && item.metadata.actor_name) ? '<span class="text-gray-500 dark:text-gray-400 text-[10px]"> · ' + String(item.metadata.actor_name).replace(/</g, '&lt;') + '</span>' : '';
-                    html += '<div class="py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-0' + unreadClass + '"><p class="font-medium text-gray-900 dark:text-white text-sm">' + (item.title || '').replace(/</g, '&lt;') + '</p><p class="text-gray-600 dark:text-gray-400 text-xs mt-0.5">' + (item.message || '').replace(/</g, '&lt;').replace(/\n/g, '<br>') + actorStr + '</p><p class="text-gray-400 dark:text-gray-500 text-[10px] mt-1">' + dateStr + '</p></div>';
-                });
-                notifList.innerHTML = html;
-            }).catch(function() { if (notifList) notifList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Bildirimler yüklenemedi.</p>'; });
-        }
-        if (notifBtn && notifDrop) {
-            notifBtn.addEventListener('click', function(e) { e.stopPropagation(); notifDrop.classList.toggle('hidden'); notifBtn.setAttribute('aria-expanded', notifDrop.classList.contains('hidden') ? 'false' : 'true'); if (!notifDrop.classList.contains('hidden')) loadNotifs(); });
-            document.addEventListener('click', function() { notifDrop.classList.add('hidden'); notifBtn.setAttribute('aria-expanded', 'false'); });
-        }
-        loadNotifs();
-        setInterval(loadNotifs, 60000);
-    })();
-    (function(){
-        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
-        var pushPromptWrap = document.getElementById('pushPromptWrap');
-        var pushEnabledWrap = document.getElementById('pushEnabledWrap');
-        var pushEnableBtn = document.getElementById('pushEnableBtn');
-        var pushBanner = document.getElementById('pushBanner');
-        var pushBannerAllow = document.getElementById('pushBannerAllow');
-        var pushBannerLater = document.getElementById('pushBannerLater');
-        var forceShowBanner = /[?&]push_banner=1/.test(location.search || '');
-        if (!forceShowBanner) {
-            if (Notification.permission === 'granted') {
-                if (pushBanner) pushBanner.classList.add('hidden');
-                showEnabled();
-                registerAndSubscribe();
-            } else if (Notification.permission === 'denied') {
-                if (pushBanner) pushBanner.classList.add('hidden');
-            } else {
-                try { if (sessionStorage.getItem('pushBannerDismissed') === '1') { if (pushBanner) pushBanner.classList.add('hidden'); } } catch (e) {}
-            }
-        }
-        function showEnabled() {
-            if (pushPromptWrap) pushPromptWrap.classList.add('hidden');
-            if (pushEnabledWrap) pushEnabledWrap.classList.remove('hidden');
-            if (pushBanner) pushBanner.classList.add('hidden');
-        }
-        function showPrompt() {
-            if (pushPromptWrap) pushPromptWrap.classList.remove('hidden');
-            if (pushEnabledWrap) pushEnabledWrap.classList.add('hidden');
-        }
-        function hidePushRow() {
-            if (pushPromptWrap) pushPromptWrap.classList.add('hidden');
-            if (pushEnabledWrap) pushEnabledWrap.classList.add('hidden');
-            if (pushBanner) pushBanner.classList.add('hidden');
-        }
-        function hideBanner() {
-            if (pushBanner) pushBanner.classList.add('hidden');
-            try { sessionStorage.setItem('pushBannerDismissed', '1'); } catch (e) {}
-        }
-        if (Notification.permission === 'denied') {
-            if (pushPromptWrap) pushPromptWrap.innerHTML = '<span class="text-gray-400">Bildirimler tarayıcıda engelli.</span>';
-        }
-        var swRegistration = null;
-        navigator.serviceWorker.register('/sw.js').then(function(reg) { swRegistration = reg; }).catch(function() {});
-        function registerAndSubscribe() {
-            var regPromise = swRegistration ? Promise.resolve(swRegistration) : navigator.serviceWorker.register('/sw.js');
-            regPromise.then(function(reg) {
-                if (!swRegistration) swRegistration = reg;
-                fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(data) {
-                    var publicKey = data.publicKey;
-                    if (!publicKey) {
-                        hidePushRow();
-                        return;
-                    }
-                    reg.pushManager.getSubscription().then(function(sub) {
-                        if (sub) {
-                            sendSubscriptionToServer(sub);
-                            showEnabled();
-                            return;
-                        }
-                        return reg.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(publicKey)
-                        });
-                    }).then(function(sub) {
-                        if (sub && !sub.endpoint) return;
-                        if (sub) sendSubscriptionToServer(sub);
-                    }).catch(function() { showPrompt(); });
-                });
-            }).catch(function() {});
-        }
-        function sendSubscriptionToServer(subscription) {
-            var body = JSON.stringify({
-                subscription: {
-                    endpoint: subscription.endpoint,
-                    keys: {
-                        p256dh: btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
-                        auth: btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-                    }
-                }
-            });
-            fetch('/api/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, credentials: 'same-origin' }).then(function(r) {
-                if (r.ok) showEnabled();
-            });
-        }
-        function urlBase64ToUint8Array(base64String) {
-            var padding = '='.repeat((4 - base64String.length % 4) % 4);
-            var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-            var rawData = window.atob(base64);
-            var outputArray = new Uint8Array(rawData.length);
-            for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-            return outputArray;
-        }
-        var pushBannerHint = document.getElementById('pushBannerHint');
-        function requestPermissionAndSubscribe() {
-            if (Notification.permission === 'granted') { registerAndSubscribe(); return; }
-            if (Notification.permission === 'denied') {
-                if (pushBannerHint) { pushBannerHint.textContent = 'Bildirimler tarayıcıda engelli. Ayarlar \u2192 Site ayarları \u2192 Bildirimler ile açabilirsiniz.'; pushBannerHint.classList.remove('hidden'); }
-                return;
-            }
-            function onResult(p) {
-                if (p === 'granted') {
-                    registerAndSubscribe();
-                    hideBanner();
-                } else if (p === 'denied' && pushBannerHint) {
-                    pushBannerHint.textContent = 'Bildirimler reddedildi. Değiştirmek için tarayıcı/site ayarlarından bildirimlere izin verin.';
-                    pushBannerHint.classList.remove('hidden');
-                } else if (pushBannerHint && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                    pushBannerHint.textContent = 'İzin penceresi açılmadıysa: Safari\/Chrome ayarları \u2192 Bu site \u2192 Bildirimler \u2192 İzin ver.';
-                    pushBannerHint.classList.remove('hidden');
-                }
-            }
-            try {
-                var p = Notification.requestPermission();
-                if (p && typeof p.then === 'function') {
-                    p.then(onResult).catch(function() { if (pushBannerHint) { pushBannerHint.textContent = 'İzin alınamadı. Lütfen tarayıcı ayarlarından bildirimlere izin verin.'; pushBannerHint.classList.remove('hidden'); } });
-                } else if (typeof p === 'string') {
-                    onResult(p);
-                }
-            } catch (e) {
-                if (pushBannerHint) { pushBannerHint.textContent = 'Bu tarayıcı bildirim desteklemiyor veya izin kapalı. Ayarlardan kontrol edin.'; pushBannerHint.classList.remove('hidden'); }
-            }
-        }
-        function bindPushAllow() {
-            if (!pushBannerAllow) return;
-            var didRequest = false;
-            function run(e) {
-                if (e) { e.preventDefault(); e.stopPropagation(); }
-                if (didRequest) return;
-                didRequest = true;
-                requestPermissionAndSubscribe();
-                setTimeout(function() { didRequest = false; }, 1500);
-            }
-            pushBannerAllow.addEventListener('click', function(e) { run(e); }, { passive: false });
-            pushBannerAllow.addEventListener('touchend', function(e) { run(e); }, { passive: false });
-            pushBannerAllow.addEventListener('touchstart', function(e) { run(e); }, { passive: false });
-        }
-        bindPushAllow();
-        if (pushEnableBtn) {
-            var didRequestEnable = false;
-            function runEnable(e) {
-                if (e) { e.preventDefault(); e.stopPropagation(); }
-                if (didRequestEnable) return;
-                didRequestEnable = true;
-                requestPermissionAndSubscribe();
-                setTimeout(function() { didRequestEnable = false; }, 1500);
-            }
-            pushEnableBtn.addEventListener('click', runEnable, { passive: false });
-            pushEnableBtn.addEventListener('touchend', runEnable, { passive: false });
-            pushEnableBtn.style.cursor = 'pointer';
-            pushEnableBtn.style.touchAction = 'manipulation';
-            pushEnableBtn.style.webkitTapHighlightColor = 'transparent';
-        }
-        if (pushBannerLater) pushBannerLater.addEventListener('click', hideBanner);
-        fetch('/api/push-vapid-public').then(function(r) { return r.json(); }).then(function(d) {
-            if (!d.publicKey) return;
-            if (Notification.permission === 'granted') { registerAndSubscribe(); return; }
-        }).catch(function() {});
     })();
     </script>
 </body>

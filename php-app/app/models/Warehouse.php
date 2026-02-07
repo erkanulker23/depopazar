@@ -5,8 +5,8 @@ class Warehouse
     {
         $id = self::uuid();
         $stmt = $pdo->prepare(
-            'INSERT INTO warehouses (id, name, company_id, address, city, district, total_floors, description, is_active) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO warehouses (id, name, company_id, address, city, district, total_floors, description, is_active, monthly_base_fee) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
@@ -18,6 +18,7 @@ class Warehouse
             isset($data['total_floors']) ? (int) $data['total_floors'] : null,
             $data['description'] ?? null,
             isset($data['is_active']) ? (int) (bool) $data['is_active'] : 1,
+            isset($data['monthly_base_fee']) && $data['monthly_base_fee'] !== '' ? (float) $data['monthly_base_fee'] : null,
         ]);
         return self::findOne($pdo, $id);
     }
@@ -66,13 +67,16 @@ class Warehouse
 
     public static function update(PDO $pdo, string $id, array $data): array
     {
-        $allowed = ['name', 'address', 'city', 'district', 'total_floors', 'description', 'is_active'];
+        $allowed = ['name', 'address', 'city', 'district', 'total_floors', 'description', 'is_active', 'monthly_base_fee'];
         $set = [];
         $params = [];
         foreach ($allowed as $k) {
             if (array_key_exists($k, $data)) {
                 $set[] = "`$k` = ?";
-                $params[] = $k === 'is_active' ? (int) (bool) $data[$k] : $data[$k];
+                $val = $data[$k];
+                if ($k === 'is_active') $val = (int) (bool) $val;
+                elseif ($k === 'monthly_base_fee') $val = ($val !== '' && $val !== null) ? (float) $val : null;
+                $params[] = $val;
             }
         }
         if (empty($set)) {

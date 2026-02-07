@@ -83,7 +83,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                         <?php else: ?>
                             <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-300">Sonlandı</span>
                         <?php endif; ?>
-                        <a href="/odemeler?collect=1&contract=<?= htmlspecialchars($c['id'] ?? '') ?>" class="text-sm font-medium text-emerald-600 dark:text-emerald-400">Ödeme Al</a>
+                        <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?collectPay=1" class="text-sm font-medium text-emerald-600 dark:text-emerald-400">Ödeme Al</a>
                         <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="text-sm font-medium text-gray-600 dark:text-gray-400">Detay</a>
                     </div>
                 </div>
@@ -127,7 +127,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/odemeler?collect=1&contract=<?= htmlspecialchars($c['id'] ?? '') ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1">Ödeme Al</a>
+                                <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?collectPay=1" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1">Ödeme Al</a>
                                 <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1">Detay</a>
                                 <?php if (!empty($c['is_active'])): ?>
                                     <form method="post" action="/girisler/sonlandir" class="inline" onsubmit="return confirm('Bu sözleşmeyi sonlandırmak istediğinize emin misiniz?');">
@@ -170,7 +170,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                 </div>
                 <button type="button" onclick="closeNewSaleModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"><i class="bi bi-x-lg"></i></button>
             </div>
-            <form method="post" action="/girisler/ekle" id="newSaleForm">
+            <form method="post" action="/girisler/ekle" id="newSaleForm" enctype="multipart/form-data">
                 <div class="space-y-6">
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
                         <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-person"></i> Temel Bilgiler</h4>
@@ -208,25 +208,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                         </div>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-calendar3"></i> Tarih Bilgileri</h4>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlangıç Tarihi <span class="text-red-500">*</span></label>
-                                <input type="date" name="start_date" id="newSale_start_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş Tarihi <span class="text-red-500">*</span></label>
-                                <input type="date" name="end_date" id="newSale_end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
-                        </div>
-                    </div>
-                    <div id="newSale_monthly_prices_section" class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 hidden">
-                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-calendar-month"></i> Aylık Fiyatlar</h4>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Başlangıç–bitiş tarihlerine göre aylar listelenir. Her ay için fiyatı düzenleyebilirsiniz.</p>
-                        <div id="newSale_monthly_prices_list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
-                    </div>
-                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-currency-exchange"></i> Fiyat ve Nakliye</h4>
+                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-currency-exchange"></i> Depo Aylık Ücreti</h4>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aylık Ücret (₺) <span class="text-red-500">*</span></label>
@@ -235,7 +217,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                             <div class="sm:col-span-2">
                                 <label class="inline-flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" id="newSale_has_transportation" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" onchange="toggleTransportationBlock(this.checked)">
-                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Nakliye ve indirim bilgisi ekle</span>
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Nakliye bilgisi ekle</span>
                                 </label>
                             </div>
                         </div>
@@ -261,10 +243,39 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                                 <input type="text" name="driver_phone" id="newSale_driver_phone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Araç Plakası</label>
-                                <input type="text" name="vehicle_plate" id="newSale_vehicle_plate" placeholder="34 ABC 123" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Araç</label>
+                                <select name="vehicle_id" id="newSale_vehicle_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <option value="">Araç seçin veya plaka girin</option>
+                                    <?php foreach ($vehicles ?? [] as $v): ?>
+                                        <option value="<?= htmlspecialchars($v['id']) ?>" data-plate="<?= htmlspecialchars($v['plate'] ?? '') ?>"><?= htmlspecialchars($v['plate'] ?? '') ?> <?= !empty($v['model_year']) ? '(' . $v['model_year'] . ')' : '' ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <input type="hidden" name="vehicle_plate" id="newSale_vehicle_plate">
                             </div>
                         </div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-calendar3"></i> Tarih Bilgileri</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlangıç Tarihi <span class="text-red-500">*</span></label>
+                                <input type="date" name="start_date" id="newSale_start_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş Tarihi <span class="text-red-500">*</span></label>
+                                <input type="date" name="end_date" id="newSale_end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="newSale_monthly_prices_section" class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 hidden">
+                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-calendar-month"></i> Aylık Fiyatlar</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Başlangıç–bitiş tarihlerine göre aylar listelenir. Her ay için fiyatı düzenleyebilirsiniz.</p>
+                        <div id="newSale_monthly_prices_list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sözleşme PDF (Opsiyonel)</label>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Şirket ile depoya girişi yapan kişi arasındaki sözleşmeyi yükleyin.</p>
+                        <input type="file" name="contract_pdf" accept=".pdf,application/pdf" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
                     </div>
                     <?php if (!empty($owners)): ?>
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
@@ -478,6 +489,17 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
     window.submitBulkDelete = submitBulkDelete;
     document.querySelectorAll('.contract-cb').forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
     if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.contract-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); updateBulkBar(); });
+})();
+(function() {
+    var sel = document.getElementById('newSale_vehicle_id');
+    var hid = document.getElementById('newSale_vehicle_plate');
+    if (sel && hid) {
+        sel.addEventListener('change', function() {
+            var opt = this.options[this.selectedIndex];
+            hid.value = (opt && opt.dataset.plate) ? opt.dataset.plate : '';
+        });
+        if (sel.selectedIndex >= 0) sel.dispatchEvent(new Event('change'));
+    }
 })();
 var newCustomerId = <?= json_encode($newCustomerId) ?>;
 if (newCustomerId && document.getElementById('newSale_customer_id')) {
