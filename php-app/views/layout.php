@@ -37,6 +37,7 @@ $navItems = [
     ['name' => 'Ayarlar', 'href' => '/ayarlar', 'active' => $currentPath === '/ayarlar'],
 ];
 $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($user['last_name'] ?? '', 0, 1));
+$companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="tr" class="scroll-smooth">
@@ -64,7 +65,7 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
                     surface: { 50: '#f8fafc', 100: '#f1f5f9', 800: '#1e293b', 900: '#0f172a' }
                 },
                 fontFamily: {
-                    sans: ['Ubuntu', 'system-ui', '-apple-system', 'sans-serif']
+                    sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif']
                 }
             }
         }
@@ -79,11 +80,11 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); --safe-left: env(safe-area-inset-left); --safe-right: env(safe-area-inset-right); }
-        html, body, input, select, textarea, button { font-family: 'Ubuntu', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+        html, body, input, select, textarea, button { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
         .nav-active .nav-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: rgba(255,255,255,.9); border-radius: 0 3px 3px 0; }
         .sidebar-mobile { transform: translateX(-100%); transition: transform .3s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
@@ -151,11 +152,15 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
         <aside id="sidebar" class="sidebar-mobile fixed md:static inset-y-0 left-0 z-40 w-72 flex flex-col pt-6 bg-white dark:bg-gray-800 border-r border-gray-200/50 dark:border-gray-700 overflow-y-auto overflow-x-hidden">
             <div class="flex items-center flex-shrink-0 px-6 mb-6">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                        <i class="bi bi-building text-white text-lg"></i>
-                    </div>
+                    <?php if (!empty($companyLogoUrl)): ?>
+                        <img src="<?= htmlspecialchars($companyLogoUrl) ?>" alt="" class="h-10 w-auto object-contain flex-shrink-0" aria-hidden="true">
+                    <?php else: ?>
+                        <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                            <i class="bi bi-building text-white text-lg"></i>
+                        </div>
+                    <?php endif; ?>
                     <div class="min-w-0">
-                        <h1 class="text-lg font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent truncate"><?= htmlspecialchars($projectName) ?></h1>
+                        <?php if (empty($companyLogoUrl)): ?><h1 class="text-lg font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent truncate"><?= htmlspecialchars($projectName) ?></h1><?php endif; ?>
                         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Sistem</p>
                     </div>
                 </div>
@@ -184,7 +189,6 @@ $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($
             </div>
         </aside>
         <main class="flex-1 min-w-0 flex flex-col min-h-screen">
-            <?php $companyLogoUrl = $_SESSION['company_logo_url'] ?? null; ?>
             <div class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-4 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
                 <div class="flex items-center gap-2 min-w-0 md:mr-auto">
                     <?php if (!empty($companyLogoUrl)): ?>
