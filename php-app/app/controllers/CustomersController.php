@@ -35,6 +35,40 @@ class CustomersController
         require __DIR__ . '/../../views/customers/index.php';
     }
 
+    public function bulkDelete(): void
+    {
+        Auth::requireStaff();
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $ids = isset($_POST['ids']) && is_array($_POST['ids']) ? array_map('trim', $_POST['ids']) : [];
+        $ids = array_filter($ids, fn($id) => $id !== '');
+        if (empty($ids)) {
+            $_SESSION['flash_error'] = 'Silinecek müşteri seçin.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $deleted = 0;
+        foreach ($ids as $id) {
+            $customer = Customer::findOne($this->pdo, $id);
+            if (!$customer) {
+                continue;
+            }
+            if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+                continue;
+            }
+            if (Customer::softDelete($this->pdo, $id)) {
+                $deleted++;
+            }
+        }
+        if ($deleted > 0) {
+            $_SESSION['flash_success'] = $deleted . ' müşteri silindi.';
+        } else {
+            $_SESSION['flash_error'] = 'Seçilen müşteriler silinemedi veya yetkiniz yok.';
+        }
+        header('Location: /musteriler' . (isset($_GET['q']) && trim($_GET['q']) !== '' ? '?q=' . urlencode(trim($_GET['q'])) : ''));
+        exit;
+    }
+
     public function show(array $params): void
     {
         Auth::requireStaff();

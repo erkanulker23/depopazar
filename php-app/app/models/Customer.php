@@ -101,6 +101,14 @@ class Customer
         return self::findOne($pdo, $id);
     }
 
+    /** Soft delete: deleted_at set eder */
+    public static function softDelete(PDO $pdo, string $id): bool
+    {
+        $stmt = $pdo->prepare('UPDATE customers SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
+    }
+
     private static function uuid(): string
     {
         $data = random_bytes(16);

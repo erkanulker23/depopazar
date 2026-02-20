@@ -1,0 +1,15 @@
+================================================================================
+LARAVEL FORGE – DEPLOY SCRIPT ALANINA SADECE BUNU YAPIŞTIRIN
+================================================================================
+Farklı veya uzun bir script kullanmayın. Site yolunu (celebi, depo vb.) yazmayın;
+Forge otomatik olarak doğru dizini ($FORGE_SITE_PATH) verir.
+================================================================================
+
+cd $FORGE_SITE_PATH && bash deploy.sh
+
+================================================================================
+Ayarlar (Settings) kontrolü:
+- Root directory: /home/forge/SITENIZ.com   (Forge otomatik doldurur)
+- Web directory:  php-app/public            (sadece bu; başında/sonunda BOŞLUK OLMASIN)
+- Environment:    DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD mutlaka dolu
+================================================================================

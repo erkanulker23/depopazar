@@ -59,20 +59,23 @@ try {
     // expense_categories tablosu yoksa (migration çalışmamışsa) sessizce atla
 }
 
-// 2) Super admin kullanıcı yoksa oluştur
+// 2) Super admin kullanıcı: yoksa oluştur, varsa şifreyi bilinen değere sıfırla (giriş garantisi)
 $seedEmail = 'erkanulker0@gmail.com';
+$seedPassword = 'password';
+$hash = password_hash($seedPassword, PASSWORD_BCRYPT, ['cost' => 10]);
 $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND deleted_at IS NULL');
 $stmt->execute([$seedEmail]);
-if ($stmt->fetch()) {
-    echo "Seed: Super admin zaten mevcut ($seedEmail).\n";
+$existing = $stmt->fetch();
+if ($existing) {
+    $pdo->prepare('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?')->execute([$hash, $existing['id']]);
+    echo "Seed: Super admin zaten mevcut; sifre '$seedPassword' olarak guncellendi ($seedEmail).\n";
     exit(0);
 }
 
 $id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-$hash = password_hash('password', PASSWORD_BCRYPT, ['cost' => 10]);
 $stmt = $pdo->prepare(
     'INSERT INTO users (id, email, password, first_name, last_name, phone, role, company_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1)'
 );
 $stmt->execute([$id, $seedEmail, $hash, 'Erkan', 'Ülker', null, 'super_admin']);
 
-echo "Seed: Super admin olusturuldu: $seedEmail (sifre: password)\n";
+echo "Seed: Super admin olusturuldu: $seedEmail (sifre: $seedPassword)\n";

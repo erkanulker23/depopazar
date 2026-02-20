@@ -6,7 +6,7 @@ Bu rehberi takip ederseniz ilk deploy’da **403 Forbidden**, **migration** ve *
 
 ## 1. Panelde site oluşturun
 
-Forge, Awapanel veya kullandığınız panelde siteyi ekleyin (domain, PHP sürümü 8.0+).
+Forge, Awapanel veya kullandığınız panelde siteyi ekleyin (domain, PHP sürümü 8.0+). Repo’yu bağlayın (örn. `erkanulker23/depopazar`), branch’i seçin.
 
 ---
 
@@ -14,12 +14,13 @@ Forge, Awapanel veya kullandığınız panelde siteyi ekleyin (domain, PHP sür�
 
 **Site ayarlarında web kökünü mutlaka `php-app/public` yapın.** Proje kökü *değil*.
 
-| Panel       | Ayar adı          | Değer                          |
-|------------|--------------------|--------------------------------|
-| Laravel Forge | Web Directory    | `php-app/public`               |
-| Awapanel   | Document Root      | `php-app/public` veya tam yol* |
+| Panel         | Ayar adı          | Değer |
+|---------------|--------------------|--------|
+| Laravel Forge | Web directory      | `php-app/public` |
+| Awapanel      | Document Root      | `php-app/public` |
 
-\* Tam yol örneği: `/home/forge/siteniz.com/php-app/public`
+- **Forge’da:** “Web directory” alanına sadece **`php-app/public`** yazın (başında/sonunda **boşluk olmasın**).
+- Tam yol kullanıyorsanız: `/home/forge/celebi.awapanel.com/php-app/public` (`.com` ile `/php-app` arasında boşluk olmamalı).
 
 Nginx’te `root` şöyle olmalı:
 
@@ -27,7 +28,7 @@ Nginx’te `root` şöyle olmalı:
 root /home/forge/SITENIZ/php-app/public;
 ```
 
-**Yanlış:** `root /home/forge/SITENIZ;` → 403 Forbidden.
+**Yanlış:** `root /home/forge/SITENIZ;` veya `root .../public;` (Laravel gibi) → 403 Forbidden. Bu projede giriş noktası **php-app/public** dizinidir.
 
 ---
 
@@ -48,19 +49,20 @@ Awapanel’de: Site ayarlarında **Environment** / **Ortam değişkenleri** benz
 
 ---
 
-## 4. Deploy script
+## 4. Deploy script (çok önemli)
 
-Panelde “Deploy Script” alanına **tek satır** yeterli (script proje içinde):
+**Forge’da “Deploy Script” alanına sadece aşağıdaki tek satırı yapıştırın.** Kendi yazdığınız veya farklı siteden kopyaladığınız script’i (örn. `depo.awapanel.com` yolu geçen) **kullanmayın**; yanlış dizine deploy edilir ve 403 / çalışmama olur.
+
+**Kopyalanacak satır:**
 
 ```bash
 cd $FORGE_SITE_PATH && bash deploy.sh
 ```
 
-Veya panel `FORGE_SITE_PATH` vermiyorsa, proje köküne göre:
+- `$FORGE_SITE_PATH` Forge tarafından otomatik verilir (o anki site: celebi.awapanel.com ise o dizin olur).
+- Proje içindeki `deploy.sh` kullanılır; git pull sonrası güncel script çalışır.
 
-```bash
-cd /home/forge/celebi.awapanel.com && bash deploy.sh
-```
+Hazır metin: **`docs/FORGE-DEPLOY-YAPISTIR.txt`**
 
 `deploy.sh` şunları yapar:
 
@@ -75,18 +77,26 @@ cd /home/forge/celebi.awapanel.com && bash deploy.sh
 
 ## 5. İlk deploy
 
-Panelden **Deploy Now** / **Deploy** çalıştırın. Hata alırsanız:
+Panelden **Deploy Now** / **Deploy** çalıştırın.
 
-- **403:** Web Directory’nin `php-app/public` olduğunu kontrol edin (adım 2).
-- **Veritabanı / Access denied:** Environment’ta DB_* değişkenlerini kontrol edin (adım 3).
-- **Migration hatası:** Aynı şekilde DB_* ve gerekirse `php artisan migrate --force` komutunu sunucuda manuel çalıştırın.
+### Hata alırsanız
+
+- **403 Forbidden**
+  - **Laravel Forge:** Site → **Settings** → **General** → **Web directory** alanı **mutlaka** `php-app/public` olmalı (varsayılan `public` **yanlış**). Kaydedin; Forge Nginx config’i bu alana göre günceller.
+  - **Nginx’i elle düzenliyorsanız:** `root` satırı `.../php-app/public` olmalı; `.../public` (Laravel gibi) 403 verir.
+  - Web directory’de başında/sonunda veya path içinde **boşluk olmamalı**.
+  - Deploy script olarak **sadece** `cd $FORGE_SITE_PATH && bash deploy.sh` kullanın.
+  - Deploy’u tekrar çalıştırın (izinler güncellenir). Hâlâ 403 ise sunucuda `ls -la /home/forge/celebi.awapanel.com/php-app/public/` ile `index.php` var mı ve okunabilir mi kontrol edin.
+- **Veritabanı / Access denied:** Environment’ta DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD dolu mu kontrol edin.
+- **Migration hatası:** Aynı şekilde DB_* değişkenleri; gerekirse sunucuda `cd $FORGE_SITE_PATH && php artisan migrate --force` çalıştırın.
+- **Giriş: "Geçersiz e-posta veya şifre"** – Varsayılan giriş: `erkanulker0@gmail.com` / `password`. Seed her deploy’da bu kullanıcının şifresini `password` yapar. Yine giremiyorsanız sunucuda: `cd $FORGE_SITE_PATH/php-app && php set-password.php erkanulker0@gmail.com password`
 
 ---
 
 ## Nginx örnek config
 
-Proje içi örnek: **`scripts/nginx-forge-awapanel.conf`**  
-`PROJE_KOYU` yerine kendi site yolunuzu yazın (örn. `/home/forge/celebi.awapanel.com`). PHP-FPM socket yolunu (örn. `php8.2-fpm.sock`) sunucunuza göre düzenleyin.
+- **Forge site.conf** (`/etc/nginx/forge-conf/SITE_ID/site.conf`): İçinde `root` yoksa en üste `root /home/forge/SITENIZ/php-app/public;` ekleyin. Tam örnek: **`scripts/forge-site-conf-ORNEK.conf`**.
+- Genel örnek: **`scripts/nginx-forge-awapanel.conf`** (PROJE_KOYU ve PHP-FPM socket’i kendi sunucunuza göre düzenleyin).
 
 ---
 

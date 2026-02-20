@@ -16,6 +16,9 @@ ob_start();
         <?php if ($q !== ''): ?><a href="/musteriler" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
     </form>
     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <button type="submit" id="bulkDeleteBtn" form="bulkDeleteForm" class="btn-touch hidden inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40">
+            <i class="bi bi-trash"></i> Seçilenleri sil
+        </button>
         <a href="/musteriler/excel-disari-aktar<?= $q !== '' ? '?q=' . urlencode($q) : '' ?>" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar
         </a>
@@ -35,6 +38,7 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
+<form id="bulkDeleteForm" method="post" action="/musteriler/toplu-sil<?= $q !== '' ? '?q=' . urlencode($q) : '' ?>" onsubmit="return confirm('Seçilen müşterileri silmek istediğinize emin misiniz?');">
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
     <?php if (empty($customers)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz müşteri kaydı yok<?= $q !== '' ? ' veya arama sonucu bulunamadı.' : '.' ?></div>
@@ -44,6 +48,9 @@ ob_start();
             <?php foreach ($customers as $c): ?>
                 <div class="p-4 active:bg-gray-50 dark:active:bg-gray-700/50" data-customer-id="<?= htmlspecialchars($c['id']) ?>">
                     <div class="flex items-start gap-3">
+                        <label class="flex-shrink-0 flex items-center mt-1 cursor-pointer">
+                            <input type="checkbox" name="ids[]" value="<?= htmlspecialchars($c['id']) ?>" class="customer-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
+                        </label>
                         <div class="flex-shrink-0 w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold text-sm">
                             <?= strtoupper(mb_substr($c['first_name'] ?? '?', 0, 1) . mb_substr($c['last_name'] ?? '', 0, 1)) ?>
                         </div>
@@ -72,6 +79,9 @@ ob_start();
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-10">
+                            <label class="cursor-pointer flex items-center gap-1"><input type="checkbox" id="selectAllCb" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500" title="Tümünü seç"><span class="sr-only">Tümünü seç</span></label>
+                        </th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-10"></th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ad Soyad</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">E-posta</th>
@@ -91,6 +101,9 @@ ob_start();
                         $detailStr = implode("\n", $detail);
                     ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50" data-customer-id="<?= htmlspecialchars($c['id']) ?>">
+                            <td class="px-4 py-3">
+                                <label class="cursor-pointer"><input type="checkbox" name="ids[]" value="<?= htmlspecialchars($c['id']) ?>" class="customer-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500"></label>
+                            </td>
                             <td class="px-4 py-3">
                                 <button type="button" class="expand-row p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white" title="Detayı göster" aria-expanded="false">
                                     <i class="bi bi-chevron-down expand-icon"></i>
@@ -112,7 +125,7 @@ ob_start();
                                 <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-sm text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 mr-1">Detay</a>
                             </td>
                         </tr>
-                        <tr class="expandable-row hidden" id="expand-<?= htmlspecialchars($c['id']) ?>"><td colspan="6" class="p-0 fragment-cell"></td></tr>
+                        <tr class="expandable-row hidden" id="expand-<?= htmlspecialchars($c['id']) ?>"><td colspan="7" class="p-0 fragment-cell"></td></tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
@@ -125,6 +138,7 @@ ob_start();
         ?>
     <?php endif; ?>
 </div>
+</form>
 
 <!-- Modal: Yeni Müşteri -->
 <div id="addCustomerModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
@@ -179,6 +193,28 @@ ob_start();
 
 <script>
 (function(){
+    var selectAllCb = document.getElementById('selectAllCb');
+    var bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    var customerCbs = document.querySelectorAll('.customer-cb');
+    function updateBulkUi() {
+        var n = document.querySelectorAll('.customer-cb:checked').length;
+        if (bulkDeleteBtn) bulkDeleteBtn.classList.toggle('hidden', n === 0);
+        if (selectAllCb) {
+            selectAllCb.checked = n > 0 && n === customerCbs.length;
+            selectAllCb.indeterminate = n > 0 && n < customerCbs.length;
+        }
+    }
+    if (selectAllCb) {
+        selectAllCb.addEventListener('change', function() {
+            customerCbs.forEach(function(cb){ cb.checked = selectAllCb.checked; });
+            updateBulkUi();
+        });
+    }
+    customerCbs.forEach(function(cb) {
+        cb.addEventListener('change', updateBulkUi);
+    });
+    updateBulkUi();
+
     function loadFragment(id, cell, icon, isOpen) {
         if (cell.innerHTML === '') {
             fetch('/musteriler/' + id + '/satir-detay').then(function(r){ return r.text(); }).then(function(html){

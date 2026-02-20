@@ -74,7 +74,12 @@ $error = $error ?? null;
                 </div>
                 <div>
                     <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Şifre</label>
-                    <input type="password" id="password" name="password" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700/50 dark:text-white transition-shadow" placeholder="••••••••" required autocomplete="current-password">
+                    <div class="relative">
+                        <input type="password" id="password" name="password" class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700/50 dark:text-white transition-shadow" placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" id="togglePassword" class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" title="Şifreyi göster / gizle" aria-label="Şifreyi göster">
+                            <i class="bi bi-eye text-xl" id="togglePasswordIcon" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-submit w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Giriş Yap</button>
             </form>
@@ -89,6 +94,18 @@ $error = $error ?? null;
                 var html = document.documentElement;
                 var isDark = html.classList.toggle('dark');
                 localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            });
+        }
+        var pw = document.getElementById('password');
+        var btn = document.getElementById('togglePassword');
+        var icon = document.getElementById('togglePasswordIcon');
+        if (pw && btn && icon) {
+            btn.addEventListener('click', function() {
+                var show = pw.type === 'password';
+                pw.type = show ? 'text' : 'password';
+                icon.classList.toggle('bi-eye', !show);
+                icon.classList.toggle('bi-eye-slash', show);
+                btn.setAttribute('aria-label', show ? 'Şifreyi gizle' : 'Şifreyi göster');
             });
         }
     })();

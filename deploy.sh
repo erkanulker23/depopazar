@@ -23,6 +23,12 @@ else
 fi
 cd "$ROOT"
 
+if [ ! -d "$ROOT/php-app/public" ]; then
+  echo "Hata: php-app/public bulunamadı. ROOT yanlış olabilir (şu an: $ROOT)."
+  echo "Forge'da Deploy Script'e sadece şunu yapıştırın: cd \$FORGE_SITE_PATH && bash deploy.sh"
+  exit 1
+fi
+
 echo -e "${GREEN}[1/8] Deploy başlatıldı (ROOT=$ROOT)${NC}"
 
 # -----------------------------------------------------------------------------
@@ -132,12 +138,14 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Dizinler ve izinler (403 önlemi: php-app/public okunabilir olmalı)
+# Dizinler ve izinler (403 önlemi: Nginx www-data php-app/public'e erişebilmeli)
 # -----------------------------------------------------------------------------
 echo -e "${YELLOW}[7/8] Dizin izinleri ayarlanıyor...${NC}"
 mkdir -p "$ROOT/php-app/public/uploads/company"
+chmod 755 "$ROOT/php-app" 2>/dev/null || true
 chmod -R 755 "$ROOT/php-app/public" 2>/dev/null || true
 chmod -R 755 "$ROOT/php-app/public/uploads" 2>/dev/null || true
+[ -f "$ROOT/php-app/public/index.php" ] && chmod 644 "$ROOT/php-app/public/index.php" 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
 # VAPID (push bildirimleri) – .env'de tanımlı olmalı; yoksa bildirimler sadece panelde

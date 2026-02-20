@@ -2,10 +2,12 @@
 
 **Tüm kurulum (Web Directory, Environment, deploy script):** **[SETUP.md](SETUP.md)**
 
-Panelde deploy script alanına örnek:
+**Forge’da Deploy Script alanına yapıştırılacak tek satır:** **[FORGE-DEPLOY-YAPISTIR.txt](FORGE-DEPLOY-YAPISTIR.txt)**
+
+Panelde deploy script alanına **sadece** şunu yazın (site adı/path yazmayın; Forge otomatik verir):
 
 ```bash
 cd $FORGE_SITE_PATH && bash deploy.sh
 ```
 
-`$FORGE_SITE_PATH` panel tarafından verilmiyorsa, tam yolu yazın (örn. `cd /home/forge/celebi.awapanel.com && bash deploy.sh`).
+Farklı path’li (örn. `depo.awapanel.com`) script kullanırsanız yanlış dizine deploy olur ve 403 veya çalışmama görülür.

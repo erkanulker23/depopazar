@@ -2,11 +2,63 @@
 $currentPage = 'genel-bakis';
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
+$setupSteps = $setupSteps ?? [];
+$setupComplete = $setupComplete ?? true;
 ?>
 <div class="mb-8">
     <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent">Genel Bakış</h1>
     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Sistem özeti ve hızlı erişim</p>
 </div>
+
+<?php if (!empty($setupSteps) && !$setupComplete): ?>
+<div class="setup-guide mb-8 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 shadow-sm overflow-hidden" role="region" aria-label="Kurulum rehberi">
+    <div class="p-5 md:p-6">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-lg animate-pulse">
+                <i class="bi bi-lightbulb text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white">Kurulum rehberi</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Sistemi kullanmaya başlamak için aşağıdaki adımları tamamlayın.</p>
+            </div>
+        </div>
+        <ul class="space-y-2" id="setupStepsList">
+            <?php
+            $order = ['company', 'warehouses', 'rooms', 'staff', 'vehicles', 'services'];
+            $delay = 0;
+            foreach ($order as $key):
+                if (!isset($setupSteps[$key])) continue;
+                $step = $setupSteps[$key];
+                $done = $step['done'];
+                $delay += 80;
+            ?>
+            <li class="setup-step flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all duration-300 <?= $done ? 'bg-white/60 dark:bg-gray-800/40 opacity-90' : 'bg-white dark:bg-gray-800/60 shadow-sm' ?>" style="animation: setupFadeIn 0.4s ease-out <?= $delay ?>ms both;">
+                <?php if ($done): ?>
+                    <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white" aria-hidden="true">
+                        <i class="bi bi-check-lg text-lg"></i>
+                    </span>
+                    <span class="text-sm font-medium text-gray-600 dark:text-gray-400 line-through"><?= htmlspecialchars($step['label']) ?></span>
+                <?php else: ?>
+                    <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                        <i class="bi <?= htmlspecialchars($step['icon']) ?> text-lg"></i>
+                    </span>
+                    <a href="<?= htmlspecialchars($step['href']) ?>" class="flex-1 text-sm font-semibold text-gray-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"><?= htmlspecialchars($step['label']) ?></a>
+                    <i class="bi bi-chevron-right text-gray-400 dark:text-gray-500 text-sm"></i>
+                <?php endif; ?>
+            </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+</div>
+<style>
+@keyframes setupFadeIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+.setup-step:not([class*="opacity-90"]):hover { background: rgba(255,255,255,0.9); }
+.dark .setup-step:not([class*="opacity-90"]):hover { background: rgba(30,41,59,0.6); }
+</style>
+<?php endif; ?>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
     <a href="/depolar" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300 group block">
