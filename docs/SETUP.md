@@ -51,6 +51,8 @@ Awapanel’de: Site ayarlarında **Environment** / **Ortam değişkenleri** benz
 
 ## 4. Deploy script (çok önemli)
 
+**Bir sitede güncelleme gelmiyor, diğer sitelerde geliyorsa:** Forge’da o site için **Settings → General → Branch** değerini kontrol edin. Push yaptığınız dal (genelde `main`) seçili olmalı. Yanlış veya eski bir dal seçiliyse deploy aynı eski kodu çeker.
+
 **Forge’da “Deploy Script” alanına sadece aşağıdaki tek satırı yapıştırın.** Kendi yazdığınız veya farklı siteden kopyaladığınız script’i (örn. `depo.awapanel.com` yolu geçen) **kullanmayın**; yanlış dizine deploy edilir ve 403 / çalışmama olur.
 
 **Kopyalanacak satır:**

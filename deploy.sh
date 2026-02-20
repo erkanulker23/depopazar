@@ -32,17 +32,17 @@ fi
 echo -e "${GREEN}[1/8] Deploy başlatıldı (ROOT=$ROOT)${NC}"
 
 # -----------------------------------------------------------------------------
-# Git güncelleme
+# Git güncelleme (branch: Forge'daki Site → Branch ayarı; güncelleme gelmiyorsa orayı kontrol edin)
 # -----------------------------------------------------------------------------
+BRANCH="${FORGE_SITE_BRANCH:-main}"
 if [ "${SKIP_GIT}" != "1" ]; then
-  echo -e "${YELLOW}[2/8] Kod güncelleniyor...${NC}"
+  echo -e "${YELLOW}[2/8] Kod güncelleniyor (branch: $BRANCH)...${NC}"
   git fetch origin
-  if [ -n "${FORGE_SITE_BRANCH}" ]; then
-    git reset --hard "origin/${FORGE_SITE_BRANCH}"
-  else
-    git reset --hard origin/main
-  fi
+  git reset --hard "origin/$BRANCH"
   cd "$ROOT"
+  COMMIT=$(git rev-parse --short HEAD 2>/dev/null || true)
+  COMMIT_MSG=$(git log -1 --format='%s' 2>/dev/null || true)
+  echo "  Deploy edilen commit: ${COMMIT} - ${COMMIT_MSG}"
 else
   echo -e "${YELLOW}[2/8] Git atlandı (SKIP_GIT=1)${NC}"
 fi
