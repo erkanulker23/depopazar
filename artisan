@@ -5,12 +5,18 @@
  * Sunucuda eksik tablo/sütunları eklemek için: php artisan migrate
  * Proje kökünden veya php-app içinden çalıştırılabilir.
  */
-$command = $argv[1] ?? '';
-
-if ($command !== 'migrate') {
-    echo "Kullanım: php artisan migrate\n";
+// Argümansız veya "migrate" veya "migrate --force" kabul et (Forge deploy uyumluluğu)
+$command = isset($argv[1]) ? trim($argv[1]) : '';
+if ($command === '--help' || $command === '-h') {
+    echo "Kullanım: php artisan migrate [--force]\n";
     echo "  Eksik tabloları ve sütunları eklemek için schema + tüm migration'ları çalıştırır.\n";
-    exit($command === '--help' || $command === '-h' ? 0 : 1);
+    exit(0);
+}
+// migrate, migrate --force, veya boş komut (sadece "php artisan") kabul et
+if ($command !== 'migrate' && $command !== '' && $command !== '--force') {
+    fwrite(STDERR, "Bilinmeyen komut: " . (string)$command . "\n");
+    fwrite(STDERR, "Kullanım: php artisan migrate [--force]\n");
+    exit(1);
 }
 
 // Proje kökü: artisan dosyası kökte veya php-app içinde olabilir
@@ -38,8 +44,8 @@ $database = getenv('DB_DATABASE') ?: 'depotakip';
 $username = getenv('DB_USERNAME') ?: 'root';
 $password = getenv('DB_PASSWORD') ?: '';
 
-// db.local.php varsa oradan da okuyabiliriz (deploy sonrası sunucuda .env yoksa)
-if (empty($password) && file_exists($phpApp . '/config/db.local.php')) {
+// Deploy sırasında oluşturulan db.local.php varsa onu kullan (sunucuda .env dosyası olmayabilir)
+if (file_exists($phpApp . '/config/db.local.php')) {
     $code = file_get_contents($phpApp . '/config/db.local.php');
     if (preg_match("/\\\$host\s*=\s*'([^']*)'/", $code, $m)) $host = $m[1];
     if (preg_match("/\\\$port\s*=\s*'([^']*)'/", $code, $m)) $port = $m[1];

@@ -36,6 +36,8 @@ fi
 
 # -----------------------------------------------------------------------------
 # .env yükleme ve db.local.php oluşturma
+# Sunucuda .env genelde olmaz (git'te yok); Forge'da Site → Environment'ta
+# DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD tanımlı olmalı.
 # -----------------------------------------------------------------------------
 echo -e "${YELLOW}[3/8] Yapılandırma kontrol ediliyor...${NC}"
 
@@ -45,13 +47,20 @@ if [ -f "$ROOT/.env" ]; then
   set +a
 fi
 
+# Forge ortam değişkenleri zaten export edilmiş olabilir; yoksa .env'den veya varsayılan
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-3306}"
 DB_DATABASE="${DB_DATABASE:-depotakip}"
 DB_USERNAME="${DB_USERNAME:-root}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 
-# php-app/config/db.local.php - deploy sırasında .env değerlerinden oluşturulur
+if [ -z "$DB_USERNAME" ] || [ "$DB_USERNAME" = "root" ]; then
+  if [ ! -f "$ROOT/.env" ]; then
+    echo -e "  ${YELLOW}Uyarı: .env yok ve DB_USERNAME boş. Forge → Site → Environment'ta DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD ekleyin.${NC}" >&2
+  fi
+fi
+
+# php-app/config/db.local.php - deploy sırasında .env veya Forge env değerlerinden oluşturulur
 mkdir -p "$ROOT/php-app/config"
 # Şifredeki tek tırnakları güvenli şekilde escape et
 DB_PASS_ESC=$(echo "$DB_PASSWORD" | sed "s/'/'\\\\''/g")
@@ -77,11 +86,13 @@ chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 # -----------------------------------------------------------------------------
 echo -e "${YELLOW}[4/8] Veritabanı güncelleniyor (schema + migrations)...${NC}"
 if [ -f "$ROOT/artisan" ]; then
-  if (cd "$ROOT" && php artisan migrate 2>/dev/null); then
+  if (cd "$ROOT" && php artisan migrate --force); then
     echo -e "  ${GREEN}Artisan migrate tamamlandı${NC}"
   else
-    echo -e "  ${YELLOW}Uyarı: php artisan migrate hata verdi (mysql client gerekebilir)${NC}" >&2
-    echo "  Sunucuda manuel: cd $ROOT && php artisan migrate" >&2
+    echo -e "  ${RED}Hata: php artisan migrate başarısız.${NC}" >&2
+    echo "  Forge'da Site → Environment'a DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD ekleyin (sunucuda .env yok)." >&2
+    echo "  Manuel test: cd $ROOT && php artisan migrate --force" >&2
+    exit 1
   fi
 else
   echo "  (artisan bulunamadı - atlanıyor)"
