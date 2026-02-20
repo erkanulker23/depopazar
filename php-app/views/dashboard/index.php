@@ -3,7 +3,29 @@ $currentPage = 'genel-bakis';
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 $setupSteps = $setupSteps ?? [];
-$setupComplete = $setupComplete ?? true;
+if (!is_array($setupSteps)) {
+    $setupSteps = [];
+}
+// Eski deployda controller steps göndermeyebilir; varsayılan 6 adım göster (hepsi yapılmadı)
+if (empty($setupSteps)) {
+    $setupSteps = [
+        'company'   => ['done' => false, 'label' => 'Firma bilgilerini güncelleyiniz', 'href' => '/ayarlar?tab=firma', 'icon' => 'bi-building-gear'],
+        'warehouses' => ['done' => false, 'label' => 'Depolarınızı ekleyin', 'href' => '/depolar', 'icon' => 'bi-building'],
+        'rooms'     => ['done' => false, 'label' => 'Odalarınızı ekleyin', 'href' => '/odalar', 'icon' => 'bi-grid-3x3'],
+        'staff'     => ['done' => false, 'label' => 'Personel ekleyin', 'href' => '/kullanicilar', 'icon' => 'bi-people'],
+        'vehicles'  => ['done' => false, 'label' => 'Araçlarınızı ekleyin', 'href' => '/araclar', 'icon' => 'bi-truck'],
+        'services'  => ['done' => false, 'label' => 'Hizmetlerinizi ekleyin', 'href' => '/hizmetler', 'icon' => 'bi-list-check'],
+    ];
+    $setupComplete = false;
+} else {
+    $setupComplete = $setupComplete ?? true;
+    foreach ($setupSteps as $s) {
+        if (empty($s['done'])) {
+            $setupComplete = false;
+            break;
+        }
+    }
+}
 ?>
 <div class="mb-8">
     <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent">Genel Bakış</h1>
