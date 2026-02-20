@@ -223,10 +223,11 @@ class ContractsController
             // Nakliye bilgisi işaretlendiyse nakliye işi oluştur (nakliye-isler listesine düşer)
             $hasTransportation = isset($_POST['has_transportation']) && $_POST['has_transportation'] === '1';
             $pickupLocation = trim($_POST['pickup_location'] ?? '');
-            if ($hasTransportation && ($pickupLocation !== '' || $transportationFee > 0)) {
+            $deliveryLocation = trim($_POST['delivery_location'] ?? '');
+            if ($hasTransportation && ($pickupLocation !== '' || $deliveryLocation !== '' || $transportationFee > 0)) {
                 $warehouse = !empty($room['warehouse_id']) ? Warehouse::findOne($this->pdo, $room['warehouse_id']) : null;
-                $deliveryAddress = '';
-                if ($warehouse) {
+                $deliveryAddress = $deliveryLocation;
+                if ($deliveryAddress === '' && $warehouse) {
                     $parts = array_filter([$warehouse['name'] ?? '', $warehouse['address'] ?? '', $warehouse['city'] ?? '', $warehouse['district'] ?? '']);
                     $deliveryAddress = implode(', ', $parts);
                 }
@@ -537,11 +538,27 @@ class ContractsController
         $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
         $musteriAdi = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
         $sozlesmeNo = $contract['contract_number'] ?? '';
+        $createdAt = $contract['created_at'] ?? null;
+        $sozlesmeTarihi = $createdAt ? date('d.m.Y H:i', strtotime($createdAt)) : date('d.m.Y');
+        $depoAdi = $contract['warehouse_name'] ?? '';
+        $odaNo = $contract['room_number'] ?? '';
+        $baslangicTarihi = !empty($contract['start_date']) ? date('d.m.Y', strtotime($contract['start_date'])) : '';
+        $bitisTarihi = !empty($contract['end_date']) ? date('d.m.Y', strtotime($contract['end_date'])) : '';
+        $aylikUcret = number_format((float) ($contract['monthly_price'] ?? $contract['room_monthly_price'] ?? 0), 2, ',', '.') . ' ₺';
         $defaultCustomer = "Sayın {musteri_adi},\n\nSözleşmeniz oluşturuldu. Sözleşme No: {sozlesme_no}\n\nİyi günler dileriz.";
-        $defaultAdmin = "Yeni sözleşme: {sozlesme_no} - {musteri_adi}";
+        $defaultAdmin = "Yeni sözleşme bildirimi:\n\n{sozlesme_tarihi} tarihinde {sozlesme_no} numaralı sözleşme oluşturuldu.\nMüşteri: {musteri_adi}\nDepo: {depo_adi}\nOda: {oda_no}\nBaşlangıç: {baslangic_tarihi} – Bitiş: {bitis_tarihi}\nAylık ücret: {aylik_ucret}";
         $tplCustomer = !empty(trim($mail['contract_created_template'] ?? '')) ? $mail['contract_created_template'] : $defaultCustomer;
         $tplAdmin = !empty(trim($mail['admin_contract_created_template'] ?? '')) ? $mail['admin_contract_created_template'] : $defaultAdmin;
-        $replace = ['{musteri_adi}' => $musteriAdi, '{sozlesme_no}' => $sozlesmeNo];
+        $replace = [
+            '{musteri_adi}' => $musteriAdi,
+            '{sozlesme_no}' => $sozlesmeNo,
+            '{sozlesme_tarihi}' => $sozlesmeTarihi,
+            '{depo_adi}' => $depoAdi,
+            '{oda_no}' => $odaNo,
+            '{baslangic_tarihi}' => $baslangicTarihi,
+            '{bitis_tarihi}' => $bitisTarihi,
+            '{aylik_ucret}' => $aylikUcret,
+        ];
 
         if (!empty($mail['notify_customer_on_contract'])) {
             $customerEmail = trim($contract['customer_email'] ?? '');

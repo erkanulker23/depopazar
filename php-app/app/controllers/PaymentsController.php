@@ -218,11 +218,33 @@ class PaymentsController
         $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
         $musteriAdi = trim(($payment['customer_first_name'] ?? '') . ' ' . ($payment['customer_last_name'] ?? ''));
         $tutar = number_format((float) ($payment['amount'] ?? 0), 2, ',', '.') . ' ₺';
+        $sozlesmeNo = $payment['contract_number'] ?? '';
+        $paidAt = $payment['paid_at'] ?? null;
+        $odemeTarihi = $paidAt ? date('d.m.Y H:i', strtotime($paidAt)) : date('d.m.Y H:i');
+        $pm = $payment['payment_method'] ?? '';
+        $odemeYontemi = $pm === 'cash' ? 'Nakit' : ($pm === 'bank_transfer' ? 'Havale/EFT' : ($pm === 'credit_card' ? 'Kredi Kartı' : ($pm !== '' ? $pm : 'Belirtilmedi')));
+        $hesapAdi = '';
+        if (!empty($payment['bank_account_id'])) {
+            $stmt = $this->pdo->prepare('SELECT bank_name, account_holder_name FROM bank_accounts WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+            $stmt->execute([$payment['bank_account_id']]);
+            $ba = $stmt->fetch(PDO::FETCH_ASSOC);
+            $hesapAdi = $ba ? trim(($ba['bank_name'] ?? '') . ' - ' . ($ba['account_holder_name'] ?? '')) : '';
+        }
+        if ($hesapAdi === '') {
+            $hesapAdi = 'Belirtilmedi';
+        }
         $defaultCustomer = "Sayın {musteri_adi},\n\n{tutar} tutarındaki ödemeniz alınmıştır.\n\nTeşekkür ederiz.";
-        $defaultAdmin = "Ödeme alındı: {musteri_adi} - {tutar}";
+        $defaultAdmin = "Ödeme bildirimi:\n\n{musteri_adi} müşterisi adına {tutar} tutarında ödeme alındı.\nSözleşme: {sozlesme_no}\nÖdeme tarihi: {odeme_tarihi}\nÖdeme yöntemi: {odeme_yontemi}\nHesap: {hesap_adi}";
         $tplCustomer = !empty(trim($mail['payment_received_template'] ?? '')) ? $mail['payment_received_template'] : $defaultCustomer;
         $tplAdmin = !empty(trim($mail['admin_payment_received_template'] ?? '')) ? $mail['admin_payment_received_template'] : $defaultAdmin;
-        $replace = ['{musteri_adi}' => $musteriAdi, '{tutar}' => $tutar];
+        $replace = [
+            '{musteri_adi}' => $musteriAdi,
+            '{tutar}' => $tutar,
+            '{sozlesme_no}' => $sozlesmeNo,
+            '{odeme_tarihi}' => $odemeTarihi,
+            '{odeme_yontemi}' => $odemeYontemi,
+            '{hesap_adi}' => $hesapAdi,
+        ];
 
         if (!empty($mail['notify_customer_on_payment'])) {
             $customerEmail = trim($payment['customer_email'] ?? '');

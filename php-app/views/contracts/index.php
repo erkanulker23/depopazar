@@ -222,36 +222,90 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                                 <input type="hidden" name="has_transportation" id="newSale_has_transportation_val" value="0">
                             </div>
                         </div>
-                        <div id="newSale_transportation_block" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 hidden">
+                        <div id="newSale_transportation_block" class="space-y-4 mt-3 hidden">
+                            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2"><i class="bi bi-geo-alt text-emerald-600"></i> Eşyanın Alınacağı Yer</h4>
+                            <?php if (!empty($warehouses)): ?>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İndirim (₺)</label>
-                                <input type="text" name="discount" id="newSale_discount" value="0" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nakliye Ücreti (₺)</label>
-                                <input type="text" name="transportation_fee" id="newSale_transportation_fee" value="0" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Eşyanın Alındığı Yer</label>
-                                <input type="text" name="pickup_location" id="newSale_pickup_location" placeholder="Örn: İstanbul, Kadıköy" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şoför Adı</label>
-                                <input type="text" name="driver_name" id="newSale_driver_name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şoför Telefon</label>
-                                <input type="text" name="driver_phone" id="newSale_driver_phone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Araç</label>
-                                <select name="vehicle_id" id="newSale_vehicle_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                    <option value="">Araç seçin veya plaka girin</option>
-                                    <?php foreach ($vehicles ?? [] as $v): ?>
-                                        <option value="<?= htmlspecialchars($v['id']) ?>" data-plate="<?= htmlspecialchars($v['plate'] ?? '') ?>"><?= htmlspecialchars($v['plate'] ?? '') ?> <?= !empty($v['model_year']) ? '(' . $v['model_year'] . ')' : '' ?></option>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo adresinden seç (opsiyonel)</label>
+                                <select id="newSale_pickup_warehouse" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <option value="">Serbest giriş / Depo seçmeyin</option>
+                                    <?php foreach ($warehouses as $wh): ?>
+                                        <?php $whAddr = trim(($wh['name'] ?? '') . ($wh['address'] ? ', ' . $wh['address'] : '') . ($wh['city'] ? ', ' . $wh['city'] : '') . ($wh['district'] ? ' / ' . $wh['district'] : '')); ?>
+                                        <option value="<?= htmlspecialchars($whAddr) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
                                     <?php endforeach; ?>
                                 </select>
-                                <input type="hidden" name="vehicle_plate" id="newSale_vehicle_plate">
+                            </div>
+                            <?php endif; ?>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Veya İl / İlçe ile belirtin</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <select id="newSale_pickup_il" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">İl seçin</option>
+                                    </select>
+                                    <select id="newSale_pickup_ilce" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">Önce il seçin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres (Eşyanın alındığı yer)</label>
+                                <input type="text" name="pickup_location" id="newSale_pickup_location" placeholder="İl, İlçe veya tam adres" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 mt-4"><i class="bi bi-geo-alt text-green-600"></i> Eşyanın Gideceği Yer (Depo)</h4>
+                            <?php if (!empty($warehouses)): ?>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo adresinden seç</label>
+                                <select id="newSale_delivery_warehouse" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <option value="">Yukarıda seçtiğiniz depo kullanılır</option>
+                                    <?php foreach ($warehouses as $wh): ?>
+                                        <?php $whAddr = trim(($wh['name'] ?? '') . ($wh['address'] ? ', ' . $wh['address'] : '') . ($wh['city'] ? ', ' . $wh['city'] : '') . ($wh['district'] ? ' / ' . $wh['district'] : '')); ?>
+                                        <option value="<?= htmlspecialchars($whAddr) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Veya İl / İlçe ile belirtin</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <select id="newSale_delivery_il" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">İl seçin</option>
+                                    </select>
+                                    <select id="newSale_delivery_ilce" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">Önce il seçin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres (Gideceği yer – boş bırakılırsa seçilen depo kullanılır)</label>
+                                <input type="text" name="delivery_location" id="newSale_delivery_location" placeholder="İl, İlçe veya tam adres" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İndirim (₺)</label>
+                                    <input type="text" name="discount" id="newSale_discount" value="0" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nakliye Ücreti (₺)</label>
+                                    <input type="text" name="transportation_fee" id="newSale_transportation_fee" value="0" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şoför Adı</label>
+                                    <input type="text" name="driver_name" id="newSale_driver_name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şoför Telefon</label>
+                                    <input type="text" name="driver_phone" id="newSale_driver_phone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Araç</label>
+                                    <select name="vehicle_id" id="newSale_vehicle_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">Araç seçin veya plaka girin</option>
+                                        <?php foreach ($vehicles ?? [] as $v): ?>
+                                            <option value="<?= htmlspecialchars($v['id']) ?>" data-plate="<?= htmlspecialchars($v['plate'] ?? '') ?>"><?= htmlspecialchars($v['plate'] ?? '') ?> <?= !empty($v['model_year']) ? '(' . $v['model_year'] . ')' : '' ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <input type="hidden" name="vehicle_plate" id="newSale_vehicle_plate">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -375,6 +429,19 @@ function toggleTransportationBlock(show) {
     var hiddenInput = document.getElementById('newSale_has_transportation_val');
     if (block) block.classList.toggle('hidden', !show);
     if (hiddenInput) hiddenInput.value = show ? '1' : '0';
+    if (show) loadNewSaleIller();
+}
+function loadNewSaleIller() {
+    var pickupIl = document.getElementById('newSale_pickup_il');
+    if (!pickupIl || pickupIl.options.length > 1) return;
+    fetch('/api/iller', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(res){
+        var list = (res && res.data) ? res.data : [];
+        [pickupIl, document.getElementById('newSale_delivery_il')].forEach(function(sel){
+            if (!sel) return;
+            sel.innerHTML = '<option value="">İl seçin</option>';
+            list.forEach(function(p){ var o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
+        });
+    });
 }
 function closeQuickAddCustomer() {
     document.getElementById('quickAddCustomerModal').classList.add('hidden');
@@ -458,6 +525,34 @@ function closeNewSaleModal() {
         var val = this.value.replace(',', '.');
         list.querySelectorAll('input').forEach(function(inp) { if (!inp.value || inp.value === '0') inp.value = val ? val.replace('.', ',') : ''; });
     });
+    var pickupWh = document.getElementById('newSale_pickup_warehouse');
+    var deliveryWh = document.getElementById('newSale_delivery_warehouse');
+    var pickupAddr = document.getElementById('newSale_pickup_location');
+    var deliveryAddr = document.getElementById('newSale_delivery_location');
+    if (pickupWh && pickupAddr) pickupWh.addEventListener('change', function() { if (this.value) pickupAddr.value = this.value; });
+    if (deliveryWh && deliveryAddr) deliveryWh.addEventListener('change', function() { if (this.value) deliveryAddr.value = this.value; });
+    var pickupIl = document.getElementById('newSale_pickup_il');
+    var pickupIlce = document.getElementById('newSale_pickup_ilce');
+    var deliveryIl = document.getElementById('newSale_delivery_il');
+    var deliveryIlce = document.getElementById('newSale_delivery_ilce');
+    function loadIlceler(ilId, ilceSelect) {
+        if (!ilceSelect) return;
+        ilceSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+        if (!ilId) { ilceSelect.innerHTML = '<option value="">Önce il seçin</option>'; return; }
+        fetch('/api/ilceler?il_id=' + ilId, { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(res){
+            var list = (res && res.data) ? res.data : [];
+            ilceSelect.innerHTML = '<option value="">İlçe seçin</option>';
+            list.forEach(function(d){ var o = document.createElement('option'); o.value = d.name; o.textContent = d.name; ilceSelect.appendChild(o); });
+        });
+    }
+    if (pickupIl && pickupIlce) {
+        pickupIl.addEventListener('change', function(){ loadIlceler(this.value, pickupIlce); pickupAddr.value = ''; });
+        pickupIlce.addEventListener('change', function(){ if (this.value && pickupIl.options[pickupIl.selectedIndex]) pickupAddr.value = pickupIl.options[pickupIl.selectedIndex].text + ', ' + this.value; });
+    }
+    if (deliveryIl && deliveryIlce) {
+        deliveryIl.addEventListener('change', function(){ loadIlceler(this.value, deliveryIlce); deliveryAddr.value = ''; });
+        deliveryIlce.addEventListener('change', function(){ if (this.value && deliveryIl.options[deliveryIl.selectedIndex]) deliveryAddr.value = deliveryIl.options[deliveryIl.selectedIndex].text + ', ' + this.value; });
+    }
 })();
 document.getElementById('newSaleModal').addEventListener('keydown', function(e) { if (e.key === 'Escape') closeNewSaleModal(); });
 (function() {

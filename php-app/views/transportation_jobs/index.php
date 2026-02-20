@@ -267,8 +267,19 @@ ob_start();
                             </div>
                             <?php endif; ?>
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Veya İl / İlçe ile belirtin</label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    <select id="newJob_pickup_il" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">İl seçin</option>
+                                    </select>
+                                    <select id="newJob_pickup_ilce" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">Önce il seçin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres <span class="text-red-500">*</span></label>
-                                <textarea name="pickup_address" id="newJob_pickup_address" rows="3" placeholder="İl, İlçe, Mahalle, Sokak, Bina No vb. tam adres bilgisi veya yukarıdan depo seçin" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
+                                <textarea name="pickup_address" id="newJob_pickup_address" rows="3" placeholder="İl, İlçe, Mahalle, Sokak, Bina No vb. veya yukarıdan depo/il-ilçe seçin" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
@@ -308,8 +319,19 @@ ob_start();
                             </div>
                             <?php endif; ?>
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Veya İl / İlçe ile belirtin</label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    <select id="newJob_delivery_il" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">İl seçin</option>
+                                    </select>
+                                    <select id="newJob_delivery_ilce" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                        <option value="">Önce il seçin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres <span class="text-red-500">*</span></label>
-                                <textarea name="delivery_address" id="newJob_delivery_address" rows="3" placeholder="İl, İlçe, Mahalle, Sokak, Bina No vb. tam adres bilgisi veya yukarıdan depo seçin" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
+                                <textarea name="delivery_address" id="newJob_delivery_address" rows="3" placeholder="İl, İlçe, Mahalle, Sokak, Bina No vb. veya yukarıdan depo/il-ilçe seçin" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
@@ -474,7 +496,22 @@ ob_start();
 </div>
 
 <script>
-function openNewJobModal() { document.getElementById('newJobModal').classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+function openNewJobModal() {
+    document.getElementById('newJobModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    var pickupIl = document.getElementById('newJob_pickup_il');
+    if (pickupIl && pickupIl.options.length <= 1) {
+        fetch('/api/iller', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(res){
+            var list = (res && res.data) ? res.data : [];
+            var deliveryIl = document.getElementById('newJob_delivery_il');
+            [pickupIl, deliveryIl].forEach(function(sel){
+                if (!sel) return;
+                sel.innerHTML = '<option value="">İl seçin</option>';
+                list.forEach(function(p){ var o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
+            });
+        });
+    }
+}
 function closeNewJobModal() { document.getElementById('newJobModal').classList.add('hidden'); document.body.style.overflow = ''; }
 function closeNewJobCustomer() {
     document.getElementById('newJobCustomerModal').classList.add('hidden');
@@ -578,8 +615,48 @@ if (newJobCustomerId && document.getElementById('newJob_customer_id')) {
     var deliveryWh = document.getElementById('newJob_delivery_warehouse');
     var pickupAddr = document.getElementById('newJob_pickup_address');
     var deliveryAddr = document.getElementById('newJob_delivery_address');
-    if (pickupWh && pickupAddr) pickupWh.addEventListener('change', function() { if (this.value) pickupAddr.value = this.value; });
-    if (deliveryWh && deliveryAddr) deliveryWh.addEventListener('change', function() { if (this.value) deliveryAddr.value = this.value; });
+    if (pickupWh && pickupAddr) pickupWh.addEventListener('change', function() { if (this.value) { pickupAddr.value = this.value; clearIlIlce('pickup'); } });
+    if (deliveryWh && deliveryAddr) deliveryWh.addEventListener('change', function() { if (this.value) { deliveryAddr.value = this.value; clearIlIlce('delivery'); } });
+    function clearIlIlce(which) {
+        var il = document.getElementById('newJob_' + which + '_il');
+        var ilce = document.getElementById('newJob_' + which + '_ilce');
+        if (il) { il.value = ''; ilce.innerHTML = '<option value="">Önce il seçin</option>'; }
+    }
+    var pickupIl = document.getElementById('newJob_pickup_il');
+    var pickupIlce = document.getElementById('newJob_pickup_ilce');
+    var deliveryIl = document.getElementById('newJob_delivery_il');
+    var deliveryIlce = document.getElementById('newJob_delivery_ilce');
+    function loadIller() {
+        fetch('/api/iller', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(res){
+            var list = (res && res.data) ? res.data : [];
+            [pickupIl, deliveryIl].forEach(function(sel){
+                if (!sel) return;
+                sel.innerHTML = '<option value="">İl seçin</option>';
+                list.forEach(function(p){ var o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
+            });
+        });
+    }
+    function loadIlceler(ilId, ilceSelect) {
+        ilceSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+        if (!ilId) { ilceSelect.innerHTML = '<option value="">Önce il seçin</option>'; return; }
+        fetch('/api/ilceler?il_id=' + ilId, { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(res){
+            var list = (res && res.data) ? res.data : [];
+            ilceSelect.innerHTML = '<option value="">İlçe seçin</option>';
+            list.forEach(function(d){ var o = document.createElement('option'); o.value = d.name; o.textContent = d.name; ilceSelect.appendChild(o); });
+        });
+    }
+    if (pickupIl && pickupIlce) {
+        pickupIl.addEventListener('change', function(){ loadIlceler(this.value, pickupIlce); pickupAddr.value = ''; });
+        pickupIlce.addEventListener('change', function(){
+            if (this.value && pickupIl.options[pickupIl.selectedIndex]) pickupAddr.value = pickupIl.options[pickupIl.selectedIndex].text + ', ' + this.value;
+        });
+    }
+    if (deliveryIl && deliveryIlce) {
+        deliveryIl.addEventListener('change', function(){ loadIlceler(this.value, deliveryIlce); deliveryAddr.value = ''; });
+        deliveryIlce.addEventListener('change', function(){
+            if (this.value && deliveryIl.options[deliveryIl.selectedIndex]) deliveryAddr.value = deliveryIl.options[deliveryIl.selectedIndex].text + ', ' + this.value;
+        });
+    }
 })();
 </script>
 <?php

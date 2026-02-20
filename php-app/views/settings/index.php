@@ -588,8 +588,8 @@ ob_start();
             'contract_created_template' => "Sayın {musteri_adi},\n\nSözleşmeniz oluşturuldu. Sözleşme No: {sozlesme_no}\n\nİyi günler dileriz.",
             'payment_received_template' => "Sayın {musteri_adi},\n\n{tutar} tutarındaki ödemeniz alınmıştır.\n\nTeşekkür ederiz.",
             'payment_reminder_template' => "Sayın {musteri_adi},\n\nVadesi {vade} olan {tutar} tutarındaki ödemenizin geciktiğini hatırlatırız.\n\nLütfen en kısa sürede ödeme yapınız.",
-            'admin_contract_created_template' => "Yeni sözleşme: {sozlesme_no} - {musteri_adi}",
-            'admin_payment_received_template' => "Ödeme alındı: {musteri_adi} - {tutar}",
+            'admin_contract_created_template' => "Yeni sözleşme bildirimi:\n\n{sozlesme_tarihi} tarihinde {sozlesme_no} numaralı sözleşme oluşturuldu.\nMüşteri: {musteri_adi}\nDepo: {depo_adi}\nOda: {oda_no}\nBaşlangıç: {baslangic_tarihi} – Bitiş: {bitis_tarihi}\nAylık ücret: {aylik_ucret}",
+            'admin_payment_received_template' => "Ödeme bildirimi:\n\n{musteri_adi} müşterisi adına {tutar} tutarında ödeme alındı.\nSözleşme: {sozlesme_no}\nÖdeme tarihi: {odeme_tarihi}\nÖdeme yöntemi: {odeme_yontemi}\nHesap: {hesap_adi}",
         ];
         $tplContractCreated = !empty(trim($mailSettings['contract_created_template'] ?? '')) ? $mailSettings['contract_created_template'] : $tplDefaults['contract_created_template'];
         $tplPaymentReceived = !empty(trim($mailSettings['payment_received_template'] ?? '')) ? $mailSettings['payment_received_template'] : $tplDefaults['payment_received_template'];
@@ -601,7 +601,8 @@ ob_start();
     ?>
         <div class="p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-file-earmark-text text-emerald-600"></i> E-posta Şablonları</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Müşteriye ve yöneticiye gidecek e-postaların metinlerini düzenleyebilirsiniz. Kullanılabilir değişkenler: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{musteri_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{tutar}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{vade}</code></p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Müşteriye ve yöneticiye gidecek e-postaların metinlerini düzenleyebilirsiniz.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Müşteri şablonları: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{musteri_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{tutar}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{vade}</code> — Yönetici ödeme: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{odeme_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{odeme_yontemi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{hesap_adi}</code> — Yönetici sözleşme: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{depo_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{oda_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{baslangic_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{bitis_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{aylik_ucret}</code></p>
             <form method="post" action="/ayarlar/sablonlar-guncelle" class="space-y-6">
                 <div class="space-y-4">
                     <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
@@ -672,11 +673,17 @@ ob_start();
         <script>
         var fromName = <?= json_encode($fromName) ?>;
         var fromEmail = <?= json_encode($fromEmail) ?>;
-        var sampleVars = { musteri_adi: 'Ahmet Yılmaz', sozlesme_no: 'SOZ-2026-0001', tutar: '1.500,00 ₺', vade: '15.02.2026' };
+        var sampleVars = {
+            musteri_adi: 'Ahmet Yılmaz', sozlesme_no: 'SOZ-2026-0001', tutar: '1.500,00 ₺', vade: '15.02.2026',
+            odeme_tarihi: '20.02.2026 14:30', odeme_yontemi: 'Havale/EFT', hesap_adi: 'Ziraat Bankası - Firma Adı',
+            sozlesme_tarihi: '20.02.2026 10:00', depo_adi: 'Merkez Depo', oda_no: 'A-101',
+            baslangic_tarihi: '01.03.2026', bitis_tarihi: '28.02.2027', aylik_ucret: '1.500,00 ₺'
+        };
         function openPreviewModal(textareaId, subject) {
             var ta = document.getElementById(textareaId);
             if (!ta) return;
-            var body = (ta.value || '').replace(/\{musteri_adi\}/g, sampleVars.musteri_adi).replace(/\{sozlesme_no\}/g, sampleVars.sozlesme_no).replace(/\{tutar\}/g, sampleVars.tutar).replace(/\{vade\}/g, sampleVars.vade);
+            var body = (ta.value || '');
+            Object.keys(sampleVars).forEach(function(k) { body = body.replace(new RegExp('\\{' + k + '\\}', 'g'), sampleVars[k]); });
             var html = '<div class="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden shadow-sm">' +
                 '<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">' +
                 '<div class="flex items-center gap-2 mb-2"><span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"><i class="bi bi-envelope text-sm"></i></span>' +
