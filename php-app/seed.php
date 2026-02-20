@@ -23,6 +23,15 @@ if (!is_readable(APP_ROOT . '/config/db.php')) {
 
 $pdo = require APP_ROOT . '/config/db.php';
 
+try {
+    $pdo->query('SELECT 1 FROM companies LIMIT 1');
+} catch (Throwable $e) {
+    echo "HATA: companies tablosu yok veya veritabani baglantisi basarisiz.\n";
+    echo "Once tablolari olusturun: proje kokunden  php artisan migrate --force\n";
+    echo "Sonra tekrar: php php-app/seed.php\n";
+    exit(1);
+}
+
 // 1) En az bir şirket yoksa varsayılan şirket oluştur (super_admin ayarlar sayfasına girebilsin diye)
 $seedCompanyId = 'b2c3d4e5-f6a7-8901-bcde-f23456789012';
 $stmt = $pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
