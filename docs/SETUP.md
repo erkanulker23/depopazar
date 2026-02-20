@@ -8,6 +8,8 @@ Bu rehberi takip ederseniz ilk deploy’da **403 Forbidden**, **migration** ve *
 
 Forge, Awapanel veya kullandığınız panelde siteyi ekleyin (domain, PHP sürümü 8.0+). Repo’yu bağlayın (örn. `erkanulker23/depopazar`), branch’i seçin.
 
+**Laravel Forge:** Proje kökünde minimal bir `composer.json` vardır (ilk kurulumda Forge "composer.json bulunamadı" vermesin diye). Asıl bağımlılıklar **php-app/** içinde; `deploy.sh` orada `composer install` çalıştırır. İsterseniz **Install Composer Dependencies** açık bırakabilirsiniz (kökte boş kurulum yapılır).
+
 ---
 
 ## 2. Web Directory / Document Root (zorunlu – 403 önlemi)
@@ -102,11 +104,25 @@ Panelden **Deploy Now** / **Deploy** çalıştırın.
 
 ---
 
+## SSL: "Bu siteye ulaşılamıyor" / ERR_SSL_UNRECOGNIZED_NAME_ALERT
+
+Bu hata, tarayıcının site adresini (örn. **celebi.awapanel.com**) SSL sertifikasındaki adla eşleştirememesinden kaynaklanır. Sertifika yok veya farklı bir domain için (örn. www. veya başka alt alan adı) olabilir.
+
+**Laravel Forge’da:**
+1. Siteyi seçin → **SSL** (veya **Domains** / sertifika bölümü).
+2. **Let's Encrypt** ile sertifika ekleyin; domain olarak **celebi.awapanel.com** yazın (www kullanmıyorsanız sadece bu).
+3. Sertifika oluşturulduktan sonra **Force HTTPS** açabilirsiniz.
+
+DNS’te bu domain’in sunucu IP’sine yönlendiğinden emin olun. Sertifika yayına geçene kadar birkaç dakika sürebilir.
+
+---
+
 ## Özet kontrol listesi
 
 - [ ] Web Directory / Document Root = **php-app/public**
 - [ ] Environment’ta **DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD** tanımlı
 - [ ] Deploy script: **cd … && bash deploy.sh**
 - [ ] İlk deploy çalıştırıldı
+- [ ] SSL sertifikası site domain’i için kuruldu (HTTPS açılmadan önce)
 
-Bu adımlarla proje ilk yüklemede 403 ve veritabanı hataları olmadan çalışır.
+Bu adımlarla proje ilk yüklemede 403, veritabanı ve SSL hataları olmadan çalışır.

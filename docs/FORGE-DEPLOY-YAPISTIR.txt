@@ -9,7 +9,8 @@ cd $FORGE_SITE_PATH && bash deploy.sh
 
 ================================================================================
 Ayarlar (Settings) kontrolü:
+- Install Composer Dependencies: KAPALI (bu projede composer.json php-app/ içinde)
 - Root directory: /home/forge/SITENIZ.com   (Forge otomatik doldurur)
 - Web directory:  php-app/public            (sadece bu; başında/sonunda BOŞLUK OLMASIN)
-- Environment:    DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD mutlaka dolu
+- Environment:   DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD mutlaka dolu (.env boş gelirse buraya yazın)
 ================================================================================

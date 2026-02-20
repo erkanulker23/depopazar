@@ -1,0 +1,8 @@
+{
+  "name": "depopazar/root",
+  "description": "DepoPazar – Proje kökü. Asıl uygulama ve bağımlılıklar php-app/ içindedir; Forge 'Install Composer Dependencies' açık kalsa bile deploy kırılmasın diye bu dosya bulunur.",
+  "require": {},
+  "config": {
+    "allow-plugins": {}
+  }
+}
