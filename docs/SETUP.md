@@ -94,6 +94,7 @@ Panelden **Deploy Now** / **Deploy** çalıştırın.
 - **Veritabanı / Access denied:** Environment’ta DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD dolu mu kontrol edin.
 - **Migration hatası:** Aynı şekilde DB_* değişkenleri; gerekirse sunucuda `cd $FORGE_SITE_PATH && php artisan migrate --force` çalıştırın.
 - **Giriş: "Geçersiz e-posta veya şifre"** – Varsayılan giriş: `erkanulker0@gmail.com` / `password`. Seed her deploy’da bu kullanıcının şifresini `password` yapar. Yine giremiyorsanız sunucuda: `cd $FORGE_SITE_PATH/php-app && php set-password.php erkanulker0@gmail.com password`
+- **Deploy: "unable to unlink ... Permission denied"** – `php-app/public` veya `uploads` içindeki dosyalar web sunucusu (www-data) kullanıcısına ait olduğu için git güncelleyemiyor. Deploy script artık önce bu dizinin sahipliğini düzeltmeyi deniyor. Hata devam ederse sunucuda bir kez çalıştırın: `sudo chown -R forge:forge /home/forge/SITENIZ.com/php-app/public` (SITENIZ.com yerine kendi site yolunuz). Sonra tekrar deploy alın.
 
 ---
 

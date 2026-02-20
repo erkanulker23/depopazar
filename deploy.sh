@@ -33,9 +33,17 @@ echo -e "${GREEN}[1/8] Deploy başlatıldı (ROOT=$ROOT)${NC}"
 
 # -----------------------------------------------------------------------------
 # Git güncelleme (branch: Forge'daki Site → Branch ayarı; güncelleme gelmiyorsa orayı kontrol edin)
+# php-app/public içindeki dosyalar www-data tarafından oluşturulmuşsa git reset "Permission denied" verir; önce sahipliği düzeltiyoruz.
 # -----------------------------------------------------------------------------
 BRANCH="${FORGE_SITE_BRANCH:-main}"
 if [ "${SKIP_GIT}" != "1" ]; then
+  if [ -d "$ROOT/php-app/public" ]; then
+    DEPLOY_USER=$(whoami 2>/dev/null || id -un 2>/dev/null)
+    if [ -n "$DEPLOY_USER" ]; then
+      sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "$ROOT/php-app/public" 2>/dev/null || true
+    fi
+    chmod -R u+w "$ROOT/php-app/public" 2>/dev/null || true
+  fi
   echo -e "${YELLOW}[2/8] Kod güncelleniyor (branch: $BRANCH)...${NC}"
   git fetch origin
   git reset --hard "origin/$BRANCH"
