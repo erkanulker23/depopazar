@@ -415,6 +415,7 @@ ob_start();
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">SMTP Sunucu</label>
                         <input type="text" name="smtp_host" value="<?= htmlspecialchars($mailSettings['smtp_host'] ?? '') ?>" placeholder="Örn: smtp.gmail.com" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Gmail için: <strong>smtp.gmail.com</strong> (smtp.google.com değil). Port 587, TLS açık. 2 adımlı doğrulama varsa Google hesabından «Uygulama şifresi» oluşturun.</p>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">SMTP Port</label>
@@ -427,6 +428,9 @@ ob_start();
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">SMTP Şifre</label>
                         <input type="password" name="smtp_password" value="" placeholder="<?= !empty($mailSettings['smtp_password']) ? '•••••••• (değiştirmek için yazın)' : 'Girin' ?>" autocomplete="new-password" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <?php if (!empty($mailSettings['smtp_password'])): ?>
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1"><i class="bi bi-check-circle"></i> Şifre kayıtlı. Değiştirmek için yeni şifre yazıp Kaydet'e basın.</p>
+                        <?php endif; ?>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Gönderen E-posta</label>

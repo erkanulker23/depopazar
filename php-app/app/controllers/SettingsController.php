@@ -584,6 +584,11 @@ class SettingsController
             header('Location: /ayarlar?tab=eposta');
             exit;
         }
+        if (empty($mail['smtp_password'])) {
+            $_SESSION['flash_error'] = 'Test e-postası için SMTP şifresi gerekli. Yukarıdaki formda şifreyi girip Kaydet\'e basın (güvenlik nedeniyle şifre sayfada gösterilmez).';
+            header('Location: /ayarlar?tab=eposta');
+            exit;
+        }
         $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../../config/config.php';
         $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
         $subject = $appName . ' – E-posta Testi';
