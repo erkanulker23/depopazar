@@ -5,6 +5,7 @@ $customers = $customers ?? [];
 $services = $services ?? [];
 $staff = $staff ?? [];
 $vehicles = $vehicles ?? [];
+$warehouses = $warehouses ?? [];
 $staffIds = isset($job['staff_ids']) && is_array($job['staff_ids']) ? $job['staff_ids'] : [];
 $flashSuccess = $flashSuccess ?? null;
 $flashError = $flashError ?? null;
@@ -32,11 +33,23 @@ ob_start();
         <input type="hidden" name="id" value="<?= htmlspecialchars($job['id'] ?? '') ?>">
         <div class="space-y-6">
             <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
-                <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-emerald-600"></i> Eşya Alındığı Yer</h4>
+                <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-emerald-600"></i> Eşyanın Alınacağı Yer</h4>
                 <div class="space-y-4">
+                    <?php if (!empty($warehouses)): ?>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo adresinden seç (opsiyonel)</label>
+                        <select id="edit_pickup_warehouse" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            <option value="">Serbest giriş / Depo seçmeyin</option>
+                            <?php foreach ($warehouses as $wh): ?>
+                                <?php $whAddr = trim(($wh['name'] ?? '') . ($wh['address'] ? ', ' . $wh['address'] : '') . ($wh['city'] ? ', ' . $wh['city'] : '') . ($wh['district'] ? ' / ' . $wh['district'] : '')); ?>
+                                <option value="<?= htmlspecialchars($whAddr) ?>" title="<?= htmlspecialchars($whAddr) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres</label>
-                        <textarea name="pickup_address" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($job['pickup_address'] ?? '') ?></textarea>
+                        <textarea name="pickup_address" id="edit_pickup_address" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($job['pickup_address'] ?? '') ?></textarea>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -59,11 +72,23 @@ ob_start();
                 </div>
             </div>
             <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
-                <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-green-600"></i> Eşyanın Gittiği Adres</h4>
+                <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-green-600"></i> Eşyanın Gideceği Yer</h4>
                 <div class="space-y-4">
+                    <?php if (!empty($warehouses)): ?>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo adresinden seç (opsiyonel)</label>
+                        <select id="edit_delivery_warehouse" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            <option value="">Serbest giriş / Depo seçmeyin</option>
+                            <?php foreach ($warehouses as $wh): ?>
+                                <?php $whAddr = trim(($wh['name'] ?? '') . ($wh['address'] ? ', ' . $wh['address'] : '') . ($wh['city'] ? ', ' . $wh['city'] : '') . ($wh['district'] ? ' / ' . $wh['district'] : '')); ?>
+                                <option value="<?= htmlspecialchars($whAddr) ?>" title="<?= htmlspecialchars($whAddr) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres</label>
-                        <textarea name="delivery_address" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($job['delivery_address'] ?? '') ?></textarea>
+                        <textarea name="delivery_address" id="edit_delivery_address" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($job['delivery_address'] ?? '') ?></textarea>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -180,6 +205,16 @@ ob_start();
         </div>
     </form>
 </div>
+<script>
+(function() {
+    var pickupWh = document.getElementById('edit_pickup_warehouse');
+    var deliveryWh = document.getElementById('edit_delivery_warehouse');
+    var pickupAddr = document.getElementById('edit_pickup_address');
+    var deliveryAddr = document.getElementById('edit_delivery_address');
+    if (pickupWh && pickupAddr) pickupWh.addEventListener('change', function() { if (this.value) pickupAddr.value = this.value; });
+    if (deliveryWh && deliveryAddr) deliveryWh.addEventListener('change', function() { if (this.value) deliveryAddr.value = this.value; });
+})();
+</script>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layout.php';

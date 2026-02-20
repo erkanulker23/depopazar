@@ -6,6 +6,7 @@ $customers = $customers ?? [];
 $services = $services ?? [];
 $staff = $staff ?? [];
 $vehicles = $vehicles ?? [];
+$warehouses = $warehouses ?? [];
 $newCustomerId = $newCustomerId ?? '';
 $bankAccounts = $bankAccounts ?? [];
 $creditCards = $creditCards ?? [];
@@ -251,11 +252,23 @@ ob_start();
 
                     <!-- Eşya Alındığı Yer -->
                     <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-emerald-600"></i> Eşya Alındığı Yer</h4>
+                        <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-emerald-600"></i> Eşyanın Alınacağı Yer</h4>
                         <div class="space-y-4">
+                            <?php if (!empty($warehouses)): ?>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo adresinden seç (opsiyonel)</label>
+                                <select id="newJob_pickup_warehouse" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <option value="">Serbest giriş / Depo seçmeyin</option>
+                                    <?php foreach ($warehouses as $wh): ?>
+                                        <?php $whAddr = trim(($wh['name'] ?? '') . ($wh['address'] ? ', ' . $wh['address'] : '') . ($wh['city'] ? ', ' . $wh['city'] : '') . ($wh['district'] ? ' / ' . $wh['district'] : '')); ?>
+                                        <option value="<?= htmlspecialchars($whAddr) ?>" title="<?= htmlspecialchars($whAddr) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres <span class="text-red-500">*</span></label>
-                                <textarea name="pickup_address" rows="3" placeholder="İl, İlçe, Mahalle, Sokak, Bina No vb. tam adres bilgisi" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
+                                <textarea name="pickup_address" id="newJob_pickup_address" rows="3" placeholder="İl, İlçe, Mahalle, Sokak, Bina No vb. tam adres bilgisi veya yukarıdan depo seçin" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
@@ -280,11 +293,23 @@ ob_start();
 
                     <!-- Eşyanın Gittiği Adres -->
                     <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-green-600"></i> Eşyanın Gittiği Adres</h4>
+                        <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-green-600"></i> Eşyanın Gideceği Yer</h4>
                         <div class="space-y-4">
+                            <?php if (!empty($warehouses)): ?>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo adresinden seç (opsiyonel)</label>
+                                <select id="newJob_delivery_warehouse" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <option value="">Serbest giriş / Depo seçmeyin</option>
+                                    <?php foreach ($warehouses as $wh): ?>
+                                        <?php $whAddr = trim(($wh['name'] ?? '') . ($wh['address'] ? ', ' . $wh['address'] : '') . ($wh['city'] ? ', ' . $wh['city'] : '') . ($wh['district'] ? ' / ' . $wh['district'] : '')); ?>
+                                        <option value="<?= htmlspecialchars($whAddr) ?>" title="<?= htmlspecialchars($whAddr) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres <span class="text-red-500">*</span></label>
-                                <textarea name="delivery_address" rows="3" placeholder="İl, İlçe, Mahalle, Sokak, Bina No vb. tam adres bilgisi" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
+                                <textarea name="delivery_address" id="newJob_delivery_address" rows="3" placeholder="İl, İlçe, Mahalle, Sokak, Bina No vb. tam adres bilgisi veya yukarıdan depo seçin" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
@@ -548,6 +573,14 @@ if (newJobCustomerId && document.getElementById('newJob_customer_id')) {
     var sel = document.getElementById('newJob_customer_id');
     if (sel && sel.querySelector('option[value="' + newJobCustomerId + '"]')) { sel.value = newJobCustomerId; }
 }
+(function() {
+    var pickupWh = document.getElementById('newJob_pickup_warehouse');
+    var deliveryWh = document.getElementById('newJob_delivery_warehouse');
+    var pickupAddr = document.getElementById('newJob_pickup_address');
+    var deliveryAddr = document.getElementById('newJob_delivery_address');
+    if (pickupWh && pickupAddr) pickupWh.addEventListener('change', function() { if (this.value) pickupAddr.value = this.value; });
+    if (deliveryWh && deliveryAddr) deliveryWh.addEventListener('change', function() { if (this.value) deliveryAddr.value = this.value; });
+})();
 </script>
 <?php
 $content = ob_get_clean();

@@ -219,6 +219,38 @@ class ContractsController
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName]);
             $this->sendContractCreatedEmails($created);
+
+            // Nakliye bilgisi işaretlendiyse nakliye işi oluştur (nakliye-isler listesine düşer)
+            $hasTransportation = isset($_POST['has_transportation']) && $_POST['has_transportation'] === '1';
+            $pickupLocation = trim($_POST['pickup_location'] ?? '');
+            if ($hasTransportation && ($pickupLocation !== '' || $transportationFee > 0)) {
+                $warehouse = !empty($room['warehouse_id']) ? Warehouse::findOne($this->pdo, $room['warehouse_id']) : null;
+                $deliveryAddress = '';
+                if ($warehouse) {
+                    $parts = array_filter([$warehouse['name'] ?? '', $warehouse['address'] ?? '', $warehouse['city'] ?? '', $warehouse['district'] ?? '']);
+                    $deliveryAddress = implode(', ', $parts);
+                }
+                if ($deliveryAddress === '' && !empty($room['warehouse_name'])) {
+                    $deliveryAddress = $room['warehouse_name'];
+                }
+                try {
+                    TransportationJob::create($this->pdo, [
+                        'company_id' => $room['company_id'] ?? $companyId,
+                        'customer_id' => $customerId,
+                        'job_type' => 'Depo girişi nakliyesi',
+                        'pickup_address' => $pickupLocation ?: null,
+                        'delivery_address' => $deliveryAddress ?: null,
+                        'price' => $transportationFee,
+                        'job_date' => $startDate,
+                        'status' => 'pending',
+                        'vehicle_plate' => $vehiclePlate ?: null,
+                        'notes' => 'Sözleşme: ' . ($contractNumber ?? $contractId),
+                    ]);
+                } catch (Throwable $e) {
+                    // Nakliye işi oluşturulamazsa sözleşme yine başarılı sayılır
+                }
+            }
+
             $_SESSION['flash_success'] = 'Sözleşme oluşturuldu.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Kayıt oluşturulamadı: ' . $e->getMessage();

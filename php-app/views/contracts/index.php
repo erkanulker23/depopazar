@@ -219,6 +219,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                                     <input type="checkbox" id="newSale_has_transportation" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" onchange="toggleTransportationBlock(this.checked)">
                                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Nakliye bilgisi ekle</span>
                                 </label>
+                                <input type="hidden" name="has_transportation" id="newSale_has_transportation_val" value="0">
                             </div>
                         </div>
                         <div id="newSale_transportation_block" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 hidden">
@@ -371,7 +372,9 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
 <script>
 function toggleTransportationBlock(show) {
     var block = document.getElementById('newSale_transportation_block');
+    var hiddenInput = document.getElementById('newSale_has_transportation_val');
     if (block) block.classList.toggle('hidden', !show);
+    if (hiddenInput) hiddenInput.value = show ? '1' : '0';
 }
 function closeQuickAddCustomer() {
     document.getElementById('quickAddCustomerModal').classList.add('hidden');

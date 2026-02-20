@@ -32,9 +32,11 @@ class TransportationJobsController
         $services = [];
         $staff = [];
         $vehicles = [];
+        $warehouses = [];
         if ($companyId) {
             $customers = Customer::findAll($this->pdo, $companyId);
             $services = Service::findAll($this->pdo, $companyId);
+            $warehouses = Warehouse::findAll($this->pdo, $companyId);
             $stmt = $this->pdo->prepare('SELECT id, first_name, last_name, email FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (\'company_staff\', \'company_owner\') ORDER BY first_name, last_name');
             $stmt->execute([$companyId]);
             $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -46,6 +48,7 @@ class TransportationJobsController
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $customers = Customer::findAll($this->pdo, null);
             $services = Service::findAll($this->pdo, null);
+            $warehouses = Warehouse::findAll($this->pdo, null);
             $stmt = $this->pdo->query('SELECT id, first_name, last_name, email FROM users WHERE deleted_at IS NULL AND role IN (\'company_staff\', \'company_owner\') ORDER BY first_name, last_name');
             $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
             try {
@@ -258,9 +261,11 @@ class TransportationJobsController
             exit;
         }
         $vehicles = [];
+        $warehouses = [];
         if ($companyId) {
             $customers = Customer::findAll($this->pdo, $companyId);
             $services = Service::findAll($this->pdo, $companyId);
+            $warehouses = Warehouse::findAll($this->pdo, $companyId);
             $stmt = $this->pdo->prepare('SELECT id, first_name, last_name, email FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (\'company_staff\', \'company_owner\') ORDER BY first_name, last_name');
             $stmt->execute([$companyId]);
             $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -272,6 +277,7 @@ class TransportationJobsController
         } else {
             $customers = Customer::findAll($this->pdo, null);
             $services = Service::findAll($this->pdo, null);
+            $warehouses = Warehouse::findAll($this->pdo, null);
             $stmt = $this->pdo->query('SELECT id, first_name, last_name, email FROM users WHERE deleted_at IS NULL AND role IN (\'company_staff\', \'company_owner\') ORDER BY first_name, last_name');
             $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
             try {
