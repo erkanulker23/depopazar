@@ -39,9 +39,18 @@ class ServicesController
         if (!$companyId) { $_SESSION['flash_error'] = 'Şirket gerekli.'; header('Location: /hizmetler'); exit; }
         $name = trim($_POST['name'] ?? '');
         if ($name === '') { $_SESSION['flash_error'] = 'Kategori adı gerekli.'; header('Location: /hizmetler'); exit; }
-        ServiceCategory::create($this->pdo, ['company_id' => $companyId, 'name' => $name, 'description' => trim($_POST['description'] ?? '') ?: null]);
-        Notification::createForCompany($this->pdo, $companyId, 'service', 'Hizmet kategorisi eklendi', $name . ' kategorisi eklendi.');
-        $_SESSION['flash_success'] = 'Kategori eklendi.';
+        try {
+            ServiceCategory::create($this->pdo, ['company_id' => $companyId, 'name' => $name, 'description' => trim($_POST['description'] ?? '') ?: null]);
+            Notification::createForCompany($this->pdo, $companyId, 'service', 'Hizmet kategorisi eklendi', $name . ' kategorisi eklendi.');
+            $_SESSION['flash_success'] = 'Kategori eklendi.';
+        } catch (Throwable $e) {
+            $logDir = defined('APP_ROOT') ? (APP_ROOT . '/storage/logs') : (__DIR__ . '/../../storage/logs');
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            @file_put_contents($logDir . '/php-errors.log', date('Y-m-d H:i:s') . ' addCategory: ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND | LOCK_EX);
+            $_SESSION['flash_error'] = 'Kategori eklenirken hata oluştu. Veritabanı tabloları (service_categories, notifications) mevcut mu kontrol edin veya sunucu loglarına bakın.';
+        }
         header('Location: /hizmetler');
         exit;
     }

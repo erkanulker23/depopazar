@@ -13,9 +13,11 @@ class UsersController
         Auth::requireStaff();
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
-        $staff = User::findStaff($this->pdo, $companyId);
-        if (($user['role'] ?? '') === 'super_admin' && !$companyId) {
+        // Super admin her zaman tüm personeli görsün (şirket atanmamış kullanıcılar da dahil)
+        if (($user['role'] ?? '') === 'super_admin') {
             $staff = User::findStaff($this->pdo, null);
+        } else {
+            $staff = User::findStaff($this->pdo, $companyId);
         }
         $roleLabels = [
             'super_admin' => 'Süper Admin',
@@ -171,7 +173,11 @@ class UsersController
         User::create($this->pdo, $data);
         $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $newCompanyId, 'user', 'Personel eklendi', $fullName . ' kullanıcı olarak eklendi.', ['actor_name' => $actorName]);
+        try {
+            Notification::createForCompany($this->pdo, $newCompanyId, 'user', 'Personel eklendi', $fullName . ' kullanıcı olarak eklendi.', ['actor_name' => $actorName]);
+        } catch (Throwable $e) {
+            // Bildirim hatası kullanıcı eklemeyi bozmasın
+        }
         $_SESSION['flash_success'] = 'Kullanıcı eklendi.';
         header('Location: /kullanicilar');
         exit;

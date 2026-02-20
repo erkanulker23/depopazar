@@ -121,7 +121,12 @@ class WarehousesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Kullanıcı bir şirkete bağlı değil.';
+            $_SESSION['flash_error'] = 'Kullanıcı bir şirkete bağlı değil. Depo eklemek için önce Ayarlar\'dan firma bilgilerini doldurun veya yöneticiye şirket ataması yaptırın.';
+            header('Location: /depolar');
+            exit;
+        }
+        if (!Company::findOne($this->pdo, $companyId)) {
+            $_SESSION['flash_error'] = 'Şirket kaydı bulunamadı. Hesabınız eski bir şirkete bağlı olabilir; yönetici ile iletişime geçin veya çıkış yapıp tekrar giriş yapın.';
             header('Location: /depolar');
             exit;
         }

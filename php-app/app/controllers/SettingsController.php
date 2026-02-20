@@ -13,19 +13,30 @@ class SettingsController
         Auth::requireStaff();
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $role = strtolower(trim((string) ($user['role'] ?? '')));
+        if (!$companyId && $role === 'super_admin') {
+            $stmt = $this->pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $companyId = $row ? $row['id'] : null;
+        }
         if (!$companyId) {
-            $role = strtolower(trim((string) ($user['role'] ?? '')));
-            if ($role === 'super_admin') {
-                $stmt = $this->pdo->query('SELECT COUNT(*) FROM companies WHERE deleted_at IS NULL');
-                $count = (int) $stmt->fetchColumn();
-                $_SESSION['flash_error'] = $count === 0
-                    ? 'Veritabanında aktif şirket yok. Lütfen php php-app/seed.php çalıştırın veya bir şirket ekleyin.'
-                    : 'Şirket eşleştirilemedi. Çıkış yapıp tekrar giriş yapmayı deneyin.';
-            } else {
-                $_SESSION['flash_error'] = 'Bu kullanıcının bir şirkete atanması gerekiyor. Kullanıcılar sayfasından kullanıcıyı düzenleyip şirket atayın.';
-            }
-            header('Location: /genel-bakis');
-            exit;
+            $flashError = $role === 'super_admin'
+                ? 'Veritabanında aktif şirket yok. Lütfen sunucuda seed çalıştırın (php php-app/seed.php) veya önce bir şirket ekleyin.'
+                : 'Bu kullanıcının bir şirkete atanması gerekiyor. Kullanıcılar sayfasından kullanıcıyı düzenleyip şirket atayın.';
+            $activeTab = $_GET['tab'] ?? 'firma';
+            $flashSuccess = $_SESSION['flash_success'] ?? null;
+            unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+            $pageTitle = 'Ayarlar';
+            $noCompany = true;
+            $company = [];
+            $bankAccounts = [];
+            $creditCards = [];
+            $mailSettings = [];
+            $paytrSettings = [];
+            $smsSettings = [];
+            $expensesMigrationOk = false;
+            require __DIR__ . '/../../views/settings/index.php';
+            return;
         }
         $company = Company::findOne($this->pdo, $companyId);
         if (!$company) {

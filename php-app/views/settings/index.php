@@ -24,6 +24,12 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
+<?php if (!empty($noCompany)): ?>
+    <div class="card-modern p-6">
+        <p class="text-gray-600 dark:text-gray-400 mb-4">Ayarlar sayfasına erişmek için yukarıdaki koşulun giderilmesi gerekiyor.</p>
+        <a href="/genel-bakis" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"><i class="bi bi-speedometer2"></i> Genel bakışa dön</a>
+    </div>
+<?php else: ?>
 <!-- Sekmeler - mobilde yatay scroll -->
 <div class="border-b border-gray-200 dark:border-gray-600 mb-6 -mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto">
     <nav class="flex gap-1 -mb-px min-w-max md:min-w-0" aria-label="Ayarlar sekmeleri">
@@ -644,6 +650,7 @@ ob_start();
         </script>
     <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <?php
 $content = ob_get_clean();

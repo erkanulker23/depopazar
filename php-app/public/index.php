@@ -99,6 +99,7 @@ $router->post('/araclar/kasko/belge-sil', fn() => (new VehiclesController($pdo))
 $router->post('/araclar/kaza/belge-ekle', fn() => (new VehiclesController($pdo))->uploadAccidentDocument());
 $router->post('/araclar/kaza/belge-sil', fn() => (new VehiclesController($pdo))->deleteAccidentDocument());
 $router->get('/hizmetler', fn() => (new ServicesController($pdo))->index());
+$router->get('/hizmetler/kategori/ekle', function () { header('Location: /hizmetler'); exit; });
 $router->post('/hizmetler/kategori/ekle', fn() => (new ServicesController($pdo))->addCategory());
 $router->post('/hizmetler/kategori/guncelle', fn() => (new ServicesController($pdo))->updateCategory());
 $router->post('/hizmetler/kategori/sil', fn() => (new ServicesController($pdo))->deleteCategory());
