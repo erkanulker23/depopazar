@@ -564,6 +564,7 @@ CREATE TABLE IF NOT EXISTS `proposals` (
   `company_id` CHAR(36) NOT NULL,
   `customer_id` CHAR(36) DEFAULT NULL,
   `title` VARCHAR(255) NOT NULL,
+  `proposal_type` VARCHAR(20) NOT NULL DEFAULT 'nakliye',
   `status` VARCHAR(50) DEFAULT 'draft',
   `total_amount` DECIMAL(10,2) DEFAULT 0,
   `currency` VARCHAR(10) DEFAULT 'TRY',

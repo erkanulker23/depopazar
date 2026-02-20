@@ -55,7 +55,7 @@ class UsersController
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
-        if ($companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
+        if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
             $_SESSION['flash_error'] = 'Bu kullanıcıya erişim yetkiniz yok.';
             header('Location: /kullanicilar');
             exit;
@@ -94,7 +94,12 @@ class UsersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
-        if (!$canManage || ($companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin')) {
+        if (!$canManage) {
+            $_SESSION['flash_error'] = 'Bu kullanıcıyı düzenleyemezsiniz.';
+            header('Location: /kullanicilar');
+            exit;
+        }
+        if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
             $_SESSION['flash_error'] = 'Bu kullanıcıyı düzenleyemezsiniz.';
             header('Location: /kullanicilar');
             exit;
@@ -204,7 +209,12 @@ class UsersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
-        if (!$canManage || ($companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin')) {
+        if (!$canManage) {
+            $_SESSION['flash_error'] = 'Bu kullanıcıyı düzenleyemezsiniz.';
+            header('Location: /kullanicilar');
+            exit;
+        }
+        if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
             $_SESSION['flash_error'] = 'Bu kullanıcıyı düzenleyemezsiniz.';
             header('Location: /kullanicilar');
             exit;
@@ -262,7 +272,12 @@ class UsersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
-        if (!$canManage || ($companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin')) {
+        if (!$canManage) {
+            $_SESSION['flash_error'] = 'Bu kullanıcının şifresini değiştirme yetkiniz yok.';
+            header('Location: /kullanicilar');
+            exit;
+        }
+        if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
             $_SESSION['flash_error'] = 'Bu kullanıcının şifresini değiştirme yetkiniz yok.';
             header('Location: /kullanicilar');
             exit;
@@ -299,7 +314,12 @@ class UsersController
         }
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
-        if (!$canManage || ($companyId && ($profile['company_id'] ?? '') !== $companyId)) {
+        if (!$canManage) {
+            $_SESSION['flash_error'] = 'Bu kullanıcıyı silemezsiniz.';
+            header('Location: /kullanicilar');
+            exit;
+        }
+        if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId) {
             $_SESSION['flash_error'] = 'Bu kullanıcıyı silemezsiniz.';
             header('Location: /kullanicilar');
             exit;

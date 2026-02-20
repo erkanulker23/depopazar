@@ -24,6 +24,20 @@ ob_start();
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
     <form method="post" action="/teklifler/ekle" id="proposalForm" class="p-6">
         <div class="space-y-6">
+            <!-- Teklif türü -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Teklif türü <span class="text-red-500">*</span></label>
+                <div class="flex flex-wrap gap-4">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="proposal_type" value="depo" class="rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-gray-700 dark:text-gray-300">Depo Teklifi</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="proposal_type" value="nakliye" checked class="rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-gray-700 dark:text-gray-300">Nakliye Teklifi</span>
+                    </label>
+                </div>
+            </div>
             <!-- Başlık + Müşteri + Durum -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>

@@ -68,6 +68,7 @@ class ServicesController
         $name = trim($_POST['name'] ?? '');
         if ($name === '') { $_SESSION['flash_error'] = 'Kategori adı gerekli.'; header('Location: /hizmetler'); exit; }
         ServiceCategory::update($this->pdo, $id, ['name' => $name, 'description' => trim($_POST['description'] ?? '') ?: null]);
+        Notification::createForCompany($this->pdo, $cat['company_id'] ?? null, 'service', 'Hizmet kategorisi güncellendi', $name . ' kategorisi güncellendi.');
         $_SESSION['flash_success'] = 'Kategori güncellendi.';
         header('Location: /hizmetler');
         exit;

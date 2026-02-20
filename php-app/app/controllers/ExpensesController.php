@@ -126,6 +126,8 @@ class ExpensesController
             'description' => trim($_POST['description'] ?? '') ?: null,
             'notes' => trim($_POST['notes'] ?? '') ?: null,
         ], $companyId);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf güncellendi', number_format($amount, 2, ',', '.') . ' ₺ tutarında masraf güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Masraf güncellendi.';
         header('Location: /masraflar');
         exit;
@@ -148,6 +150,8 @@ class ExpensesController
         $id = trim($_POST['id'] ?? '');
         if ($id) {
             Expense::remove($this->pdo, $id, $companyId);
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf silindi', 'Masraf kaydı silindi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Masraf silindi.';
         }
         header('Location: /masraflar');
@@ -180,6 +184,8 @@ class ExpensesController
             'description' => trim($_POST['description'] ?? '') ?: null,
             'sort_order' => (int) ($_POST['sort_order'] ?? 0),
         ]);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf kategorisi eklendi', $name . ' masraf kategorisi eklendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Masraf kategorisi eklendi.';
         header('Location: /masraflar');
         exit;
@@ -211,6 +217,8 @@ class ExpensesController
             'description' => trim($_POST['description'] ?? '') ?: null,
             'sort_order' => (int) ($_POST['sort_order'] ?? 0),
         ], $companyId);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf kategorisi güncellendi', $name . ' masraf kategorisi güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Masraf kategorisi güncellendi.';
         header('Location: /masraflar');
         exit;
@@ -236,6 +244,8 @@ class ExpensesController
                 $_SESSION['flash_error'] = 'Bu kategoriye bağlı masraflar var, silinemez.';
             } else {
                 ExpenseCategory::remove($this->pdo, $id, $companyId);
+                $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+                Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf kategorisi silindi', 'Masraf kategorisi silindi.', ['actor_name' => $actorName]);
                 $_SESSION['flash_success'] = 'Masraf kategorisi silindi.';
             }
         }

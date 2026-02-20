@@ -70,6 +70,7 @@ class SettingsController
         $mailSettings = $this->getMailSettings($companyId);
         $paytrSettings = $this->getPaytrSettings($companyId);
         $smsSettings = $this->getSmsSettings($companyId);
+        $emailLogEntries = MailService::getLogEntries(50);
         $activeTab = $_GET['tab'] ?? 'firma';
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
@@ -236,6 +237,8 @@ class SettingsController
             'opening_balance' => isset($_POST['opening_balance']) ? (float) $_POST['opening_balance'] : 0,
         ];
         BankAccount::update($this->pdo, $id, $data, $companyId);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı güncellendi', ($data['bank_name'] ?? '') . ' banka hesabı güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Banka hesabı güncellendi.';
         header('Location: /ayarlar?tab=banka');
         exit;
@@ -258,6 +261,8 @@ class SettingsController
         $id = trim($_POST['id'] ?? '');
         if ($id) {
             BankAccount::remove($this->pdo, $id, $companyId);
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı silindi', 'Banka hesabı silindi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Banka hesabı silindi.';
         }
         header('Location: /ayarlar?tab=banka');
@@ -298,6 +303,8 @@ class SettingsController
             'nickname' => trim($_POST['nickname'] ?? '') ?: null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ]);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'settings', 'Kredi kartı eklendi', $bankName . ' kredi kartı eklendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Kredi kartı eklendi.';
         header('Location: /ayarlar?tab=kredi-karti');
         exit;
@@ -330,6 +337,8 @@ class SettingsController
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ];
         CreditCard::update($this->pdo, $id, $data, $companyId);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'settings', 'Kredi kartı güncellendi', 'Kredi kartı bilgileri güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Kredi kartı güncellendi.';
         header('Location: /ayarlar?tab=kredi-karti');
         exit;
@@ -352,6 +361,8 @@ class SettingsController
         $id = trim($_POST['id'] ?? '');
         if ($id) {
             CreditCard::remove($this->pdo, $id, $companyId);
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'settings', 'Kredi kartı silindi', 'Kredi kartı silindi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Kredi kartı silindi.';
         }
         header('Location: /ayarlar?tab=kredi-karti');
@@ -416,6 +427,8 @@ class SettingsController
                     $data['is_active'],
                 ]);
         }
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'settings', 'E-posta ayarları güncellendi', 'E-posta (SMTP) ayarları güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'E-posta ayarları güncellendi.';
         header('Location: /ayarlar?tab=eposta');
         exit;
@@ -455,6 +468,8 @@ class SettingsController
             $this->pdo->prepare('INSERT INTO company_paytr_settings (id, company_id, merchant_id, merchant_key, merchant_salt, is_active, test_mode) VALUES (?, ?, ?, ?, ?, ?, ?)')
                 ->execute([$id, $companyId, $merchantId, $merchantKey, $merchantSalt, $isActive, $testMode]);
         }
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'settings', 'PayTR ayarları güncellendi', 'PayTR ayarları güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'PayTR ayarları güncellendi.';
         header('Location: /ayarlar?tab=paytr');
         exit;
@@ -495,6 +510,8 @@ class SettingsController
             $this->pdo->prepare('INSERT INTO company_sms_settings (id, company_id, username, password, sender_id, api_url, is_active, test_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
                 ->execute([$id, $companyId, $username, $password, $senderId, $apiUrl, $isActive, $testMode]);
         }
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'settings', 'SMS ayarları güncellendi', 'SMS (Netgsm) ayarları güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'SMS (Netgsm) ayarları güncellendi.';
         header('Location: /ayarlar?tab=sms');
         exit;
@@ -601,7 +618,7 @@ class SettingsController
         );
         $result = MailService::sendSmtp($mail, $to, $subject, $bodyPlain, $bodyHtml);
         if ($result['success']) {
-            $_SESSION['flash_success'] = 'Test e-postası gönderildi: ' . $to;
+            $_SESSION['flash_success'] = 'Test e-postası sunucuya gönderildi: ' . $to . '. Gelen kutusu ve spam klasörünü kontrol edin; gelmiyorsa aşağıdaki «Son e-posta gönderimleri» tablosunda durumu inceleyin.';
         } else {
             $_SESSION['flash_error'] = 'E-posta gönderilemedi: ' . ($result['error'] ?? 'SMTP sunucusu ve port ayarlarını kontrol edin.');
         }
@@ -653,6 +670,8 @@ class SettingsController
                     $templates['admin_payment_received_template'] ?: null,
                 ]);
             }
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'settings', 'E-posta şablonları güncellendi', 'E-posta şablonları kaydedildi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'E-posta şablonları kaydedildi.';
         } catch (Throwable $e) {
             $_SESSION['flash_error'] = 'Kaydedilemedi: ' . $e->getMessage();

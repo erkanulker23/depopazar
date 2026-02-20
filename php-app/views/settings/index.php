@@ -492,6 +492,45 @@ ob_start();
                     <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Test Et</button>
                 </form>
             </div>
+            <?php
+            $emailLogEntries = $emailLogEntries ?? [];
+            if (!empty($emailLogEntries)):
+            ?>
+            <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Son e-posta gönderimleri</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Test, sözleşme ve ödeme bildirimleri dahil panelden giden tüm e-postalar. «OK» = sunucu kabul etti (spam/gelen kutusunda kontrol edin).</p>
+                <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-600">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Alıcı</th>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Konu</th>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Hata</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                            <?php foreach ($emailLogEntries as $entry): ?>
+                            <tr class="<?= ($entry['status'] ?? '') === 'FAIL' ? 'bg-red-50 dark:bg-red-900/10' : '' ?>">
+                                <td class="px-3 py-2 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($entry['date'] ?? '') ?></td>
+                                <td class="px-3 py-2 text-gray-700 dark:text-gray-200"><?= htmlspecialchars($entry['to'] ?? '') ?></td>
+                                <td class="px-3 py-2 text-gray-700 dark:text-gray-200"><?= htmlspecialchars($entry['subject'] ?? '') ?></td>
+                                <td class="px-3 py-2">
+                                    <?php if (($entry['status'] ?? '') === 'OK'): ?>
+                                    <span class="text-green-600 dark:text-green-400 font-medium">OK</span>
+                                    <?php else: ?>
+                                    <span class="text-red-600 dark:text-red-400 font-medium">FAIL</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($entry['error'] ?? '') ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     <?php elseif ($activeTab === 'sms'): ?>
         <div class="p-6">

@@ -59,10 +59,100 @@ class MailService
                 $mail->Body = $bodyPlain;
             }
             $mail->send();
+            self::logSend($to, $subject, true, null);
             return ['success' => true, 'error' => null];
         } catch (Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            $err = $e->getMessage();
+            self::logSend($to, $subject, false, $err);
+            return ['success' => false, 'error' => $err];
         }
+    }
+
+    /**
+     * Her e-posta gönderimini loglar (panelden "Son gönderimler" ile takip için).
+     */
+    public static function logSend(string $to, string $subject, bool $success, ?string $error): void
+    {
+        $dir = defined('APP_ROOT') ? (APP_ROOT . '/storage/logs') : (__DIR__ . '/../storage/logs');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $file = $dir . '/email.log';
+        $line = date('Y-m-d H:i:s') . "\t" . $to . "\t" . str_replace(["\t", "\n", "\r"], ' ', $subject) . "\t" . ($success ? 'OK' : 'FAIL') . "\t" . ($error !== null ? str_replace(["\t", "\n", "\r"], ' ', $error) : '') . "\n";
+        @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+    }
+
+    /**
+     * Tüm süper admin kullanıcılara aksiyon bildirimi e-postası gönderir.
+     * Ayarlar > E-posta ayarları (company_mail_settings) kullanılır; companyId yoksa e-postası tanımlı ilk şirket kullanılır.
+     */
+    public static function sendToSuperAdmins(PDO $pdo, ?string $companyId, string $subject, string $message): void
+    {
+        $stmt = $pdo->query("SELECT email FROM users WHERE role = 'super_admin' AND deleted_at IS NULL AND email != ''");
+        $emails = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($emails)) {
+            return;
+        }
+        $mailSettings = null;
+        if ($companyId !== null && $companyId !== '') {
+            $mailSettings = Company::getMailSettings($pdo, $companyId);
+        }
+        if ($mailSettings === null) {
+            $row = $pdo->query("SELECT company_id FROM company_mail_settings WHERE deleted_at IS NULL LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $mailSettings = Company::getMailSettings($pdo, $row['company_id']);
+            }
+        }
+        if ($mailSettings === null || empty($mailSettings['smtp_host']) || empty($mailSettings['smtp_password'])) {
+            return;
+        }
+        $appName = 'DepoPazar';
+        if (defined('APP_ROOT') && is_file(APP_ROOT . '/config/config.php')) {
+            $config = require APP_ROOT . '/config/config.php';
+            $appName = $config['app_name'] ?? $appName;
+        }
+        $bodyHtml = self::wrapInHtmlTemplate($appName, 'Panel Bildirimi', $message, $subject);
+        foreach ($emails as $to) {
+            $to = trim($to);
+            if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+            try {
+                self::sendSmtp($mailSettings, $to, $subject, $message, $bodyHtml);
+            } catch (Throwable $e) {
+                // Süper admin e-postası hatası ana işlemi bozmasın
+            }
+        }
+    }
+
+    /**
+     * Son e-posta gönderim kayıtlarını döner (panelde listeleme için).
+     * @return array<array{date: string, to: string, subject: string, status: string, error: string}>
+     */
+    public static function getLogEntries(int $limit = 50): array
+    {
+        $dir = defined('APP_ROOT') ? (APP_ROOT . '/storage/logs') : (__DIR__ . '/../storage/logs');
+        $file = $dir . '/email.log';
+        if (!is_file($file)) {
+            return [];
+        }
+        $lines = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false) {
+            return [];
+        }
+        $lines = array_slice(array_reverse($lines), 0, $limit);
+        $out = [];
+        foreach ($lines as $line) {
+            $parts = explode("\t", $line, 5);
+            $out[] = [
+                'date' => $parts[0] ?? '',
+                'to' => $parts[1] ?? '',
+                'subject' => $parts[2] ?? '',
+                'status' => $parts[3] ?? '',
+                'error' => $parts[4] ?? '',
+            ];
+        }
+        return $out;
     }
 
     /**

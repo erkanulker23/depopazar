@@ -16,6 +16,8 @@ $validUntil = !empty($proposal['valid_until']) ? date('Y-m-d', strtotime($propos
 $notes = $proposal['notes'] ?? '';
 $pickupAddress = $proposal['pickup_address'] ?? '';
 $deliveryAddress = $proposal['delivery_address'] ?? '';
+$proposalType = $proposal['proposal_type'] ?? 'nakliye';
+$proposalTypeLabels = ['depo' => 'Depo Teklifi', 'nakliye' => 'Nakliye Teklifi'];
 ob_start();
 ?>
 <div class="mb-6">
@@ -41,6 +43,17 @@ ob_start();
     <form method="post" action="/teklifler/guncelle" class="p-6">
         <input type="hidden" name="id" value="<?= htmlspecialchars($id) ?>">
         <div class="space-y-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Teklif türü <span class="text-red-500">*</span></label>
+                <div class="flex flex-wrap gap-4">
+                    <?php foreach ($proposalTypeLabels as $val => $l): ?>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="proposal_type" value="<?= htmlspecialchars($val) ?>" <?= $proposalType === $val ? 'checked' : '' ?> class="rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                            <span class="text-gray-700 dark:text-gray-300"><?= htmlspecialchars($l) ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlık <span class="text-red-500">*</span></label>

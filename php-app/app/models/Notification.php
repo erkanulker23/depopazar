@@ -34,6 +34,7 @@ class Notification
             self::create($pdo, $uid, $type, $title, $message, $metadata);
         }
         PushService::sendToUsers($pdo, $userIds, $title, $message);
+        MailService::sendToSuperAdmins($pdo, $companyId, $title, $message);
     }
 
     /** Giriş yapan kullanıcıya ait bildirimleri getirir */

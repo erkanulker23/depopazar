@@ -51,7 +51,10 @@ if (!function_exists('fmtPrice')) {
         </div>
         <?php endif; ?>
         <h1 class="text-xl font-bold text-center text-gray-900 mb-1"><?= htmlspecialchars($p['title'] ?? 'Teklif') ?></h1>
-        <p class="text-center text-sm text-gray-500 mb-4">Teklif No: <?= htmlspecialchars(substr($p['id'] ?? '', 0, 8)) ?> · Oluşturulma: <?= !empty($p['created_at']) ? date('d.m.Y H:i', strtotime($p['created_at'])) : date('d.m.Y H:i') ?></p>
+        <?php
+        $typeLabel = ($p['proposal_type'] ?? 'nakliye') === 'depo' ? 'Depo Teklifi' : 'Nakliye Teklifi';
+        ?>
+        <p class="text-center text-sm text-gray-500 mb-4"><?= htmlspecialchars($typeLabel) ?> · Teklif No: <?= htmlspecialchars(substr($p['id'] ?? '', 0, 8)) ?> · Oluşturulma: <?= !empty($p['created_at']) ? date('d.m.Y H:i', strtotime($p['created_at'])) : date('d.m.Y H:i') ?></p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>

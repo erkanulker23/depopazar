@@ -143,10 +143,15 @@ class ProposalsController
                 $totalAmount += ((float)($it['quantity'] ?? 0)) * ((float)($it['unit_price'] ?? 0));
             }
         }
+        $proposalType = trim($_POST['proposal_type'] ?? '');
+        if (!in_array($proposalType, ['depo', 'nakliye'], true)) {
+            $proposalType = 'nakliye';
+        }
         Proposal::create($this->pdo, [
             'company_id' => $companyId,
             'customer_id' => $customerId,
             'title' => $title,
+            'proposal_type' => $proposalType,
             'status' => $_POST['status'] ?? 'draft',
             'total_amount' => $totalAmount,
             'valid_until' => trim($_POST['valid_until'] ?? '') ?: null,
@@ -272,8 +277,14 @@ class ProposalsController
                 $totalAmount += ((float)($it['quantity'] ?? 0)) * ((float)($it['unit_price'] ?? 0));
             }
         }
+        $proposalCompanyId = $proposal['company_id'] ?? null;
+        $proposalType = trim($_POST['proposal_type'] ?? '');
+        if (!in_array($proposalType, ['depo', 'nakliye'], true)) {
+            $proposalType = 'nakliye';
+        }
         Proposal::update($this->pdo, $id, [
             'title' => trim($_POST['title'] ?? ''),
+            'proposal_type' => $proposalType,
             'customer_id' => trim($_POST['customer_id'] ?? '') ?: null,
             'status' => $_POST['status'] ?? 'draft',
             'total_amount' => $totalAmount,
@@ -283,6 +294,8 @@ class ProposalsController
             'delivery_address' => trim($_POST['delivery_address'] ?? '') ?: null,
             'items' => $items,
         ]);
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $proposalCompanyId, 'proposal', 'Teklif güncellendi', ($proposal['title'] ?? '') . ' teklifi güncellendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Teklif güncellendi.';
         header('Location: /teklifler');
         exit;

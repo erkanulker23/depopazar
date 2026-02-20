@@ -16,7 +16,7 @@ if ($companyName !== '' && $appName !== '') {
 $user = Auth::user();
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
 if (($q = strpos($currentPath, '?')) !== false) $currentPath = substr($currentPath, 0, $q);
-$navIcons = ['Genel Bakış'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Araçlar'=>'car-front','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Raporlar'=>'bar-chart','Ayarlar'=>'gear'];
+$navIcons = ['Genel Bakış'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Araçlar'=>'car-front','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Raporlar'=>'bar-chart','Bildirimler'=>'bell','Ayarlar'=>'gear'];
 $navItems = [
     ['name' => 'Genel Bakış', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
     ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
@@ -34,6 +34,7 @@ $navItems = [
     ['name' => 'Ödemeler', 'href' => '/odemeler', 'active' => $currentPath === '/odemeler'],
     ['name' => 'Masraflar', 'href' => '/masraflar', 'active' => $currentPath === '/masraflar'],
     ['name' => 'Raporlar', 'href' => '/raporlar', 'active' => $currentPath === '/raporlar'],
+    ['name' => 'Bildirimler', 'href' => '/bildirimler', 'active' => $currentPath === '/bildirimler'],
     ['name' => 'Ayarlar', 'href' => '/ayarlar', 'active' => $currentPath === '/ayarlar'],
 ];
 $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($user['last_name'] ?? '', 0, 1));
@@ -197,6 +198,31 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                     <span class="md:hidden text-sm font-semibold text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($projectName) ?></span>
                 </div>
                 <div class="flex items-center gap-1">
+                    <?php if ($user && !empty($user['id'])): ?>
+                    <div class="relative" id="notificationWrap">
+                        <button type="button" id="notificationBell" class="relative p-3 md:p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center" title="Bildirimler" aria-expanded="false" aria-haspopup="true">
+                            <i class="bi bi-bell text-xl md:text-lg" aria-hidden="true"></i>
+                            <span id="notificationBadge" class="absolute top-1.5 right-1.5 md:top-1 md:right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center hidden">0</span>
+                        </button>
+                        <div id="notificationDropdown" class="hidden absolute right-0 top-full mt-2 w-[min(90vw,380px)] max-h-[min(70vh,420px)] flex flex-col rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl z-50 overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50">
+                                <span class="font-semibold text-gray-900 dark:text-white">Bildirimler</span>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" id="notificationMarkAllRead" class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" title="Tümünü okundu işaretle"><i class="bi bi-check-all"></i></button>
+                                    <button type="button" id="notificationDeleteAll" class="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20" title="Tümünü sil"><i class="bi bi-trash"></i></button>
+                                </div>
+                            </div>
+                            <div id="notificationListWrap" class="flex-1 overflow-y-auto min-h-[120px]">
+                                <div id="notificationListLoading" class="hidden p-6 text-center text-gray-500 dark:text-gray-400 text-sm">Yükleniyor…</div>
+                                <div id="notificationListEmpty" class="hidden p-6 text-center text-gray-500 dark:text-gray-400 text-sm"><i class="bi bi-bell text-3xl block mb-2 opacity-50"></i>Bildirim yok</div>
+                                <ul id="notificationList" class="divide-y divide-gray-200 dark:divide-gray-600"></ul>
+                            </div>
+                            <div class="border-t border-gray-200 dark:border-gray-600 px-4 py-2 bg-gray-50 dark:bg-gray-700/50">
+                                <a href="/bildirimler" class="block text-center text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline">Tüm bildirimler</a>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                     <button type="button" id="themeToggle" class="p-3 md:p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center" title="Koyu / Açık mod">
                         <i class="bi bi-moon-stars text-xl md:text-lg dark:hidden" aria-hidden="true"></i>
                         <i class="bi bi-sun text-xl md:text-lg hidden dark:inline" aria-hidden="true"></i>
@@ -250,6 +276,91 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 localStorage.setItem('theme', isDark ? 'dark' : 'light');
             });
         }
+    })();
+    (function(){
+        var wrap = document.getElementById('notificationWrap');
+        if (!wrap) return;
+        var bell = document.getElementById('notificationBell');
+        var badge = document.getElementById('notificationBadge');
+        var dropdown = document.getElementById('notificationDropdown');
+        var listEl = document.getElementById('notificationList');
+        var listLoading = document.getElementById('notificationListLoading');
+        var listEmpty = document.getElementById('notificationListEmpty');
+        var markAllBtn = document.getElementById('notificationMarkAllRead');
+        var deleteAllBtn = document.getElementById('notificationDeleteAll');
+
+        function setBadge(n) {
+            if (!badge) return;
+            n = parseInt(n, 10) || 0;
+            badge.textContent = n > 99 ? '99+' : n;
+            badge.classList.toggle('hidden', n === 0);
+        }
+
+        function fetchNotifications(cb) {
+            fetch('/api/bildirimler', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(data){
+                var list = data.notifications || [];
+                var unread = data.unread_count || 0;
+                setBadge(unread);
+                if (typeof cb === 'function') cb(list);
+            }).catch(function(){ setBadge(0); if (typeof cb === 'function') cb([]); });
+        }
+
+        function renderList(list) {
+            listLoading.classList.add('hidden');
+            listEmpty.classList.toggle('hidden', list.length > 0);
+            listEl.innerHTML = '';
+            var typeIcons = { payment: 'credit-card', contract: 'file-text', proposal: 'file-earmark-plus', customer: 'people', warehouse: 'building', room: 'grid-3x3', bank: 'bank', expense: 'wallet2', vehicle: 'car-front', default: 'bell' };
+            list.forEach(function(n){
+                var icon = typeIcons[n.type] || typeIcons.default;
+                var read = n.is_read == 1;
+                var li = document.createElement('li');
+                li.className = 'px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ' + (read ? '' : 'bg-emerald-50/50 dark:bg-emerald-900/10');
+                var time = n.created_at ? new Date(n.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                var actor = (n.metadata && n.metadata.actor_name) ? ' · ' + n.metadata.actor_name : '';
+                li.innerHTML = '<div class="flex items-start gap-3"><div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ' + (read ? 'bg-gray-100 dark:bg-gray-600 text-gray-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400') + '"><i class="bi bi-' + icon + '"></i></div><div class="flex-1 min-w-0"><p class="font-medium text-gray-900 dark:text-white text-sm">' + (n.title || '').replace(/</g,'&lt;') + '</p><p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">' + (n.message || '').replace(/</g,'&lt;').substring(0,120) + (n.message && n.message.length > 120 ? '…' : '') + actor + '</p><p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">' + time + '</p></div></div>';
+                listEl.appendChild(li);
+            });
+        }
+
+        function openDropdown() {
+            dropdown.classList.remove('hidden');
+            bell.setAttribute('aria-expanded', 'true');
+            listEl.innerHTML = '';
+            listLoading.classList.remove('hidden');
+            listEmpty.classList.add('hidden');
+            fetchNotifications(function(list){ renderList(list); });
+        }
+
+        function closeDropdown() {
+            dropdown.classList.add('hidden');
+            bell.setAttribute('aria-expanded', 'false');
+        }
+
+        bell.addEventListener('click', function(e){
+            e.stopPropagation();
+            if (dropdown.classList.contains('hidden')) openDropdown(); else closeDropdown();
+        });
+
+        wrap.addEventListener('click', function(e){ e.stopPropagation(); });
+        document.documentElement.addEventListener('click', function(){ closeDropdown(); });
+
+        if (markAllBtn) markAllBtn.addEventListener('click', function(){
+            var csrf = document.querySelector('input[name="_token"]');
+            fetch('/bildirimler/okundu', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' }, body: '_token=' + (csrf ? encodeURIComponent(csrf.value) : '') }).then(function(){
+                fetchNotifications(function(list){ renderList(list); });
+            });
+        });
+
+        if (deleteAllBtn) deleteAllBtn.addEventListener('click', function(){
+            if (!confirm('Tüm bildirimleri silmek istediğinize emin misiniz?')) return;
+            var csrf = document.querySelector('input[name="_token"]');
+            fetch('/bildirimler/tumunu-sil', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' }, body: '_token=' + (csrf ? encodeURIComponent(csrf.value) : '') }).then(function(){
+                setBadge(0);
+                renderList([]);
+            });
+        });
+
+        fetchNotifications();
     })();
     </script>
 </body>

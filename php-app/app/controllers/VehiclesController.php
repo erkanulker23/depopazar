@@ -140,6 +140,8 @@ class VehiclesController
             header('Location: /araclar');
             exit;
         }
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompany($this->pdo, $companyId, 'vehicle', 'Araç eklendi', $plate . ' plakalı araç eklendi.', ['actor_name' => $actorName]);
         $_SESSION['flash_success'] = 'Araç eklendi.';
         http_response_code(303);
         header('Location: /araclar');
@@ -176,6 +178,8 @@ class VehiclesController
                 'notes' => trim($_POST['notes'] ?? '') ?: null,
             ], $companyId);
             if ($ok) {
+                $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+                Notification::createForCompany($this->pdo, $companyId, 'vehicle', 'Araç güncellendi', $plate . ' plakalı araç güncellendi.', ['actor_name' => $actorName]);
                 $_SESSION['flash_success'] = 'Araç güncellendi.';
             } else {
                 $_SESSION['flash_error'] = 'Araç güncellenemedi veya yetkiniz yok.';
@@ -207,6 +211,8 @@ class VehiclesController
         }
         $ok = Vehicle::delete($this->pdo, $id, $companyId);
         if ($ok) {
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'vehicle', 'Araç silindi', 'Araç kaydı silindi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = 'Araç kaydı silindi.';
         } else {
             $_SESSION['flash_error'] = 'Araç silinemedi veya yetkiniz yok.';

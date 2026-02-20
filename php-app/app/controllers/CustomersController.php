@@ -61,6 +61,8 @@ class CustomersController
             }
         }
         if ($deleted > 0) {
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri silindi', $deleted . ' müşteri silindi.', ['actor_name' => $actorName]);
             $_SESSION['flash_success'] = $deleted . ' müşteri silindi.';
         } else {
             $_SESSION['flash_error'] = 'Seçilen müşteriler silinemedi veya yetkiniz yok.';
