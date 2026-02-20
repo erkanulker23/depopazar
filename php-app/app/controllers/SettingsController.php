@@ -40,9 +40,21 @@ class SettingsController
         }
         $company = Company::findOne($this->pdo, $companyId);
         if (!$company) {
-            $_SESSION['flash_error'] = 'Şirket bulunamadı.';
-            header('Location: /genel-bakis');
-            exit;
+            $flashError = 'Şirket kaydı bulunamadı. Sunucuda seed çalıştırın (php php-app/seed.php) veya veritabanında companies tablosunu kontrol edin.';
+            $activeTab = $_GET['tab'] ?? 'firma';
+            $flashSuccess = $_SESSION['flash_success'] ?? null;
+            unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+            $pageTitle = 'Ayarlar';
+            $noCompany = true;
+            $company = [];
+            $bankAccounts = [];
+            $creditCards = [];
+            $mailSettings = [];
+            $paytrSettings = [];
+            $smsSettings = [];
+            $expensesMigrationOk = false;
+            require __DIR__ . '/../../views/settings/index.php';
+            return;
         }
         $bankAccounts = BankAccount::findAll($this->pdo, $companyId);
         $creditCards = $this->safeCreditCardsFindAll($companyId);

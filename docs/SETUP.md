@@ -98,6 +98,39 @@ Panelden **Deploy Now** / **Deploy** çalıştırın.
 
 ---
 
+## "Depo/Müşteri eklenemedi" – Foreign key (company_id) hatası
+
+**Hata:** `Cannot add or update a child row: a foreign key constraint fails ... fk_customers_company` veya `fk_warehouses_company`.
+
+**Sebep:** Veritabanında ya hiç şirket yok ya da giriş yapan kullanıcının hesabı artık var olmayan bir şirkete bağlı (`users.company_id` geçersiz).
+
+**Yapmanız gereken (sunucuda, proje kökünden):**
+
+1. **Şirket ve varsayılan kullanıcıyı oluşturmak için seed çalıştırın:**
+   ```bash
+   cd /home/forge/celebi.awapanel.com   # kendi site yolunuz
+   php php-app/seed.php
+   ```
+   Bu komut: `companies` tablosunda yoksa bir şirket ekler, super admin kullanıcı yoksa oluşturur (e-posta: `erkanulker0@gmail.com`, şifre: `password`).
+
+2. **Tablo/sütun eksikse migration çalıştırın:**
+   ```bash
+   php artisan migrate --force
+   ```
+
+3. **Giriş yaptığınız kullanıcı şirket sahibi/personel ise** ve hata devam ediyorsa, o kullanıcının `company_id` değeri geçersiz olabilir. Geçerli bir şirket ID’si atamak için (MySQL/phpMyAdmin veya SSH):
+   ```sql
+   -- Önce mevcut şirket ID’sini görün
+   SELECT id, name FROM companies WHERE deleted_at IS NULL;
+
+   -- Kullanıcının company_id’sini bu ID ile güncelleyin (EMAIL ve COMPANY_ID’yi değiştirin)
+   UPDATE users SET company_id = 'BURAYA_SIRKET_ID' WHERE email = 'giris_yaptiginiz@email.com' AND deleted_at IS NULL;
+   ```
+
+Bu adımlardan sonra depo ve müşteri ekleme çalışır. Uygulama artık bu durumda veritabanı hatası yerine “Şirket kaydı bulunamadı…” uyarısını da gösterecektir.
+
+---
+
 ## Nginx örnek config
 
 - **Forge site.conf** (`/etc/nginx/forge-conf/SITE_ID/site.conf`): İçinde `root` yoksa en üste `root /home/forge/SITENIZ/php-app/public;` ekleyin. Tam örnek: **`scripts/forge-site-conf-ORNEK.conf`**.

@@ -552,7 +552,12 @@ class CustomersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı. Depo/müşteri eklemek için Ayarlar\'dan firma oluşturun veya yöneticiye şirket ataması yaptırın.';
+            header('Location: /musteriler');
+            exit;
+        }
+        if (!Company::findOne($this->pdo, $companyId)) {
+            $_SESSION['flash_error'] = 'Şirket kaydı veritabanında bulunamadı. Sunucuda "php php-app/seed.php" veya "php artisan migrate" çalıştırın; yönetici kullanıcınıza geçerli bir şirket atasın.';
             header('Location: /musteriler');
             exit;
         }
