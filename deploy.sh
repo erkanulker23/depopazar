@@ -1,9 +1,9 @@
 #!/bin/bash
 # =============================================================================
-# DepoPazar – Laravel Forge Deploy Script (PHP Uygulaması)
-# Proje: php-app (PHP + MySQL)
-# Web Root: php-app/public
-# Kullanım: Forge'da "Deploy Now" veya sunucuda: ./deploy.sh
+# DepoPazar – Deploy Script (Forge / Awapanel / manuel)
+# Web Root: php-app/public (panelde mutlaka bu dizin seçilmeli, yoksa 403)
+# Kullanım: Panelde "Deploy" veya sunucuda: cd /path/to/proje && ./deploy.sh
+# İlk kurulum: docs/SETUP.md
 # =============================================================================
 
 set -e
@@ -13,7 +13,14 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
+# Proje kökü: panel FORGE_SITE_PATH veya SITE_PATH veriyorsa onu kullan, yoksa script'in bulunduğu dizin
+if [ -n "${FORGE_SITE_PATH}" ]; then
+  ROOT="${FORGE_SITE_PATH}"
+elif [ -n "${SITE_PATH}" ]; then
+  ROOT="${SITE_PATH}"
+else
+  ROOT="$(cd "$(dirname "$0")" && pwd)"
+fi
 cd "$ROOT"
 
 echo -e "${GREEN}[1/8] Deploy başlatıldı (ROOT=$ROOT)${NC}"
@@ -125,14 +132,12 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Dizinler ve izinler (uygulama php-app/public/uploads kullanıyor)
+# Dizinler ve izinler (403 önlemi: php-app/public okunabilir olmalı)
 # -----------------------------------------------------------------------------
 echo -e "${YELLOW}[7/8] Dizin izinleri ayarlanıyor...${NC}"
 mkdir -p "$ROOT/php-app/public/uploads/company"
+chmod -R 755 "$ROOT/php-app/public" 2>/dev/null || true
 chmod -R 755 "$ROOT/php-app/public/uploads" 2>/dev/null || true
-
-# Forge'da forge kullanıcısı chown yapamaz (Operation not permitted).
-# Sadece izinler yeterli; chown atlanıyor (uploads dizini zaten forge tarafından oluşturuluyor).
 
 # -----------------------------------------------------------------------------
 # VAPID (push bildirimleri) – .env'de tanımlı olmalı; yoksa bildirimler sadece panelde
@@ -146,7 +151,7 @@ fi
 
 echo -e "${GREEN}Deploy tamamlandı.${NC}"
 echo ""
-echo "  Web Root:    php-app/public"
-echo "  Nginx:       root -> $ROOT/php-app/public"
-echo "  PHP:         8.1+ (push için 8.1+ önerilir)"
+echo "  Web Root:    $ROOT/php-app/public"
+echo "  Panelde (Forge/Awapanel) Web Directory / Document Root = php-app/public olmalı (403 önlemi)."
+echo "  İlk kurulum: docs/SETUP.md"
 echo ""

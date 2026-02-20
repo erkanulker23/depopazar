@@ -1,4 +1,8 @@
-# DepoPazar / Depotakip – Scripts
+# DepoPazar – Scripts
+
+**Sunucu ilk kurulum:** Proje kökündeki [docs/SETUP.md](../docs/SETUP.md). Nginx/web root mutlaka `php-app/public` olmalı.
+
+---
 
 ## Sunucuya atmadan önce: pre-deploy.sh
 
@@ -33,4 +37,4 @@ Bu script:
 
 ---
 
-- `valet.conf` / `nginx.conf` / `laragon.conf`: Opsiyonel referans config’ler (root: `php-app/public`). Yerelde genelde sadece `setup-valet.sh` yeterli.
+- `nginx.conf` / `nginx-forge-awapanel.conf` / `valet.conf` / `laragon.conf`: Referans config’ler; root her zaman `php-app/public`. Sunucuda panelde Web Directory = `php-app/public` seçin (bkz. SETUP.md).
