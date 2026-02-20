@@ -4,10 +4,18 @@ class Company
     public static function getCompanyIdForUser(PDO $pdo, array $user): ?string
     {
         $companyId = $user['company_id'] ?? null;
-        if ($companyId !== null && $companyId !== '') {
-            return $companyId;
-        }
         $role = isset($user['role']) ? strtolower(trim((string) $user['role'])) : '';
+        if ($companyId !== null && $companyId !== '') {
+            if (self::findOne($pdo, $companyId)) {
+                return $companyId;
+            }
+            if ($role === 'super_admin') {
+                $stmt = $pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $row ? $row['id'] : null;
+            }
+            return null;
+        }
         if ($role === 'super_admin') {
             $stmt = $pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
             $row = $stmt->fetch(PDO::FETCH_ASSOC);

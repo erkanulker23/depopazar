@@ -1,20 +1,23 @@
 #!/usr/bin/env php
 <?php
 /**
- * İlk kurulum seed: En az bir şirket ve super admin kullanıcı oluşturur.
- * Super_admin ayarlar sayfasına girebilmek için en az bir şirket gerekir (getCompanyIdForUser ilk şirketi döner).
- * Deploy sırasında deploy.sh tarafından çalıştırılır.
+ * İlk kurulum seed:
+ * 1) Tüm tabloları ve sütunları oluşturur (schema + migrations – mevcut veriyi bozmaz).
+ * 2) İçerik zorunlu değil: yoksa varsayılan şirket ve super admin kullanıcı ekler.
  *
- * Komut satırından (proje kökünden):
+ * Tek komutla kurulum (proje kökünden):
  *   php php-app/seed.php
  * veya php-app içinden:
  *   php seed.php
+ *
+ * Alternatif: Önce php artisan migrate --force (tablo/sütun), sonra php php-app/seed.php (veri).
  */
 if (php_sapi_name() !== 'cli') {
     die('Sadece CLI\'dan calistirilir.');
 }
 
 define('APP_ROOT', __DIR__);
+$root = basename(APP_ROOT) === 'php-app' ? dirname(APP_ROOT) : APP_ROOT;
 
 if (!is_readable(APP_ROOT . '/config/db.php')) {
     echo "Seed atlandi: config/db.php veya db.local.php yok (once deploy calistirin).\n";
@@ -23,16 +26,32 @@ if (!is_readable(APP_ROOT . '/config/db.php')) {
 
 $pdo = require APP_ROOT . '/config/db.php';
 
+// 1) Tablolar ve sütunlar: önce migrate çalıştır (IF NOT EXISTS / güvenli ALTER – mevcut veriyi bozmaz)
+$artisan = $root . '/artisan';
+if (is_file($artisan)) {
+    echo "Tablolar ve sutunlar kontrol ediliyor (migrate)...\n";
+    $origCwd = getcwd();
+    chdir($root);
+    passthru('php ' . escapeshellarg($artisan) . ' migrate --force', $migrateRet);
+    chdir($origCwd);
+    if ($migrateRet !== 0) {
+        echo "Uyari: migrate bazi dosyalarda hata/uyari verdi; devam ediliyor.\n";
+    }
+} else {
+    echo "Uyari: artisan bulunamadi; sadece veri ekleniyor (tablolar zaten mevcut olmali).\n";
+}
+
+// Veritabanı erişimi kontrolü
 try {
     $pdo->query('SELECT 1 FROM companies LIMIT 1');
 } catch (Throwable $e) {
     echo "HATA: companies tablosu yok veya veritabani baglantisi basarisiz.\n";
-    echo "Once tablolari olusturun: proje kokunden  php artisan migrate --force\n";
+    echo "Proje kokunden: php artisan migrate --force\n";
     echo "Sonra tekrar: php php-app/seed.php\n";
     exit(1);
 }
 
-// 1) En az bir şirket yoksa varsayılan şirket oluştur (super_admin ayarlar sayfasına girebilsin diye)
+// 2) Veri: en az bir şirket yoksa oluştur (içinde veri olmak zorunda değil)
 $seedCompanyId = 'b2c3d4e5-f6a7-8901-bcde-f23456789012';
 $stmt = $pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
 $companyRow = $stmt->fetch();
@@ -45,7 +64,7 @@ if (!$companyRow) {
     $seedCompanyId = $companyRow['id'];
 }
 
-// 1b) Varsayılan masraf kategorileri (expense_categories tablosu varsa ve boşsa)
+// 2b) Varsayılan masraf kategorileri (tablo varsa ve boşsa)
 try {
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM expense_categories WHERE company_id = ? AND deleted_at IS NULL');
     $stmt->execute([$seedCompanyId]);
@@ -65,10 +84,10 @@ try {
         echo "Seed: Varsayilan masraf kategorileri olusturuldu (" . count($categories) . " adet).\n";
     }
 } catch (Throwable $e) {
-    // expense_categories tablosu yoksa (migration çalışmamışsa) sessizce atla
+    // expense_categories tablosu yoksa sessizce atla
 }
 
-// 2) Super admin kullanıcı: yoksa oluştur, varsa şifreyi bilinen değere sıfırla (giriş garantisi)
+// 3) Super admin: yoksa oluştur, varsa sadece şifreyi güncelle (içerik bozulmaz)
 $seedEmail = 'erkanulker0@gmail.com';
 $seedPassword = 'password';
 $hash = password_hash($seedPassword, PASSWORD_BCRYPT, ['cost' => 10]);

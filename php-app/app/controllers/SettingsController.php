@@ -39,6 +39,14 @@ class SettingsController
             return;
         }
         $company = Company::findOne($this->pdo, $companyId);
+        if (!$company && $role === 'super_admin') {
+            $stmt = $this->pdo->query('SELECT id FROM companies WHERE deleted_at IS NULL LIMIT 1');
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $companyId = $row['id'];
+                $company = Company::findOne($this->pdo, $companyId);
+            }
+        }
         if (!$company) {
             $flashError = 'Şirket kaydı bulunamadı. Sunucuda seed çalıştırın (php php-app/seed.php) veya veritabanında companies tablosunu kontrol edin.';
             $activeTab = $_GET['tab'] ?? 'firma';

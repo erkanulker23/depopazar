@@ -104,20 +104,18 @@ Panelden **Deploy Now** / **Deploy** çalıştırın.
 
 **Sebep:** Veritabanında ya hiç şirket yok ya da giriş yapan kullanıcının hesabı artık var olmayan bir şirkete bağlı (`users.company_id` geçersiz).
 
-**Yapmanız gereken (sunucuda, proje kökünden) – sıra önemli:**
+**Yapmanız gereken (sunucuda, proje kökünden):**
 
-1. **Önce tüm tabloları oluşturun (migration):**
-   ```bash
-   cd /home/forge/celebi.awapanel.com   # kendi site yolunuz
-   php artisan migrate --force
-   ```
-   Bu komut `companies`, `users`, `service_categories`, `notifications` vb. tüm tabloları oluşturur. **Bunu yapmadan seed çalışmaz.**
+- **Tek komut (tablolar + varsayılan veri):**
+  ```bash
+  cd /home/forge/celebi.awapanel.com   # kendi site yolunuz
+  php php-app/seed.php
+  ```
+  Bu komut önce tüm tabloları ve sütunları oluşturur (içinde veri olması zorunlu değil), sonra yoksa varsayılan şirket ve super admin kullanıcı ekler. Mevcut veriyi bozmaz.
 
-2. **Sonra şirket ve varsayılan kullanıcıyı ekleyin (seed):**
-   ```bash
-   php php-app/seed.php
-   ```
-   Çıktıda "Varsayilan sirket olusturuldu" veya "Super admin zaten mevcut" görmelisiniz. Hiç çıktı yoksa veya "companies tablosu yok" hatası alırsanız önce 1. adımı çalıştırın.
+- **İsterseniz ayrı ayrı:**
+  1. `php artisan migrate --force` — Sadece tablolar/eksik sütunlar oluşturulur; **mevcut veri bozulmaz** (IF NOT EXISTS / güvenli ALTER).
+  2. `php php-app/seed.php` — Şirket ve kullanıcı yoksa eklenir; varsa sadece super admin şifresi güncellenir.
 
 3. **Giriş yaptığınız kullanıcı şirket sahibi/personel ise** ve hata devam ediyorsa, o kullanıcının `company_id` değeri geçersiz olabilir. Geçerli bir şirket ID’si atamak için (MySQL/phpMyAdmin veya SSH):
    ```sql

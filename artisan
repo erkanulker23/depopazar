@@ -2,7 +2,8 @@
 <?php
 /**
  * DepoPazar – Artisan (migrate komutu)
- * Sunucuda eksik tablo/sütunları eklemek için: php artisan migrate
+ * Tüm tabloları ve eksik sütunları oluşturur. Mevcut veriyi bozmaz (CREATE TABLE IF NOT EXISTS / güvenli ALTER).
+ * Kullanım: php artisan migrate [--force]
  * Proje kökünden veya php-app içinden çalıştırılabilir.
  */
 // Argümansız veya "migrate" veya "migrate --force" kabul et (Forge deploy uyumluluğu)
