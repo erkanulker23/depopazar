@@ -161,6 +161,32 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Vadesi gelmiş / ödemesi alınmamış müşteriler (bu ay veya önceki aylar – bekleyen veya gecikmiş) */
+    public static function findCustomersWithUnpaidPayments(PDO $pdo, ?string $companyId = null, int $limit = 50): array
+    {
+        $sql = 'SELECT c.customer_id,
+                cu.first_name AS customer_first_name,
+                cu.last_name AS customer_last_name,
+                SUM(p.amount) AS total_debt,
+                COUNT(p.id) AS payment_count
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY c.customer_id, cu.first_name, cu.last_name ORDER BY total_debt DESC LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /** Bekleyen/gecikmiş ödemelerden vadesi bugünden itibaren N gün içinde olanlar */
     public static function findUpcoming(PDO $pdo, ?string $companyId, int $days = 10): array
     {
@@ -228,6 +254,25 @@ class Payment
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE c.customer_id = ? AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
                 AND YEAR(p.due_date) = YEAR(CURDATE()) AND MONTH(p.due_date) = MONTH(CURDATE()) ';
+        $params = [$customerId];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    /** Müşteri: vadesi geçmiş (henüz ödenmemiş) tutar – due_date < bugün */
+    public static function sumUnpaidOverdueByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): float
+    {
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE c.customer_id = ? AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) < CURDATE() ';
         $params = [$customerId];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';

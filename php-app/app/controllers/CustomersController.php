@@ -509,6 +509,8 @@ class CustomersController
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
         $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
+        $debtOverdue = Payment::sumUnpaidOverdueByCustomerId($this->pdo, $id, $companyId);
+        $debtDueThisMonth = Payment::sumUnpaidDueThisMonthByCustomerId($this->pdo, $id, $companyId);
         require __DIR__ . '/../../views/customers/_row_fragment.php';
     }
 

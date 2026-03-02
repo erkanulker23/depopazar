@@ -255,4 +255,146 @@ class WarehousesController
         header('Location: /depolar');
         exit;
     }
+
+    /** Excel (CSV) dışa aktar – mevcut depoları indir */
+    public function exportCsv(): void
+    {
+        Auth::requireStaff();
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId) {
+            $warehouses = Warehouse::findAll($this->pdo, $companyId);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $warehouses = Warehouse::findAll($this->pdo, null);
+        } else {
+            $warehouses = [];
+        }
+        $filename = 'depolar_' . date('Y-m-d_His') . '.csv';
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        $out = fopen('php://output', 'wb');
+        fprintf($out, "\xEF\xBB\xBF");
+        $headers = ['Depo Adı', 'Adres', 'İl', 'İlçe', 'Kat Sayısı', 'Açıklama', 'Aktif', 'Aylık Baz Ücret'];
+        fputcsv($out, $headers, ';');
+        foreach ($warehouses as $w) {
+            fputcsv($out, [
+                $w['name'] ?? '',
+                $w['address'] ?? '',
+                $w['city'] ?? '',
+                $w['district'] ?? '',
+                $w['total_floors'] ?? '',
+                $w['description'] ?? '',
+                !empty($w['is_active']) ? 'Evet' : 'Hayır',
+                $w['monthly_base_fee'] !== null && $w['monthly_base_fee'] !== '' ? str_replace('.', ',', (string)$w['monthly_base_fee']) : '',
+            ], ';');
+        }
+        fclose($out);
+        exit;
+    }
+
+    /** Excel (CSV) şablonu indir */
+    public function downloadTemplate(): void
+    {
+        Auth::requireStaff();
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="depo_sablonu.csv"');
+        $out = fopen('php://output', 'wb');
+        fprintf($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['Depo Adı', 'Adres', 'İl', 'İlçe', 'Kat Sayısı', 'Açıklama', 'Aktif', 'Aylık Baz Ücret'], ';');
+        fputcsv($out, ['KARTAL DEPO', 'Örnek Mah. Depo Sok. 1', 'İstanbul', 'Kartal', '2', '', 'Evet', '5000'], ';');
+        fclose($out);
+        exit;
+    }
+
+    /** Excel (CSV) içe aktar – form */
+    public function importForm(): void
+    {
+        Auth::requireStaff();
+        $flashSuccess = $_SESSION['flash_success'] ?? null;
+        $flashError = $_SESSION['flash_error'] ?? null;
+        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        $currentPage = 'depolar';
+        require __DIR__ . '/../../views/warehouses/import.php';
+    }
+
+    /** Excel (CSV) içe aktar – işle */
+    public function importCsv(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /depolar');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /depolar/excel-ice-aktar');
+            exit;
+        }
+        $file = $_FILES['csv_file'] ?? null;
+        if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
+            $_SESSION['flash_error'] = 'Lütfen bir CSV dosyası seçin.';
+            header('Location: /depolar/excel-ice-aktar');
+            exit;
+        }
+        $handle = @fopen($file['tmp_name'], 'rb');
+        if (!$handle) {
+            $_SESSION['flash_error'] = 'Dosya okunamadı.';
+            header('Location: /depolar/excel-ice-aktar');
+            exit;
+        }
+        $bom = fread($handle, 3);
+        if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+        $first = fgetcsv($handle, 0, ';');
+        if ($first === false) $first = fgetcsv($handle, 0, ',');
+        $delimiter = (count($first ?? []) > 1) ? ';' : ',';
+        if ($delimiter === ',') {
+            rewind($handle);
+            if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+            fgetcsv($handle, 0, ',');
+        }
+        $added = 0;
+        $errors = [];
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            $row = array_map('trim', $row);
+            if (count($row) < 1) continue;
+            $name = $row[0] ?? '';
+            if ($name === '') continue;
+            if (stripos($name, 'depo') !== false && stripos($name, 'adı') !== false) continue; // başlık
+            $address = $row[1] ?? null;
+            $city = $row[2] ?? null;
+            $district = $row[3] ?? null;
+            $totalFloors = isset($row[4]) && $row[4] !== '' ? (int)$row[4] : null;
+            $description = $row[5] ?? null;
+            $isActive = 1;
+            if (isset($row[6]) && $row[6] !== '') {
+                $v = mb_strtolower($row[6]);
+                if (strpos($v, 'hayır') !== false || $v === '0' || $v === 'pasif') $isActive = 0;
+            }
+            $monthlyBaseFee = isset($row[7]) && $row[7] !== '' ? (float) str_replace(',', '.', $row[7]) : null;
+            try {
+                Warehouse::create($this->pdo, [
+                    'name' => $name,
+                    'company_id' => $companyId,
+                    'address' => $address,
+                    'city' => $city,
+                    'district' => $district,
+                    'total_floors' => $totalFloors,
+                    'description' => $description,
+                    'is_active' => $isActive,
+                    'monthly_base_fee' => $monthlyBaseFee,
+                ]);
+                $added++;
+            } catch (Throwable $e) {
+                $errors[] = $name . ': ' . $e->getMessage();
+            }
+        }
+        fclose($handle);
+        if ($added > 0) $_SESSION['flash_success'] = $added . ' depo eklendi.';
+        if (!empty($errors)) $_SESSION['flash_error'] = implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : '');
+        header('Location: /depolar/excel-ice-aktar');
+        exit;
+    }
 }

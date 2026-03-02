@@ -2,6 +2,8 @@
 $contracts = $contracts ?? [];
 $payments = $payments ?? [];
 $debt = $debt ?? 0;
+$debtOverdue = $debtOverdue ?? 0;
+$debtDueThisMonth = $debtDueThisMonth ?? 0;
 $statusStyles = [
     'paid' => 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
     'overdue' => 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800',
@@ -54,6 +56,28 @@ $statusLabels = ['paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'pending' => 'Be
                         </div>
                     <?php endif; ?>
                 </div>
+                <?php if ($debtOverdue > 0 || $debtDueThisMonth > 0): ?>
+                <div class="px-4 py-3 flex flex-wrap gap-3 border-b border-slate-100 dark:border-gray-700">
+                    <?php if ($debtOverdue > 0): ?>
+                        <div class="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200/80 dark:border-red-800/50 px-3 py-2 flex items-center gap-2">
+                            <i class="bi bi-exclamation-triangle-fill text-red-600 dark:text-red-400"></i>
+                            <div>
+                                <span class="text-xs font-semibold text-red-800 dark:text-red-200 uppercase tracking-wider">Vadesi geçmiş</span>
+                                <span class="block text-base font-bold text-red-700 dark:text-red-300 tabular-nums"><?= number_format($debtOverdue, 2, ',', '.') ?> ₺</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($debtDueThisMonth > 0): ?>
+                        <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/80 dark:border-amber-800/50 px-3 py-2 flex items-center gap-2">
+                            <i class="bi bi-calendar-event text-amber-600 dark:text-amber-400"></i>
+                            <div>
+                                <span class="text-xs font-semibold text-amber-800 dark:text-amber-200 uppercase tracking-wider">Vadesi gelmiş (bu ay)</span>
+                                <span class="block text-base font-bold text-amber-700 dark:text-amber-300 tabular-nums"><?= number_format($debtDueThisMonth, 2, ',', '.') ?> ₺</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
                 <div class="p-4">
                     <?php if (empty($payments)): ?>
                         <p class="text-sm text-slate-500 dark:text-gray-400">Ödeme kaydı yok.</p>

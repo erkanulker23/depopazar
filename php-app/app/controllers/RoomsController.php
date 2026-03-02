@@ -213,4 +213,173 @@ class RoomsController
         header('Location: /odalar');
         exit;
     }
+
+    /** Excel (CSV) dışa aktar – mevcut odaları indir */
+    public function exportCsv(): void
+    {
+        Auth::requireStaff();
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $warehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
+        if ($companyId) {
+            $rooms = Room::findAll($this->pdo, $warehouseId);
+            $rooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $rooms = Room::findAll($this->pdo, $warehouseId);
+        } else {
+            $rooms = [];
+        }
+        $filename = 'odalar_' . date('Y-m-d_His') . '.csv';
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        $out = fopen('php://output', 'wb');
+        fprintf($out, "\xEF\xBB\xBF");
+        $headers = ['Depo Adı', 'Oda No', 'Alan (m²)', 'Aylık Fiyat', 'Durum', 'Kat', 'Blok', 'Koridor', 'Açıklama', 'Notlar'];
+        fputcsv($out, $headers, ';');
+        foreach ($rooms as $r) {
+            $status = $r['status'] ?? 'empty';
+            $statusLabel = $status === 'empty' ? 'Boş' : ($status === 'occupied' ? 'Dolu' : ($status === 'reserved' ? 'Rezerve' : 'Kilitli'));
+            fputcsv($out, [
+                $r['warehouse_name'] ?? '',
+                $r['room_number'] ?? '',
+                str_replace('.', ',', (string)($r['area_m2'] ?? '')),
+                str_replace('.', ',', (string)($r['monthly_price'] ?? '')),
+                $statusLabel,
+                $r['floor'] ?? '',
+                $r['block'] ?? '',
+                $r['corridor'] ?? '',
+                $r['description'] ?? '',
+                $r['notes'] ?? '',
+            ], ';');
+        }
+        fclose($out);
+        exit;
+    }
+
+    /** Excel (CSV) şablonu indir */
+    public function downloadTemplate(): void
+    {
+        Auth::requireStaff();
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="oda_sablonu.csv"');
+        $out = fopen('php://output', 'wb');
+        fprintf($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['Depo Adı', 'Oda No', 'Alan (m²)', 'Aylık Fiyat', 'Durum', 'Kat', 'Blok', 'Koridor', 'Açıklama', 'Notlar'], ';');
+        fputcsv($out, ['KARTAL DEPO', '101', '25', '5000', 'Boş', '', '', '', '', ''], ';');
+        fputcsv($out, ['KARTAL DEPO', '102', '30', '6000', 'Boş', '1', 'A', '', '', ''], ';');
+        fclose($out);
+        exit;
+    }
+
+    /** Excel (CSV) içe aktar – form */
+    public function importForm(): void
+    {
+        Auth::requireStaff();
+        $flashSuccess = $_SESSION['flash_success'] ?? null;
+        $flashError = $_SESSION['flash_error'] ?? null;
+        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        $currentPage = 'odalar';
+        require __DIR__ . '/../../views/rooms/import.php';
+    }
+
+    /** Excel (CSV) içe aktar – işle */
+    public function importCsv(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /odalar');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            header('Location: /odalar/excel-ice-aktar');
+            exit;
+        }
+        $file = $_FILES['csv_file'] ?? null;
+        if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
+            $_SESSION['flash_error'] = 'Lütfen bir CSV dosyası seçin.';
+            header('Location: /odalar/excel-ice-aktar');
+            exit;
+        }
+        $handle = @fopen($file['tmp_name'], 'rb');
+        if (!$handle) {
+            $_SESSION['flash_error'] = 'Dosya okunamadı.';
+            header('Location: /odalar/excel-ice-aktar');
+            exit;
+        }
+        $bom = fread($handle, 3);
+        if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+        $first = fgetcsv($handle, 0, ';');
+        if ($first === false) $first = fgetcsv($handle, 0, ',');
+        $delimiter = (count($first ?? []) > 1) ? ';' : ',';
+        if ($delimiter === ',') {
+            rewind($handle);
+            if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+            $first = fgetcsv($handle, 0, ',');
+        }
+        $warehouses = Warehouse::findAll($this->pdo, $companyId);
+        $warehouseByName = [];
+        foreach ($warehouses as $w) {
+            $warehouseByName[mb_strtoupper(trim($w['name'] ?? ''))] = $w;
+        }
+        $added = 0;
+        $errors = [];
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            $row = array_map('trim', $row);
+            if (count($row) < 4) continue;
+            $warehouseName = $row[0] ?? '';
+            $roomNumber = $row[1] ?? '';
+            $areaM2 = isset($row[2]) ? (float) str_replace(',', '.', $row[2]) : 0;
+            $monthlyPrice = isset($row[3]) ? (float) str_replace(',', '.', $row[3]) : 0;
+            if ($warehouseName === '' || $roomNumber === '') continue;
+            if (stripos($warehouseName, 'depo') !== false && stripos($roomNumber, 'oda') !== false) continue; // başlık
+            $status = 'empty';
+            if (isset($row[4]) && $row[4] !== '') {
+                $s = mb_strtolower($row[4]);
+                if (strpos($s, 'dolu') !== false) $status = 'occupied';
+                elseif (strpos($s, 'rezerve') !== false) $status = 'reserved';
+                elseif (strpos($s, 'kilit') !== false) $status = 'locked';
+            }
+            $whKey = mb_strtoupper($warehouseName);
+            $warehouse = $warehouseByName[$whKey] ?? null;
+            if (!$warehouse) {
+                try {
+                    $newWh = Warehouse::create($this->pdo, ['name' => $warehouseName, 'company_id' => $companyId]);
+                    $warehouse = $newWh;
+                    $warehouseByName[$whKey] = $warehouse;
+                } catch (Throwable $e) {
+                    $errors[] = $roomNumber . ': Depo oluşturulamadı – ' . $e->getMessage();
+                    continue;
+                }
+            }
+            $warehouseId = $warehouse['id'];
+            if ($areaM2 <= 0) $areaM2 = 1;
+            if ($monthlyPrice < 0) $monthlyPrice = 0;
+            try {
+                Room::create($this->pdo, [
+                    'room_number'   => $roomNumber,
+                    'warehouse_id'  => $warehouseId,
+                    'area_m2'       => $areaM2,
+                    'monthly_price' => $monthlyPrice,
+                    'status'        => $status,
+                    'floor'         => $row[5] ?? null,
+                    'block'         => $row[6] ?? null,
+                    'corridor'      => $row[7] ?? null,
+                    'description'   => $row[8] ?? null,
+                    'notes'         => $row[9] ?? null,
+                ]);
+                $added++;
+            } catch (Throwable $e) {
+                $errors[] = $roomNumber . ': ' . $e->getMessage();
+            }
+        }
+        fclose($handle);
+        if ($added > 0) $_SESSION['flash_success'] = $added . ' oda eklendi.';
+        if (!empty($errors)) $_SESSION['flash_error'] = implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : '');
+        header('Location: /odalar/excel-ice-aktar');
+        exit;
+    }
 }

@@ -2,6 +2,7 @@
 $currentPage = 'odemeler';
 $statusLabels = $statusLabels ?? [];
 $payments = $payments ?? [];
+$paymentsByCustomer = $paymentsByCustomer ?? [];
 $collectMode = $collectMode ?? false;
 $bankAccounts = $bankAccounts ?? [];
 $customersWithDebt = $customersWithDebt ?? [];
@@ -23,9 +24,11 @@ $dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 $totalPages = $totalPages ?? 1;
 $page = $page ?? 1;
 ?>
+<?php $preselectedCustomerId = $preselectedCustomerId ?? ''; ?>
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <form method="get" action="/odemeler" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <?php if ($collectMode): ?><input type="hidden" name="collect" value="1"><?php endif; ?>
+        <?php if ($collectMode && $preselectedCustomerId !== ''): ?><input type="hidden" name="customer" value="<?= htmlspecialchars($preselectedCustomerId) ?>"><?php endif; ?>
         <input type="search" name="q" value="<?= htmlspecialchars($payQ) ?>" placeholder="Ödeme no, sözleşme, müşteri ara..." class="flex-1 min-w-0 sm:w-48 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
         <input type="date" name="date_from" value="<?= htmlspecialchars($dateFrom) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi başlangıç">
         <input type="date" name="date_to" value="<?= htmlspecialchars($dateTo) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi bitiş">
@@ -38,7 +41,7 @@ $page = $page ?? 1;
             <option value="cancelled" <?= $payStatus === 'cancelled' ? 'selected' : '' ?>>İptal</option>
         </select>
         <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
-        <?php if ($payStatus !== '' || $payQ !== '' || $dateFrom !== '' || $dateTo !== ''): ?><a href="/odemeler<?= $collectMode ? '?collect=1' : '' ?>" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
+        <?php if ($payStatus !== '' || $payQ !== '' || $dateFrom !== '' || $dateTo !== ''): ?><a href="/odemeler<?= $collectMode ? '?collect=1' . ($preselectedCustomerId !== '' ? '&customer=' . urlencode($preselectedCustomerId) : '') : '' ?>" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
     </form>
     <button type="button" onclick="openCollectModal()" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
         <i class="bi bi-bank mr-2"></i> Ödeme Al
@@ -79,87 +82,80 @@ $page = $page ?? 1;
         </div>
     <?php elseif ($collectMode && empty($customersWithDebt)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Borcu olan müşteri yok.</div>
-    <?php elseif (empty($payments)): ?>
-        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz ödeme kaydı yok.</div>
+    <?php elseif (empty($paymentsByCustomer)): ?>
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz ödeme kaydı yok veya filtreye uyan kayıt yok.</div>
     <?php else: ?>
-        <!-- Mobil: kart listesi -->
-        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
-            <?php foreach ($payments as $p):
-                $st = $p['status'] ?? 'pending';
-                $canCollect = in_array($st, ['pending', 'overdue']);
-                $pJson = json_encode(['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']);
-                $cls = $st === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ($st === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : ($st === 'cancelled' ? 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'));
+        <!-- Müşteri listesi: her satırda müşteri adı, yanında dropdown ile o müşteriye ait ödemeler -->
+        <div class="divide-y divide-gray-200 dark:divide-gray-600">
+            <?php foreach ($paymentsByCustomer as $idx => $cust):
+                $customerName = trim(($cust['customer_first_name'] ?? '') . ' ' . ($cust['customer_last_name'] ?? ''));
+                $payList = $cust['payments'] ?? [];
+                $unpaidSum = 0;
+                $unpaidCount = 0;
+                foreach ($payList as $px) {
+                    if (in_array($px['status'] ?? '', ['pending', 'overdue'])) {
+                        $unpaidSum += (float)($px['amount'] ?? 0);
+                        $unpaidCount++;
+                    }
+                }
+                $expandId = 'payments-customer-' . $idx;
             ?>
-                <div class="p-4 flex flex-col gap-2">
-                    <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="active:bg-gray-50 dark:active:bg-gray-700/50 -m-2 p-2 rounded-lg">
-                        <p class="font-semibold text-gray-900 dark:text-white"><?= htmlspecialchars($p['payment_number'] ?? '-') ?></p>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"><?= htmlspecialchars($p['contract_number'] ?? '') ?> · <?= htmlspecialchars(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? '')) ?></p>
-                        <div class="flex items-center justify-between mt-2">
-                            <span class="text-sm text-gray-500 dark:text-gray-500"><?= $p['due_date'] ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></span>
-                            <span class="font-semibold text-gray-900 dark:text-white"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</span>
+            <div class="payments-customer-row" data-customer-id="<?= htmlspecialchars($cust['id'] ?? '') ?>">
+                <div class="flex items-center justify-between gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer group" onclick="toggleCustomerPayments('<?= $expandId ?>', this)" onkeydown="if (event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleCustomerPayments('<?= $expandId ?>', this); }" role="button" tabindex="0" aria-expanded="false" aria-controls="<?= $expandId ?>">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <span class="payments-expand-icon text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-transform" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($customerName ?: '-') ?></p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400"><?= count($payList) ?> ödeme<?= $unpaidCount > 0 ? ' · ' . $unpaidCount . ' bekleyen, ' . fmtMoney($unpaidSum) . ' ₺ borç' : '' ?></p>
                         </div>
-                        <span class="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded-full <?= $cls ?>"><?= htmlspecialchars($statusLabels[$st] ?? $st) ?></span>
-                    </a>
-                    <?php if ($canCollect): ?>
-                        <button type="button" onclick="event.preventDefault(); openCollectForPayment(<?= htmlspecialchars($pJson) ?>)" class="btn-touch w-full py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ödeme Al</button>
-                    <?php endif; ?>
+                    </div>
+                    <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($cust['id'] ?? '') ?>" onclick="event.stopPropagation()" class="shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ödeme Al</a>
                 </div>
+                <div id="<?= $expandId ?>" class="payments-dropdown hidden border-t border-gray-100 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50" aria-hidden="true">
+                    <div class="px-4 py-3 pl-10 overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+                                    <th class="pb-2 pr-4">Ödeme No</th>
+                                    <th class="pb-2 pr-4">Sözleşme</th>
+                                    <th class="pb-2 pr-4">Vade</th>
+                                    <th class="pb-2 pr-4">Tutar</th>
+                                    <th class="pb-2 pr-4">Durum</th>
+                                    <th class="pb-2">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                                <?php foreach ($payList as $p):
+                                    $st = $p['status'] ?? 'pending';
+                                    $canCollect = in_array($st, ['pending', 'overdue']);
+                                    $pJson = json_encode(['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']);
+                                    $cls = $st === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ($st === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : ($st === 'cancelled' ? 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'));
+                                ?>
+                                <tr class="hover:bg-gray-100/50 dark:hover:bg-gray-700/30">
+                                    <td class="py-2 pr-4 font-medium"><a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($p['payment_number'] ?? '-') ?></a></td>
+                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></td>
+                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300"><?= $p['due_date'] ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></td>
+                                    <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</td>
+                                    <td class="py-2 pr-4"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $cls ?>"><?= htmlspecialchars($statusLabels[$st] ?? $st) ?></span></td>
+                                    <td class="py-2">
+                                        <?php if ($canCollect): ?>
+                                            <button type="button" onclick="event.stopPropagation(); openCollectForPayment(<?= htmlspecialchars($pJson) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Ödeme Al</button>
+                                        <?php else: ?>
+                                            <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:underline">Detay</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
             <?php endforeach; ?>
         </div>
-        <!-- Masaüstü: tablo -->
-        <div class="hidden md:block overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                <thead class="bg-gray-50 dark:bg-gray-700/50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödeme No</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme / Müşteri</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Vade</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                    <?php foreach ($payments as $p):
-                        $st = $p['status'] ?? 'pending';
-                        $canCollect = in_array($st, ['pending', 'overdue']);
-                        $pJson = json_encode(['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']);
-                        $cls = $st === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ($st === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : ($st === 'cancelled' ? 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'));
-                    ?>
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"><?= htmlspecialchars($p['payment_number'] ?? '-') ?></a></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($p['contract_number'] ?? '') ?> / <?= htmlspecialchars(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? '')) ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= $p['due_date'] ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</td>
-                            <td class="px-4 py-3">
-                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $cls ?>"><?= htmlspecialchars($statusLabels[$st] ?? $st) ?></span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <?php if ($canCollect): ?>
-                                    <button type="button" onclick="openCollectForPayment(<?= htmlspecialchars($pJson) ?>)" class="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">Ödeme Al</button>
-                                <?php else: ?>
-                                    <span class="text-gray-400 dark:text-gray-500 text-sm">—</span>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400">
+            <?= count($paymentsByCustomer) ?> müşteri · Toplam <?= $totalPayments ?> ödeme
         </div>
-        <?php if ($totalPages > 1): ?>
-        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-600 flex flex-wrap items-center justify-between gap-2">
-            <span class="text-sm text-gray-600 dark:text-gray-400">Sayfa <?= $page ?> / <?= $totalPages ?> (<?= $totalPayments ?? count($payments) ?> kayıt)</span>
-            <div class="flex gap-1">
-                <?php
-                $qp = array_filter(['q' => $payQ, 'status' => $payStatus, 'date_from' => $dateFrom, 'date_to' => $dateTo]);
-                if ($collectMode) $qp['collect'] = '1';
-                $base = '/odemeler' . (empty($qp) ? '' : '?' . http_build_query($qp));
-                $sep = strpos($base, '?') !== false ? '&' : '?';
-                if ($page > 1): ?><a href="<?= $base . $sep ?>page=<?= $page - 1 ?>" class="px-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">← Önceki</a><?php endif; ?>
-                <?php if ($page < $totalPages): ?><a href="<?= $base . $sep ?>page=<?= $page + 1 ?>" class="px-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">Sonraki →</a><?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
     <?php endif; ?>
 </div>
 
@@ -184,7 +180,7 @@ $page = $page ?? 1;
                         $total = array_sum(array_map(fn($p) => (float)($p['amount'] ?? 0), $c['payments']));
                         $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));
                         ?>
-                        <button type="button" onclick="selectCustomer('<?= htmlspecialchars($c['id']) ?>', <?= htmlspecialchars(json_encode($c['payments'])) ?>)" class="w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between">
+                        <button type="button" onclick="selectCustomer('<?= htmlspecialchars($c['id']) ?>', <?= htmlspecialchars(json_encode($c['payments'])) ?>, <?= json_encode($name) ?>)" class="w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between">
                             <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($name) ?></span>
                             <span class="text-sm font-semibold text-amber-700 dark:text-amber-300"><?= fmtMoney($total) ?> ₺</span>
                         </button>
@@ -197,7 +193,10 @@ $page = $page ?? 1;
 
             <!-- Adım 2: Ödeme seç -->
             <div id="stepPayment" class="step-content hidden">
-                <button type="button" onclick="collectStep(1)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline mb-4">← Müşteri seç</button>
+                <div class="mb-4 flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="collectStep(1)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline">← Müşteri değiştir</button>
+                    <span id="step2CustomerName" class="text-sm font-medium text-gray-700 dark:text-gray-200"></span>
+                </div>
                 <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödemeyi seçin.</p>
                 <div id="paymentList" class="space-y-2 max-h-48 overflow-y-auto"></div>
             </div>
@@ -292,6 +291,21 @@ $page = $page ?? 1;
 var collectCurrentStep = 1;
 var collectSelectedPayments = [];
 
+function toggleCustomerPayments(expandId, rowEl) {
+    var panel = document.getElementById(expandId);
+    if (!panel) return;
+    var isHidden = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', !isHidden);
+    panel.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
+    if (rowEl) {
+        rowEl.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+        var icon = rowEl.querySelector('.payments-expand-icon');
+        if (icon) {
+            icon.classList.toggle('rotate-90', isHidden);
+        }
+    }
+}
+
 var customersWithDebt = <?= json_encode(array_map(function($c) {
     return ['id' => $c['id'], 'name' => trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? '')), 'payments' => $c['payments']];
 }, $customersWithDebt)) ?>;
@@ -322,8 +336,10 @@ function collectStep(n) {
     document.getElementById('stepSubmitSimple').classList.add('hidden');
     document.getElementById('stepCreditCardNote').classList.add('hidden');
 }
-function selectCustomer(customerId, payments) {
+function selectCustomer(customerId, payments, customerName) {
     collectSelectedPayments = Array.isArray(payments) ? payments : [];
+    var nameEl = document.getElementById('step2CustomerName');
+    if (nameEl) nameEl.textContent = customerName ? 'Müşteri: ' + customerName : '';
     var list = document.getElementById('paymentList');
     list.innerHTML = '';
     var total = 0;
@@ -405,13 +421,17 @@ document.getElementById('customerSearch').addEventListener('input', function() {
         btn.style.display = !q || name.toLowerCase().indexOf(q) >= 0 ? 'block' : 'none';
     });
 });
-var preselectedCustomerId = <?= json_encode($preselectedCustomerId ?? '') ?>;
+var preselectedCustomerId = <?= json_encode($preselectedCustomerId) ?>;
 <?php if ($collectMode): ?>document.addEventListener('DOMContentLoaded', function() {
-    openCollectModal();
     if (preselectedCustomerId && customersWithDebt && customersWithDebt.length) {
-        var c = customersWithDebt.find(function(x) { return x.id === preselectedCustomerId; });
-        if (c && c.payments && c.payments.length) selectCustomer(c.id, c.payments);
+        var c = customersWithDebt.find(function(x) { return String(x.id) === String(preselectedCustomerId); });
+        if (c && c.payments && c.payments.length) {
+            openCollectModal();
+            selectCustomer(c.id, c.payments, c.name || '');
+            return;
+        }
     }
+    openCollectModal();
 });<?php endif; ?>
 </script>
 <?php

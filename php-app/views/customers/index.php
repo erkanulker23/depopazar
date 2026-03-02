@@ -58,6 +58,9 @@ ob_start();
                             <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="font-semibold text-gray-900 dark:text-white block truncate"><?= htmlspecialchars($c['first_name'] . ' ' . $c['last_name']) ?></a>
                             <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5"><?= htmlspecialchars($c['email'] ?? '–') ?></p>
                             <p class="text-sm text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($c['phone'] ?? '–') ?></p>
+                            <?php if (!empty(trim($c['notes'] ?? ''))): ?>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2"><?= nl2br(htmlspecialchars(mb_substr(trim($c['notes']), 0, 100) . (mb_strlen(trim($c['notes'])) > 100 ? '…' : ''))) ?></p>
+                            <?php endif; ?>
                             <div class="flex flex-wrap items-center gap-2 mt-2">
                                 <?php if (!empty($c['is_active'])): ?>
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
@@ -86,6 +89,7 @@ ob_start();
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ad Soyad</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">E-posta</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Telefon</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Bilgi notu</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
                     </tr>
@@ -114,6 +118,13 @@ ob_start();
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['email'] ?? '') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['phone'] ?? '-') ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-[200px]">
+                                <?php if (!empty(trim($c['notes'] ?? ''))): ?>
+                                    <span class="line-clamp-2" title="<?= htmlspecialchars($c['notes']) ?>"><?= nl2br(htmlspecialchars(mb_substr(trim($c['notes']), 0, 120) . (mb_strlen(trim($c['notes'])) > 120 ? '…' : ''))) ?></span>
+                                <?php else: ?>
+                                    <span class="text-gray-400 dark:text-gray-500">–</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="px-4 py-3">
                                 <?php if (!empty($c['is_active'])): ?>
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
@@ -125,7 +136,7 @@ ob_start();
                                 <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-sm text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 mr-1">Detay</a>
                             </td>
                         </tr>
-                        <tr class="expandable-row hidden" id="expand-<?= htmlspecialchars($c['id']) ?>"><td colspan="7" class="p-0 fragment-cell"></td></tr>
+                        <tr class="expandable-row hidden" id="expand-<?= htmlspecialchars($c['id']) ?>"><td colspan="8" class="p-0 fragment-cell"></td></tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>

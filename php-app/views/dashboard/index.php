@@ -167,7 +167,35 @@ if (empty($setupSteps)) {
     </a>
 </div>
 
-<?php $upcomingPayments = $upcomingPayments ?? []; $expiringContracts = $expiringContracts ?? []; ?>
+<?php
+$upcomingPayments = $upcomingPayments ?? [];
+$expiringContracts = $expiringContracts ?? [];
+$customersWithUnpaid = $customersWithUnpaid ?? [];
+?>
+<?php if (!empty($customersWithUnpaid)): ?>
+<div class="card-modern p-6 rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10 shadow-sm mb-6">
+    <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+        <i class="bi bi-exclamation-circle text-red-600 dark:text-red-400"></i> Vadesi Gelmiş / Ödemesi Alınmayan Müşteriler
+    </h2>
+    <p class="text-xs text-gray-600 dark:text-gray-400 mb-4">Bu ay veya önceki aylardan ödemesi alınmamış müşteriler. Ödeme almak için ilgili satırdaki bağlantıyı kullanın.</p>
+    <ul class="space-y-2 max-h-56 overflow-y-auto">
+        <?php foreach ($customersWithUnpaid as $row):
+            $name = trim(($row['customer_first_name'] ?? '') . ' ' . ($row['customer_last_name'] ?? ''));
+            $debt = (float)($row['total_debt'] ?? 0);
+            $count = (int)($row['payment_count'] ?? 0);
+        ?>
+            <li class="flex justify-between items-center py-2.5 px-3 rounded-lg bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 text-sm gap-3">
+                <span class="min-w-0 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($name ?: '-') ?></span>
+                <span class="text-red-600 dark:text-red-400 font-semibold flex-shrink-0"><?= fmtMoney($debt) ?> ₺</span>
+                <span class="text-gray-500 dark:text-gray-400 text-xs flex-shrink-0"><?= $count ?> ödeme</span>
+                <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($row['customer_id'] ?? '') ?>" class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700">Ödeme Al</a>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+    <a href="/odemeler?status=unpaid" class="inline-block mt-3 text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Tüm ödemeler →</a>
+</div>
+<?php endif; ?>
+
 <?php if (!empty($upcomingPayments) || !empty($expiringContracts)): ?>
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-6">
     <?php if (!empty($upcomingPayments)): ?>

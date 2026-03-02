@@ -61,12 +61,40 @@ class PaymentsController
             $first = $list[0];
             $customersWithDebt[] = ['id' => $cid, 'customer_first_name' => $first['customer_first_name'] ?? '', 'customer_last_name' => $first['customer_last_name'] ?? '', 'payments' => $list];
         }
+        // Müşteri bazlı liste: tüm ödemeleri müşteriye göre grupla (dropdown için)
+        $paymentsByCustomer = [];
+        foreach ($payments as $p) {
+            $cid = $p['customer_id'] ?? '';
+            if ($cid === '') continue;
+            if (!isset($paymentsByCustomer[$cid])) {
+                $paymentsByCustomer[$cid] = [
+                    'id' => $cid,
+                    'customer_first_name' => $p['customer_first_name'] ?? '',
+                    'customer_last_name' => $p['customer_last_name'] ?? '',
+                    'customer_email' => $p['customer_email'] ?? '',
+                    'payments' => [],
+                ];
+            }
+            $paymentsByCustomer[$cid]['payments'][] = $p;
+        }
+        // Her müşterinin ödemelerini vade tarihine göre sırala (eskiden yeniye)
+        foreach ($paymentsByCustomer as $cid => $row) {
+            usort($paymentsByCustomer[$cid]['payments'], function ($a, $b) {
+                $da = strtotime($a['due_date'] ?? '');
+                $db = strtotime($b['due_date'] ?? '');
+                return $da <=> $db;
+            });
+        }
+        // Müşteri adına göre sırala
+        uasort($paymentsByCustomer, function ($a, $b) {
+            $na = trim(($a['customer_first_name'] ?? '') . ' ' . ($a['customer_last_name'] ?? ''));
+            $nb = trim(($b['customer_first_name'] ?? '') . ' ' . ($b['customer_last_name'] ?? ''));
+            return strcasecmp($na, $nb);
+        });
+        $paymentsByCustomer = array_values($paymentsByCustomer);
         $totalPayments = count($payments);
-        $perPage = 25;
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $offset = ($page - 1) * $perPage;
-        $payments = array_slice($payments, $offset, $perPage);
-        $totalPages = $totalPayments > 0 ? (int)ceil($totalPayments / $perPage) : 1;
+        $totalPages = 1;
+        $page = 1;
         $collectMode = isset($_GET['collect']) && $_GET['collect'] !== '0';
         $preselectedCustomerId = isset($_GET['customer']) ? trim($_GET['customer']) : '';
         $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
@@ -82,7 +110,8 @@ class PaymentsController
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
-        $totalPayments = $totalPayments ?? count($payments);
+        $paymentsByCustomer = $paymentsByCustomer ?? [];
+        $totalPayments = $totalPayments ?? 0;
         $preselectedCustomerId = $preselectedCustomerId ?? '';
         require __DIR__ . '/../../views/payments/index.php';
     }

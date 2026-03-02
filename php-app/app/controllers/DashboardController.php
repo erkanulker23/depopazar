@@ -55,12 +55,15 @@ class DashboardController
 
         $upcomingPayments = [];
         $expiringContracts = [];
+        $customersWithUnpaid = [];
         if ($companyId) {
             $upcomingPayments = Payment::findUpcoming($this->pdo, $companyId, 10);
             $expiringContracts = Contract::findExpiringSoon($this->pdo, $companyId, 30);
+            $customersWithUnpaid = Payment::findCustomersWithUnpaidPayments($this->pdo, $companyId, 50);
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $upcomingPayments = Payment::findUpcoming($this->pdo, null, 10);
             $expiringContracts = Contract::findExpiringSoon($this->pdo, null, 30);
+            $customersWithUnpaid = Payment::findCustomersWithUnpaidPayments($this->pdo, null, 50);
         }
 
         $config = require __DIR__ . '/../../config/config.php';

@@ -9,9 +9,17 @@ ob_start();
 
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <div></div>
-    <button type="button" onclick="openModal('addWarehouseModal')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
-        <i class="bi bi-plus-lg mr-2"></i> Yeni Depo
-    </button>
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="/depolar/excel-disari-aktar" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar
+        </a>
+        <a href="/depolar/excel-ice-aktar" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <i class="bi bi-file-earmark-arrow-down"></i> Excel İçe Aktar
+        </a>
+        <button type="button" onclick="openModal('addWarehouseModal')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
+            <i class="bi bi-plus-lg mr-2"></i> Yeni Depo
+        </button>
+    </div>
 </div>
 
 <?php if (!empty($flashSuccess)): ?>

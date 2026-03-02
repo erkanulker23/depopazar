@@ -19,9 +19,17 @@ ob_start();
         </select>
         <button type="submit" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
     </form>
-    <button type="button" onclick="openModal('addRoomModal')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
-        <i class="bi bi-plus-lg mr-2"></i> Yeni Oda
-    </button>
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="/odalar/excel-disari-aktar<?= isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? '?warehouse_id=' . urlencode($_GET['warehouse_id']) : '' ?>" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar
+        </a>
+        <a href="/odalar/excel-ice-aktar" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <i class="bi bi-file-earmark-arrow-down"></i> Excel İçe Aktar
+        </a>
+        <button type="button" onclick="openModal('addRoomModal')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
+            <i class="bi bi-plus-lg mr-2"></i> Yeni Oda
+        </button>
+    </div>
 </div>
 
 <?php if (!empty($flashSuccess)): ?>

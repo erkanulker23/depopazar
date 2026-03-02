@@ -23,12 +23,20 @@ $router->get('/genel-bakis', fn() => (new DashboardController($pdo))->index());
 $router->post('/genel-bakis', function () { header('Location: /genel-bakis', true, 303); exit; });
 
 $router->get('/depolar', fn() => (new WarehousesController($pdo))->index());
+$router->get('/depolar/excel-disari-aktar', fn() => (new WarehousesController($pdo))->exportCsv());
+$router->get('/depolar/excel-sablon', fn() => (new WarehousesController($pdo))->downloadTemplate());
+$router->get('/depolar/excel-ice-aktar', fn() => (new WarehousesController($pdo))->importForm());
+$router->post('/depolar/excel-ice-aktar', fn() => (new WarehousesController($pdo))->importCsv());
 $router->get('/depolar/{id}', fn(array $p) => (new WarehousesController($pdo))->detail($p));
 $router->post('/depolar/ekle', fn() => (new WarehousesController($pdo))->create());
 $router->post('/depolar/guncelle', fn() => (new WarehousesController($pdo))->update());
 $router->post('/depolar/sil', fn() => (new WarehousesController($pdo))->delete());
 
 $router->get('/odalar', fn() => (new RoomsController($pdo))->index());
+$router->get('/odalar/excel-disari-aktar', fn() => (new RoomsController($pdo))->exportCsv());
+$router->get('/odalar/excel-sablon', fn() => (new RoomsController($pdo))->downloadTemplate());
+$router->get('/odalar/excel-ice-aktar', fn() => (new RoomsController($pdo))->importForm());
+$router->post('/odalar/excel-ice-aktar', fn() => (new RoomsController($pdo))->importCsv());
 $router->get('/odalar/{id}', fn(array $p) => (new RoomsController($pdo))->detail($p));
 $router->post('/odalar/ekle', fn() => (new RoomsController($pdo))->create());
 $router->post('/odalar/guncelle', fn() => (new RoomsController($pdo))->update());
