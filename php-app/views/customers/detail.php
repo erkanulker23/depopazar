@@ -48,6 +48,9 @@ ob_start();
                 <span class="font-semibold text-gray-900 dark:text-white"><?= number_format((float)$debt, 2, ',', '.') ?> ₺</span>
                 <?php if ($debt > 0): ?><span class="text-red-600 dark:text-red-400">(Müşteri Borçlu)</span><?php endif; ?>
             </p>
+            <?php $debtDueThisMonth = $debtDueThisMonth ?? 0; if ($debtDueThisMonth > 0): ?>
+            <p class="text-xs mt-1 text-amber-700 dark:text-amber-400 font-medium">Vadesi gelmiş borç (bu ay): <?= number_format((float)$debtDueThisMonth, 2, ',', '.') ?> ₺</p>
+            <?php endif; ?>
         </div>
         <div>
             <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Son Ödeme</p>
@@ -118,6 +121,12 @@ ob_start();
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Telefon</dt>
                     <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($customer['phone'] ?? '-') ?></dd>
                 </div>
+                <?php if (!empty($customer['phone_2'])): ?>
+                <div>
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Telefon 2</dt>
+                    <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($customer['phone_2']) ?></dd>
+                </div>
+                <?php endif; ?>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">TC Kimlik No</dt>
                     <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($customer['identity_number'] ?? '-') ?></dd>

@@ -403,7 +403,11 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
-                        <input type="tel" name="phone" inputmode="tel" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Örn: 05551234567">
+                        <input type="tel" name="phone" inputmode="tel" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Örn: 05551234567" data-phone-mask>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon 2</label>
+                        <input type="tel" name="phone_2" inputmode="tel" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Örn: 05551234567" data-phone-mask>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No</label>

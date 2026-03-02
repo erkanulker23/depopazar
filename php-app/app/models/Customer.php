@@ -10,8 +10,9 @@ class Customer
             $params[] = $companyId;
         }
         if ($search !== null && $search !== '') {
-            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ?) ';
+            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.phone_2 LIKE ?) ';
             $q = '%' . $search . '%';
+            $params[] = $q;
             $params[] = $q;
             $params[] = $q;
             $params[] = $q;
@@ -39,8 +40,9 @@ class Customer
             $params[] = $companyId;
         }
         if ($search !== null && $search !== '') {
-            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ?) ';
+            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.phone_2 LIKE ?) ';
             $q = '%' . $search . '%';
+            $params[] = $q;
             $params[] = $q;
             $params[] = $q;
             $params[] = $q;
@@ -96,9 +98,21 @@ class Customer
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    /** Excel/dış sistem eşleşmesi: aynı şirkette external_id ile müşteri (boş değilse) */
+    public static function findByExternalId(PDO $pdo, string $companyId, string $externalId): ?array
+    {
+        $externalId = trim($externalId);
+        if ($externalId === '') {
+            return null;
+        }
+        $stmt = $pdo->prepare('SELECT * FROM customers WHERE company_id = ? AND external_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$companyId, $externalId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     public static function update(PDO $pdo, string $id, array $data): void
     {
-        $allowed = ['first_name', 'last_name', 'email', 'phone', 'identity_number', 'address', 'notes', 'is_active'];
+        $allowed = ['first_name', 'last_name', 'email', 'phone', 'phone_2', 'identity_number', 'address', 'notes', 'is_active', 'external_id'];
         $updates = [];
         $params = [];
         foreach ($allowed as $key) {
@@ -118,11 +132,21 @@ class Customer
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
-        $stmt = $pdo->prepare(
-            'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, identity_number, address, notes, is_active) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
+        $paramsNew = [
+            $id,
+            $data['company_id'],
+            trim($data['first_name'] ?? ''),
+            trim($data['last_name'] ?? ''),
+            trim($data['email'] ?? '') !== '' ? trim($data['email']) : '',
+            trim($data['phone'] ?? '') ?: null,
+            trim($data['phone_2'] ?? '') ?: null,
+            trim($data['identity_number'] ?? '') ?: null,
+            trim($data['address'] ?? '') ?: null,
+            trim($data['notes'] ?? '') ?: null,
+            isset($data['is_active']) ? (int) $data['is_active'] : 1,
+            trim($data['external_id'] ?? '') ?: null,
+        ];
+        $paramsOld = [
             $id,
             $data['company_id'],
             trim($data['first_name'] ?? ''),
@@ -133,7 +157,23 @@ class Customer
             trim($data['address'] ?? '') ?: null,
             trim($data['notes'] ?? '') ?: null,
             isset($data['is_active']) ? (int) $data['is_active'] : 1,
-        ]);
+        ];
+        try {
+            $stmt = $pdo->prepare(
+                'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, phone_2, identity_number, address, notes, is_active, external_id) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            );
+            $stmt->execute($paramsNew);
+        } catch (PDOException $e) {
+            if (strpos($e->getMessage(), 'phone_2') === false && strpos($e->getMessage(), 'external_id') === false) {
+                throw $e;
+            }
+            $stmt = $pdo->prepare(
+                'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, identity_number, address, notes, is_active) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            );
+            $stmt->execute($paramsOld);
+        }
         return self::findOne($pdo, $id);
     }
 

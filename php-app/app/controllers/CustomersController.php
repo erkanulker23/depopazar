@@ -95,6 +95,7 @@ class CustomersController
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
         $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
+        $debtDueThisMonth = Payment::sumUnpaidDueThisMonthByCustomerId($this->pdo, $id, $companyId);
         try {
             $debt += CustomerCharge::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
         } catch (Throwable $e) {
@@ -579,6 +580,7 @@ class CustomersController
         }
         $email = trim($_POST['email'] ?? '');
         $phone = trim($_POST['phone'] ?? '') ?: null;
+        $phone2 = trim($_POST['phone_2'] ?? '') ?: null;
         $identityNumber = trim($_POST['identity_number'] ?? '') ?: null;
         if ($identityNumber !== null && !validateTcIdentity($identityNumber)) {
             $_SESSION['flash_error'] = 'Müşteri numarası (TC Kimlik No) en fazla 11 haneli rakam olmalıdır.';
@@ -590,12 +592,18 @@ class CustomersController
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
+        if ($phone2 !== null && !validatePhone($phone2)) {
+            $_SESSION['flash_error'] = '2. telefon formatı geçersiz. Örn: 05551234567';
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+            exit;
+        }
         if ($email !== '' && !validateEmail($email)) {
             $_SESSION['flash_error'] = 'E-posta formatı geçersiz.';
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         $phoneFormatted = $phone !== null ? formatPhoneInput($phone) : null;
+        $phone2Formatted = $phone2 !== null ? formatPhoneInput($phone2) : null;
         if ($email !== '' && Customer::findByEmail($this->pdo, $companyId, $email, null)) {
             $_SESSION['flash_error'] = 'Bu e-posta adresi ile kayıtlı bir müşteri zaten var. Aynı e-posta ile müşteri kaydedilemez.';
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
@@ -612,6 +620,7 @@ class CustomersController
             'last_name'       => $lastName,
             'email'           => $email,
             'phone'           => $phoneFormatted,
+            'phone_2'         => $phone2Formatted,
             'identity_number' => $identityNumber,
             'address'         => trim($_POST['address'] ?? '') ?: null,
             'notes'           => trim($_POST['notes'] ?? '') ?: null,
@@ -792,25 +801,48 @@ class CustomersController
             if (count($row) < 2) {
                 continue;
             }
-            $firstName = $row[0] ?? '';
-            $lastName = $row[1] ?? '';
+            // Opsiyonel: ilk sütun external_id (Müşteri No); 9 sütun varsa kullan
+            $externalId = null;
+            $col0 = $row[0] ?? '';
+            $col1 = $row[1] ?? '';
+            if (count($row) >= 9 && $col0 !== '' && (stripos($col0, 'ad') === false && stripos($col1, 'soyad') === false)) {
+                $externalId = $col0;
+                $firstName = $col1;
+                $lastName = $row[2] ?? '';
+                $email = $row[3] ?? '';
+                $phone = isset($row[4]) ? trim($row[4]) : null;
+                $identityNumber = isset($row[5]) && $row[5] !== '' ? trim($row[5]) : null;
+                $address = isset($row[6]) && $row[6] !== '' ? trim($row[6]) : null;
+                $notes = isset($row[7]) && $row[7] !== '' ? trim($row[7]) : null;
+                $isActive = 1;
+                if (isset($row[8])) {
+                    $v = trim($row[8]);
+                    if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
+                        $isActive = 0;
+                    }
+                }
+            } else {
+                $externalId = null;
+                $firstName = $col0;
+                $lastName = $col1;
+                $email = $row[2] ?? '';
+                $phone = isset($row[3]) ? trim($row[3]) : null;
+                $identityNumber = isset($row[4]) && $row[4] !== '' ? trim($row[4]) : null;
+                $address = isset($row[5]) && $row[5] !== '' ? trim($row[5]) : null;
+                $notes = isset($row[6]) && $row[6] !== '' ? trim($row[6]) : null;
+                $isActive = 1;
+                if (isset($row[7])) {
+                    $v = trim($row[7]);
+                    if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
+                        $isActive = 0;
+                    }
+                }
+            }
             if ($firstName === '' && $lastName === '') {
                 continue;
             }
             if (stripos($firstName, 'ad') !== false && stripos($lastName, 'soyad') !== false) {
                 continue; // başlık satırı
-            }
-            $email = $row[2] ?? '';
-            $phone = isset($row[3]) ? trim($row[3]) : null;
-            $identityNumber = isset($row[4]) && $row[4] !== '' ? trim($row[4]) : null;
-            $address = isset($row[5]) && $row[5] !== '' ? trim($row[5]) : null;
-            $notes = isset($row[6]) && $row[6] !== '' ? trim($row[6]) : null;
-            $isActive = 1;
-            if (isset($row[7])) {
-                $v = trim($row[7]);
-                if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
-                    $isActive = 0;
-                }
             }
 
             if ($identityNumber !== null && !validateTcIdentity($identityNumber)) {
@@ -825,6 +857,17 @@ class CustomersController
             }
             $phoneFormatted = ($phone !== null && $phone !== '') ? formatPhoneInput($phone) : null;
 
+            $existing = null;
+            if ($externalId !== null && $externalId !== '') {
+                $existing = Customer::findByExternalId($this->pdo, $companyId, $externalId);
+            }
+            if (!$existing && $email !== '') {
+                $existing = Customer::findByEmail($this->pdo, $companyId, $email, null);
+            }
+            if (!$existing && $phoneFormatted !== null) {
+                $existing = Customer::findByPhone($this->pdo, $companyId, $phoneFormatted, null);
+            }
+
             try {
                 $data = [
                     'company_id'      => $companyId,
@@ -836,9 +879,15 @@ class CustomersController
                     'address'         => $address,
                     'notes'           => $notes,
                     'is_active'       => $isActive,
+                    'external_id'     => $externalId,
                 ];
-                Customer::create($this->pdo, $data);
-                $added++;
+                if ($existing) {
+                    Customer::update($this->pdo, $existing['id'], $data);
+                    $added++; // güncelleme de "işlendi" sayılır
+                } else {
+                    Customer::create($this->pdo, $data);
+                    $added++;
+                }
             } catch (Throwable $e) {
                 $errors[] = $firstName . ' ' . $lastName . ': ' . $e->getMessage();
                 $skipped++;

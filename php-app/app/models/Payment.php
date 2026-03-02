@@ -196,7 +196,7 @@ class Payment
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
         }
-        $sql .= ' ORDER BY p.due_date DESC ';
+        $sql .= ' ORDER BY p.due_date ASC ';
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -217,6 +217,35 @@ class Payment
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return (float) $stmt->fetchColumn();
+    }
+
+    /** Müşteri: bu ay vadesi gelen (ve henüz ödenmemiş) tutar */
+    public static function sumUnpaidDueThisMonthByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): float
+    {
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE c.customer_id = ? AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND YEAR(p.due_date) = YEAR(CURDATE()) AND MONTH(p.due_date) = MONTH(CURDATE()) ';
+        $params = [$customerId];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    /** Ödemeyi iptal et / geri al (paid -> pending, paid_at temizlenir; borç olarak tekrar görünür) */
+    public static function cancel(PDO $pdo, string $paymentId): bool
+    {
+        $stmt = $pdo->prepare(
+            'UPDATE payments SET status = \'pending\', paid_at = NULL, payment_method = NULL, transaction_id = NULL, bank_account_id = NULL WHERE id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([$paymentId]);
+        return $stmt->rowCount() > 0;
     }
 
     public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null): void

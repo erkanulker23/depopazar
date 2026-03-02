@@ -363,5 +363,24 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         fetchNotifications();
     })();
     </script>
+    <script>
+    (function() {
+        document.addEventListener('input', function(e) {
+            var inp = e.target;
+            if (!inp.matches || !inp.matches('input[data-phone-mask]')) return;
+            var v = inp.value.replace(/\D/g, '');
+            if (v.length > 0 && v.charAt(0) === '9' && v.charAt(1) === '0') v = v.substr(2);
+            if (v.length > 0 && v.charAt(0) !== '0') v = '0' + v;
+            if (v.length > 11) v = v.substr(0, 11);
+            if (v.length <= 1) { inp.value = v; return; }
+            var s = v.charAt(0);
+            if (v.length > 1) s += ' ' + v.substr(1, 3);
+            if (v.length > 4) s += ' ' + v.substr(4, 3);
+            if (v.length > 7) s += ' ' + v.substr(7, 2);
+            if (v.length > 9) s += ' ' + v.substr(9, 2);
+            inp.value = s;
+        });
+    })();
+    </script>
 </body>
 </html>

@@ -175,6 +175,47 @@ class PaymentsController
         require __DIR__ . '/../../views/payments/detail.php';
     }
 
+    /** Ödemeyi iptal et (yanlış işlem geri alınsın) */
+    public function cancel(array $params): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /odemeler');
+            exit;
+        }
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            $_SESSION['flash_error'] = 'Ödeme bulunamadı.';
+            header('Location: /odemeler');
+            exit;
+        }
+        $payment = Payment::findOne($this->pdo, $id);
+        if (!$payment) {
+            $_SESSION['flash_error'] = 'Ödeme kaydı bulunamadı.';
+            header('Location: /odemeler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($payment['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu ödemeyi iptal etme yetkiniz yok.';
+            header('Location: /odemeler');
+            exit;
+        }
+        if (($payment['status'] ?? '') !== 'paid') {
+            $_SESSION['flash_error'] = 'Sadece ödenmiş ödemeler iptal edilebilir.';
+            header('Location: /odemeler/' . $id);
+            exit;
+        }
+        if (Payment::cancel($this->pdo, $id)) {
+            $_SESSION['flash_success'] = 'Ödeme iptal edildi.';
+        } else {
+            $_SESSION['flash_error'] = 'İptal işlemi yapılamadı.';
+        }
+        header('Location: /odemeler/' . $id);
+        exit;
+    }
+
     public function printPage(array $params): void
     {
         Auth::requireStaff();

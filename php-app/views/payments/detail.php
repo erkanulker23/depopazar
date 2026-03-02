@@ -19,9 +19,18 @@ ob_start();
             <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Ödeme Detayı</h1>
             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($payment['payment_number'] ?? '') ?></p>
         </div>
-        <a href="/odemeler/<?= htmlspecialchars($payment['id'] ?? '') ?>/yazdir" target="_blank" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
-            <i class="bi bi-printer mr-2"></i> Yazdır
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/odemeler/<?= htmlspecialchars($payment['id'] ?? '') ?>/yazdir" target="_blank" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
+                <i class="bi bi-printer mr-2"></i> Yazdır
+            </a>
+            <?php if (($payment['status'] ?? '') === 'paid'): ?>
+            <form method="post" action="/odemeler/<?= htmlspecialchars($payment['id'] ?? '') ?>/iptal" class="inline" onsubmit="return confirm('Bu ödemeyi iptal etmek istediğinize emin misiniz? Ödeme borç olarak tekrar görünecek.');">
+                <button type="submit" class="inline-flex items-center px-4 py-2 rounded-xl border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 font-medium hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <i class="bi bi-x-circle mr-2"></i> Ödemeyi İptal Et
+                </button>
+            </form>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 

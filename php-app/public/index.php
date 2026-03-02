@@ -67,6 +67,7 @@ $router->post('/girisler/sonlandir', fn() => (new ContractsController($pdo))->te
 $router->post('/girisler/sil', fn() => (new ContractsController($pdo))->delete());
 $router->get('/odemeler', fn() => (new PaymentsController($pdo))->index());
 $router->post('/odemeler/odeme-al', fn() => (new PaymentsController($pdo))->markPaid());
+$router->post('/odemeler/{id}/iptal', fn(array $p) => (new PaymentsController($pdo))->cancel($p));
 $router->get('/odemeler/{id}/yazdir', fn(array $p) => (new PaymentsController($pdo))->printPage($p));
 $router->get('/odemeler/{id}', fn(array $p) => (new PaymentsController($pdo))->show($p));
 $router->get('/nakliye-isler', fn() => (new TransportationJobsController($pdo))->index());
