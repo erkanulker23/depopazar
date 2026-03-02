@@ -241,7 +241,12 @@ class PaymentsController
         } else {
             $_SESSION['flash_error'] = 'İptal işlemi yapılamadı.';
         }
-        header('Location: /odemeler/' . $id);
+        $redirect = isset($_POST['redirect']) ? trim($_POST['redirect']) : '';
+        if ($redirect !== '' && (str_starts_with($redirect, '/raporlar/') || str_starts_with($redirect, '/odemeler'))) {
+            header('Location: ' . $redirect);
+        } else {
+            header('Location: /odemeler/' . $id);
+        }
         exit;
     }
 

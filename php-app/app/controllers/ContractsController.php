@@ -48,13 +48,8 @@ class ContractsController
         $staff = [];
         $owners = [];
         if ($companyId) {
-            // Personel seçimi: şirketteki tüm personel + depo sahipleri (company_staff, data_entry, accounting, company_owner)
-            $stmt = $this->pdo->prepare('SELECT id, first_name, last_name, email FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (\'company_owner\', \'company_staff\', \'data_entry\', \'accounting\') ORDER BY first_name, last_name');
-            $stmt->execute([$companyId]);
-            $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $stmt = $this->pdo->prepare('SELECT id, first_name, last_name, email FROM users WHERE company_id = ? AND deleted_at IS NULL AND role = \'company_owner\' ORDER BY first_name, last_name');
-            $stmt->execute([$companyId]);
-            $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $staff = User::findStaff($this->pdo, $companyId);
+            $owners = array_values(array_filter($staff, fn($u) => ($u['role'] ?? '') === 'company_owner'));
         }
         $openNewSale = isset($_GET['newSale']) && $_GET['newSale'] !== '0';
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';

@@ -25,7 +25,7 @@ if (!function_exists('validatePhone')) {
     }
 }
 
-/** Telefon formatına çevir (girişten) */
+/** Telefon formatına çevir (girişten) - veritabanı için normalize */
 if (!function_exists('formatPhoneInput')) {
     function formatPhoneInput(?string $value): ?string {
         if ($value === null || $value === '') return null;
@@ -34,6 +34,18 @@ if (!function_exists('formatPhoneInput')) {
         if (strlen($v) === 11 && substr($v, 0, 2) === '90') return '0' . substr($v, 2);
         if (strlen($v) >= 10) return $v;
         return $value;
+    }
+}
+
+/** Telefonu ekranda göstermek için maskeli formata çevir (05xx xxx xx xx) */
+if (!function_exists('formatPhoneDisplay')) {
+    function formatPhoneDisplay(?string $value): string {
+        if ($value === null || $value === '') return '';
+        $v = preg_replace('/\D/', '', $value);
+        if (strlen($v) === 10 && $v[0] === '5') $v = '0' . $v;
+        if (strlen($v) === 11 && substr($v, 0, 2) === '90') $v = '0' . substr($v, 2);
+        if (strlen($v) !== 11 || $v[0] !== '0' || $v[1] !== '5') return $value;
+        return $v[0] . ' ' . substr($v, 1, 3) . ' ' . substr($v, 4, 3) . ' ' . substr($v, 7, 2) . ' ' . substr($v, 9, 2);
     }
 }
 

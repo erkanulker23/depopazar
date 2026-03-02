@@ -2,6 +2,7 @@
 $currentPage = 'musteriler';
 $q = isset($_GET['q']) ? trim($_GET['q']) : '';
 $customers = $customers ?? [];
+$duplicateFullNames = $duplicateFullNames ?? [];
 ob_start();
 ?>
 <div class="mb-6">
@@ -11,7 +12,7 @@ ob_start();
 
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <form method="get" action="/musteriler" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <input type="search" name="q" value="<?= htmlspecialchars($q) ?>" placeholder="Ad, e-posta veya telefon ara..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="search" name="q" value="<?= htmlspecialchars($q) ?>" placeholder="Ad, e-posta, telefon veya bilgi notu ara..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
         <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
         <?php if ($q !== ''): ?><a href="/musteriler" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
     </form>
@@ -62,6 +63,12 @@ ob_start();
                                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2"><?= nl2br(htmlspecialchars(mb_substr(trim($c['notes']), 0, 100) . (mb_strlen(trim($c['notes'])) > 100 ? '…' : ''))) ?></p>
                             <?php endif; ?>
                             <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <?php
+                                $fullName = trim(($c['first_name'] ?? '') . ' ' . ($c['last_name'] ?? ''));
+                                $isDuplicate = in_array($fullName, $duplicateFullNames, true);
+                                if ($isDuplicate): ?>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">Tekrarlanan müşteri</span>
+                                <?php endif; ?>
                                 <?php if (!empty($c['is_active'])): ?>
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
                                 <?php else: ?>
@@ -114,7 +121,11 @@ ob_start();
                                 </button>
                             </td>
                             <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                                <?php $fullName = trim(($c['first_name'] ?? '') . ' ' . ($c['last_name'] ?? '')); $isDuplicate = in_array($fullName, $duplicateFullNames, true); ?>
                                 <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"><?= htmlspecialchars($c['first_name'] . ' ' . $c['last_name']) ?></a>
+                                <?php if ($isDuplicate): ?>
+                                    <span class="ml-1.5 px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">Tekrarlanan müşteri</span>
+                                <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['email'] ?? '') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['phone'] ?? '-') ?></td>

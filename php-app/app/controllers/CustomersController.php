@@ -29,6 +29,10 @@ class CustomersController
             $customers = [];
         }
 
+        $duplicateFullNames = [];
+        if (!empty($customers) || $customersTotal > 0) {
+            $duplicateFullNames = Customer::getDuplicateFullNames($this->pdo, $companyId ?? null);
+        }
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
@@ -455,8 +459,13 @@ class CustomersController
             header('Location: /musteriler/' . $id);
             exit;
         }
-        if ($checkCompanyId && $phoneFormatted !== null && Customer::findByPhone($this->pdo, $checkCompanyId, $phoneFormatted, $id)) {
-            $_SESSION['flash_error'] = 'Bu telefon numarası başka bir müşteride kayıtlı.';
+        if ($checkCompanyId && $phoneFormatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $checkCompanyId, $phoneFormatted, $id)) {
+            $_SESSION['flash_error'] = 'Bu telefon numarası başka bir müşteride kayıtlı. Aynı telefon numarasına ait başka bir müşteri olamaz.';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        if ($checkCompanyId && $phone2Formatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $checkCompanyId, $phone2Formatted, $id)) {
+            $_SESSION['flash_error'] = 'Bu 2. telefon numarası başka bir müşteride kayıtlı. Aynı telefon numarasına ait başka bir müşteri olamaz.';
             header('Location: /musteriler/' . $id);
             exit;
         }
@@ -695,8 +704,13 @@ class CustomersController
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
-        if ($phoneFormatted !== null && Customer::findByPhone($this->pdo, $companyId, $phoneFormatted, null)) {
-            $_SESSION['flash_error'] = 'Bu telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarası ile müşteri kaydedilemez.';
+        if ($phoneFormatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $companyId, $phoneFormatted, null)) {
+            $_SESSION['flash_error'] = 'Bu telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarasına ait başka bir müşteri olamaz.';
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+            exit;
+        }
+        if ($phone2Formatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $companyId, $phone2Formatted, null)) {
+            $_SESSION['flash_error'] = 'Bu 2. telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarasına ait başka bir müşteri olamaz.';
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
@@ -951,7 +965,7 @@ class CustomersController
                 $existing = Customer::findByEmail($this->pdo, $companyId, $email, null);
             }
             if (!$existing && $phoneFormatted !== null) {
-                $existing = Customer::findByPhone($this->pdo, $companyId, $phoneFormatted, null);
+                $existing = Customer::findByPhoneOrPhone2($this->pdo, $companyId, $phoneFormatted, null);
             }
 
             try {

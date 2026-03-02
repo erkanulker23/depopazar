@@ -132,14 +132,21 @@ $page = $page ?? 1;
                                     $st = $p['status'] ?? 'pending';
                                     $canCollect = in_array($st, ['pending', 'overdue']);
                                     $pJson = json_encode(['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']);
-                                    $cls = $st === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ($st === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : ($st === 'cancelled' ? 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'));
+                                    $displayLabel = $statusLabels[$st] ?? $st;
+                                    if ($st === 'pending' && !empty($p['due_date'])) {
+                                        $dueTs = strtotime($p['due_date']);
+                                        if ($dueTs !== false && $dueTs > time()) {
+                                            $displayLabel = 'Vadesi gelmemiş';
+                                        }
+                                    }
+                                    $cls = $st === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ($st === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : ($st === 'cancelled' ? 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300' : ($displayLabel === 'Vadesi gelmemiş' ? 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300')));
                                 ?>
                                 <tr class="hover:bg-gray-100/50 dark:hover:bg-gray-700/30">
                                     <td class="py-2 pr-4 font-medium"><a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($p['payment_number'] ?? '-') ?></a></td>
                                     <td class="py-2 pr-4 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></td>
                                     <td class="py-2 pr-4 text-gray-600 dark:text-gray-300"><?= $p['due_date'] ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></td>
                                     <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</td>
-                                    <td class="py-2 pr-4"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $cls ?>"><?= htmlspecialchars($statusLabels[$st] ?? $st) ?></span></td>
+                                    <td class="py-2 pr-4"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $cls ?>"><?= htmlspecialchars($displayLabel) ?></span></td>
                                     <td class="py-2">
                                         <?php if ($canCollect): ?>
                                             <button type="button" onclick="event.stopPropagation(); openCollectForPayment(<?= htmlspecialchars($pJson) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Ödeme Al</button>
@@ -319,10 +326,31 @@ function openCollectModal() {
     collectSelectedPayments = [];
     collectStep(1);
 }
+function formatDueMonth(dueDateStr) {
+    if (!dueDateStr) return '';
+    var part = dueDateStr.split(' ')[0];
+    var d = part.split('-');
+    if (d.length < 2) return '';
+    var months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    var month = parseInt(d[1], 10) - 1;
+    var year = d[0];
+    return (months[month] || '') + ' ' + year;
+}
+function buildAmountSummaryHtml(payments) {
+    var lines = [];
+    (payments || []).forEach(function(p) {
+        var monthLabel = formatDueMonth(p.due_date);
+        var amt = parseFloat(p.amount || 0).toFixed(2).replace('.', ',');
+        lines.push(monthLabel ? (monthLabel + ': ' + amt + ' ₺') : ('Tutar: ' + amt + ' ₺'));
+    });
+    var total = (payments || []).reduce(function(s, x) { return s + parseFloat(x.amount || 0); }, 0);
+    lines.push('Toplam: ' + total.toFixed(2).replace('.', ',') + ' ₺');
+    return lines.join('<br>');
+}
 function openCollectForPayment(payment) {
     collectSelectedPayments = [payment];
     document.getElementById('collectModal').classList.remove('hidden');
-    document.getElementById('selectedAmountSummary').textContent = 'Toplam: ' + parseFloat(payment.amount || 0).toFixed(2).replace('.', ',') + ' ₺';
+    document.getElementById('selectedAmountSummary').innerHTML = buildAmountSummaryHtml(collectSelectedPayments);
     collectStep(3);
     document.getElementById('stepMethod').classList.remove('hidden');
 }
@@ -359,8 +387,7 @@ function selectCustomer(customerId, payments, customerName) {
 }
 function selectOnePayment(p) {
     collectSelectedPayments = [p];
-    var total = collectSelectedPayments.reduce(function(s, x) { return s + parseFloat(x.amount || 0); }, 0);
-    document.getElementById('selectedAmountSummary').textContent = 'Toplam: ' + total.toFixed(2).replace('.', ',') + ' ₺';
+    document.getElementById('selectedAmountSummary').innerHTML = buildAmountSummaryHtml(collectSelectedPayments);
     collectStep(3);
     document.getElementById('stepMethod').classList.remove('hidden');
 }

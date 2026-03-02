@@ -80,10 +80,14 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Banka</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Sözleşme / Müşteri</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">İşlem</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                    <?php foreach ($rows as $r): ?>
+                    <?php
+                    $reportUrl = '/raporlar/banka-hesaplari?' . http_build_query(array_filter(['bank_account_id' => $bankAccountId ?: null, 'start_date' => $startDate, 'end_date' => $endDate]));
+                    foreach ($rows as $r):
+                    ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3">
                                 <a href="/odemeler/<?= htmlspecialchars($r['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></a>
@@ -92,6 +96,12 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['bank_name'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['contract_number'] ?? '') ?> / <?= htmlspecialchars(trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? ''))) ?></td>
                             <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white"><?= fmtMoney($r['amount'] ?? 0) ?> ₺</td>
+                            <td class="px-4 py-3 text-right">
+                                <form method="post" action="/odemeler/<?= htmlspecialchars($r['id']) ?>/iptal" class="inline" onsubmit="return confirm('Bu ödemeyi iptal etmek istediğinize emin misiniz?');">
+                                    <input type="hidden" name="redirect" value="<?= htmlspecialchars($reportUrl) ?>">
+                                    <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-sm font-medium">Ödemeyi iptal et</button>
+                                </form>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

@@ -14,7 +14,7 @@ ob_start();
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($customerName) ?></p>
     </div>
     <div class="flex gap-2">
-        <button type="button" onclick="document.getElementById('editCustomerModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
+        <button type="button" onclick="openEditCustomerModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
             <i class="bi bi-pencil mr-2"></i> Müşteri Düzenle
         </button>
         <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/yazdir" target="_blank" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -44,7 +44,7 @@ ob_start();
     <div class="p-4 space-y-4">
         <div class="flex flex-wrap items-center gap-2">
             <span class="font-bold text-gray-900 dark:text-white"><?= htmlspecialchars($customerName) ?></span>
-            <button type="button" onclick="document.getElementById('editCustomerModal').classList.remove('hidden')" class="text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" title="Düzenle"><i class="bi bi-pencil"></i></button>
+            <button type="button" onclick="openEditCustomerModal()" class="text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" title="Düzenle"><i class="bi bi-pencil"></i></button>
         </div>
         <div>
             <p class="text-sm text-gray-600 dark:text-gray-300">
@@ -110,7 +110,7 @@ ob_start();
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <i class="bi bi-person text-emerald-600"></i> Müşteri Bilgileri
-                <button type="button" onclick="document.getElementById('editCustomerModal').classList.remove('hidden')" class="ml-2 p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" title="Düzenle"><i class="bi bi-pencil"></i></button>
+                <button type="button" onclick="openEditCustomerModal()" class="ml-2 p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" title="Düzenle"><i class="bi bi-pencil"></i></button>
             </h2>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -123,12 +123,12 @@ ob_start();
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Telefon</dt>
-                    <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($customer['phone'] ?? '-') ?></dd>
+                    <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= htmlspecialchars(!empty($customer['phone']) ? formatPhoneDisplay($customer['phone']) : '-') ?></dd>
                 </div>
                 <?php if (!empty($customer['phone_2'])): ?>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Telefon 2</dt>
-                    <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($customer['phone_2']) ?></dd>
+                    <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= htmlspecialchars(formatPhoneDisplay($customer['phone_2'])) ?></dd>
                 </div>
                 <?php endif; ?>
                 <div>
@@ -154,7 +154,7 @@ ob_start();
                 <i class="bi bi-file-text text-emerald-600"></i> Sözleşmeler
             </h2>
             <?php if (empty($contracts)): ?>
-                <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu müşteriye ait sözleşme yok.</div>
+                <div class="p-6 text-center text-gray-500 dark:text-gray-400">Depo girişi yok.</div>
             <?php else: ?>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
@@ -400,11 +400,11 @@ ob_start();
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
-                    <input type="tel" name="phone" inputmode="tel" value="<?= htmlspecialchars($customer['phone'] ?? '') ?>" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white phone-mask" data-phone-mask>
+                    <input type="tel" name="phone" inputmode="tel" value="<?= htmlspecialchars(formatPhoneDisplay($customer['phone'] ?? '')) ?>" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white phone-mask" data-phone-mask title="Örn: 05551234567">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon 2</label>
-                    <input type="tel" name="phone_2" inputmode="tel" value="<?= htmlspecialchars($customer['phone_2'] ?? '') ?>" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white phone-mask" data-phone-mask>
+                    <input type="tel" name="phone_2" inputmode="tel" value="<?= htmlspecialchars(formatPhoneDisplay($customer['phone_2'] ?? '')) ?>" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white phone-mask" data-phone-mask title="Örn: 05551234567">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No</label>
@@ -553,6 +553,32 @@ ob_start();
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    function applyPhoneMaskToInput(inp) {
+        if (!inp || !inp.matches || !inp.matches('input[data-phone-mask]')) return;
+        var v = inp.value.replace(/\D/g, '');
+        if (v.length > 0 && v.charAt(0) === '9' && v.charAt(1) === '0') v = v.substr(2);
+        if (v.length > 0 && v.charAt(0) !== '0') v = '0' + v;
+        if (v.length > 11) v = v.substr(0, 11);
+        if (v.length <= 1) { inp.value = v; return; }
+        var s = v.charAt(0);
+        if (v.length > 1) s += ' ' + v.substr(1, 3);
+        if (v.length > 4) s += ' ' + v.substr(4, 3);
+        if (v.length > 7) s += ' ' + v.substr(7, 2);
+        if (v.length > 9) s += ' ' + v.substr(9, 2);
+        inp.value = s;
+    }
+    window.openEditCustomerModal = function() {
+        var modal = document.getElementById('editCustomerModal');
+        if (modal) {
+            modal.querySelectorAll('input[data-phone-mask]').forEach(applyPhoneMaskToInput);
+            modal.classList.remove('hidden');
+        }
+    };
+})();
+</script>
 
 <?php
 $content = ob_get_clean();

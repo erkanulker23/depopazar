@@ -10,8 +10,9 @@ class Customer
             $params[] = $companyId;
         }
         if ($search !== null && $search !== '') {
-            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.phone_2 LIKE ?) ';
+            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.phone_2 LIKE ? OR c.notes LIKE ?) ';
             $q = '%' . $search . '%';
+            $params[] = $q;
             $params[] = $q;
             $params[] = $q;
             $params[] = $q;
@@ -40,8 +41,9 @@ class Customer
             $params[] = $companyId;
         }
         if ($search !== null && $search !== '') {
-            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.phone_2 LIKE ?) ';
+            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.phone_2 LIKE ? OR c.notes LIKE ?) ';
             $q = '%' . $search . '%';
+            $params[] = $q;
             $params[] = $q;
             $params[] = $q;
             $params[] = $q;
@@ -53,6 +55,27 @@ class Customer
             $stmt->execute($params);
         }
         return (int) $stmt->fetchColumn();
+    }
+
+    /** Aynı ad-soyada sahip (tekrarlanan) müşteri adlarını döndürür – şirket veya tümü. */
+    public static function getDuplicateFullNames(PDO $pdo, ?string $companyId = null): array
+    {
+        $sql = 'SELECT TRIM(first_name) AS fn, TRIM(last_name) AS ln FROM customers WHERE deleted_at IS NULL ';
+        $params = [];
+        if ($companyId !== null && $companyId !== '') {
+            $sql .= ' AND company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY TRIM(first_name), TRIM(last_name) HAVING COUNT(*) > 1';
+        $stmt = count($params) > 0 ? $pdo->prepare($sql) : $pdo->query($sql);
+        if (count($params) > 0) {
+            $stmt->execute($params);
+        }
+        $out = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $out[] = trim(($row['fn'] ?? '') . ' ' . ($row['ln'] ?? ''));
+        }
+        return $out;
     }
 
     public static function findOne(PDO $pdo, string $id): ?array
@@ -88,6 +111,24 @@ class Customer
         }
         $sql = 'SELECT * FROM customers WHERE company_id = ? AND phone = ? AND deleted_at IS NULL';
         $params = [$companyId, $phone];
+        if ($excludeId !== null && $excludeId !== '') {
+            $sql .= ' AND id != ?';
+            $params[] = $excludeId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /** Aynı şirkette bu numara başka bir müşteride phone veya phone_2 olarak kayıtlı mı? (excludeId = güncellemede kendi kaydı) */
+    public static function findByPhoneOrPhone2(PDO $pdo, string $companyId, ?string $phone, ?string $excludeId = null): ?array
+    {
+        if ($phone === null || $phone === '') {
+            return null;
+        }
+        $sql = 'SELECT * FROM customers WHERE company_id = ? AND (phone = ? OR phone_2 = ?) AND deleted_at IS NULL';
+        $params = [$companyId, $phone, $phone];
         if ($excludeId !== null && $excludeId !== '') {
             $sql .= ' AND id != ?';
             $params[] = $excludeId;

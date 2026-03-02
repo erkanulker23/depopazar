@@ -87,7 +87,7 @@ ob_start();
     <table class="min-w-full border border-gray-300 text-sm">
         <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th></tr></thead>
         <tbody>
-            <?php foreach ($payments as $p): $s = $p['status'] ?? 'pending'; $l = $s === 'paid' ? 'Ödendi' : ($s === 'overdue' ? 'Gecikmiş' : 'Bekliyor'); ?>
+            <?php foreach ($payments as $p): $s = $p['status'] ?? 'pending'; $l = $s === 'paid' ? 'Ödendi' : ($s === 'overdue' ? 'Gecikmiş' : ($s === 'pending' && !empty($p['due_date']) && strtotime($p['due_date']) > time() ? 'Vadesi gelmemiş' : 'Bekliyor')); ?>
             <tr><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td><td class="border border-gray-300 px-3 py-2"><?= $l ?></td></tr>
             <?php endforeach; ?>
         </tbody>
@@ -169,8 +169,12 @@ ob_start();
                                     <td class="px-4 py-3">
                                         <?php
                                         $status = $p['status'] ?? 'pending';
-                                        $badge = ['pending' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300', 'paid' => 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', 'overdue' => 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300', 'cancelled' => 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'][$status] ?? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
                                         $label = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'][$status] ?? $status;
+                                        if ($status === 'pending' && !empty($p['due_date']) && strtotime($p['due_date']) > time()) {
+                                            $label = 'Vadesi gelmemiş';
+                                        }
+                                        $badge = ['pending' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300', 'paid' => 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', 'overdue' => 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300', 'cancelled' => 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'][$status] ?? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
+                                        if ($label === 'Vadesi gelmemiş') $badge = 'bg-slate-100 dark:bg-slate-900/30 text-slate-800 dark:text-slate-300';
                                         ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $badge ?>"><?= $label ?></span>
                                     </td>
