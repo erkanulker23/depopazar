@@ -178,12 +178,12 @@ $page = $page ?? 1;
                 <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme almak istediğiniz müşteriyi seçin.</p>
                 <input type="text" id="customerSearch" placeholder="Müşteri ara..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm mb-4 focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                 <div class="max-h-64 overflow-y-auto space-y-2" id="customerList">
-                    <?php foreach ($customersWithDebt as $c): ?>
+                    <?php foreach ($customersWithDebt as $idx => $c): ?>
                         <?php
                         $total = array_sum(array_map(fn($p) => (float)($p['amount'] ?? 0), $c['payments']));
                         $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));
                         ?>
-                        <button type="button" onclick="selectCustomer('<?= htmlspecialchars($c['id']) ?>', <?= htmlspecialchars(json_encode($c['payments'])) ?>, <?= json_encode($name) ?>)" class="w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between">
+                        <button type="button" data-customer-index="<?= (int) $idx ?>" class="collect-customer-btn w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between">
                             <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($name) ?></span>
                             <span class="text-sm font-semibold text-amber-700 dark:text-amber-300"><?= fmtMoney($total) ?> ₺</span>
                         </button>
@@ -422,6 +422,14 @@ document.getElementById('customerSearch').addEventListener('input', function() {
     document.querySelectorAll('#customerList button').forEach(function(btn) {
         var name = (btn.querySelector('span') && btn.querySelector('span').textContent) || '';
         btn.style.display = !q || name.toLowerCase().indexOf(q) >= 0 ? 'block' : 'none';
+    });
+});
+document.querySelectorAll('.collect-customer-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var idx = parseInt(this.getAttribute('data-customer-index'), 10);
+        if (isNaN(idx) || !customersWithDebt || !customersWithDebt[idx]) return;
+        var c = customersWithDebt[idx];
+        selectCustomer(c.id, c.payments || [], c.name || '');
     });
 });
 var preselectedCustomerId = <?= json_encode($preselectedCustomerId) ?>;

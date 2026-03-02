@@ -131,65 +131,30 @@ if (empty($setupSteps)) {
     </div>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
-    <a href="/odemeler?status=pending" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 group block">
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0 overflow-hidden">
-                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Bekleyen Ödeme</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $pendingPayments ?></p>
-                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1">adet</p>
+<a href="/odemeler" class="block mb-8">
+    <div class="stat-card min-h-[100px] hover:shadow-lg hover:shadow-rose-500/10 transition-all duration-300 border border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between gap-4 mb-3">
+            <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                <i class="bi bi-cash-stack text-rose-500"></i> Borç özeti
+            </h3>
+            <span class="text-xs text-gray-500 dark:text-gray-400"><?= (int) $pendingPayments ?> bekleyen · <?= (int) $overduePayments ?> gecikmiş ödeme</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                <span class="text-xs font-medium text-red-800 dark:text-red-200">Vadesi geçmiş</span>
+                <span class="text-sm font-bold text-red-700 dark:text-red-300 tabular-nums"><?= fmtMoney($debtOverdue ?? 0) ?> ₺</span>
             </div>
-            <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
-                <i class="bi bi-credit-card text-white text-xl"></i>
+            <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                <span class="text-xs font-medium text-amber-800 dark:text-amber-200">Vadesi gelmiş (bu ay)</span>
+                <span class="text-sm font-bold text-amber-700 dark:text-amber-300 tabular-nums"><?= fmtMoney($debtDueThisMonth ?? 0) ?> ₺</span>
+            </div>
+            <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-100 dark:bg-gray-700/60">
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Toplam borç</span>
+                <span class="text-sm font-bold text-gray-900 dark:text-white tabular-nums"><?= fmtMoney($totalDebt ?? 0) ?> ₺</span>
             </div>
         </div>
-    </a>
-    <a href="/odemeler?status=overdue" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-red-500/10 transition-all duration-300 group block">
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0 overflow-hidden">
-                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Geciken Ödeme</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $overduePayments ?></p>
-                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1">adet</p>
-            </div>
-            <div class="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex-shrink-0 shadow-lg shadow-red-500/20 group-hover:scale-105 transition-transform">
-                <i class="bi bi-exclamation-triangle text-white text-xl"></i>
-            </div>
-        </div>
-    </a>
-    <a href="/odemeler?status=overdue" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-red-600/10 transition-all duration-300 group block">
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0 overflow-hidden">
-                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Vadesi Geçmiş Borç</p>
-                <p class="text-xl font-bold text-red-600 dark:text-red-400 break-words"><?= fmtMoney($debtOverdue ?? 0) ?> ₺</p>
-            </div>
-            <div class="p-3 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex-shrink-0 shadow-lg shadow-red-500/20 group-hover:scale-105 transition-transform">
-                <i class="bi bi-calendar-x text-white text-xl"></i>
-            </div>
-        </div>
-    </a>
-    <a href="/odemeler?collect=1" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 group block">
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0 overflow-hidden">
-                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Vadesi Gelmiş Borç (Bu Ay)</p>
-                <p class="text-xl font-bold text-amber-600 dark:text-amber-400 break-words"><?= fmtMoney($debtDueThisMonth ?? 0) ?> ₺</p>
-            </div>
-            <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
-                <i class="bi bi-calendar-event text-white text-xl"></i>
-            </div>
-        </div>
-    </a>
-    <a href="/odemeler" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-rose-500/10 transition-all duration-300 group block">
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex-1 min-w-0 overflow-hidden">
-                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Toplam Borç</p>
-                <p class="text-xl font-bold text-rose-600 dark:text-rose-400 break-words"><?= fmtMoney($totalDebt ?? 0) ?> ₺</p>
-            </div>
-            <div class="p-3 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl flex-shrink-0 shadow-lg shadow-rose-500/20 group-hover:scale-105 transition-transform">
-                <i class="bi bi-cash-stack text-white text-xl"></i>
-            </div>
-        </div>
-    </a>
-</div>
+    </div>
+</a>
 
 <?php
 $upcomingPayments = $upcomingPayments ?? [];
