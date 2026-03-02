@@ -38,11 +38,12 @@ class Proposal
     public static function update(PDO $pdo, string $id, array $data): void
     {
         $stmt = $pdo->prepare(
-            'UPDATE proposals SET title = ?, proposal_type = ?, customer_id = ?, status = ?, total_amount = ?, valid_until = ?, notes = ?, pickup_address = ?, delivery_address = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE proposals SET title = ?, proposal_type = ?, warehouse_id = ?, customer_id = ?, status = ?, total_amount = ?, valid_until = ?, notes = ?, pickup_address = ?, delivery_address = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
             trim($data['title'] ?? '') ?: 'Teklif',
             in_array($data['proposal_type'] ?? '', ['depo', 'nakliye'], true) ? $data['proposal_type'] : 'nakliye',
+            (trim($data['warehouse_id'] ?? '') && ($data['proposal_type'] ?? '') === 'depo') ? trim($data['warehouse_id']) : null,
             trim($data['customer_id'] ?? '') ?: null,
             $data['status'] ?? 'draft',
             isset($data['total_amount']) ? (float) $data['total_amount'] : 0,
@@ -70,16 +71,19 @@ class Proposal
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
+        $proposalType = in_array($data['proposal_type'] ?? '', ['depo', 'nakliye'], true) ? $data['proposal_type'] : 'nakliye';
+        $warehouseId = ($proposalType === 'depo' && trim($data['warehouse_id'] ?? '')) ? trim($data['warehouse_id']) : null;
         $stmt = $pdo->prepare(
-            'INSERT INTO proposals (id, company_id, customer_id, title, proposal_type, status, total_amount, currency, valid_until, notes, pickup_address, delivery_address) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO proposals (id, company_id, customer_id, title, proposal_type, warehouse_id, status, total_amount, currency, valid_until, notes, pickup_address, delivery_address) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
             $data['company_id'],
             trim($data['customer_id'] ?? '') ?: null,
             trim($data['title'] ?? '') ?: 'Teklif',
-            in_array($data['proposal_type'] ?? '', ['depo', 'nakliye'], true) ? $data['proposal_type'] : 'nakliye',
+            $proposalType,
+            $warehouseId,
             $data['status'] ?? 'draft',
             isset($data['total_amount']) ? (float) $data['total_amount'] : 0,
             $data['currency'] ?? 'TRY',

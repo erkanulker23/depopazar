@@ -73,6 +73,12 @@ if (!function_exists('fmtPrice')) {
             </div>
         </div>
 
+        <?php if (($p['proposal_type'] ?? '') === 'depo' && !empty($p['warehouse_name'])): ?>
+        <div class="mb-6">
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Depo</h2>
+            <p class="text-sm"><?= htmlspecialchars($p['warehouse_name']) ?></p>
+        </div>
+        <?php endif; ?>
         <?php if (!empty($p['pickup_address']) || !empty($p['delivery_address'])): ?>
         <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <?php if (!empty($p['pickup_address'])): ?>

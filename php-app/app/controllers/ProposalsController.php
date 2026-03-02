@@ -66,6 +66,10 @@ class ProposalsController
             exit;
         }
         $proposal['items'] = ProposalItem::findByProposalId($this->pdo, $id);
+        if (!empty($proposal['warehouse_id'])) {
+            $wh = Warehouse::findOne($this->pdo, $proposal['warehouse_id']);
+            $proposal['warehouse_name'] = $wh['name'] ?? null;
+        }
         $company = !empty($proposal['company_id']) ? Company::findOne($this->pdo, $proposal['company_id']) : null;
         $statusLabels = ['draft' => 'Taslak', 'sent' => 'Gönderildi', 'accepted' => 'Kabul', 'rejected' => 'Red'];
         require __DIR__ . '/../../views/proposals/print_one.php';
@@ -79,12 +83,15 @@ class ProposalsController
         if ($companyId) {
             $customers = Customer::findAll($this->pdo, $companyId);
             $services = Service::findAll($this->pdo, $companyId);
+            $warehouses = Warehouse::findAll($this->pdo, $companyId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $customers = Customer::findAll($this->pdo, null);
             $services = Service::findAll($this->pdo, null);
+            $warehouses = Warehouse::findAll($this->pdo, null);
         } else {
             $customers = [];
             $services = [];
+            $warehouses = [];
         }
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
@@ -147,11 +154,18 @@ class ProposalsController
         if (!in_array($proposalType, ['depo', 'nakliye'], true)) {
             $proposalType = 'nakliye';
         }
+        $warehouseId = ($proposalType === 'depo' && trim($_POST['warehouse_id'] ?? '')) ? trim($_POST['warehouse_id']) : null;
+        if ($proposalType === 'depo' && !$warehouseId) {
+            $_SESSION['flash_error'] = 'Depo teklifi için depo seçimi zorunludur.';
+            header('Location: /teklifler/yeni');
+            exit;
+        }
         Proposal::create($this->pdo, [
             'company_id' => $companyId,
             'customer_id' => $customerId,
             'title' => $title,
             'proposal_type' => $proposalType,
+            'warehouse_id' => $warehouseId,
             'status' => $_POST['status'] ?? 'draft',
             'total_amount' => $totalAmount,
             'valid_until' => trim($_POST['valid_until'] ?? '') ?: null,
@@ -232,9 +246,11 @@ class ProposalsController
         if ($companyId) {
             $customers = Customer::findAll($this->pdo, $companyId);
             $services = Service::findAll($this->pdo, $companyId);
+            $warehouses = Warehouse::findAll($this->pdo, $companyId);
         } else {
             $customers = Customer::findAll($this->pdo, null);
             $services = Service::findAll($this->pdo, null);
+            $warehouses = Warehouse::findAll($this->pdo, null);
         }
         $proposal['items'] = ProposalItem::findByProposalId($this->pdo, $id);
         $flashSuccess = $_SESSION['flash_success'] ?? null;
@@ -282,9 +298,16 @@ class ProposalsController
         if (!in_array($proposalType, ['depo', 'nakliye'], true)) {
             $proposalType = 'nakliye';
         }
+        $warehouseId = ($proposalType === 'depo' && trim($_POST['warehouse_id'] ?? '')) ? trim($_POST['warehouse_id']) : null;
+        if ($proposalType === 'depo' && !$warehouseId) {
+            $_SESSION['flash_error'] = 'Depo teklifi için depo seçimi zorunludur.';
+            header('Location: /teklifler/' . $id . '/duzenle');
+            exit;
+        }
         Proposal::update($this->pdo, $id, [
             'title' => trim($_POST['title'] ?? ''),
             'proposal_type' => $proposalType,
+            'warehouse_id' => $warehouseId,
             'customer_id' => trim($_POST['customer_id'] ?? '') ?: null,
             'status' => $_POST['status'] ?? 'draft',
             'total_amount' => $totalAmount,

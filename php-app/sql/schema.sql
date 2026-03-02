@@ -565,6 +565,7 @@ CREATE TABLE IF NOT EXISTS `proposals` (
   `customer_id` CHAR(36) DEFAULT NULL,
   `title` VARCHAR(255) NOT NULL,
   `proposal_type` VARCHAR(20) NOT NULL DEFAULT 'nakliye',
+  `warehouse_id` CHAR(36) DEFAULT NULL,
   `status` VARCHAR(50) DEFAULT 'draft',
   `total_amount` DECIMAL(10,2) DEFAULT 0,
   `currency` VARCHAR(10) DEFAULT 'TRY',
@@ -577,8 +578,10 @@ CREATE TABLE IF NOT EXISTS `proposals` (
   PRIMARY KEY (`id`),
   KEY `idx_proposals_company_id` (`company_id`),
   KEY `idx_proposals_customer_id` (`customer_id`),
+  KEY `idx_proposals_warehouse_id` (`warehouse_id`),
   CONSTRAINT `fk_proposals_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_proposals_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE SET NULL
+  CONSTRAINT `fk_proposals_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_proposals_warehouse` FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- proposal_items

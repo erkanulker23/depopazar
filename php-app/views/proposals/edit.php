@@ -3,6 +3,7 @@ $currentPage = 'teklifler';
 $proposal = $proposal ?? [];
 $customers = $customers ?? [];
 $services = $services ?? [];
+$warehouses = $warehouses ?? [];
 $items = $proposal['items'] ?? [];
 $flashSuccess = $flashSuccess ?? null;
 $flashError = $flashError ?? null;
@@ -17,6 +18,7 @@ $notes = $proposal['notes'] ?? '';
 $pickupAddress = $proposal['pickup_address'] ?? '';
 $deliveryAddress = $proposal['delivery_address'] ?? '';
 $proposalType = $proposal['proposal_type'] ?? 'nakliye';
+$warehouseId = $proposal['warehouse_id'] ?? '';
 $proposalTypeLabels = ['depo' => 'Depo Teklifi', 'nakliye' => 'Nakliye Teklifi'];
 ob_start();
 ?>
@@ -48,12 +50,43 @@ ob_start();
                 <div class="flex flex-wrap gap-4">
                     <?php foreach ($proposalTypeLabels as $val => $l): ?>
                         <label class="inline-flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="proposal_type" value="<?= htmlspecialchars($val) ?>" <?= $proposalType === $val ? 'checked' : '' ?> class="rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                            <input type="radio" name="proposal_type" value="<?= htmlspecialchars($val) ?>" <?= $proposalType === $val ? 'checked' : '' ?> class="proposal-type-radio rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span class="text-gray-700 dark:text-gray-300"><?= htmlspecialchars($l) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
             </div>
+
+            <!-- Depo seçimi (sadece Depo Teklifi) -->
+            <div id="proposalDepoSection" class="border-t border-gray-200 dark:border-gray-700 pt-4 <?= $proposalType !== 'depo' ? 'hidden' : '' ?>">
+                <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-building text-emerald-600"></i> Depo Seçimi</h4>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Bu teklif hangi depo için geçerli?</p>
+                <div class="max-w-md">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo <span class="text-red-500">*</span></label>
+                    <select name="warehouse_id" id="warehouse_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">Depo seçin</option>
+                        <?php foreach ($warehouses as $w): ?>
+                            <option value="<?= htmlspecialchars($w['id']) ?>" <?= ($warehouseId && $warehouseId === ($w['id'] ?? '')) ? 'selected' : '' ?>><?= htmlspecialchars($w['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Nakliye adresleri (sadece Nakliye Teklifi) -->
+            <div id="proposalNakliyeSection" class="border-t border-gray-200 dark:border-gray-700 pt-4 <?= $proposalType === 'depo' ? 'hidden' : '' ?>">
+                <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-truck text-emerald-600"></i> Nakliye Adresleri</h4>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Eşya / Hizmet Alınacak Yer (Açık Adres)</label>
+                        <textarea name="pickup_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($pickupAddress) ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Eşya / Hizmet Teslim Adresi (Açık Adres)</label>
+                        <textarea name="delivery_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($deliveryAddress) ?></textarea>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlık <span class="text-red-500">*</span></label>
@@ -76,16 +109,6 @@ ob_start();
                         <?php endforeach; ?>
                     </select>
                 </div>
-            </div>
-
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-emerald-600"></i> Eşya / Hizmet Alınacak Adres</h4>
-                <textarea name="pickup_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($pickupAddress) ?></textarea>
-            </div>
-
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-geo-alt text-green-600"></i> Eşya / Hizmet Teslim Adresi</h4>
-                <textarea name="delivery_address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($deliveryAddress) ?></textarea>
             </div>
 
             <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -173,6 +196,33 @@ ob_start();
 
 <script>
 (function() {
+    var form = document.querySelector('form[action="/teklifler/guncelle"]');
+    var depoSection = document.getElementById('proposalDepoSection');
+    var nakliyeSection = document.getElementById('proposalNakliyeSection');
+    var warehouseSelect = document.getElementById('warehouse_id');
+    var radios = form && form.querySelectorAll('.proposal-type-radio');
+    function setTypeVisibility() {
+        var isDepo = form && form.querySelector('input[name="proposal_type"]:checked').value === 'depo';
+        if (depoSection) depoSection.classList.toggle('hidden', !isDepo);
+        if (nakliyeSection) nakliyeSection.classList.toggle('hidden', isDepo);
+        if (warehouseSelect) warehouseSelect.removeAttribute('required');
+        if (isDepo && warehouseSelect) warehouseSelect.setAttribute('required', 'required');
+    }
+    if (radios && radios.length) {
+        radios.forEach(function(r) { r.addEventListener('change', setTypeVisibility); });
+        setTypeVisibility();
+    }
+    if (form) form.addEventListener('submit', function(e) {
+        var isDepo = form.querySelector('input[name="proposal_type"]:checked').value === 'depo';
+        if (isDepo && warehouseSelect && (!warehouseSelect.value || warehouseSelect.value === '')) {
+            e.preventDefault();
+            alert('Depo teklifi için lütfen bir depo seçin.');
+            depoSection.classList.remove('hidden');
+            warehouseSelect.focus();
+            return false;
+        }
+    });
+
     var tbody = document.getElementById('itemsBody');
     var addBtn = document.getElementById('addItemRow');
     function rowNumber() {
