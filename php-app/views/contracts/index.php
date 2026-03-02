@@ -193,7 +193,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                                     <option value="">Depo Seçin</option>
                                     <?php foreach ($warehouses as $w): ?>
                                         <?php $whFee = isset($w['monthly_base_fee']) && $w['monthly_base_fee'] !== null && $w['monthly_base_fee'] !== '' ? (float)$w['monthly_base_fee'] : null; ?>
-                                        <option value="<?= htmlspecialchars($w['id']) ?>" data-monthly-base-fee="<?= $whFee !== null ? htmlspecialchars(number_format((float)$whFee, 2, '.', '')) : '' ?>"><?= htmlspecialchars($w['name']) ?></option>
+                                        <option value="<?= htmlspecialchars($w['id']) ?>" data-monthly-base-fee="<?= $whFee !== null ? htmlspecialchars(number_format((float)$whFee, 2, '.', '')) : '' ?>"><?= htmlspecialchars($w['name']) ?><?= $whFee !== null ? ' (' . fmtPrice($whFee) . ')' : '' ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -202,7 +202,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                                 <select name="room_id" id="newSale_room" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                                     <option value="">Önce Depo Seçin</option>
                                     <?php foreach ($rooms as $r): ?>
-                                        <option value="<?= htmlspecialchars($r['id']) ?>" data-warehouse="<?= htmlspecialchars($r['warehouse_id']) ?>"><?= htmlspecialchars($r['room_number']) ?> (<?= fmtPrice($r['monthly_price']) ?>)</option>
+                                        <option value="<?= htmlspecialchars($r['id']) ?>" data-warehouse="<?= htmlspecialchars($r['warehouse_id']) ?>"><?= htmlspecialchars($r['room_number']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -461,8 +461,7 @@ function closeNewSaleModal() {
     var roomSelect = document.getElementById('newSale_room');
     var roomOptions = [];
     roomSelect.querySelectorAll('option[data-warehouse]').forEach(function(o) {
-        var m = o.textContent.match(/[\d,\.]+/);
-        roomOptions.push({ value: o.value, warehouse: o.getAttribute('data-warehouse'), text: o.textContent, price: m ? m[0].replace(',', '.') : '' });
+        roomOptions.push({ value: o.value, warehouse: o.getAttribute('data-warehouse'), text: o.textContent.trim() });
     });
     whSelect.addEventListener('change', function() {
         var wh = this.value;
@@ -472,7 +471,6 @@ function closeNewSaleModal() {
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
-                if (o.price) opt.setAttribute('data-price', o.price);
                 roomSelect.appendChild(opt);
             }
         });

@@ -174,7 +174,8 @@ class Contract
     private static function generateContractNumber(PDO $pdo): string
     {
         $y = date('Y');
-        $stmt = $pdo->prepare("SELECT MAX(contract_number) FROM contracts WHERE contract_number LIKE ? AND deleted_at IS NULL");
+        // Tüm kayıtlar (silinmiş dahil) dikkate alınmalı; UNIQUE tüm tabloda geçerli
+        $stmt = $pdo->prepare("SELECT MAX(contract_number) FROM contracts WHERE contract_number LIKE ?");
         $stmt->execute(["SOZ-{$y}-%"]);
         $max = $stmt->fetchColumn();
         $n = 1;
