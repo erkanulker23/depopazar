@@ -7,12 +7,12 @@ if (!function_exists('fmtPrice')) {
     }
 }
 
-/** TC Kimlik No: 11 haneli rakam */
+/** TC Kimlik No / Müşteri numarası: en fazla 11 haneli rakam (boş bırakılabilir) */
 if (!function_exists('validateTcIdentity')) {
     function validateTcIdentity(?string $value): bool {
         if ($value === null || $value === '') return true;
         $v = preg_replace('/\s/', '', $value);
-        return preg_match('/^\d{11}$/', $v) === 1;
+        return preg_match('/^\d{1,11}$/', $v) === 1;
     }
 }
 

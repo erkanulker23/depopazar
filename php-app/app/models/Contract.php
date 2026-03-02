@@ -174,9 +174,13 @@ class Contract
     private static function generateContractNumber(PDO $pdo): string
     {
         $y = date('Y');
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM contracts WHERE contract_number LIKE ? AND deleted_at IS NULL");
+        $stmt = $pdo->prepare("SELECT MAX(contract_number) FROM contracts WHERE contract_number LIKE ? AND deleted_at IS NULL");
         $stmt->execute(["SOZ-{$y}-%"]);
-        $n = (int) $stmt->fetchColumn() + 1;
+        $max = $stmt->fetchColumn();
+        $n = 1;
+        if ($max && preg_match('/^SOZ-\d{4}-(\d+)$/', $max, $m)) {
+            $n = (int) $m[1] + 1;
+        }
         return sprintf('SOZ-%s-%04d', $y, $n);
     }
 

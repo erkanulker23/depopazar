@@ -581,7 +581,7 @@ class CustomersController
         $phone = trim($_POST['phone'] ?? '') ?: null;
         $identityNumber = trim($_POST['identity_number'] ?? '') ?: null;
         if ($identityNumber !== null && !validateTcIdentity($identityNumber)) {
-            $_SESSION['flash_error'] = 'TC Kimlik No 11 haneli rakam olmalıdır.';
+            $_SESSION['flash_error'] = 'Müşteri numarası (TC Kimlik No) en fazla 11 haneli rakam olmalıdır.';
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
@@ -605,9 +605,6 @@ class CustomersController
             $_SESSION['flash_error'] = 'Bu telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarası ile müşteri kaydedilemez.';
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
-        }
-        if ($email === '') {
-            $email = 'musteri-' . bin2hex(random_bytes(4)) . '@depopazar.local';
         }
         $data = [
             'company_id'      => $companyId,
