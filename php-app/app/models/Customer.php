@@ -153,7 +153,7 @@ class Customer
 
     public static function update(PDO $pdo, string $id, array $data): void
     {
-        $allowed = ['first_name', 'last_name', 'email', 'phone', 'phone_2', 'identity_number', 'address', 'notes', 'is_active', 'external_id'];
+        $allowed = ['first_name', 'last_name', 'email', 'phone', 'phone_2', 'identity_number', 'address', 'notes', 'invoice_info', 'is_active', 'external_id'];
         $updates = [];
         $params = [];
         foreach ($allowed as $key) {
@@ -184,6 +184,7 @@ class Customer
             trim($data['identity_number'] ?? '') ?: null,
             trim($data['address'] ?? '') ?: null,
             trim($data['notes'] ?? '') ?: null,
+            trim($data['invoice_info'] ?? '') ?: null,
             isset($data['is_active']) ? (int) $data['is_active'] : 1,
             trim($data['external_id'] ?? '') ?: null,
         ];
@@ -201,8 +202,8 @@ class Customer
         ];
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, phone_2, identity_number, address, notes, is_active, external_id) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, phone_2, identity_number, address, notes, invoice_info, is_active, external_id) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute($paramsNew);
         } catch (PDOException $e) {

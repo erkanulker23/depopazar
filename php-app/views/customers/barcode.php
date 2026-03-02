@@ -2,9 +2,7 @@
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
 $barcodeCode = strtoupper(substr($customer['id'], 0, 8));
 $items = $items ?? [];
-$paidMonths = $paidMonths ?? [];
-$monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-$currentYear = (int)date('Y');
+$contracts = $contracts ?? [];
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -74,31 +72,33 @@ $currentYear = (int)date('Y');
         </div>
 
         <div>
-            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Aylık Ödeme Takip Çizelgesi</h2>
-            <table class="min-w-full border border-gray-300 text-sm">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="border border-gray-300 px-3 py-2 text-left font-bold">Dönem</th>
-                        <th class="border border-gray-300 px-3 py-2 text-center font-bold">Ödendi</th>
-                        <th class="border border-gray-300 px-3 py-2 text-center font-bold">Ödenmedi</th>
-                        <th class="border border-gray-300 px-3 py-2 text-left font-bold">Not</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php for ($i = 0; $i < 12; $i++):
-                        $m = str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT);
-                        $key = $currentYear . '-' . $m;
-                        $isPaid = !empty($paidMonths[$key]);
-                    ?>
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Oda bilgileri</h2>
+            <?php if (empty($contracts)): ?>
+                <p class="text-sm text-gray-500">Bu müşteriye ait depo girişi / oda kaydı yok.</p>
+            <?php else: ?>
+                <table class="min-w-full border border-gray-300 text-sm">
+                    <thead class="bg-gray-100">
                         <tr>
-                            <td class="border border-gray-300 px-3 py-2"><?= $monthNames[$i] ?> <?= $currentYear ?></td>
-                            <td class="border border-gray-300 px-3 py-2 text-center"><?= $isPaid ? '[ ✓ ]' : '[  ]' ?></td>
-                            <td class="border border-gray-300 px-3 py-2 text-center"><?= !$isPaid ? '[ ✓ ]' : '[  ]' ?></td>
-                            <td class="border border-gray-300 px-3 py-2"></td>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Sözleşme No</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Depo</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Oda No</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Başlangıç – Bitiş</th>
+                            <th class="border border-gray-300 px-3 py-2 text-right font-bold">Aylık</th>
                         </tr>
-                    <?php endfor; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($contracts as $c): ?>
+                            <tr>
+                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></td>
+                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($c['warehouse_name'] ?? '-') ?></td>
+                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($c['room_number'] ?? '-') ?></td>
+                                <td class="border border-gray-300 px-3 py-2"><?= !empty($c['start_date']) ? date('d.m.Y', strtotime($c['start_date'])) : '-' ?> – <?= !empty($c['end_date']) ? date('d.m.Y', strtotime($c['end_date'])) : '-' ?></td>
+                                <td class="border border-gray-300 px-3 py-2 text-right"><?= number_format((float)($c['monthly_price'] ?? 0), 2, ',', '.') ?> ₺</td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         </div>
 
         <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= date('d.m.Y H:i') ?></p>

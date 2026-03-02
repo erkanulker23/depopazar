@@ -478,6 +478,7 @@ class CustomersController
             'identity_number' => $identityNumber,
             'address'         => trim($_POST['address'] ?? '') ?: null,
             'notes'           => trim($_POST['notes'] ?? '') ?: null,
+            'invoice_info'    => trim($_POST['invoice_info'] ?? '') ?: null,
             'is_active'       => isset($_POST['is_active']) ? 1 : 0,
         ];
         Customer::update($this->pdo, $id, $data);
@@ -630,13 +631,7 @@ class CustomersController
             exit;
         }
         $items = Item::findByCustomerId($this->pdo, $id);
-        $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
-        $paidMonths = [];
-        foreach ($payments as $p) {
-            if (($p['status'] ?? '') === 'paid' && !empty($p['due_date'])) {
-                $paidMonths[date('Y-m', strtotime($p['due_date']))] = true;
-            }
-        }
+        $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         require __DIR__ . '/../../views/customers/barcode.php';
     }
 
@@ -724,6 +719,7 @@ class CustomersController
             'identity_number' => $identityNumber,
             'address'         => trim($_POST['address'] ?? '') ?: null,
             'notes'           => trim($_POST['notes'] ?? '') ?: null,
+            'invoice_info'    => trim($_POST['invoice_info'] ?? '') ?: null,
         ];
         try {
             $customer = Customer::create($this->pdo, $data);

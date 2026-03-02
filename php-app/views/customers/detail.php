@@ -145,6 +145,12 @@ ob_start();
                     <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= nl2br(htmlspecialchars($customer['notes'])) ?></dd>
                 </div>
                 <?php endif; ?>
+                <?php if (!empty($customer['invoice_info'])): ?>
+                <div class="sm:col-span-2">
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Fatura bilgisi</dt>
+                    <dd class="mt-1 text-gray-600 dark:text-gray-300 whitespace-pre-line"><?= nl2br(htmlspecialchars($customer['invoice_info'])) ?></dd>
+                </div>
+                <?php endif; ?>
             </dl>
         </div>
 
@@ -289,12 +295,28 @@ ob_start();
                                     <td class="px-4 py-3">
                                         <?php
                                         $status = $p['status'] ?? 'pending';
-                                        $label = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'][$status] ?? $status;
-                                        if ($status === 'pending' && !empty($p['due_date']) && strtotime($p['due_date']) > time()) {
+                                        $dueTs = !empty($p['due_date']) ? strtotime($p['due_date']) : false;
+                                        $todayStart = strtotime(date('Y-m-d'));
+                                        $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+                                        if ($status === 'paid') {
+                                            $label = 'Ödendi';
+                                            $badge = 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
+                                        } elseif ($status === 'cancelled') {
+                                            $label = 'İptal';
+                                            $badge = 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
+                                        } elseif ($status === 'overdue' || ($status === 'pending' && $dueTs !== false && $dueTs < $todayStart)) {
+                                            $label = 'Vadesi geçmiş';
+                                            $badge = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
+                                        } elseif ($status === 'pending' && $dueTs !== false && $dueTs >= $todayStart && $dueTs <= $monthEnd) {
+                                            $label = 'Ödeme bekliyor';
+                                            $badge = 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300';
+                                        } elseif ($status === 'pending' && $dueTs !== false && $dueTs > $monthEnd) {
                                             $label = 'Vadesi gelmemiş';
+                                            $badge = 'bg-slate-100 dark:bg-slate-900/30 text-slate-800 dark:text-slate-300';
+                                        } else {
+                                            $label = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Vadesi geçmiş', 'cancelled' => 'İptal'][$status] ?? $status;
+                                            $badge = ['pending' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300', 'paid' => 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', 'overdue' => 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300', 'cancelled' => 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'][$status] ?? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
                                         }
-                                        $badge = ['pending' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300', 'paid' => 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', 'overdue' => 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300', 'cancelled' => 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'][$status] ?? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
-                                        if ($label === 'Vadesi gelmemiş') $badge = 'bg-slate-100 dark:bg-slate-900/30 text-slate-800 dark:text-slate-300';
                                         ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $badge ?>"><?= $label ?></span>
                                     </td>
@@ -417,6 +439,10 @@ ob_start();
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adres</label>
                     <textarea name="address" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($customer['address'] ?? '') ?></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fatura bilgisi <span class="text-gray-400 font-normal">(opsiyonel)</span></label>
+                    <textarea name="invoice_info" rows="3" placeholder="Fatura unvanı, vergi no, vergi dairesi vb." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($customer['invoice_info'] ?? '') ?></textarea>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not</label>

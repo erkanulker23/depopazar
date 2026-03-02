@@ -92,16 +92,24 @@ $page = $page ?? 1;
                 $payList = $cust['payments'] ?? [];
                 $unpaidSum = 0;
                 $unpaidCount = 0;
-                $overdueCount = 0;
+                $overdueSum = 0;
+                $notDueSum = 0;
+                $todayStart = strtotime(date('Y-m-d'));
                 foreach ($payList as $px) {
                     if (in_array($px['status'] ?? '', ['pending', 'overdue'])) {
-                        $unpaidSum += (float)($px['amount'] ?? 0);
+                        $am = (float)($px['amount'] ?? 0);
+                        $unpaidSum += $am;
                         $unpaidCount++;
-                        if (($px['status'] ?? '') === 'overdue') $overdueCount++;
+                        $dueTs = !empty($px['due_date']) ? strtotime($px['due_date']) : 0;
+                        if (($px['status'] ?? '') === 'overdue' || $dueTs < $todayStart) {
+                            $overdueSum += $am;
+                        } else {
+                            $notDueSum += $am;
+                        }
                     }
                 }
                 $expandId = 'payments-customer-' . $idx;
-                $unpaidText = $unpaidCount > 0 ? ($overdueCount > 0 ? 'vadesi geçmiş ' . $overdueCount . ' ödeme · ' : '') . $unpaidCount . ' bekleyen, ' . fmtMoney($unpaidSum) . ' ₺ borç' : '';
+                $unpaidText = $unpaidCount > 0 ? 'Toplam borç: ' . fmtMoney($unpaidSum) . ' ₺ · Vadesi gelmiş: ' . fmtMoney($overdueSum) . ' ₺ · Vadesi gelmemiş: ' . fmtMoney($notDueSum) . ' ₺' : '';
             ?>
             <div class="payments-customer-row" data-customer-id="<?= htmlspecialchars($cust['id'] ?? '') ?>">
                 <div class="flex items-center justify-between gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer group" onclick="toggleCustomerPayments('<?= $expandId ?>', this)" onkeydown="if (event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleCustomerPayments('<?= $expandId ?>', this); }" role="button" tabindex="0" aria-expanded="false" aria-controls="<?= $expandId ?>">
