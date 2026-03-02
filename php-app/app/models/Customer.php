@@ -60,6 +60,42 @@ class Customer
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    /** Aynı şirkette aynı e-posta ile kayıtlı müşteri var mı? (excludeId = güncellemede kendi kaydı) */
+    public static function findByEmail(PDO $pdo, string $companyId, string $email, ?string $excludeId = null): ?array
+    {
+        if ($email === '') {
+            return null;
+        }
+        $sql = 'SELECT * FROM customers WHERE company_id = ? AND email = ? AND deleted_at IS NULL';
+        $params = [$companyId, $email];
+        if ($excludeId !== null && $excludeId !== '') {
+            $sql .= ' AND id != ?';
+            $params[] = $excludeId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /** Aynı şirkette aynı telefon ile kayıtlı müşteri var mı? (excludeId = güncellemede kendi kaydı) */
+    public static function findByPhone(PDO $pdo, string $companyId, ?string $phone, ?string $excludeId = null): ?array
+    {
+        if ($phone === null || $phone === '') {
+            return null;
+        }
+        $sql = 'SELECT * FROM customers WHERE company_id = ? AND phone = ? AND deleted_at IS NULL';
+        $params = [$companyId, $phone];
+        if ($excludeId !== null && $excludeId !== '') {
+            $sql .= ' AND id != ?';
+            $params[] = $excludeId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     public static function update(PDO $pdo, string $id, array $data): void
     {
         $allowed = ['first_name', 'last_name', 'email', 'phone', 'identity_number', 'address', 'notes', 'is_active'];

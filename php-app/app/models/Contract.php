@@ -65,29 +65,45 @@ class Contract
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
-        $contractNumber = $data['contract_number'] ?? self::generateContractNumber($pdo);
         $stmt = $pdo->prepare(
             'INSERT INTO contracts (id, contract_number, customer_id, room_id, start_date, end_date, monthly_price, payment_frequency_months, is_active, sold_by_user_id, transportation_fee, pickup_location, discount, driver_name, driver_phone, vehicle_plate, contract_pdf_url, notes) 
              VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([
-            $id,
-            $contractNumber,
-            $data['customer_id'],
-            $data['room_id'],
-            $data['start_date'],
-            $data['end_date'],
-            $data['monthly_price'],
-            $data['sold_by_user_id'] ?? null,
-            $data['transportation_fee'] ?? 0,
-            $data['pickup_location'] ?? null,
-            $data['discount'] ?? 0,
-            $data['driver_name'] ?? null,
-            $data['driver_phone'] ?? null,
-            $data['vehicle_plate'] ?? null,
-            $data['contract_pdf_url'] ?? null,
-            $data['notes'] ?? null,
-        ]);
+        $maxAttempts = 5;
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $contractNumber = $data['contract_number'] ?? self::generateContractNumber($pdo);
+            try {
+                $stmt->execute([
+                    $id,
+                    $contractNumber,
+                    $data['customer_id'],
+                    $data['room_id'],
+                    $data['start_date'],
+                    $data['end_date'],
+                    $data['monthly_price'],
+                    $data['sold_by_user_id'] ?? null,
+                    $data['transportation_fee'] ?? 0,
+                    $data['pickup_location'] ?? null,
+                    $data['discount'] ?? 0,
+                    $data['driver_name'] ?? null,
+                    $data['driver_phone'] ?? null,
+                    $data['vehicle_plate'] ?? null,
+                    $data['contract_pdf_url'] ?? null,
+                    $data['notes'] ?? null,
+                ]);
+                return self::findOne($pdo, $id);
+            } catch (PDOException $e) {
+                if ($attempt === $maxAttempts - 1) {
+                    throw $e;
+                }
+                $code = $e->getCode();
+                $msg = $e->getMessage();
+                if ($code === '23000' || (int) $code === 23000 || strpos($msg, '1062') !== false || strpos($msg, 'Duplicate entry') !== false) {
+                    continue;
+                }
+                throw $e;
+            }
+        }
         return self::findOne($pdo, $id);
     }
 

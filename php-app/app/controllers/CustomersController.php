@@ -595,6 +595,17 @@ class CustomersController
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
+        $phoneFormatted = $phone !== null ? formatPhoneInput($phone) : null;
+        if ($email !== '' && Customer::findByEmail($this->pdo, $companyId, $email, null)) {
+            $_SESSION['flash_error'] = 'Bu e-posta adresi ile kayıtlı bir müşteri zaten var. Aynı e-posta ile müşteri kaydedilemez.';
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+            exit;
+        }
+        if ($phoneFormatted !== null && Customer::findByPhone($this->pdo, $companyId, $phoneFormatted, null)) {
+            $_SESSION['flash_error'] = 'Bu telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarası ile müşteri kaydedilemez.';
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+            exit;
+        }
         if ($email === '') {
             $email = 'musteri-' . bin2hex(random_bytes(4)) . '@depopazar.local';
         }
@@ -603,7 +614,7 @@ class CustomersController
             'first_name'      => $firstName,
             'last_name'       => $lastName,
             'email'           => $email,
-            'phone'           => formatPhoneInput($phone),
+            'phone'           => $phoneFormatted,
             'identity_number' => $identityNumber,
             'address'         => trim($_POST['address'] ?? '') ?: null,
             'notes'           => trim($_POST['notes'] ?? '') ?: null,

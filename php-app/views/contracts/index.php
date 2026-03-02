@@ -192,7 +192,8 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                                 <select name="warehouse_id" id="newSale_warehouse" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                                     <option value="">Depo Seçin</option>
                                     <?php foreach ($warehouses as $w): ?>
-                                        <option value="<?= htmlspecialchars($w['id']) ?>"><?= htmlspecialchars($w['name']) ?></option>
+                                        <?php $whFee = isset($w['monthly_base_fee']) && $w['monthly_base_fee'] !== null && $w['monthly_base_fee'] !== '' ? (float)$w['monthly_base_fee'] : null; ?>
+                                        <option value="<?= htmlspecialchars($w['id']) ?>" data-monthly-base-fee="<?= $whFee !== null ? htmlspecialchars(number_format((float)$whFee, 2, '.', '')) : '' ?>"><?= htmlspecialchars($w['name']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -475,12 +476,20 @@ function closeNewSaleModal() {
                 roomSelect.appendChild(opt);
             }
         });
+        var priceEl = document.getElementById('newSale_monthly_price');
+        if (priceEl) {
+            var whOpt = this.options[this.selectedIndex];
+            var depotFee = whOpt && whOpt.getAttribute('data-monthly-base-fee');
+            priceEl.value = depotFee ? depotFee.replace('.', ',') : '';
+        }
     });
     roomSelect.addEventListener('change', function() {
-        var opt = this.options[this.selectedIndex];
         var priceEl = document.getElementById('newSale_monthly_price');
-        if (priceEl && opt && opt.getAttribute('data-price')) {
-            priceEl.value = opt.getAttribute('data-price').replace('.', ',');
+        var whSelect = document.getElementById('newSale_warehouse');
+        if (priceEl && whSelect) {
+            var whOpt = whSelect.options[whSelect.selectedIndex];
+            var depotFee = whOpt && whOpt.getAttribute('data-monthly-base-fee');
+            if (depotFee) priceEl.value = depotFee.replace('.', ',');
         }
         buildMonthlyPricesList();
     });
