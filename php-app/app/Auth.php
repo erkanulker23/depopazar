@@ -19,6 +19,13 @@ class Auth
         self::$user = $user;
     }
 
+    /** Oturumdaki kullanıcı bilgisini günceller (örn. kendi profilini düzenledikten sonra) */
+    public static function refreshUser(array $user): void
+    {
+        $_SESSION['user'] = $user;
+        self::$user = $user;
+    }
+
     public static function logout(): void
     {
         $_SESSION = [];

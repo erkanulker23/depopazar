@@ -66,11 +66,12 @@ ob_start();
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Alan (m²)</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Fiyat</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aktif sözleşme</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                    <?php foreach ($rooms as $r): ?>
+                    <?php $activeContractCountByRoom = $activeContractCountByRoom ?? []; foreach ($rooms as $r): ?>
                         <?php
                         $status = $r['status'] ?? 'empty';
                         $badgeClass = $status === 'empty' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : ($status === 'occupied' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : ($status === 'reserved' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' : 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'));
@@ -83,6 +84,13 @@ ob_start();
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($r['monthly_price'] ?? 0) ?></td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $badgeClass ?>"><?= $statusLabels[$status] ?? $status ?></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                <?php $activeCount = (int)($activeContractCountByRoom[$r['id']] ?? 0); if ($activeCount > 0): ?>
+                                    <a href="/odalar/<?= htmlspecialchars($r['id']) ?>#sözleşmeler" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= $activeCount ?> aktif sözleşme</a>
+                                <?php else: ?>
+                                    <span class="text-gray-400 dark:text-gray-500">—</span>
+                                <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 mr-1" title="Detay"><i class="bi bi-eye"></i></a>

@@ -72,10 +72,13 @@ class Room
         return self::findOne($pdo, $id);
     }
 
+    /** Aktif sözleşme var mı – sadece silinmemiş müşteriye ait sözleşmeler sayılır (detay sayfasıyla tutarlı) */
     public static function hasActiveContract(PDO $pdo, string $roomId): bool
     {
         $stmt = $pdo->prepare(
-            'SELECT 1 FROM contracts WHERE room_id = ? AND deleted_at IS NULL AND is_active = 1 LIMIT 1'
+            'SELECT 1 FROM contracts c
+             INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+             WHERE c.room_id = ? AND c.deleted_at IS NULL AND c.is_active = 1 LIMIT 1'
         );
         $stmt->execute([$roomId]);
         return (bool) $stmt->fetch();

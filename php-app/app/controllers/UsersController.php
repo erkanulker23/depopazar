@@ -241,6 +241,21 @@ class UsersController
             $data['password'] = $_POST['password'];
         }
         User::update($this->pdo, $id, $data);
+        // Güncellenen kullanıcı şu an giriş yapmışsa oturumu güncelle (e-posta, rol vb. hemen yansısın)
+        if (($user['id'] ?? '') === $id) {
+            $updated = User::findOne($this->pdo, $id);
+            if ($updated) {
+                $sessionUser = [
+                    'id' => $updated['id'],
+                    'email' => $updated['email'],
+                    'first_name' => $updated['first_name'],
+                    'last_name' => $updated['last_name'],
+                    'role' => $updated['role'],
+                    'company_id' => $updated['company_id'] ?? null,
+                ];
+                Auth::refreshUser($sessionUser);
+            }
+        }
         $fullName = trim(($data['first_name'] ?? $profile['first_name'] ?? '') . ' ' . ($data['last_name'] ?? $profile['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName]);

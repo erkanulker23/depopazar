@@ -23,7 +23,9 @@ class DashboardController
         $monthlyRevenue = 0.0;
         $pendingPayments = 0;
         $overduePayments = 0;
-        $totalDebt = 0.0;
+        $debtOverdue = 0.0;      // vadesi geçmiş borç (tutar)
+        $debtDueThisMonth = 0.0; // vadesi gelmiş borç – bu ay (tutar)
+        $totalDebt = 0.0;        // toplam borç (tüm ödenmemiş)
 
         if ($companyId) {
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
@@ -38,6 +40,8 @@ class DashboardController
             $monthlyRevenue = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
             $pendingPayments = Payment::countByStatus($this->pdo, $companyId, 'pending');
             $overduePayments = Payment::countByStatus($this->pdo, $companyId, 'overdue');
+            $debtOverdue = Payment::sumOverdueByCompany($this->pdo, $companyId);
+            $debtDueThisMonth = Payment::sumDueThisMonthByCompany($this->pdo, $companyId);
             $totalDebt = Payment::sumUnpaidByCompany($this->pdo, $companyId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehousesCount = Warehouse::countAll($this->pdo);
@@ -50,6 +54,8 @@ class DashboardController
             $monthlyRevenue = Payment::sumPaidThisMonthGlobal($this->pdo);
             $pendingPayments = Payment::countByStatusGlobal($this->pdo, 'pending');
             $overduePayments = Payment::countByStatusGlobal($this->pdo, 'overdue');
+            $debtOverdue = Payment::sumOverdueGlobal($this->pdo);
+            $debtDueThisMonth = Payment::sumDueThisMonthGlobal($this->pdo);
             $totalDebt = Payment::sumUnpaidGlobal($this->pdo);
         }
 

@@ -131,12 +131,13 @@ if (empty($setupSteps)) {
     </div>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
     <a href="/odemeler?status=pending" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 group block">
         <div class="flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0 overflow-hidden">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Bekleyen Ödeme</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $pendingPayments ?></p>
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1">adet</p>
             </div>
             <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
                 <i class="bi bi-credit-card text-white text-xl"></i>
@@ -148,9 +149,32 @@ if (empty($setupSteps)) {
             <div class="flex-1 min-w-0 overflow-hidden">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Geciken Ödeme</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $overduePayments ?></p>
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1">adet</p>
             </div>
             <div class="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex-shrink-0 shadow-lg shadow-red-500/20 group-hover:scale-105 transition-transform">
                 <i class="bi bi-exclamation-triangle text-white text-xl"></i>
+            </div>
+        </div>
+    </a>
+    <a href="/odemeler?status=overdue" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-red-600/10 transition-all duration-300 group block">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex-1 min-w-0 overflow-hidden">
+                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Vadesi Geçmiş Borç</p>
+                <p class="text-xl font-bold text-red-600 dark:text-red-400 break-words"><?= fmtMoney($debtOverdue ?? 0) ?> ₺</p>
+            </div>
+            <div class="p-3 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex-shrink-0 shadow-lg shadow-red-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-calendar-x text-white text-xl"></i>
+            </div>
+        </div>
+    </a>
+    <a href="/odemeler?collect=1" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 group block">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex-1 min-w-0 overflow-hidden">
+                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Vadesi Gelmiş Borç (Bu Ay)</p>
+                <p class="text-xl font-bold text-amber-600 dark:text-amber-400 break-words"><?= fmtMoney($debtDueThisMonth ?? 0) ?> ₺</p>
+            </div>
+            <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-calendar-event text-white text-xl"></i>
             </div>
         </div>
     </a>
@@ -158,7 +182,7 @@ if (empty($setupSteps)) {
         <div class="flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0 overflow-hidden">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Toplam Borç</p>
-                <p class="text-2xl font-bold text-red-600 dark:text-red-400 break-words"><?= fmtMoney($totalDebt) ?> ₺</p>
+                <p class="text-xl font-bold text-rose-600 dark:text-rose-400 break-words"><?= fmtMoney($totalDebt ?? 0) ?> ₺</p>
             </div>
             <div class="p-3 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl flex-shrink-0 shadow-lg shadow-rose-500/20 group-hover:scale-105 transition-transform">
                 <i class="bi bi-cash-stack text-white text-xl"></i>

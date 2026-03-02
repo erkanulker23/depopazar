@@ -36,10 +36,16 @@ ob_start();
             </div>
         </div>
         <hr class="my-6 border-gray-100 dark:border-gray-700">
-        <h3 class="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"><i class="bi bi-people text-emerald-600"></i> Odayı Kullanan Müşteriler</h3>
-        <?php $contracts = $contracts ?? []; if (empty($contracts)): ?>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Bu odayı kullanan müşteri yok.</p>
+        <h3 id="sözleşmeler" class="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"><i class="bi bi-people text-emerald-600"></i> Aktif sözleşmeler / Odayı kullanan müşteriler</h3>
+        <?php
+        $contracts = $contracts ?? [];
+        $activeContracts = array_filter($contracts, fn($c) => !empty($c['is_active']));
+        if (empty($contracts)): ?>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Bu odayı kullanan müşteri yok. Aktif veya sonlandırılmış sözleşme bulunmuyor.</p>
         <?php else: ?>
+            <?php if (count($activeContracts) > 0): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-3"><?= count($activeContracts) ?> aktif sözleşme · Silme işlemi için önce sözleşmeleri sonlandırın.</p>
+            <?php endif; ?>
             <div class="overflow-x-auto mb-4">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">

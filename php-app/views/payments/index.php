@@ -92,13 +92,16 @@ $page = $page ?? 1;
                 $payList = $cust['payments'] ?? [];
                 $unpaidSum = 0;
                 $unpaidCount = 0;
+                $overdueCount = 0;
                 foreach ($payList as $px) {
                     if (in_array($px['status'] ?? '', ['pending', 'overdue'])) {
                         $unpaidSum += (float)($px['amount'] ?? 0);
                         $unpaidCount++;
+                        if (($px['status'] ?? '') === 'overdue') $overdueCount++;
                     }
                 }
                 $expandId = 'payments-customer-' . $idx;
+                $unpaidText = $unpaidCount > 0 ? ($overdueCount > 0 ? 'vadesi geçmiş ' . $overdueCount . ' ödeme · ' : '') . $unpaidCount . ' bekleyen, ' . fmtMoney($unpaidSum) . ' ₺ borç' : '';
             ?>
             <div class="payments-customer-row" data-customer-id="<?= htmlspecialchars($cust['id'] ?? '') ?>">
                 <div class="flex items-center justify-between gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer group" onclick="toggleCustomerPayments('<?= $expandId ?>', this)" onkeydown="if (event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleCustomerPayments('<?= $expandId ?>', this); }" role="button" tabindex="0" aria-expanded="false" aria-controls="<?= $expandId ?>">
@@ -106,7 +109,7 @@ $page = $page ?? 1;
                         <span class="payments-expand-icon text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-transform" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
                         <div class="min-w-0">
                             <p class="font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($customerName ?: '-') ?></p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400"><?= count($payList) ?> ödeme<?= $unpaidCount > 0 ? ' · ' . $unpaidCount . ' bekleyen, ' . fmtMoney($unpaidSum) . ' ₺ borç' : '' ?></p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400"><?= count($payList) ?> ödeme<?= $unpaidText !== '' ? ' · ' . $unpaidText : '' ?></p>
                         </div>
                     </div>
                     <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($cust['id'] ?? '') ?>" onclick="event.stopPropagation()" class="shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ödeme Al</a>

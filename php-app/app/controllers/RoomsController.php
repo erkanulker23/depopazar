@@ -28,6 +28,22 @@ class RoomsController
         $flashSuccess = $_SESSION['flash_success'] ?? null;
         $flashError = $_SESSION['flash_error'] ?? null;
         unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        // Oda başına aktif sözleşme sayısı (silinmemiş müşteriye ait, detay sayfasıyla aynı mantık)
+        $activeContractCountByRoom = [];
+        if (!empty($rooms)) {
+            $roomIds = array_column($rooms, 'id');
+            $placeholders = implode(',', array_fill(0, count($roomIds), '?'));
+            $stmt = $this->pdo->prepare(
+                "SELECT c.room_id, COUNT(*) AS cnt FROM contracts c
+                 INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                 WHERE c.room_id IN ($placeholders) AND c.deleted_at IS NULL AND c.is_active = 1
+                 GROUP BY c.room_id"
+            );
+            $stmt->execute($roomIds);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $activeContractCountByRoom[$row['room_id']] = (int) $row['cnt'];
+            }
+        }
         require __DIR__ . '/../../views/rooms/index.php';
     }
 
