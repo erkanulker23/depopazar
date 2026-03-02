@@ -167,11 +167,12 @@ ob_start();
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
-                        <input type="text" name="phone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <input type="tel" name="phone" inputmode="tel" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Örn: 05551234567 veya +90 555 123 45 67">
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Geçerli format: 05xx xxx xx xx</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No</label>
-                        <input type="text" name="identity_number" maxlength="11" inputmode="numeric" pattern="[0-9]*" placeholder="En fazla 11 hane" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <input type="text" name="identity_number" maxlength="11" inputmode="numeric" pattern="[0-9]*" placeholder="En fazla 11 hane" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Sadece rakam, en fazla 11 hane">
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">En fazla 11 haneli rakam girebilirsiniz.</p>
                     </div>
                     <div>

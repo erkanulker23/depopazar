@@ -813,13 +813,25 @@ class CustomersController
                 }
             }
 
+            if ($identityNumber !== null && !validateTcIdentity($identityNumber)) {
+                $errors[] = $firstName . ' ' . $lastName . ': TC Kimlik No en fazla 11 haneli rakam olmalıdır.';
+                $skipped++;
+                continue;
+            }
+            if ($phone !== null && $phone !== '' && !validatePhone($phone)) {
+                $errors[] = $firstName . ' ' . $lastName . ': Telefon formatı geçersiz (örn: 05551234567).';
+                $skipped++;
+                continue;
+            }
+            $phoneFormatted = ($phone !== null && $phone !== '') ? formatPhoneInput($phone) : null;
+
             try {
                 $data = [
                     'company_id'      => $companyId,
                     'first_name'      => $firstName,
                     'last_name'       => $lastName,
                     'email'           => $email,
-                    'phone'           => $phone ?: null,
+                    'phone'           => $phoneFormatted,
                     'identity_number' => $identityNumber,
                     'address'         => $address,
                     'notes'           => $notes,

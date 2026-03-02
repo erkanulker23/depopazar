@@ -201,8 +201,11 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Oda <span class="text-red-500">*</span></label>
                                 <select name="room_id" id="newSale_room" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                                     <option value="">Önce Depo Seçin</option>
-                                    <?php foreach ($rooms as $r): ?>
-                                        <option value="<?= htmlspecialchars($r['id']) ?>" data-warehouse="<?= htmlspecialchars($r['warehouse_id']) ?>"><?= htmlspecialchars($r['room_number']) ?></option>
+                                    <?php foreach ($rooms as $r):
+                                        $roomLabel = preg_replace('/\s*\([^)]*\)\s*$/', '', (string)($r['room_number'] ?? '')); // Sadece oda numarası (parantez içi fiyat varsa kaldır)
+                                        $roomPrice = isset($r['monthly_price']) && $r['monthly_price'] !== null && $r['monthly_price'] !== '' ? (float)$r['monthly_price'] : null;
+                                    ?>
+                                        <option value="<?= htmlspecialchars($r['id']) ?>" data-warehouse="<?= htmlspecialchars($r['warehouse_id']) ?>" data-monthly-price="<?= $roomPrice !== null ? htmlspecialchars(number_format((float)$roomPrice, 2, '.', '')) : '' ?>"><?= htmlspecialchars($roomLabel) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -400,11 +403,11 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
-                        <input type="text" name="phone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <input type="tel" name="phone" inputmode="tel" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Örn: 05551234567">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No</label>
-                        <input type="text" name="identity_number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <input type="text" name="identity_number" maxlength="11" inputmode="numeric" pattern="[0-9]*" placeholder="En fazla 11 hane" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Sadece rakam, en fazla 11 hane">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adres</label>
@@ -461,7 +464,12 @@ function closeNewSaleModal() {
     var roomSelect = document.getElementById('newSale_room');
     var roomOptions = [];
     roomSelect.querySelectorAll('option[data-warehouse]').forEach(function(o) {
-        roomOptions.push({ value: o.value, warehouse: o.getAttribute('data-warehouse'), text: o.textContent.trim() });
+        roomOptions.push({
+            value: o.value,
+            warehouse: o.getAttribute('data-warehouse'),
+            text: o.textContent.trim(),
+            monthlyPrice: o.getAttribute('data-monthly-price') || ''
+        });
     });
     whSelect.addEventListener('change', function() {
         var wh = this.value;
@@ -471,23 +479,19 @@ function closeNewSaleModal() {
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
+                opt.setAttribute('data-monthly-price', o.monthlyPrice || '');
                 roomSelect.appendChild(opt);
             }
         });
         var priceEl = document.getElementById('newSale_monthly_price');
-        if (priceEl) {
-            var whOpt = this.options[this.selectedIndex];
-            var depotFee = whOpt && whOpt.getAttribute('data-monthly-base-fee');
-            priceEl.value = depotFee ? depotFee.replace('.', ',') : '';
-        }
+        if (priceEl) priceEl.value = '';
     });
     roomSelect.addEventListener('change', function() {
         var priceEl = document.getElementById('newSale_monthly_price');
-        var whSelect = document.getElementById('newSale_warehouse');
-        if (priceEl && whSelect) {
-            var whOpt = whSelect.options[whSelect.selectedIndex];
-            var depotFee = whOpt && whOpt.getAttribute('data-monthly-base-fee');
-            if (depotFee) priceEl.value = depotFee.replace('.', ',');
+        if (priceEl) {
+            var opt = this.options[this.selectedIndex];
+            var roomFee = opt && opt.getAttribute('data-monthly-price');
+            priceEl.value = roomFee ? roomFee.replace('.', ',') : '';
         }
         buildMonthlyPricesList();
     });
