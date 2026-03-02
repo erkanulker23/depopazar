@@ -50,6 +50,7 @@ $router->get('/musteriler/excel-sablon', fn() => (new CustomersController($pdo))
 $router->get('/musteriler/excel-ice-aktar', fn() => (new CustomersController($pdo))->importForm());
 $router->post('/musteriler/excel-ice-aktar', fn() => (new CustomersController($pdo))->importCsv());
 $router->post('/musteriler/ekle', fn() => (new CustomersController($pdo))->create());
+$router->post('/musteriler/guncelle', fn() => (new CustomersController($pdo))->update());
 $router->post('/musteriler/toplu-sil', fn() => (new CustomersController($pdo))->bulkDelete());
 $router->get('/musteriler/{id}/satir-detay', fn(array $p) => (new CustomersController($pdo))->rowFragment($p));
 $router->get('/musteriler/{id}/yazdir', fn(array $p) => (new CustomersController($pdo))->printPage($p));

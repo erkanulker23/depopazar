@@ -393,6 +393,90 @@ class CustomersController
         exit;
     }
 
+    /** Müşteri bilgilerini güncelle (ad, soyad, e-posta, telefon vb.) */
+    public function update(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /musteriler');
+            exit;
+        }
+        $id = trim($_POST['id'] ?? '');
+        if (!$id) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $customerCompanyId = $customer['company_id'] ?? null;
+        if ($companyId && $customerCompanyId !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            header('Location: /musteriler');
+            exit;
+        }
+        $firstName = trim($_POST['first_name'] ?? '');
+        $lastName = trim($_POST['last_name'] ?? '');
+        $email = trim($_POST['email'] ?? '') !== '' ? trim($_POST['email']) : '';
+        $phone = trim($_POST['phone'] ?? '') !== '' ? trim($_POST['phone']) : null;
+        $phone2 = trim($_POST['phone_2'] ?? '') !== '' ? trim($_POST['phone_2']) : null;
+        $identityNumber = trim($_POST['identity_number'] ?? '') !== '' ? trim($_POST['identity_number']) : null;
+        if ($firstName === '' || $lastName === '') {
+            $_SESSION['flash_error'] = 'Ad ve soyad zorunludur.';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        if ($phone !== null && formatPhoneInput($phone) === null) {
+            $_SESSION['flash_error'] = 'Telefon formatı geçersiz. Örn: 05551234567';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        if ($phone2 !== null && formatPhoneInput($phone2) === null) {
+            $_SESSION['flash_error'] = '2. telefon formatı geçersiz. Örn: 05551234567';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        if ($email !== '' && !validateEmail($email)) {
+            $_SESSION['flash_error'] = 'E-posta formatı geçersiz.';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        $phoneFormatted = $phone !== null ? formatPhoneInput($phone) : null;
+        $phone2Formatted = $phone2 !== null ? formatPhoneInput($phone2) : null;
+        $checkCompanyId = $customerCompanyId ?? $companyId;
+        if ($checkCompanyId && $email !== '' && Customer::findByEmail($this->pdo, $checkCompanyId, $email, $id)) {
+            $_SESSION['flash_error'] = 'Bu e-posta adresi başka bir müşteride kayıtlı.';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        if ($checkCompanyId && $phoneFormatted !== null && Customer::findByPhone($this->pdo, $checkCompanyId, $phoneFormatted, $id)) {
+            $_SESSION['flash_error'] = 'Bu telefon numarası başka bir müşteride kayıtlı.';
+            header('Location: /musteriler/' . $id);
+            exit;
+        }
+        $data = [
+            'first_name'      => $firstName,
+            'last_name'       => $lastName,
+            'email'           => $email,
+            'phone'           => $phoneFormatted,
+            'phone_2'         => $phone2Formatted,
+            'identity_number' => $identityNumber,
+            'address'         => trim($_POST['address'] ?? '') ?: null,
+            'notes'           => trim($_POST['notes'] ?? '') ?: null,
+            'is_active'       => isset($_POST['is_active']) ? 1 : 0,
+        ];
+        Customer::update($this->pdo, $id, $data);
+        $_SESSION['flash_success'] = 'Müşteri bilgileri güncellendi.';
+        header('Location: /musteriler/' . $id);
+        exit;
+    }
+
     /** Bilgi notu güncelle */
     public function noteUpdate(array $params): void
     {

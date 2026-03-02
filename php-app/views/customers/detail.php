@@ -14,6 +14,9 @@ ob_start();
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($customerName) ?></p>
     </div>
     <div class="flex gap-2">
+        <button type="button" onclick="document.getElementById('editCustomerModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
+            <i class="bi bi-pencil mr-2"></i> Müşteri Düzenle
+        </button>
         <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/yazdir" target="_blank" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
             <i class="bi bi-printer mr-2"></i> Sayfayı Yazdır
         </a>
@@ -41,7 +44,7 @@ ob_start();
     <div class="p-4 space-y-4">
         <div class="flex flex-wrap items-center gap-2">
             <span class="font-bold text-gray-900 dark:text-white"><?= htmlspecialchars($customerName) ?></span>
-            <a href="#" class="text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" title="Düzenle (yakında)"><i class="bi bi-pencil"></i></a>
+            <button type="button" onclick="document.getElementById('editCustomerModal').classList.remove('hidden')" class="text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" title="Düzenle"><i class="bi bi-pencil"></i></button>
         </div>
         <div>
             <p class="text-sm text-gray-600 dark:text-gray-300">
@@ -107,6 +110,7 @@ ob_start();
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <i class="bi bi-person text-emerald-600"></i> Müşteri Bilgileri
+                <button type="button" onclick="document.getElementById('editCustomerModal').classList.remove('hidden')" class="ml-2 p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" title="Düzenle"><i class="bi bi-pencil"></i></button>
             </h2>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -362,6 +366,64 @@ ob_start();
                 </div>
                 <div class="flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('noteModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Müşteri Düzenle -->
+<div id="editCustomerModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('editCustomerModal').classList.add('hidden')"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-600">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i class="bi bi-pencil text-emerald-600 mr-2"></i> Müşteri Düzenle</h3>
+                <button type="button" onclick="document.getElementById('editCustomerModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form method="post" action="/musteriler/guncelle" class="space-y-3">
+                <input type="hidden" name="id" value="<?= htmlspecialchars($customer['id']) ?>">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad <span class="text-red-500">*</span></label>
+                        <input type="text" name="first_name" required value="<?= htmlspecialchars($customer['first_name'] ?? '') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Soyad <span class="text-red-500">*</span></label>
+                        <input type="text" name="last_name" required value="<?= htmlspecialchars($customer['last_name'] ?? '') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-posta</label>
+                    <input type="email" name="email" value="<?= htmlspecialchars($customer['email'] ?? '') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
+                    <input type="tel" name="phone" inputmode="tel" value="<?= htmlspecialchars($customer['phone'] ?? '') ?>" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white phone-mask" data-phone-mask>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon 2</label>
+                    <input type="tel" name="phone_2" inputmode="tel" value="<?= htmlspecialchars($customer['phone_2'] ?? '') ?>" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white phone-mask" data-phone-mask>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No</label>
+                    <input type="text" name="identity_number" maxlength="11" inputmode="numeric" value="<?= htmlspecialchars($customer['identity_number'] ?? '') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adres</label>
+                    <textarea name="address" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($customer['address'] ?? '') ?></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not</label>
+                    <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($customer['notes'] ?? '') ?></textarea>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" name="is_active" id="edit_is_active" value="1" <?= !empty($customer['is_active']) ? 'checked' : '' ?> class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
+                    <label for="edit_is_active" class="text-sm font-medium text-gray-700 dark:text-gray-300">Aktif müşteri</label>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('editCustomerModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
                     <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
