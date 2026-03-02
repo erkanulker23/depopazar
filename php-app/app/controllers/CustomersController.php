@@ -14,16 +14,21 @@ class CustomersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $inDepo = isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null;
+        $warehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
         $perPage = 50;
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $offset = ($page - 1) * $perPage;
 
+        $warehouses = [];
         if ($companyId) {
-            $customersTotal = Customer::count($this->pdo, $companyId, $search);
-            $customers = Customer::findAll($this->pdo, $companyId, $search, $perPage, $offset);
+            $warehouses = Warehouse::findAll($this->pdo, $companyId);
+            $customersTotal = Customer::count($this->pdo, $companyId, $search, $inDepo, $warehouseId);
+            $customers = Customer::findAll($this->pdo, $companyId, $search, $perPage, $offset, $inDepo, $warehouseId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $customersTotal = Customer::count($this->pdo, null, $search);
-            $customers = Customer::findAll($this->pdo, null, $search, $perPage, $offset);
+            $warehouses = Warehouse::findAll($this->pdo, null);
+            $customersTotal = Customer::count($this->pdo, null, $search, $inDepo, $warehouseId);
+            $customers = Customer::findAll($this->pdo, null, $search, $perPage, $offset, $inDepo, $warehouseId);
         } else {
             $customersTotal = 0;
             $customers = [];
@@ -71,7 +76,12 @@ class CustomersController
         } else {
             $_SESSION['flash_error'] = 'Seçilen müşteriler silinemedi veya yetkiniz yok.';
         }
-        header('Location: /musteriler' . (isset($_GET['q']) && trim($_GET['q']) !== '' ? '?q=' . urlencode(trim($_GET['q'])) : ''));
+        $redirectParams = array_filter([
+            'q' => isset($_GET['q']) ? trim($_GET['q']) : null,
+            'in_depo' => isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null,
+            'warehouse_id' => isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null,
+        ]);
+        header('Location: /musteriler' . ($redirectParams !== [] ? '?' . http_build_query($redirectParams) : ''));
         exit;
     }
 
@@ -764,10 +774,12 @@ class CustomersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $inDepo = isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null;
+        $warehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
         if ($companyId) {
-            $customers = Customer::findAll($this->pdo, $companyId, $search);
+            $customers = Customer::findAll($this->pdo, $companyId, $search, null, 0, $inDepo, $warehouseId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $customers = Customer::findAll($this->pdo, null, $search);
+            $customers = Customer::findAll($this->pdo, null, $search, null, 0, $inDepo, $warehouseId);
         } else {
             $customers = [];
         }

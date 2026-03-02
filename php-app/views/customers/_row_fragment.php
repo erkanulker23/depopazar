@@ -8,8 +8,10 @@ $statusStyles = [
     'paid' => 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
     'overdue' => 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800',
     'pending' => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+    'vadesi_gecmis' => 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800',
+    'odeme_bekliyor' => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+    'vadesi_gelmemis' => 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700',
 ];
-$statusLabels = ['paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'pending' => 'Bekliyor'];
 ?>
 <div class="row-fragment-modern bg-gradient-to-b from-slate-50/80 to-white dark:from-gray-800/80 dark:to-gray-800 border-t border-slate-200 dark:border-gray-700">
     <div class="px-4 py-4 md:px-6 md:py-5">
@@ -83,10 +85,31 @@ $statusLabels = ['paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'pending' => 'Be
                         <p class="text-sm text-slate-500 dark:text-gray-400">Ödeme kaydı yok.</p>
                     <?php else: ?>
                         <ul class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                            <?php foreach (array_slice($payments, 0, 10) as $p):
+                            <?php
+                            $todayStart = strtotime(date('Y-m-d'));
+                            $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+                            foreach (array_slice($payments, 0, 10) as $p):
                                 $status = $p['status'] ?? 'pending';
-                                $style = $statusStyles[$status] ?? $statusStyles['pending'];
-                                $label = $statusLabels[$status] ?? $status;
+                                $dueTs = !empty($p['due_date']) ? strtotime($p['due_date']) : false;
+                                if ($status === 'paid') {
+                                    $label = 'Ödendi';
+                                    $style = $statusStyles['paid'];
+                                } elseif ($status === 'cancelled') {
+                                    $label = 'İptal';
+                                    $style = 'bg-gray-500/15 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600';
+                                } elseif ($status === 'overdue' || ($status === 'pending' && $dueTs !== false && $dueTs < $todayStart)) {
+                                    $label = 'Vadesi geçmiş';
+                                    $style = $statusStyles['vadesi_gecmis'];
+                                } elseif ($status === 'pending' && $dueTs !== false && $dueTs >= $todayStart && $dueTs <= $monthEnd) {
+                                    $label = 'Bekliyor';
+                                    $style = $statusStyles['odeme_bekliyor'];
+                                } elseif ($status === 'pending' && $dueTs !== false && $dueTs > $monthEnd) {
+                                    $label = 'Vadesi gelmemiş';
+                                    $style = $statusStyles['vadesi_gelmemis'];
+                                } else {
+                                    $label = $status === 'paid' ? 'Ödendi' : ($status === 'overdue' ? 'Vadesi geçmiş' : 'Bekliyor');
+                                    $style = $statusStyles[$status] ?? $statusStyles['pending'];
+                                }
                             ?>
                                 <li class="flex items-center justify-between gap-3 py-2 px-3 rounded-xl bg-slate-50/80 dark:bg-gray-700/40 hover:bg-slate-100/80 dark:hover:bg-gray-700/60 transition-colors">
                                     <span class="text-sm font-medium text-slate-700 dark:text-gray-200 tabular-nums"><?= date('m.Y', strtotime($p['due_date'] ?? '')) ?></span>

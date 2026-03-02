@@ -344,6 +344,16 @@ function formatDueMonth(dueDateStr) {
     var year = d[0];
     return (months[month] || '') + ' ' + year;
 }
+function getPaymentStatusForDueDate(dueDateStr) {
+    if (!dueDateStr) return { label: 'Bekliyor', className: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800' };
+    var dueTs = new Date(dueDateStr.split(' ')[0]).getTime();
+    var now = new Date();
+    var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).getTime();
+    if (dueTs < todayStart) return { label: 'Vadesi geçmiş', className: 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800' };
+    if (dueTs >= todayStart && dueTs <= monthEnd) return { label: 'Bekliyor', className: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800' };
+    return { label: 'Vadesi gelmemiş', className: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700' };
+}
 function buildAmountSummaryHtml(payments) {
     var lines = [];
     (payments || []).forEach(function(p) {
@@ -384,10 +394,11 @@ function selectCustomer(customerId, payments, customerName) {
     var total = 0;
     collectSelectedPayments.forEach(function(p) {
         total += parseFloat(p.amount || 0);
+        var st = getPaymentStatusForDueDate(p.due_date);
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center';
-        btn.innerHTML = '<div><span class="font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500 dark:text-gray-400">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="font-semibold text-gray-900 dark:text-white">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
+        btn.className = 'w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center gap-3';
+        btn.innerHTML = '<div class="min-w-0 flex-1"><span class="font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500 dark:text-gray-400">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold shrink-0 ' + st.className + '">' + st.label + '</span><span class="font-semibold text-gray-900 dark:text-white tabular-nums shrink-0">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
         btn.onclick = function() { selectOnePayment(p); };
         list.appendChild(btn);
     });
@@ -442,14 +453,17 @@ function buildPaymentListForSelect() {
     list.innerHTML = '';
     if (collectSelectedPayments.length === 0) return;
     var total = 0;
+    var list = document.getElementById('paymentList');
+    if (list) list.innerHTML = '';
     collectSelectedPayments.forEach(function(p) {
         total += parseFloat(p.amount || 0);
+        var st = getPaymentStatusForDueDate(p.due_date);
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center';
-        btn.innerHTML = '<div><span class="font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500 dark:text-gray-400">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="font-semibold text-gray-900 dark:text-white">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
+        btn.className = 'w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center gap-3';
+        btn.innerHTML = '<div class="min-w-0 flex-1"><span class="font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500 dark:text-gray-400">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold shrink-0 ' + st.className + '">' + st.label + '</span><span class="font-semibold text-gray-900 dark:text-white tabular-nums shrink-0">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
         btn.onclick = function() { selectOnePayment(p); };
-        list.appendChild(btn);
+        if (list) list.appendChild(btn);
     });
 }
 document.getElementById('customerSearch').addEventListener('input', function() {

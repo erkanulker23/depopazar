@@ -1,7 +1,7 @@
 <?php
 class Customer
 {
-    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $search = null, ?int $limit = null, int $offset = 0): array
+    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $search = null, ?int $limit = null, int $offset = 0, ?string $inDepo = null, ?string $warehouseId = null): array
     {
         $sql = 'SELECT c.* FROM customers c WHERE c.deleted_at IS NULL ';
         $params = [];
@@ -19,6 +19,10 @@ class Customer
             $params[] = $q;
             $params[] = $q;
         }
+        $depoClause = self::depoFilterSql($companyId, $inDepo, $warehouseId, $params);
+        if ($depoClause !== '') {
+            $sql .= ' AND ' . $depoClause;
+        }
         $sql .= ' ORDER BY c.first_name, c.last_name ';
         if ($limit !== null) {
             $sql .= ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
@@ -32,7 +36,7 @@ class Customer
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function count(PDO $pdo, ?string $companyId = null, ?string $search = null): int
+    public static function count(PDO $pdo, ?string $companyId = null, ?string $search = null, ?string $inDepo = null, ?string $warehouseId = null): int
     {
         $sql = 'SELECT COUNT(*) FROM customers c WHERE c.deleted_at IS NULL ';
         $params = [];
@@ -50,11 +54,36 @@ class Customer
             $params[] = $q;
             $params[] = $q;
         }
+        $depoClause = self::depoFilterSql($companyId, $inDepo, $warehouseId, $params);
+        if ($depoClause !== '') {
+            $sql .= ' AND ' . $depoClause;
+        }
         $stmt = count($params) > 0 ? $pdo->prepare($sql) : $pdo->query($sql);
         if (count($params) > 0) {
             $stmt->execute($params);
         }
         return (int) $stmt->fetchColumn();
+    }
+
+    /** Depoda olan / olmayan veya belirli depo filtresi için SQL koşulu (EXISTS / NOT EXISTS). $params by ref. */
+    private static function depoFilterSql(?string $companyId, ?string $inDepo, ?string $warehouseId, array &$params): string
+    {
+        if (($inDepo === null || $inDepo === '') && ($warehouseId === null || $warehouseId === '')) {
+            return '';
+        }
+        $sub = 'SELECT 1 FROM contracts co INNER JOIN rooms r ON r.id = co.room_id AND r.deleted_at IS NULL INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL WHERE co.customer_id = c.id AND co.deleted_at IS NULL';
+        if ($companyId !== null && $companyId !== '') {
+            $sub .= ' AND w.company_id = ?';
+            $params[] = $companyId;
+        }
+        if ($warehouseId !== null && $warehouseId !== '') {
+            $sub .= ' AND w.id = ?';
+            $params[] = $warehouseId;
+        }
+        if ($inDepo === 'no') {
+            return 'NOT EXISTS (' . $sub . ')';
+        }
+        return 'EXISTS (' . $sub . ')';
     }
 
     /** Aynı ad-soyada sahip (tekrarlanan) müşteri adlarını döndürür – şirket veya tümü. */
