@@ -131,26 +131,32 @@ if (empty($setupSteps)) {
     </div>
 </div>
 
-<a href="/odemeler" class="block mb-8">
-    <div class="stat-card min-h-[100px] hover:shadow-lg hover:shadow-rose-500/10 transition-all duration-300 border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center justify-between gap-4 mb-3">
-            <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                <i class="bi bi-cash-stack text-rose-500"></i> Borç özeti
-            </h3>
-            <span class="text-xs text-gray-500 dark:text-gray-400"><?= (int) $pendingPayments ?> bekleyen · <?= (int) $overduePayments ?> gecikmiş ödeme</span>
+<a href="/odemeler" class="block mb-8 group">
+    <div class="stat-card min-h-[120px] hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300 border border-slate-200/80 dark:border-gray-600/80 overflow-hidden">
+        <div class="flex items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <i class="bi bi-cash-stack text-lg"></i>
+                </span>
+                <div>
+                    <h3 class="text-sm font-bold text-gray-900 dark:text-white">Borç özeti</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400"><?= (int) $pendingPayments ?> bekleyen · <?= (int) $overduePayments ?> gecikmiş</p>
+                </div>
+            </div>
+            <i class="bi bi-chevron-right text-gray-300 dark:text-gray-500 group-hover:text-emerald-500 transition-colors"></i>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-red-50 dark:bg-red-900/20">
-                <span class="text-xs font-medium text-red-800 dark:text-red-200">Vadesi geçmiş</span>
-                <span class="text-sm font-bold text-red-700 dark:text-red-300 tabular-nums"><?= fmtMoney($debtOverdue ?? 0) ?> ₺</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="flex flex-col py-3 px-4 rounded-xl bg-red-50/80 dark:bg-red-900/20 border border-red-100 dark:border-red-800/40">
+                <span class="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-0.5">Vadesi geçmiş</span>
+                <span class="text-lg font-bold text-red-700 dark:text-red-300 tabular-nums"><?= fmtMoney($debtOverdue ?? 0) ?> ₺</span>
             </div>
-            <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                <span class="text-xs font-medium text-amber-800 dark:text-amber-200">Vadesi gelmiş (bu ay)</span>
-                <span class="text-sm font-bold text-amber-700 dark:text-amber-300 tabular-nums"><?= fmtMoney($debtDueThisMonth ?? 0) ?> ₺</span>
+            <div class="flex flex-col py-3 px-4 rounded-xl bg-amber-50/80 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/40">
+                <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-0.5">Bu ay</span>
+                <span class="text-lg font-bold text-amber-700 dark:text-amber-300 tabular-nums"><?= fmtMoney($debtDueThisMonth ?? 0) ?> ₺</span>
             </div>
-            <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-100 dark:bg-gray-700/60">
-                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Toplam borç</span>
-                <span class="text-sm font-bold text-gray-900 dark:text-white tabular-nums"><?= fmtMoney($totalDebt ?? 0) ?> ₺</span>
+            <div class="flex flex-col py-3 px-4 rounded-xl bg-slate-50 dark:bg-gray-700/50 border border-slate-100 dark:border-gray-600">
+                <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">Toplam borç</span>
+                <span class="text-lg font-bold text-gray-900 dark:text-white tabular-nums"><?= fmtMoney($totalDebt ?? 0) ?> ₺</span>
             </div>
         </div>
     </div>
@@ -162,26 +168,41 @@ $expiringContracts = $expiringContracts ?? [];
 $customersWithUnpaid = $customersWithUnpaid ?? [];
 ?>
 <?php if (!empty($customersWithUnpaid)): ?>
-<div class="card-modern p-6 rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10 shadow-sm mb-6">
-    <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-        <i class="bi bi-exclamation-circle text-red-600 dark:text-red-400"></i> Vadesi Gelmiş / Ödemesi Alınmayan Müşteriler
-    </h2>
-    <p class="text-xs text-gray-600 dark:text-gray-400 mb-4">Bu ay veya önceki aylardan ödemesi alınmamış müşteriler. Ödeme almak için ilgili satırdaki bağlantıyı kullanın.</p>
-    <ul class="space-y-2 max-h-56 overflow-y-auto">
-        <?php foreach ($customersWithUnpaid as $row):
-            $name = trim(($row['customer_first_name'] ?? '') . ' ' . ($row['customer_last_name'] ?? ''));
-            $debt = (float)($row['total_debt'] ?? 0);
-            $count = (int)($row['payment_count'] ?? 0);
-        ?>
-            <li class="flex justify-between items-center py-2.5 px-3 rounded-lg bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 text-sm gap-3">
-                <span class="min-w-0 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($name ?: '-') ?></span>
-                <span class="text-red-600 dark:text-red-400 font-semibold flex-shrink-0"><?= fmtMoney($debt) ?> ₺</span>
-                <span class="text-gray-500 dark:text-gray-400 text-xs flex-shrink-0"><?= $count ?> ödeme</span>
-                <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($row['customer_id'] ?? '') ?>" class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700">Ödeme Al</a>
-            </li>
-        <?php endforeach; ?>
-    </ul>
-    <a href="/odemeler?status=unpaid" class="inline-block mt-3 text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Tüm ödemeler →</a>
+<div class="rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm overflow-hidden mb-8">
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-700 bg-slate-50/50 dark:bg-gray-800/80">
+        <div class="flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-600 dark:text-red-400">
+                <i class="bi bi-exclamation-circle text-lg"></i>
+            </span>
+            <div>
+                <h2 class="text-base font-bold text-gray-900 dark:text-white">Vadesi gelmiş / ödemesi alınmayan müşteriler</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Bu ay veya önceki aylardan tahsil edilmemiş ödemeler. Ödeme almak için satırdaki butonu kullanın.</p>
+            </div>
+        </div>
+    </div>
+    <div class="p-4">
+        <ul class="space-y-2 max-h-64 overflow-y-auto pr-1">
+            <?php foreach ($customersWithUnpaid as $row):
+                $name = trim(($row['customer_first_name'] ?? '') . ' ' . ($row['customer_last_name'] ?? ''));
+                $debt = (float)($row['total_debt'] ?? 0);
+                $count = (int)($row['payment_count'] ?? 0);
+            ?>
+                <li class="flex items-center justify-between gap-4 py-3 px-4 rounded-xl bg-slate-50/80 dark:bg-gray-700/40 hover:bg-slate-100/80 dark:hover:bg-gray-700/60 border border-transparent hover:border-slate-200 dark:hover:border-gray-600 transition-colors">
+                    <div class="min-w-0 flex-1">
+                        <span class="font-semibold text-gray-900 dark:text-white block truncate"><?= htmlspecialchars($name ?: '-') ?></span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400"><?= $count ?> ödeme</span>
+                    </div>
+                    <span class="text-base font-bold text-red-600 dark:text-red-400 tabular-nums shrink-0"><?= fmtMoney($debt) ?> ₺</span>
+                    <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($row['customer_id'] ?? '') ?>" class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm hover:shadow-md transition-all">
+                        <i class="bi bi-bank text-sm"></i> Ödeme Al
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <a href="/odemeler?status=unpaid" class="inline-flex items-center gap-1.5 mt-4 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+            Tüm ödemeler <i class="bi bi-arrow-right text-xs"></i>
+        </a>
+    </div>
 </div>
 <?php endif; ?>
 

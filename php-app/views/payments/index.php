@@ -387,6 +387,13 @@ function collectStep(n) {
 }
 function selectCustomer(customerId, payments, customerName) {
     collectSelectedPayments = Array.isArray(payments) ? payments : [];
+    collectSelectedPayments.sort(function(a, b) {
+        var da = (a.due_date || '').split(' ')[0] || '';
+        var db = (b.due_date || '').split(' ')[0] || '';
+        if (!da) return 1;
+        if (!db) return -1;
+        return da.localeCompare(db);
+    });
     var nameEl = document.getElementById('step2CustomerName');
     if (nameEl) nameEl.textContent = customerName ? 'Müşteri: ' + customerName : '';
     var list = document.getElementById('paymentList');
@@ -450,11 +457,17 @@ function setPaymentMethod(method) {
 // Müşteri seçildiğinde ödeme listesinde tek tıklamada seç (ilk ödemeyi seç veya tümünü listele - kullanıcı birini seçsin)
 function buildPaymentListForSelect() {
     var list = document.getElementById('paymentList');
+    if (!list) return;
     list.innerHTML = '';
     if (collectSelectedPayments.length === 0) return;
+    collectSelectedPayments.sort(function(a, b) {
+        var da = (a.due_date || '').split(' ')[0] || '';
+        var db = (b.due_date || '').split(' ')[0] || '';
+        if (!da) return 1;
+        if (!db) return -1;
+        return da.localeCompare(db);
+    });
     var total = 0;
-    var list = document.getElementById('paymentList');
-    if (list) list.innerHTML = '';
     collectSelectedPayments.forEach(function(p) {
         total += parseFloat(p.amount || 0);
         var st = getPaymentStatusForDueDate(p.due_date);
