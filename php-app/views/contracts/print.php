@@ -61,6 +61,9 @@ if (!function_exists('fmtPrice')) {
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Başlangıç – Bitiş</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Sözleşmeyi Yapan</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($soldByName) ?></td></tr>
+            <?php if (!empty($contract['stored_items_condition'])): ?>
+            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ürün Durumu</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><span class="text-xs text-gray-600 mt-1 block">Hasar notu: <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?></span><?php endif; ?></td></tr>
+            <?php endif; ?>
         </table>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Takvimi</h2>
         <table class="min-w-full border border-gray-300 text-sm">
@@ -71,7 +74,7 @@ if (!function_exists('fmtPrice')) {
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= date('d.m.Y H:i') ?></p>
+        <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= fmtDateTime($contract['created_at'] ?? null) ?></p>
     </div>
 </body>
 </html>

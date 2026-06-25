@@ -2,6 +2,12 @@
 $currentPage = 'genel-bakis';
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
+function daysOverdue(?string $dueDate): int {
+    if (!$dueDate) return 0;
+    $due = strtotime(explode(' ', $dueDate)[0]);
+    $today = strtotime(date('Y-m-d'));
+    return $due === false ? 0 : max(0, (int) (($today - $due) / 86400));
+}
 $setupSteps = $setupSteps ?? [];
 if (!is_array($setupSteps)) {
     $setupSteps = [];
@@ -26,11 +32,16 @@ if (empty($setupSteps)) {
         }
     }
 }
+$authUser = Auth::user();
+$userDisplayName = trim(($authUser['first_name'] ?? '') . ' ' . ($authUser['last_name'] ?? ''));
 ?>
 <div class="mb-8">
     <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
             <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent">Genel Bakış</h1>
+            <p class="text-base md:text-lg text-gray-700 dark:text-gray-200 mt-2 font-medium">
+                Merhaba<?= $userDisplayName !== '' ? ' ' . htmlspecialchars($userDisplayName) : '' ?>, hoş geldin
+            </p>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Sistem özeti ve hızlı erişim</p>
         </div>
         <div class="inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm text-sm shrink-0" aria-live="polite">
@@ -161,6 +172,215 @@ if (empty($setupSteps)) {
         </div>
     </div>
 </div>
+
+<?php
+$weekRange = $weekRange ?? Payment::currentWeekRange();
+$weekOverdueList = $weekOverdueList ?? [];
+$weekDueList = $weekDueList ?? [];
+$weekPaidList = $weekPaidList ?? [];
+$hasWeekData = !empty($showWeekPanel);
+?>
+<?php if ($hasWeekData): ?>
+<section class="mb-8 rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" aria-label="Bu hafta özeti">
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-700 bg-gradient-to-r from-slate-50 to-white dark:from-gray-800 dark:to-gray-800/80 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <i class="bi bi-calendar-week text-xl"></i>
+            </span>
+            <div>
+                <h2 class="text-base font-bold text-gray-900 dark:text-white">Bu Hafta</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($weekRange['label'] ?? '') ?> · Pazartesi–Pazar</p>
+            </div>
+        </div>
+        <a href="/odemeler?collect=1" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm transition-colors">
+            <i class="bi bi-bank"></i> Ödeme Al
+        </a>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-100 dark:bg-gray-700">
+        <div class="bg-white dark:bg-gray-800 p-4">
+            <p class="text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider mb-1">Toplam geciken</p>
+            <p class="text-xl font-bold text-red-700 dark:text-red-300 tabular-nums"><?= fmtMoney($weekOverdueSum ?? 0) ?> ₺</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($weekOverdueCount ?? 0) ?> ödeme</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4">
+            <p class="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider mb-1">Bu hafta geciken</p>
+            <p class="text-xl font-bold text-orange-700 dark:text-orange-300 tabular-nums"><?= fmtMoney($weekNewOverdueSum ?? 0) ?> ₺</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($weekNewOverdueCount ?? 0) ?> ödeme · vadesi bu hafta doldu</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4">
+            <p class="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider mb-1">Bu hafta vadesi gelen</p>
+            <p class="text-xl font-bold text-amber-700 dark:text-amber-300 tabular-nums"><?= fmtMoney($weekDueSum ?? 0) ?> ₺</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($weekDueCount ?? 0) ?> ödeme · bugünden itibaren</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4">
+            <p class="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider mb-1">Bu hafta tahsil edilen</p>
+            <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300 tabular-nums"><?= fmtMoney($weekPaidSum ?? 0) ?> ₺</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= count($weekPaidList) ?> son işlem gösteriliyor</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:divide-x divide-slate-100 dark:divide-gray-700">
+        <!-- Geciken ödemeler -->
+        <div class="p-4 lg:p-5">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                Geciken ödemeler
+            </h3>
+            <?php if (empty($weekOverdueList)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Geciken ödeme yok</p>
+            <?php else: ?>
+                <ul class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <?php foreach ($weekOverdueList as $p):
+                        $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
+                        $late = daysOverdue($p['due_date'] ?? '');
+                    ?>
+                    <li class="flex items-start justify-between gap-2 py-2.5 px-3 rounded-xl bg-red-50/60 dark:bg-red-900/10 border border-red-100/80 dark:border-red-900/30">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($name ?: '-') ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($p['payment_number'] ?? '') ?> · Vade <?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></p>
+                            <?php if ($late > 0): ?><p class="text-xs font-medium text-red-600 dark:text-red-400 mt-0.5"><?= $late ?> gün gecikmiş</p><?php endif; ?>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="text-sm font-bold text-red-700 dark:text-red-300 tabular-nums"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</p>
+                            <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($p['customer_id'] ?? '') ?>" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Tahsil et</a>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+
+        <!-- Bu hafta vadesi gelen -->
+        <div class="p-4 lg:p-5 border-t lg:border-t-0 border-slate-100 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                Bu hafta vadesi gelen
+            </h3>
+            <?php if (empty($weekDueList)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu hafta kalan vade yok</p>
+            <?php else: ?>
+                <ul class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <?php foreach ($weekDueList as $p):
+                        $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
+                        $dueTs = strtotime(explode(' ', $p['due_date'] ?? '')[0] ?? '');
+                        $isToday = $dueTs === strtotime(date('Y-m-d'));
+                    ?>
+                    <li class="flex items-start justify-between gap-2 py-2.5 px-3 rounded-xl bg-amber-50/60 dark:bg-amber-900/10 border border-amber-100/80 dark:border-amber-900/30">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($name ?: '-') ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($p['contract_number'] ?? '') ?></p>
+                            <p class="text-xs font-medium <?= $isToday ? 'text-amber-700 dark:text-amber-300' : 'text-gray-600 dark:text-gray-400' ?> mt-0.5">
+                                <?= $isToday ? 'Bugün vadesi doluyor' : ('Vade: ' . date('d.m.Y', strtotime($p['due_date'] ?? ''))) ?>
+                            </p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="text-sm font-bold text-gray-900 dark:text-white tabular-nums"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</p>
+                            <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($p['customer_id'] ?? '') ?>" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Tahsil et</a>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+
+        <!-- Bu hafta tahsil edilen -->
+        <div class="p-4 lg:p-5 border-t lg:border-t-0 border-slate-100 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Bu hafta tahsil edilen
+            </h3>
+            <?php if (empty($weekPaidList)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu hafta henüz tahsilat yok</p>
+            <?php else: ?>
+                <ul class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <?php foreach ($weekPaidList as $p):
+                        $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
+                    ?>
+                    <li class="flex items-start justify-between gap-2 py-2.5 px-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-900/10 border border-emerald-100/80 dark:border-emerald-900/30">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($name ?: '-') ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($p['payment_number'] ?? '') ?></p>
+                            <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5"><?= fmtDateTime($p['paid_at'] ?? null) ?></p>
+                        </div>
+                        <p class="text-sm font-bold text-emerald-700 dark:text-emerald-300 tabular-nums shrink-0"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</p>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if (!empty($showWeekPanel)): ?>
+<section class="mb-8 rounded-2xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" aria-label="Erken ve peşin ödemeler">
+    <div class="px-5 py-4 border-b border-blue-100 dark:border-blue-900/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <i class="bi bi-lightning-charge text-xl"></i>
+            </span>
+            <div>
+                <h2 class="text-base font-bold text-gray-900 dark:text-white">Erken &amp; peşin ödemeler</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Vadesinden önce tahsil edilen · <?= (int) ($earlyPaymentsCount ?? 0) ?> erken ödeme · <?= fmtMoney($earlyPaymentsSum ?? 0) ?> ₺</p>
+            </div>
+        </div>
+        <a href="/raporlar/erken-odemeler" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+            Tüm rapor <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-gray-700">
+        <div class="p-4 lg:p-5">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Son erken tahsilatlar</h3>
+            <?php if (empty($earlyPaymentsList)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Henüz erken ödeme kaydı yok</p>
+            <?php else: ?>
+                <ul class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                    <?php foreach ($earlyPaymentsList as $p):
+                        $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
+                        $daysEarly = (int) ($p['days_early'] ?? paymentDaysEarly($p));
+                    ?>
+                    <li class="flex items-start justify-between gap-2 py-2.5 px-3 rounded-xl bg-blue-50/60 dark:bg-blue-900/10 border border-blue-100/80 dark:border-blue-900/30">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($name ?: '-') ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Tahsilat <?= fmtDateTime($p['paid_at'] ?? null) ?>
+                                · Vade <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?>
+                            </p>
+                            <p class="text-xs font-medium text-blue-600 dark:text-blue-400 mt-0.5"><?= $daysEarly ?> gün erken</p>
+                        </div>
+                        <p class="text-sm font-bold text-blue-700 dark:text-blue-300 tabular-nums shrink-0"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</p>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+        <div class="p-4 lg:p-5">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Peşin ödemiş sözleşmeler</h3>
+            <?php if (empty($prepaidContracts)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Tüm taksitlerini peşin kapatan aktif sözleşme yok</p>
+            <?php else: ?>
+                <ul class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                    <?php foreach ($prepaidContracts as $c):
+                        $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));
+                    ?>
+                    <li class="py-2.5 px-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-900/10 border border-indigo-100/80 dark:border-indigo-900/30">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <a href="/girisler/<?= htmlspecialchars($c['contract_id'] ?? '') ?>" class="text-sm font-semibold text-gray-900 dark:text-white hover:text-emerald-600 truncate block"><?= htmlspecialchars($name) ?></a>
+                                <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($c['contract_number'] ?? '') ?> · <?= (int) ($c['payment_count'] ?? 0) ?> taksit · <?= fmtMoney($c['total_paid'] ?? 0) ?> ₺</p>
+                            </div>
+                            <span class="shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">Peşin</span>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
 
 <a href="/odemeler" class="block mb-8 group">
     <div class="stat-card min-h-[120px] hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300 border border-slate-200/80 dark:border-gray-600/80 overflow-hidden">

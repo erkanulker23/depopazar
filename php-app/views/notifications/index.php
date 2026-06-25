@@ -57,7 +57,7 @@ ob_start();
                         <div class="flex-1 min-w-0">
                             <p class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($n['title']) ?></p>
                             <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"><?= nl2br(htmlspecialchars($n['message'])) ?><?php if (!empty($n['metadata']['actor_name'])): ?> <span class="text-gray-500 dark:text-gray-500">· <?= htmlspecialchars($n['metadata']['actor_name']) ?></span><?php endif; ?></p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"><?= date('d.m.Y H:i', strtotime($n['created_at'] ?? '')) ?></p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"><?= fmtDateTime($n['created_at'] ?? null) ?></p>
                         </div>
                     </div>
                 </li>

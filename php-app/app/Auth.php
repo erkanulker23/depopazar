@@ -99,24 +99,13 @@ class Auth
     public static function canAccessNav(string $href): bool
     {
         $role = self::$user['role'] ?? '';
-        if (in_array($role, ['super_admin', 'company_owner'], true)) {
-            return true;
-        }
-        $restricted = [
-            '/ayarlar' => ['super_admin', 'company_owner'],
-            '/kullanicilar' => ['super_admin', 'company_owner'],
-            '/yetkiler' => ['super_admin', 'company_owner'],
-            '/raporlar' => ['super_admin', 'company_owner', 'accounting', 'company_staff'],
-            '/masraflar' => ['super_admin', 'company_owner', 'accounting'],
-        ];
-        foreach ($restricted as $path => $allowed) {
-            if ($href === $path || str_starts_with($href, $path . '/')) {
-                return in_array($role, $allowed, true);
-            }
-        }
-        if ($role === 'data_entry') {
-            return !in_array($href, ['/ayarlar', '/kullanicilar', '/yetkiler', '/masraflar'], true);
-        }
-        return true;
+        return RolePermissions::canViewNav($role, $href);
+    }
+
+    /** Modül işlemi için yetki kontrolü */
+    public static function can(string $moduleId, string $action): bool
+    {
+        $role = self::$user['role'] ?? '';
+        return RolePermissions::can($role, $moduleId, $action);
     }
 }

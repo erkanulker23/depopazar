@@ -144,11 +144,30 @@ class ReportsController
         $bankAccountId = isset($_GET['bank_account_id']) ? trim($_GET['bank_account_id']) : '';
         $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-01');
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
-        $rows = $this->fetchBankAccountPaymentRows($companyId, $bankAccountId ?: null, $startDate, $endDate);
-        $expenseRows = $this->safeFetchBankAccountExpenseRows($companyId, $bankAccountId ?: null, $startDate, $endDate);
+        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $search = $search !== '' ? $search : null;
+        $paymentMethod = isset($_GET['payment_method']) && in_array($_GET['payment_method'], ['havale', 'kredi_karti'], true) ? $_GET['payment_method'] : null;
+        $rows = $this->fetchBankAccountPaymentRows($companyId, $bankAccountId ?: null, $startDate, $endDate, $search, $paymentMethod);
+        $expenseRows = $this->safeFetchBankAccountExpenseRows($companyId, $bankAccountId ?: null, $startDate, $endDate, $search);
         $bankBalances = $this->safeComputeBankBalances($companyId, $bankAccounts, $endDate);
         $pageTitle = 'Banka Hesaplarına Göre Ödemeler';
         require __DIR__ . '/../../views/reports/bank_accounts.php';
+    }
+
+    /** Erken / peşin ödemeler raporu */
+    public function earlyPaymentsReport(): void
+    {
+        Auth::requireStaff();
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-01', strtotime('-11 months'));
+        $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
+        $rows = Payment::findEarlyPayments($this->pdo, $companyId, 500, $startDate, $endDate);
+        $prepaidContracts = Payment::findFullyPrepaidContracts($this->pdo, $companyId, 100);
+        $totalCount = Payment::countEarlyPayments($this->pdo, $companyId, $startDate, $endDate);
+        $totalSum = Payment::sumEarlyPayments($this->pdo, $companyId, $startDate, $endDate);
+        $pageTitle = 'Erken ve Peşin Ödemeler';
+        require __DIR__ . '/../../views/reports/early_payments.php';
     }
 
     /** Masraflar raporu */
@@ -221,10 +240,10 @@ class ReportsController
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    private function safeFetchBankAccountExpenseRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate): array
+    private function safeFetchBankAccountExpenseRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate, ?string $search = null): array
     {
         try {
-            return $this->fetchBankAccountExpenseRows($companyId, $bankAccountId, $startDate, $endDate);
+            return $this->fetchBankAccountExpenseRows($companyId, $bankAccountId, $startDate, $endDate, $search);
         } catch (Throwable $e) {
             return [];
         }
@@ -266,7 +285,7 @@ class ReportsController
         }
     }
 
-    private function fetchBankAccountExpenseRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate): array
+    private function fetchBankAccountExpenseRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate, ?string $search = null): array
     {
         $sql = 'SELECT e.id, e.amount, e.expense_date, e.description, e.payment_source_id, ec.name AS category_name
                 FROM expenses e
@@ -281,6 +300,12 @@ class ReportsController
         if ($bankAccountId) {
             $sql .= ' AND e.payment_source_id = ? ';
             $params[] = $bankAccountId;
+        }
+        $search = trim((string) $search);
+        if ($search !== '') {
+            $sql .= ' AND (e.description LIKE ? OR e.notes LIKE ? OR ec.name LIKE ?) ';
+            $q = '%' . $search . '%';
+            $params = array_merge($params, [$q, $q, $q]);
         }
         $sql .= ' ORDER BY e.expense_date DESC ';
         $stmt = $this->pdo->prepare($sql);
@@ -369,7 +394,7 @@ class ReportsController
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    private function fetchBankAccountPaymentRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate): array
+    private function fetchBankAccountPaymentRows(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate, ?string $search = null, ?string $paymentMethod = null): array
     {
         $sql = 'SELECT p.id, p.payment_number, p.amount, p.paid_at, p.payment_method, p.transaction_id, p.notes,
                        c.contract_number, c.id AS contract_id, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
@@ -390,6 +415,16 @@ class ReportsController
         if ($bankAccountId) {
             $sql .= ' AND p.bank_account_id = ? ';
             $params[] = $bankAccountId;
+        }
+        if ($paymentMethod) {
+            $sql .= ' AND p.payment_method = ? ';
+            $params[] = $paymentMethod;
+        }
+        $search = trim((string) $search);
+        if ($search !== '') {
+            $sql .= ' AND (p.payment_number LIKE ? OR c.contract_number LIKE ? OR cu.first_name LIKE ? OR cu.last_name LIKE ? OR p.transaction_id LIKE ? OR p.notes LIKE ?) ';
+            $q = '%' . $search . '%';
+            $params = array_merge($params, array_fill(0, 6, $q));
         }
         $sql .= ' ORDER BY p.paid_at DESC, ba.bank_name, p.payment_number ';
         $stmt = $this->pdo->prepare($sql);

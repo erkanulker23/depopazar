@@ -34,7 +34,7 @@ ob_start();
 </form>
 
 <!-- Rapor kartları -->
-<div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     <a href="/raporlar/banka-hesaplari" class="block p-6 card-modern hover:border-emerald-500/50 dark:hover:border-emerald-500/50 group">
         <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
@@ -55,6 +55,18 @@ ob_start();
             <div class="flex-1">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Masraf Raporu</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Kategoriye ve ödeme kaynağına göre harcamalar</p>
+            </div>
+            <span class="text-emerald-600 dark:text-emerald-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
+        </div>
+    </a>
+    <a href="/raporlar/erken-odemeler" class="block p-6 card-modern hover:border-emerald-500/50 dark:hover:border-emerald-500/50 group">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-lightning-charge text-2xl text-white"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Erken / Peşin Ödemeler</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Vadesinden önce tahsil edilen ödemeler ve tüm taksitlerini peşin kapatan müşteriler</p>
             </div>
             <span class="text-emerald-600 dark:text-emerald-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
         </div>

@@ -130,7 +130,7 @@ chmod 640 "$ROOT/php-app/config/db.local.php" 2>/dev/null || true
 # -----------------------------------------------------------------------------
 echo -e "${YELLOW}[4/8] Veritabanı güncelleniyor (schema + migrations)...${NC}"
 if [ -f "$ROOT/artisan" ]; then
-  if (cd "$ROOT" && php artisan migrate --force); then
+  if (cd "$ROOT" && ARTISAN_SKIP_SEED=1 php artisan migrate --force); then
     echo -e "  ${GREEN}Artisan migrate tamamlandı${NC}"
   else
     echo -e "  ${RED}Hata: php artisan migrate başarısız.${NC}" >&2
@@ -158,15 +158,11 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Seed: Super admin kullanıcı + varsayılan şirket (yoksa oluştur)
+# Seed: Yalnizca ilk kurulumda manuel — deploy sirasinda calistirilmaz (sifre/veri korunur)
+# Ilk kurulum: ssh ile sunucuda  ARTISAN_RUN_SEED=1 php artisan migrate --force
 # -----------------------------------------------------------------------------
-echo -e "${YELLOW}[6/8] Seed kontrol ediliyor...${NC}"
-if [ -f "$ROOT/php-app/seed.php" ] && [ -f "$ROOT/php-app/config/db.local.php" ]; then
-  cd "$ROOT/php-app" && php seed.php 2>/dev/null || true
-  cd "$ROOT"
-else
-  echo "  (seed.php veya db.local.php yok - atlanıyor)"
-fi
+echo -e "${YELLOW}[6/8] Seed atlaniyor (deploy mevcut veriyi degistirmez)${NC}"
+echo "  Ilk kurulum icin: ARTISAN_RUN_SEED=1 php artisan migrate --force"
 
 # -----------------------------------------------------------------------------
 # Dizinler ve izinler (403 önlemi: Nginx www-data php-app/public'e erişebilmeli)

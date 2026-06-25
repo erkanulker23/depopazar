@@ -138,6 +138,8 @@ CREATE TABLE IF NOT EXISTS `contracts` (
   `payment_frequency_months` INT DEFAULT 1,
   `terms` TEXT DEFAULT NULL,
   `notes` TEXT DEFAULT NULL,
+  `stored_items_condition` ENUM('sifir','paketlenmis','ikinci_el','hasarli') DEFAULT NULL COMMENT 'Giriş yapılan ürün durumu',
+  `stored_items_condition_note` TEXT DEFAULT NULL COMMENT 'Hasarlı seçildiğinde hasar açıklaması',
   `is_active` TINYINT(1) DEFAULT 1,
   `terminated_at` DATETIME DEFAULT NULL,
   `transportation_fee` DECIMAL(10,2) DEFAULT 0,

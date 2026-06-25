@@ -71,6 +71,23 @@ if (!empty($upcomingKasko) || !empty($upcomingInspection)) {
     </div>
 <?php endif; ?>
 
+<?php
+$qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
+$alertGet = isset($_GET['alert']) ? $_GET['alert'] : '';
+?>
+<form method="get" action="/araclar" class="flex flex-wrap items-center gap-2 mb-4">
+    <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Plaka, model yılı, not..." class="flex-1 min-w-0 sm:w-56 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <select name="alert" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <option value="">Tüm Araçlar</option>
+        <option value="kasko" <?= $alertGet === 'kasko' ? 'selected' : '' ?>>Kasko kayıtlı</option>
+        <option value="inspection" <?= $alertGet === 'inspection' ? 'selected' : '' ?>>Muayene kayıtlı</option>
+    </select>
+    <button type="submit" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Ara</button>
+    <?php if ($qGet !== '' || $alertGet !== ''): ?>
+        <a href="/araclar" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
+    <?php endif; ?>
+</form>
+
 <?php if ($tableExists): ?>
 <div class="flex flex-wrap items-center gap-3 mb-4">
     <button type="button" onclick="document.getElementById('addVehicleModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">

@@ -66,7 +66,7 @@ if (!function_exists('fmtPrice')) {
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($payment['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($payment['room_number'] ?? '') ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Tutar</td><td class="border border-gray-300 px-3 py-2 font-bold"><?= fmtPrice($payment['amount'] ?? 0) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Vade</td><td class="border border-gray-300 px-3 py-2"><?= !empty($payment['due_date']) ? date('d.m.Y', strtotime($payment['due_date'])) : '–' ?></td></tr>
-            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ödenme</td><td class="border border-gray-300 px-3 py-2"><?= !empty($payment['paid_at']) ? date('d.m.Y', strtotime($payment['paid_at'])) : '–' ?></td></tr>
+            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ödenme</td><td class="border border-gray-300 px-3 py-2"><?= fmtDateTime($payment['paid_at'] ?? null) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Durum</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($statusLabel) ?></td></tr>
             <?php if (!empty($payment['payment_method'])): ?><tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ödeme Yöntemi</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($payment['payment_method']) ?></td></tr><?php endif; ?>
         </table>

@@ -38,6 +38,7 @@ $page = $page ?? 1;
             <option value="pending" <?= $payStatus === 'pending' ? 'selected' : '' ?>>Bekliyor</option>
             <option value="overdue" <?= $payStatus === 'overdue' ? 'selected' : '' ?>>Gecikmiş</option>
             <option value="paid" <?= $payStatus === 'paid' ? 'selected' : '' ?>>Ödendi</option>
+            <option value="early" <?= $payStatus === 'early' ? 'selected' : '' ?>>Erken ödendi (vadesinden önce)</option>
             <option value="cancelled" <?= $payStatus === 'cancelled' ? 'selected' : '' ?>>İptal</option>
         </select>
         <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
@@ -130,6 +131,7 @@ $page = $page ?? 1;
                                     <th class="pb-2 pr-4">Ödeme No</th>
                                     <th class="pb-2 pr-4">Sözleşme</th>
                                     <th class="pb-2 pr-4">Vade</th>
+                                    <th class="pb-2 pr-4">Tahsilat</th>
                                     <th class="pb-2 pr-4">Tutar</th>
                                     <th class="pb-2 pr-4">Durum</th>
                                     <th class="pb-2">İşlem</th>
@@ -145,6 +147,14 @@ $page = $page ?? 1;
                                     <td class="py-2 pr-4 font-medium"><a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($p['payment_number'] ?? '-') ?></a></td>
                                     <td class="py-2 pr-4 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></td>
                                     <td class="py-2 pr-4 text-gray-600 dark:text-gray-300"><?= $p['due_date'] ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></td>
+                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">
+                                        <?php if (!empty($p['paid_at'])): ?>
+                                            <?= fmtDateTime($p['paid_at'] ?? null) ?>
+                                            <?php if (paymentIsEarly($p)): ?>
+                                                <span class="block text-[10px] text-blue-600 dark:text-blue-400 font-medium"><?= paymentDaysEarly($p) ?> gün erken</span>
+                                            <?php endif; ?>
+                                        <?php else: ?>-<?php endif; ?>
+                                    </td>
                                     <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</td>
                                     <td class="py-2 pr-4"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span></td>
                                     <td class="py-2">
@@ -256,7 +266,8 @@ $page = $page ?? 1;
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Tarihi</label>
-                            <input type="date" name="paid_at" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat Tarihi</label>
+                            <input type="datetime-local" name="paid_at" value="<?= fmtDateTimeLocalInput() ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İşlem No (opsiyonel)</label>

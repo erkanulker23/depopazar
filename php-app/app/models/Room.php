@@ -24,7 +24,7 @@ class Room
         return self::findOne($pdo, $id);
     }
 
-    public static function findAll(PDO $pdo, ?string $warehouseId = null): array
+    public static function findAll(PDO $pdo, ?string $warehouseId = null, ?string $search = null, ?string $status = null, ?string $hasContract = null): array
     {
         $sql = 'SELECT r.*, w.name AS warehouse_name, w.company_id 
                 FROM rooms r 
@@ -34,6 +34,21 @@ class Room
         if ($warehouseId) {
             $sql .= ' AND r.warehouse_id = ? ';
             $params[] = $warehouseId;
+        }
+        if ($status !== null && $status !== '' && in_array($status, ['empty', 'occupied', 'reserved', 'locked'], true)) {
+            $sql .= ' AND r.status = ? ';
+            $params[] = $status;
+        }
+        $search = trim((string) $search);
+        if ($search !== '') {
+            $sql .= ' AND (r.room_number LIKE ? OR r.floor LIKE ? OR r.block LIKE ? OR r.corridor LIKE ? OR r.description LIKE ? OR r.notes LIKE ? OR w.name LIKE ?) ';
+            $q = '%' . $search . '%';
+            $params = array_merge($params, array_fill(0, 7, $q));
+        }
+        if ($hasContract === 'yes') {
+            $sql .= ' AND EXISTS (SELECT 1 FROM contracts c INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL WHERE c.room_id = r.id AND c.deleted_at IS NULL AND c.is_active = 1) ';
+        } elseif ($hasContract === 'no') {
+            $sql .= ' AND NOT EXISTS (SELECT 1 FROM contracts c INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL WHERE c.room_id = r.id AND c.deleted_at IS NULL AND c.is_active = 1) ';
         }
         $sql .= ' ORDER BY w.name, r.room_number ';
         $stmt = $pdo->prepare($sql);

@@ -7,6 +7,8 @@ $bankBalances = $bankBalances ?? [];
 $bankAccountId = $bankAccountId ?? '';
 $startDate = $startDate ?? date('Y-m-01');
 $endDate = $endDate ?? date('Y-m-t');
+$qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
+$paymentMethodGet = isset($_GET['payment_method']) ? $_GET['payment_method'] : '';
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 ?>
@@ -38,7 +40,22 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş</label>
         <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Yöntemi</label>
+        <select name="payment_method" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[140px]">
+            <option value="">Tümü</option>
+            <option value="havale" <?= $paymentMethodGet === 'havale' ? 'selected' : '' ?>>Havale</option>
+            <option value="kredi_karti" <?= $paymentMethodGet === 'kredi_karti' ? 'selected' : '' ?>>Kredi Kartı</option>
+        </select>
+    </div>
+    <div class="w-full sm:w-auto flex-1 min-w-[200px]">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arama</label>
+        <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Ödeme no, sözleşme, müşteri, işlem no..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    </div>
     <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
+    <?php if ($qGet !== '' || $paymentMethodGet !== '' || $bankAccountId !== ''): ?>
+        <a href="/raporlar/banka-hesaplari?start_date=<?= urlencode($startDate) ?>&end_date=<?= urlencode($endDate) ?>" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
+    <?php endif; ?>
 </form>
 
 <!-- Banka hesabı bakiyeleri (bitiş tarihine kadar) -->
@@ -92,7 +109,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
                             <td class="px-4 py-3">
                                 <a href="/odemeler/<?= htmlspecialchars($r['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></a>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= $r['paid_at'] ? date('d.m.Y H:i', strtotime($r['paid_at'])) : '-' ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($r['paid_at'] ?? null) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['bank_name'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['contract_number'] ?? '') ?> / <?= htmlspecialchars(trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? ''))) ?></td>
                             <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white"><?= fmtMoney($r['amount'] ?? 0) ?> ₺</td>

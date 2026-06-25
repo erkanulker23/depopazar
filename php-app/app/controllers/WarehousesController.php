@@ -13,10 +13,12 @@ class WarehousesController
         Auth::requireStaff();
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $search = $search !== '' ? $search : null;
         if ($companyId) {
-            $warehouses = Warehouse::findAll($this->pdo, $companyId);
+            $warehouses = Warehouse::findAll($this->pdo, $companyId, $search);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $warehouses = Warehouse::findAll($this->pdo, null);
+            $warehouses = Warehouse::findAll($this->pdo, null, $search);
         } else {
             $_SESSION['flash_error'] = 'Kullanıcı bir şirkete bağlı değil.';
             header('Location: /genel-bakis');

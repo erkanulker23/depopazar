@@ -20,7 +20,7 @@ class PaymentsController
         } else {
             $payments = [];
         }
-        $statusFilter = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'paid', 'overdue', 'cancelled', 'unpaid'], true) ? $_GET['status'] : '';
+        $statusFilter = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'paid', 'overdue', 'cancelled', 'unpaid', 'early'], true) ? $_GET['status'] : '';
         if ($statusFilter === 'unpaid') {
             $payments = array_filter($payments, fn($p) => paymentMatchesStatusFilter($p, 'unpaid'));
         } elseif ($statusFilter !== '') {

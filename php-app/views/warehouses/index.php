@@ -8,7 +8,11 @@ ob_start();
 </div>
 
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <div></div>
+    <form method="get" action="/depolar" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <input type="search" name="q" value="<?= htmlspecialchars(isset($_GET['q']) ? trim($_GET['q']) : '') ?>" placeholder="Depo adı, şehir, adres..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Ara</button>
+        <?php if (!empty($_GET['q'])): ?><a href="/depolar" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
+    </form>
     <div class="flex flex-wrap items-center gap-2">
         <a href="/depolar/excel-disari-aktar" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar

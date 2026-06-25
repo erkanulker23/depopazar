@@ -20,6 +20,30 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
+<?php
+$qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
+$roleGet = isset($_GET['role']) ? $_GET['role'] : '';
+$activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
+?>
+<form method="get" action="/kullanicilar" class="mb-4 flex flex-wrap items-center gap-2">
+    <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Ad, soyad, e-posta, telefon..." class="flex-1 min-w-0 sm:w-56 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <select name="role" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <option value="">Tüm Roller</option>
+        <?php foreach ($roleLabels as $roleKey => $roleLabel): if ($roleKey === 'customer') continue; ?>
+            <option value="<?= htmlspecialchars($roleKey) ?>" <?= $roleGet === $roleKey ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <select name="is_active" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <option value="">Tüm Durumlar</option>
+        <option value="1" <?= $activeGet === '1' ? 'selected' : '' ?>>Aktif</option>
+        <option value="0" <?= $activeGet === '0' ? 'selected' : '' ?>>Pasif</option>
+    </select>
+    <button type="submit" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
+    <?php if ($qGet !== '' || $roleGet !== '' || $activeGet !== ''): ?>
+        <a href="/kullanicilar" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
+    <?php endif; ?>
+</form>
+
 <?php if ($canManageUsers): ?>
 <div class="mb-4">
     <button type="button" onclick="document.getElementById('addUserModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">

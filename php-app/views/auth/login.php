@@ -7,7 +7,7 @@ $error = $error ?? null;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#1a1614" media="(prefers-color-scheme: dark)">
     <link rel="icon" href="data:,">
     <title>Giriş - <?= htmlspecialchars($projectName ?? 'Depo ve Nakliye Takip') ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,6 +16,21 @@ $error = $error ?? null;
         darkMode: 'class',
         theme: {
             extend: {
+                colors: {
+                    gray: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#9a8a7e',
+                        500: '#7a6b5e',
+                        600: '#4a3f36',
+                        700: '#352e28',
+                        800: '#2a2320',
+                        900: '#1a1614',
+                        950: '#120f0d',
+                    }
+                },
                 fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif'] }
             }
         }
@@ -37,7 +52,7 @@ $error = $error ?? null;
         html { height: 100%; }
         body { min-height: 100%; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
         .login-bg { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #d1fae5 100%); }
-        .dark .login-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+        .dark .login-bg { background: linear-gradient(135deg, #1a1614 0%, #2a2320 50%, #1a1614 100%); }
         .login-card { max-width: 420px; width: 100%; }
         input { font-size: 16px !important; min-height: 48px; }
         .btn-submit { min-height: 48px; font-size: 1rem; transition: all 0.2s; }

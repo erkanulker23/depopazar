@@ -71,14 +71,52 @@ class DashboardController
         $upcomingPayments = [];
         $expiringContracts = [];
         $customersWithUnpaid = [];
-        if ($companyId) {
-            $upcomingPayments = Payment::findUpcoming($this->pdo, $companyId, 10);
-            $expiringContracts = Contract::findExpiringSoon($this->pdo, $companyId, 30);
-            $customersWithUnpaid = Payment::findCustomersWithUnpaidPayments($this->pdo, $companyId, 50);
-        } elseif (($user['role'] ?? '') === 'super_admin') {
-            $upcomingPayments = Payment::findUpcoming($this->pdo, null, 10);
-            $expiringContracts = Contract::findExpiringSoon($this->pdo, null, 30);
-            $customersWithUnpaid = Payment::findCustomersWithUnpaidPayments($this->pdo, null, 50);
+        $weekRange = Payment::currentWeekRange();
+        $weekOverdueList = [];
+        $weekDueList = [];
+        $weekPaidList = [];
+        $weekOverdueCount = 0;
+        $weekOverdueSum = 0.0;
+        $weekNewOverdueCount = 0;
+        $weekNewOverdueSum = 0.0;
+        $weekDueCount = 0;
+        $weekDueSum = 0.0;
+        $weekPaidSum = 0.0;
+        $showWeekPanel = false;
+        $earlyPaymentsList = [];
+        $prepaidContracts = [];
+        $earlyPaymentsCount = 0;
+        $earlyPaymentsSum = 0.0;
+
+        if ($companyId || ($user['role'] ?? '') === 'super_admin') {
+            $cid = $companyId;
+            $upcomingPayments = Payment::findUpcoming($this->pdo, $cid, 10);
+            $expiringContracts = Contract::findExpiringSoon($this->pdo, $cid, 30);
+            $customersWithUnpaid = Payment::findCustomersWithUnpaidPayments($this->pdo, $cid, 50);
+            $weekOverdueList = Payment::findOverdueList($this->pdo, $cid, 12);
+            $weekDueList = Payment::findDueThisWeek($this->pdo, $cid, 12);
+            $weekPaidList = Payment::findPaidThisWeek($this->pdo, $cid, 8);
+            $weekOverdueCount = $cid
+                ? Payment::countOverdueByDueDate($this->pdo, $cid)
+                : Payment::countOverdueByDueDateGlobal($this->pdo);
+            $weekOverdueSum = $cid
+                ? Payment::sumOverdueByCompany($this->pdo, $cid)
+                : Payment::sumOverdueGlobal($this->pdo);
+            $weekNewOverdueCount = Payment::countOverdueDueThisWeek($this->pdo, $cid);
+            $weekNewOverdueSum = Payment::sumOverdueDueThisWeek($this->pdo, $cid);
+            $weekDueCount = Payment::countDueThisWeek($this->pdo, $cid);
+            $weekDueSum = Payment::sumDueThisWeek($this->pdo, $cid);
+            $weekPaidSum = Payment::sumPaidThisWeek($this->pdo, $cid);
+            $showWeekPanel = true;
+            $earlyPaymentsList = Payment::findEarlyPayments($this->pdo, $cid, 8);
+            $prepaidContracts = Payment::findFullyPrepaidContracts($this->pdo, $cid, 6);
+            $earlyPaymentsCount = Payment::countEarlyPayments($this->pdo, $cid);
+            $earlyPaymentsSum = Payment::sumEarlyPayments($this->pdo, $cid);
+        } else {
+            $earlyPaymentsList = [];
+            $prepaidContracts = [];
+            $earlyPaymentsCount = 0;
+            $earlyPaymentsSum = 0.0;
         }
 
         $config = require __DIR__ . '/../../config/config.php';

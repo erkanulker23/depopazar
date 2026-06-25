@@ -82,6 +82,9 @@ ob_start();
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Başlangıç – Bitiş</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></td></tr>
+        <?php if (!empty($contract['stored_items_condition'])): ?>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ürün Durumu</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><span class="text-xs text-gray-600 mt-1 block">Hasar notu: <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?></span><?php endif; ?></td></tr>
+        <?php endif; ?>
     </table>
     <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Takvimi</h2>
     <table class="min-w-full border border-gray-300 text-sm">
@@ -92,7 +95,7 @@ ob_start();
             <?php endforeach; ?>
         </tbody>
     </table>
-    <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= date('d.m.Y H:i') ?></p>
+    <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= fmtDateTime($contract['created_at'] ?? null) ?></p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -118,8 +121,12 @@ ob_start();
                     <dd class="mt-1 text-gray-900 dark:text-white"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></dd>
                 </div>
                 <div>
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kayıt Tarihi</dt>
+                    <dd class="mt-1 text-gray-900 dark:text-white"><?= fmtDateTime($contract['created_at'] ?? null) ?></dd>
+                </div>
+                <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Başlangıç – Bitiş</dt>
-                    <dd class="mt-1 text-gray-900 dark:text-white"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></dd>
+                    <dd class="mt-1 text-gray-900 dark:text-white"><?= fmtDate($contract['start_date'] ?? null) ?> – <?= fmtDate($contract['end_date'] ?? null) ?></dd>
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Fiyat</dt>
@@ -139,6 +146,19 @@ ob_start();
                         <?php endif; ?>
                     </dd>
                 </div>
+                <?php if (!empty($contract['stored_items_condition'])): ?>
+                <div class="sm:col-span-2">
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Giriş Yapılan Ürün Durumu</dt>
+                    <dd class="mt-1 text-gray-900 dark:text-white">
+                        <?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?>
+                        <?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?>
+                            <p class="mt-2 text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2 border border-amber-200 dark:border-amber-800">
+                                <span class="font-medium">Hasar notu:</span> <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?>
+                            </p>
+                        <?php endif; ?>
+                    </dd>
+                </div>
+                <?php endif; ?>
             </dl>
         </div>
 
@@ -170,7 +190,7 @@ ob_start();
                                         <?php $ps = paymentStatusDisplay($p); ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= !empty($p['paid_at']) ? date('d.m.Y', strtotime($p['paid_at'])) : '–' ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($p['paid_at'] ?? null) ?></td>
                                     <td class="px-4 py-3">
                                         <?php if (paymentIsCollectible($p)): ?>
                                             <button type="button" onclick="openCollectModal(<?= htmlspecialchars(json_encode([['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']])) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</button>
@@ -247,8 +267,8 @@ ob_start();
                             <?php endif; ?>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Tarihi</label>
-                            <input type="date" name="paid_at" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat Tarihi</label>
+                            <input type="datetime-local" name="paid_at" value="<?= fmtDateTimeLocalInput() ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
                         </div>
                         <input type="text" name="transaction_id" placeholder="İşlem no (opsiyonel)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
                         <textarea name="notes" rows="2" placeholder="Not (opsiyonel)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>

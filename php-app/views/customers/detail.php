@@ -61,7 +61,7 @@ ob_start();
             <p class="text-sm <?= (time() - strtotime($lastPayment['paid_at'])) > 90 * 86400 ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300' ?>">
                 <?= htmlspecialchars(timeAgoTr($lastPayment['paid_at'])) ?>
             </p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Tarih: <?= date('d-m-Y', strtotime($lastPayment['paid_at'])) ?> · Tutar: <?= fmtPrice($lastPayment['amount'] ?? 0) ?></p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Tarih: <?= fmtDateTime($lastPayment['paid_at'] ?? null) ?> · Tutar: <?= fmtPrice($lastPayment['amount'] ?? 0) ?></p>
             <?php else: ?>
             <p class="text-sm text-red-600 dark:text-red-400">Ödeme kaydı yok.</p>
             <?php endif; ?>
@@ -341,7 +341,7 @@ ob_start();
                                         <?php $ps = paymentStatusDisplay($p); ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= !empty($p['paid_at']) ? date('d.m.Y', strtotime($p['paid_at'])) : '–' ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($p['paid_at'] ?? null) ?></td>
                                     <td class="px-4 py-3">
                                         <?php if (paymentIsCollectible($p)): ?>
                                             <a href="/odemeler?payment=<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</a>
@@ -556,7 +556,8 @@ $bankAccounts = $bankAccounts ?? [];
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme tarihi</label>
-                            <input type="date" name="paid_at" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat Tarihi</label>
+                            <input type="datetime-local" name="paid_at" value="<?= fmtDateTimeLocalInput() ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İşlem no (opsiyonel)</label>

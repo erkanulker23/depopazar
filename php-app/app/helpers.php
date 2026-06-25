@@ -7,6 +7,39 @@ if (!function_exists('fmtPrice')) {
     }
 }
 
+/** Tarih gösterimi (vade, sözleşme dönemi vb.) */
+if (!function_exists('fmtDate')) {
+    function fmtDate(?string $value, string $fallback = '–'): string
+    {
+        if ($value === null || trim($value) === '') {
+            return $fallback;
+        }
+        $ts = strtotime(trim($value));
+        return $ts !== false ? date('d.m.Y', $ts) : $fallback;
+    }
+}
+
+/** Tarih + saat gösterimi (kayıt, tahsilat, işlem zamanı) */
+if (!function_exists('fmtDateTime')) {
+    function fmtDateTime(?string $value, string $fallback = '–'): string
+    {
+        if ($value === null || trim($value) === '') {
+            return $fallback;
+        }
+        $ts = strtotime(trim($value));
+        return $ts !== false ? date('d.m.Y H:i', $ts) : $fallback;
+    }
+}
+
+/** datetime-local input varsayılan değeri */
+if (!function_exists('fmtDateTimeLocalInput')) {
+    function fmtDateTimeLocalInput(?string $value = null): string
+    {
+        $ts = ($value !== null && trim($value) !== '') ? strtotime(trim($value)) : time();
+        return $ts !== false ? date('Y-m-d\TH:i', $ts) : date('Y-m-d\TH:i');
+    }
+}
+
 /** TC Kimlik No / Müşteri numarası: en fazla 11 haneli rakam (boş bırakılabilir) */
 if (!function_exists('validateTcIdentity')) {
     function validateTcIdentity(?string $value): bool {
@@ -98,8 +131,41 @@ if (!function_exists('paymentMethodLabel')) {
 }
 
 /**
+ * Ödeme vadesinden önce tahsil edilmiş mi (paid_at < due_date).
+ */
+if (!function_exists('paymentIsEarly')) {
+    function paymentIsEarly(array $payment): bool
+    {
+        if (($payment['status'] ?? '') !== 'paid') {
+            return false;
+        }
+        $paidRaw = trim((string) ($payment['paid_at'] ?? ''));
+        $dueRaw = trim((string) ($payment['due_date'] ?? ''));
+        if ($paidRaw === '' || $dueRaw === '') {
+            return false;
+        }
+        $paidDay = strtotime(explode(' ', $paidRaw)[0]);
+        $dueDay = strtotime(explode(' ', $dueRaw)[0]);
+        return $paidDay !== false && $dueDay !== false && $paidDay < $dueDay;
+    }
+}
+
+/** Vadeden kaç gün önce ödendi (erken değilse 0) */
+if (!function_exists('paymentDaysEarly')) {
+    function paymentDaysEarly(array $payment): int
+    {
+        if (!paymentIsEarly($payment)) {
+            return 0;
+        }
+        $paidDay = strtotime(explode(' ', trim((string) ($payment['paid_at'] ?? '')))[0]);
+        $dueDay = strtotime(explode(' ', trim((string) ($payment['due_date'] ?? '')))[0]);
+        return (int) max(0, ($dueDay - $paidDay) / 86400);
+    }
+}
+
+/**
  * Ödeme durumu etiketi ve rozet sınıfı (vade tarihine göre; DB overdue status kullanılmaz).
- * @return array{label: string, badge: string, collectible: bool}
+ * @return array{label: string, badge: string, collectible: bool, early?: bool, days_early?: int}
  */
 if (!function_exists('paymentStatusDisplay')) {
     function paymentStatusDisplay(array $payment): array
@@ -110,10 +176,16 @@ if (!function_exists('paymentStatusDisplay')) {
         $todayStart = strtotime(date('Y-m-d'));
 
         if ($status === 'paid') {
+            $early = paymentIsEarly($payment);
+            $daysEarly = $early ? paymentDaysEarly($payment) : 0;
             return [
-                'label' => 'Ödendi',
-                'badge' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                'label' => $early ? ('Erken ödendi' . ($daysEarly > 0 ? ' (' . $daysEarly . ' gün)' : '')) : 'Ödendi',
+                'badge' => $early
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
                 'collectible' => false,
+                'early' => $early,
+                'days_early' => $daysEarly,
             ];
         }
         if ($status === 'cancelled') {
@@ -161,12 +233,65 @@ if (!function_exists('paymentMatchesStatusFilter')) {
         $dbStatus = $payment['status'] ?? 'pending';
         return match ($filter) {
             'paid' => $dbStatus === 'paid',
+            'early' => paymentIsEarly($payment),
             'cancelled' => $dbStatus === 'cancelled',
             'overdue' => $display['label'] === 'Vadesi geçmiş',
             'pending' => in_array($display['label'], ['Bekliyor', 'Vadesi gelmemiş'], true),
             'unpaid' => $display['collectible'],
             default => true,
         };
+    }
+}
+
+/** Depo girişi — girilen eşyanın durumu seçenekleri */
+if (!function_exists('storedItemsConditionOptions')) {
+    function storedItemsConditionOptions(): array
+    {
+        return [
+            'sifir' => 'Sıfır',
+            'paketlenmis' => 'Paketlenmiş',
+            'ikinci_el' => 'İkinci el',
+            'hasarli' => 'Hasarlı',
+        ];
+    }
+}
+
+if (!function_exists('storedItemsConditionLabel')) {
+    function storedItemsConditionLabel(?string $code): string
+    {
+        if ($code === null || $code === '') {
+            return '-';
+        }
+        return storedItemsConditionOptions()[$code] ?? $code;
+    }
+}
+
+/**
+ * POST'tan ürün durumu doğrular.
+ * @return array{0: ?string, 1: ?string, 2: ?string} [condition, note, errorMessage]
+ */
+if (!function_exists('parseStoredItemsConditionFromRequest')) {
+    function parseStoredItemsConditionFromRequest(array $post, bool $required = true): array
+    {
+        $allowed = array_keys(storedItemsConditionOptions());
+        $condition = trim((string) ($post['stored_items_condition'] ?? ''));
+        if ($condition === '') {
+            if ($required) {
+                return [null, null, 'Giriş yapılan ürün durumu seçilmelidir.'];
+            }
+            return [null, null, null];
+        }
+        if (!in_array($condition, $allowed, true)) {
+            return [null, null, 'Geçersiz ürün durumu.'];
+        }
+        $note = trim((string) ($post['stored_items_condition_note'] ?? ''));
+        if ($condition === 'hasarli' && $note === '') {
+            return [null, null, 'Hasarlı ürünler için hasar notu zorunludur.'];
+        }
+        if ($condition !== 'hasarli') {
+            $note = '';
+        }
+        return [$condition, $note !== '' ? $note : null, null];
     }
 }
 
@@ -195,7 +320,7 @@ if (!function_exists('chargeStatusDisplay')) {
     }
 }
 
-/** POST paid_at (Y-m-d veya datetime) → MySQL datetime; boşsa şimdi */
+/** POST paid_at (Y-m-d, datetime-local veya datetime) → MySQL datetime; boşsa şimdi */
 if (!function_exists('normalizePaidAt')) {
     function normalizePaidAt(?string $paidAt): string
     {
@@ -205,6 +330,12 @@ if (!function_exists('normalizePaidAt')) {
         }
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $paidAt)) {
             return $paidAt . ' ' . date('H:i:s');
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/', $paidAt)) {
+            $paidAt = str_replace('T', ' ', $paidAt);
+            if (strlen($paidAt) === 16) {
+                $paidAt .= ':00';
+            }
         }
         $ts = strtotime($paidAt);
         return $ts !== false ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s');

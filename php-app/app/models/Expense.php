@@ -1,7 +1,7 @@
 <?php
 class Expense
 {
-    public static function findAll(PDO $pdo, string $companyId, ?string $categoryId = null, ?string $startDate = null, ?string $endDate = null, ?string $paymentSourceType = null, ?string $paymentSourceId = null): array
+    public static function findAll(PDO $pdo, string $companyId, ?string $categoryId = null, ?string $startDate = null, ?string $endDate = null, ?string $paymentSourceType = null, ?string $paymentSourceId = null, ?string $search = null): array
     {
         $sql = 'SELECT e.*, ec.name AS category_name, ec.id AS category_id
                 FROM expenses e
@@ -27,6 +27,12 @@ class Expense
         if ($paymentSourceId) {
             $sql .= ' AND e.payment_source_id = ? ';
             $params[] = $paymentSourceId;
+        }
+        $search = trim((string) $search);
+        if ($search !== '') {
+            $sql .= ' AND (e.description LIKE ? OR e.notes LIKE ? OR ec.name LIKE ?) ';
+            $q = '%' . $search . '%';
+            $params = array_merge($params, [$q, $q, $q]);
         }
         $sql .= ' ORDER BY e.expense_date DESC, e.created_at DESC ';
         $stmt = $pdo->prepare($sql);

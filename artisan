@@ -2,7 +2,8 @@
 <?php
 /**
  * DepoPazar – Artisan (Forge / Laravel deploy uyumlu)
- * migrate: schema + SQL migration + idempotent seed (--force ile)
+ * migrate: schema + SQL migration (schema_migrations ile yalnizca bir kez)
+ * Seed deploy'da calismaz; ilk kurulum: ARTISAN_RUN_SEED=1 php artisan migrate --force
  * optimize, config:cache, route:cache, view:cache vb.: no-op (saf PHP uygulaması)
  */
 $command = isset($argv[1]) ? trim($argv[1]) : '';
@@ -137,6 +138,85 @@ function run_mysql_file_pdo(PDO $pdo, $file) {
     }
 }
 
+function ensure_migration_table(PDO $pdo): void
+{
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS `schema_migrations` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `migration` VARCHAR(255) NOT NULL,
+            `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uq_schema_migrations_migration` (`migration`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+}
+
+function get_applied_migrations(PDO $pdo): array
+{
+    ensure_migration_table($pdo);
+    $rows = $pdo->query('SELECT migration FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN);
+    return array_flip($rows ?: []);
+}
+
+function mark_migration_applied(PDO $pdo, string $name): void
+{
+    $stmt = $pdo->prepare('INSERT IGNORE INTO schema_migrations (migration) VALUES (?)');
+    $stmt->execute([$name]);
+}
+
+function database_has_existing_data(PDO $pdo): bool
+{
+    try {
+        $pdo->query('SELECT 1 FROM companies LIMIT 1');
+        return (int) $pdo->query('SELECT COUNT(*) FROM companies')->fetchColumn() > 0;
+    } catch (Throwable $e) {
+        try {
+            $pdo->query('SELECT 1 FROM users LIMIT 1');
+            return (int) $pdo->query('SELECT COUNT(*) FROM users WHERE deleted_at IS NULL')->fetchColumn() > 0;
+        } catch (Throwable $e2) {
+            return false;
+        }
+    }
+}
+
+/** Migration daha once uygulanmis mi (Duplicate column vb.) */
+function is_migration_already_applied_error(string $err): bool
+{
+    $err = strtolower($err);
+    $needles = [
+        'duplicate column',
+        'duplicate key name',
+        'duplicate entry',
+        'already exists',
+        'check that column/key exists',
+        'multiple primary key',
+    ];
+    foreach ($needles as $needle) {
+        if (str_contains($err, $needle)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function run_schema_if_needed(PDO $pdo, bool $useMysqlCli, string $mysqlCmd, string $host, string $port, string $username, string $password, string $database, string $schemaPath): void
+{
+    echo "Schema kontrol ediliyor... ";
+    if ($useMysqlCli) {
+        list($ok, $err) = run_mysql_file($mysqlCmd, $host, $port, $username, $password, $database, $schemaPath);
+    } else {
+        list($ok, $err) = run_mysql_file_pdo($pdo, $schemaPath);
+    }
+    if ($ok) {
+        echo "OK\n";
+    } else {
+        echo "atlandi (tablolar zaten mevcut)\n";
+        if ($err !== '') {
+            echo trim($err) . "\n";
+        }
+    }
+}
+
 $useMysqlCli = false;
 $mysqlCmd = 'mysql';
 $which = trim((string) shell_exec('which mysql 2>/dev/null'));
@@ -160,36 +240,68 @@ if (!$useMysqlCli) {
 
 echo "Veritabanı: $database @ $host:$port\n";
 
-// 1) Schema (temel tablolar)
-echo "Schema yükleniyor... ";
-if ($useMysqlCli) {
-    list($ok, $err) = run_mysql_file($mysqlCmd, $host, $port, $username, $password, $database, $schemaPath);
-} else {
-    list($ok, $err) = run_mysql_file_pdo($pdo, $schemaPath);
-}
-if ($ok) {
-    echo "OK\n";
-} else {
-    echo "uyarı (tablolar mevcut olabilir)\n";
-    if ($err !== '') echo trim($err) . "\n";
+// PDO her zaman migration takibi icin (mysql CLI migration calistirsa bile)
+if ($pdo === null) {
+    try {
+        $dsn = "mysql:host=$host;port=$port;dbname=$database;charset=utf8mb4";
+        $pdo = new PDO($dsn, $username, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    } catch (Throwable $e) {
+        fwrite(STDERR, "Veritabani baglanti hatasi (migration takibi): " . $e->getMessage() . "\n");
+        exit(1);
+    }
 }
 
-// 2) Migration'lar (sırayla)
+ensure_migration_table($pdo);
 $files = glob($migrationsDir . '/*.sql');
 sort($files);
-$done = 0;
-$failed = [];
+$applied = get_applied_migrations($pdo);
+$pending = [];
 foreach ($files as $f) {
     $name = basename($f);
-    if (trim(file_get_contents($f)) === '') continue;
+    if (trim((string) file_get_contents($f)) === '') {
+        continue;
+    }
+    if (!isset($applied[$name])) {
+        $pending[] = $f;
+    }
+}
+
+// Mevcut canli veritabani: daha once elle/eskiden migrate edilmis, kayit tablosu bos
+if (empty($applied)) {
+    run_schema_if_needed($pdo, $useMysqlCli, $mysqlCmd, $host, $port, $username, $password, $database, $schemaPath);
+    $pending = [];
+    foreach ($files as $f) {
+        $name = basename($f);
+        if (trim((string) file_get_contents($f)) === '') {
+            continue;
+        }
+        $pending[] = $f;
+    }
+    if (database_has_existing_data($pdo)) {
+        echo "Mevcut veritabani — bekleyen migration'lar kontrol edilecek (zaten uygulananlar atlanir).\n";
+    }
+} else {
+    echo "Uygulanmis migration: " . count($applied) . ", bekleyen: " . count($pending) . "\n";
+}
+
+$done = 0;
+$skipped = 0;
+$failed = [];
+foreach ($pending as $f) {
+    $name = basename($f);
     if ($useMysqlCli) {
         list($ok, $err) = run_mysql_file($mysqlCmd, $host, $port, $username, $password, $database, $f);
     } else {
         list($ok, $err) = run_mysql_file_pdo($pdo, $f);
     }
     if ($ok) {
+        mark_migration_applied($pdo, $name);
         echo "  Migration: $name\n";
         $done++;
+    } elseif (is_migration_already_applied_error($err)) {
+        mark_migration_applied($pdo, $name);
+        echo "  Migration (zaten uygulanmis): $name\n";
+        $skipped++;
     } else {
         $failed[] = [$name, $err];
     }
@@ -197,24 +309,23 @@ foreach ($files as $f) {
 
 if (!empty($failed)) {
     foreach ($failed as list($name, $err)) {
-        fwrite(STDERR, "  Uyarı/Hata: $name - " . trim($err) . "\n");
+        fwrite(STDERR, "  Hata: $name - " . trim($err) . "\n");
     }
+    fwrite(STDERR, "Bazi migration'lar basarisiz. DELIMITER iceren dosyalar icin sunucuda mysql istemcisi gerekir.\n");
+    exit(1);
 }
 
-echo "Toplam $done migration çalıştırıldı.\n";
-if (!empty($failed)) {
-    echo count($failed) . " dosya hata/uyarı verdi (zaten uygulanmış veya DELIMITER kullanıyorsa mysql CLI gerekir).\n";
-}
+echo "Toplam $done yeni migration uygulandi" . ($skipped > 0 ? ", $skipped zaten uygulanmis" : '') . ".\n";
 
-// Forge standart deploy: php artisan migrate --force sonrası idempotent seed
-$runSeed = in_array('--force', $argv, true) && getenv('ARTISAN_SKIP_SEED') !== '1';
+// Seed YALNIZCA ilk kurulum icin: ARTISAN_RUN_SEED=1 ile calistirin (deploy'da varsayilan kapali)
+$runSeed = getenv('ARTISAN_RUN_SEED') === '1' && getenv('ARTISAN_SKIP_SEED') !== '1';
 if ($runSeed) {
     $seedScript = $phpApp . '/seed.php';
     if (is_file($seedScript)) {
-        echo "Seed kontrol ediliyor...\n";
+        echo "Seed calistiriliyor (ARTISAN_RUN_SEED=1)...\n";
         passthru('php ' . escapeshellarg($seedScript) . ' --skip-migrate', $seedRet);
         if ($seedRet !== 0) {
-            fwrite(STDERR, "Uyarı: seed.php çıkış kodu: $seedRet\n");
+            fwrite(STDERR, "Uyari: seed.php cikis kodu: $seedRet\n");
         }
     }
 }

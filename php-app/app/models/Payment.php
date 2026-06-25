@@ -359,6 +359,212 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Bu haftanın Pazartesi–Pazar aralığı (Y-m-d) ve etiket */
+    public static function currentWeekRange(): array
+    {
+        $monday = new DateTime('monday this week');
+        $sunday = new DateTime('sunday this week');
+        $months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+        $m1 = $months[(int) $monday->format('n') - 1];
+        $m2 = $months[(int) $sunday->format('n') - 1];
+        $label = $monday->format('j') . ' ' . $m1 . ' – ' . $sunday->format('j') . ' ' . $m2 . ' ' . $sunday->format('Y');
+        return [
+            'start' => $monday->format('Y-m-d'),
+            'end' => $sunday->format('Y-m-d'),
+            'label' => $label,
+        ];
+    }
+
+    /** Vadesi geçmiş ödemeler (liste) */
+    public static function findOverdueList(PDO $pdo, ?string $companyId, int $limit = 15): array
+    {
+        $sql = 'SELECT p.*, c.contract_number, c.customer_id, c.id AS contract_id,
+                       cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) < CURDATE() ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.due_date ASC LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Bu hafta vadesi dolmuş (Pazartesi–bugün arası, ödenmemiş) */
+    public static function findOverdueDueThisWeek(PDO $pdo, ?string $companyId, int $limit = 15): array
+    {
+        $week = self::currentWeekRange();
+        $sql = 'SELECT p.*, c.contract_number, c.customer_id, c.id AS contract_id,
+                       cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) >= ? AND DATE(p.due_date) < CURDATE() ';
+        $params = [$week['start']];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.due_date ASC LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Bu hafta vadesi gelecek (bugün–Pazar, ödenmemiş) */
+    public static function findDueThisWeek(PDO $pdo, ?string $companyId, int $limit = 15): array
+    {
+        $week = self::currentWeekRange();
+        $sql = 'SELECT p.*, c.contract_number, c.customer_id, c.id AS contract_id,
+                       cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) >= CURDATE() AND DATE(p.due_date) <= ? ';
+        $params = [$week['end']];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.due_date ASC LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Bu hafta tahsil edilen ödemeler */
+    public static function findPaidThisWeek(PDO $pdo, ?string $companyId, int $limit = 10): array
+    {
+        $week = self::currentWeekRange();
+        $sql = 'SELECT p.*, c.contract_number, c.customer_id,
+                       cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\'
+                AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
+        $params = [$week['start'], $week['end']];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.paid_at DESC LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function sumPaidThisWeek(PDO $pdo, ?string $companyId): float
+    {
+        $week = self::currentWeekRange();
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\'
+                AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
+        $params = [$week['start'], $week['end']];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    public static function countDueThisWeek(PDO $pdo, ?string $companyId): int
+    {
+        $week = self::currentWeekRange();
+        $sql = 'SELECT COUNT(*) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) >= CURDATE() AND DATE(p.due_date) <= ? ';
+        $params = [$week['end']];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public static function sumDueThisWeek(PDO $pdo, ?string $companyId): float
+    {
+        $week = self::currentWeekRange();
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) >= CURDATE() AND DATE(p.due_date) <= ? ';
+        $params = [$week['end']];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    public static function countOverdueDueThisWeek(PDO $pdo, ?string $companyId): int
+    {
+        $week = self::currentWeekRange();
+        $sql = 'SELECT COUNT(*) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) >= ? AND DATE(p.due_date) < CURDATE() ';
+        $params = [$week['start']];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public static function sumOverdueDueThisWeek(PDO $pdo, ?string $companyId): float
+    {
+        $week = self::currentWeekRange();
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) >= ? AND DATE(p.due_date) < CURDATE() ';
+        $params = [$week['start']];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
     public static function findByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): array
     {
         $sql = 'SELECT p.*, c.contract_number
@@ -445,7 +651,7 @@ class Payment
 
     public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null): void
     {
-        $paidAtValue = self::normalizePaidAt($paidAt);
+        $paidAtValue = normalizePaidAt($paidAt);
         $stmt = $pdo->prepare(
             'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ? WHERE id = ? AND deleted_at IS NULL'
         );
@@ -462,7 +668,7 @@ class Payment
     public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null): void
     {
         $method = $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti';
-        $paidAtValue = self::normalizePaidAt($paidAt);
+        $paidAtValue = normalizePaidAt($paidAt);
         $placeholders = implode(',', array_fill(0, count($paymentIds), '?'));
         $params = array_merge([$paidAtValue, $method, $transactionId, $notes, $bankAccountId], $paymentIds);
         $stmt = $pdo->prepare(
@@ -471,17 +677,128 @@ class Payment
         $stmt->execute($params);
     }
 
-    /** POST paid_at (Y-m-d veya datetime) → MySQL datetime; boşsa şimdi */
-    private static function normalizePaidAt(?string $paidAt): string
+    /** Vadesinden önce tahsil edilmiş ödemeler (paid_at < due_date) */
+    public static function findEarlyPayments(PDO $pdo, ?string $companyId, int $limit = 50, ?string $paidFrom = null, ?string $paidTo = null): array
     {
-        $paidAt = trim((string) $paidAt);
-        if ($paidAt === '') {
-            return date('Y-m-d H:i:s');
+        $sql = 'SELECT p.*, c.contract_number, c.customer_id, c.id AS contract_id,
+                       cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
+                       DATEDIFF(DATE(p.due_date), DATE(p.paid_at)) AS days_early
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\'
+                AND p.paid_at IS NOT NULL AND p.due_date IS NOT NULL
+                AND DATE(p.paid_at) < DATE(p.due_date) ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
         }
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $paidAt)) {
-            return $paidAt . ' ' . date('H:i:s');
+        if ($paidFrom) {
+            $sql .= ' AND DATE(p.paid_at) >= ? ';
+            $params[] = $paidFrom;
         }
-        $ts = strtotime($paidAt);
-        return $ts !== false ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s');
+        if ($paidTo) {
+            $sql .= ' AND DATE(p.paid_at) <= ? ';
+            $params[] = $paidTo;
+        }
+        $sql .= ' ORDER BY p.paid_at DESC LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function countEarlyPayments(PDO $pdo, ?string $companyId, ?string $paidFrom = null, ?string $paidTo = null): int
+    {
+        $sql = 'SELECT COUNT(*) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\'
+                AND p.paid_at IS NOT NULL AND p.due_date IS NOT NULL
+                AND DATE(p.paid_at) < DATE(p.due_date) ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        if ($paidFrom) {
+            $sql .= ' AND DATE(p.paid_at) >= ? ';
+            $params[] = $paidFrom;
+        }
+        if ($paidTo) {
+            $sql .= ' AND DATE(p.paid_at) <= ? ';
+            $params[] = $paidTo;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public static function sumEarlyPayments(PDO $pdo, ?string $companyId, ?string $paidFrom = null, ?string $paidTo = null): float
+    {
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\'
+                AND p.paid_at IS NOT NULL AND p.due_date IS NOT NULL
+                AND DATE(p.paid_at) < DATE(p.due_date) ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        if ($paidFrom) {
+            $sql .= ' AND DATE(p.paid_at) >= ? ';
+            $params[] = $paidFrom;
+        }
+        if ($paidTo) {
+            $sql .= ' AND DATE(p.paid_at) <= ? ';
+            $params[] = $paidTo;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    /** Tüm taksitleri ödenmiş ve en az bir erken ödeme içeren aktif sözleşmeler */
+    public static function findFullyPrepaidContracts(PDO $pdo, ?string $companyId, int $limit = 20): array
+    {
+        $sql = 'SELECT c.id AS contract_id, c.contract_number, c.customer_id, c.start_date, c.end_date,
+                       cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
+                       w.name AS warehouse_name, r.room_number,
+                       COUNT(p.id) AS payment_count,
+                       COALESCE(SUM(p.amount), 0) AS total_paid,
+                       MIN(p.paid_at) AS first_paid_at,
+                       MAX(p.due_date) AS last_due_date,
+                       SUM(CASE WHEN DATE(p.paid_at) < DATE(p.due_date) THEN 1 ELSE 0 END) AS early_payment_count,
+                       MAX(DATEDIFF(DATE(p.due_date), DATE(p.paid_at))) AS max_days_early
+                FROM contracts c
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                INNER JOIN payments p ON p.contract_id = c.id AND p.deleted_at IS NULL AND p.status = \'paid\'
+                WHERE c.deleted_at IS NULL AND c.is_active = 1
+                AND NOT EXISTS (
+                    SELECT 1 FROM payments px
+                    WHERE px.contract_id = c.id AND px.deleted_at IS NULL
+                    AND px.status IN (\'pending\', \'overdue\')
+                ) ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY c.id, c.contract_number, c.customer_id, c.start_date, c.end_date,
+                         cu.first_name, cu.last_name, w.name, r.room_number
+                  HAVING early_payment_count > 0 AND payment_count >= 1
+                  ORDER BY first_paid_at DESC
+                  LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

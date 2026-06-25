@@ -14,10 +14,14 @@ class UsersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         // Super admin her zaman tüm personeli görsün (şirket atanmamış kullanıcılar da dahil)
+        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $search = $search !== '' ? $search : null;
+        $roleFilter = isset($_GET['role']) && $_GET['role'] !== '' ? trim($_GET['role']) : null;
+        $activeFilter = isset($_GET['is_active']) && in_array($_GET['is_active'], ['0', '1'], true) ? $_GET['is_active'] : null;
         if (($user['role'] ?? '') === 'super_admin') {
-            $staff = User::findStaff($this->pdo, null);
+            $staff = User::findStaff($this->pdo, null, $search, $roleFilter, $activeFilter);
         } else {
-            $staff = User::findStaff($this->pdo, $companyId);
+            $staff = User::findStaff($this->pdo, $companyId, $search, $roleFilter, $activeFilter);
         }
         $roleLabels = [
             'super_admin' => 'Süper Admin',

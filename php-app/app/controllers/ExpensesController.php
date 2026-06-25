@@ -26,7 +26,9 @@ class ExpensesController
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
         $paymentSourceType = isset($_GET['payment_source_type']) ? trim($_GET['payment_source_type']) : null;
         $paymentSourceId = isset($_GET['payment_source_id']) ? trim($_GET['payment_source_id']) : null;
-        $expenses = $this->safeExpensesFindAll($companyId, $categoryId ?: null, $startDate, $endDate, $paymentSourceType ?: null, $paymentSourceId ?: null);
+        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $search = $search !== '' ? $search : null;
+        $expenses = $this->safeExpensesFindAll($companyId, $categoryId ?: null, $startDate, $endDate, $paymentSourceType ?: null, $paymentSourceId ?: null, $search);
         $totalAmount = array_sum(array_map(fn($e) => (float) ($e['amount'] ?? 0), $expenses));
         $expensesMigrationOk = $this->checkExpensesMigration();
         $flashSuccess = $_SESSION['flash_success'] ?? null;
@@ -271,10 +273,10 @@ class ExpensesController
         }
     }
 
-    private function safeExpensesFindAll(string $companyId, ?string $categoryId, string $startDate, string $endDate, ?string $paymentSourceType, ?string $paymentSourceId): array
+    private function safeExpensesFindAll(string $companyId, ?string $categoryId, string $startDate, string $endDate, ?string $paymentSourceType, ?string $paymentSourceId, ?string $search = null): array
     {
         try {
-            return Expense::findAll($this->pdo, $companyId, $categoryId, $startDate, $endDate, $paymentSourceType, $paymentSourceId);
+            return Expense::findAll($this->pdo, $companyId, $categoryId, $startDate, $endDate, $paymentSourceType, $paymentSourceId, $search);
         } catch (Throwable $e) {
             return [];
         }

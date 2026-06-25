@@ -9,18 +9,44 @@ ob_start();
 </div>
 
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <form method="get" action="/odalar" class="flex flex-wrap items-center gap-2">
-        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Depo:</label>
+    <?php
+    $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
+    $statusGet = isset($_GET['status']) ? $_GET['status'] : '';
+    $hasContractGet = isset($_GET['has_contract']) ? $_GET['has_contract'] : '';
+    $exportParams = array_filter([
+        'warehouse_id' => $_GET['warehouse_id'] ?? '',
+        'q' => $qGet,
+        'status' => $statusGet,
+        'has_contract' => $hasContractGet,
+    ], fn($v) => $v !== '');
+    $exportQuery = $exportParams ? '?' . http_build_query($exportParams) : '';
+    ?>
+    <form method="get" action="/odalar" class="flex flex-wrap items-center gap-2 w-full sm:flex-1">
+        <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Oda no, kat, blok, depo..." class="flex-1 min-w-0 sm:w-44 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
         <select name="warehouse_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            <option value="">Tümü</option>
+            <option value="">Tüm Depolar</option>
             <?php foreach ($warehouses as $w): ?>
                 <option value="<?= htmlspecialchars($w['id']) ?>" <?= (isset($_GET['warehouse_id']) && $_GET['warehouse_id'] === $w['id']) ? 'selected' : '' ?>><?= htmlspecialchars($w['name']) ?></option>
             <?php endforeach; ?>
         </select>
+        <select name="status" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+            <option value="">Tüm Durumlar</option>
+            <?php foreach ($statusLabels as $key => $label): ?>
+                <option value="<?= htmlspecialchars($key) ?>" <?= $statusGet === $key ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <select name="has_contract" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+            <option value="">Sözleşme (tümü)</option>
+            <option value="yes" <?= $hasContractGet === 'yes' ? 'selected' : '' ?>>Aktif sözleşmesi var</option>
+            <option value="no" <?= $hasContractGet === 'no' ? 'selected' : '' ?>>Aktif sözleşmesi yok</option>
+        </select>
         <button type="submit" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
+        <?php if ($qGet !== '' || $statusGet !== '' || $hasContractGet !== '' || !empty($_GET['warehouse_id'])): ?>
+            <a href="/odalar" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
+        <?php endif; ?>
     </form>
     <div class="flex flex-wrap items-center gap-2">
-        <a href="/odalar/excel-disari-aktar<?= isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? '?warehouse_id=' . urlencode($_GET['warehouse_id']) : '' ?>" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <a href="/odalar/excel-disari-aktar<?= htmlspecialchars($exportQuery) ?>" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar
         </a>
         <a href="/odalar/excel-ice-aktar" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">

@@ -40,14 +40,32 @@ class User
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    public static function findStaff(PDO $pdo, ?string $companyId = null): array
+    public static function findStaff(PDO $pdo, ?string $companyId = null, ?string $search = null, ?string $roleFilter = null, ?string $activeFilter = null): array
     {
+        $sql = 'SELECT id, first_name, last_name, email, phone, role, is_active, created_at FROM users WHERE deleted_at IS NULL AND role IN (\'super_admin\', \'company_owner\', \'company_staff\', \'data_entry\', \'accounting\') ';
+        $params = [];
         if ($companyId) {
-            $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, phone, role, is_active, created_at FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (\'super_admin\', \'company_owner\', \'company_staff\', \'data_entry\', \'accounting\') ORDER BY first_name, last_name');
-            $stmt->execute([$companyId]);
-        } else {
-            $stmt = $pdo->query('SELECT id, first_name, last_name, email, phone, role, is_active, created_at FROM users WHERE deleted_at IS NULL AND role IN (\'super_admin\', \'company_owner\', \'company_staff\', \'data_entry\', \'accounting\') ORDER BY first_name, last_name');
+            $sql .= ' AND company_id = ? ';
+            $params[] = $companyId;
         }
+        if ($roleFilter !== null && $roleFilter !== '' && in_array($roleFilter, ['super_admin', 'company_owner', 'company_staff', 'data_entry', 'accounting'], true)) {
+            $sql .= ' AND role = ? ';
+            $params[] = $roleFilter;
+        }
+        if ($activeFilter === '1') {
+            $sql .= ' AND is_active = 1 ';
+        } elseif ($activeFilter === '0') {
+            $sql .= ' AND is_active = 0 ';
+        }
+        $search = trim((string) $search);
+        if ($search !== '') {
+            $sql .= ' AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ?) ';
+            $q = '%' . $search . '%';
+            $params = array_merge($params, array_fill(0, 4, $q));
+        }
+        $sql .= ' ORDER BY first_name, last_name ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

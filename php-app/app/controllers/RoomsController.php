@@ -14,13 +14,17 @@ class RoomsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $filterWarehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
+        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $search = $search !== '' ? $search : null;
+        $statusFilter = isset($_GET['status']) && in_array($_GET['status'], ['empty', 'occupied', 'reserved', 'locked'], true) ? $_GET['status'] : null;
+        $hasContract = isset($_GET['has_contract']) && in_array($_GET['has_contract'], ['yes', 'no'], true) ? $_GET['has_contract'] : null;
         if ($companyId) {
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
-            $rooms = Room::findAll($this->pdo, $filterWarehouseId);
+            $rooms = Room::findAll($this->pdo, $filterWarehouseId, $search, $statusFilter, $hasContract);
             $rooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehouses = Warehouse::findAll($this->pdo, null);
-            $rooms = Room::findAll($this->pdo, $filterWarehouseId);
+            $rooms = Room::findAll($this->pdo, $filterWarehouseId, $search, $statusFilter, $hasContract);
         } else {
             $warehouses = [];
             $rooms = [];
@@ -237,11 +241,15 @@ class RoomsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $warehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
+        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $search = $search !== '' ? $search : null;
+        $statusFilter = isset($_GET['status']) && in_array($_GET['status'], ['empty', 'occupied', 'reserved', 'locked'], true) ? $_GET['status'] : null;
+        $hasContract = isset($_GET['has_contract']) && in_array($_GET['has_contract'], ['yes', 'no'], true) ? $_GET['has_contract'] : null;
         if ($companyId) {
-            $rooms = Room::findAll($this->pdo, $warehouseId);
+            $rooms = Room::findAll($this->pdo, $warehouseId, $search, $statusFilter, $hasContract);
             $rooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $rooms = Room::findAll($this->pdo, $warehouseId);
+            $rooms = Room::findAll($this->pdo, $warehouseId, $search, $statusFilter, $hasContract);
         } else {
             $rooms = [];
         }

@@ -15,18 +15,20 @@ class ContractsController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $statusFilter = isset($_GET['durum']) && in_array($_GET['durum'], ['active', 'inactive'], true) ? $_GET['durum'] : null;
         $debtFilter = isset($_GET['borc']) && in_array($_GET['borc'], ['with_debt', 'no_debt'], true) ? $_GET['borc'] : null;
+        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $search = $search !== '' ? $search : null;
         $perPage = 50;
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $offset = ($page - 1) * $perPage;
 
         if ($companyId) {
-            $contractsTotal = Contract::count($this->pdo, $companyId, $statusFilter, $debtFilter);
-            $contracts = Contract::findAll($this->pdo, $companyId, $statusFilter, $debtFilter, $perPage, $offset);
+            $contractsTotal = Contract::count($this->pdo, $companyId, $statusFilter, $debtFilter, $search);
+            $contracts = Contract::findAll($this->pdo, $companyId, $statusFilter, $debtFilter, $perPage, $offset, $search);
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
             $customers = Customer::findAll($this->pdo, $companyId, null, 500);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $contractsTotal = Contract::count($this->pdo, null, $statusFilter, $debtFilter);
-            $contracts = Contract::findAll($this->pdo, null, $statusFilter, $debtFilter, $perPage, $offset);
+            $contractsTotal = Contract::count($this->pdo, null, $statusFilter, $debtFilter, $search);
+            $contracts = Contract::findAll($this->pdo, null, $statusFilter, $debtFilter, $perPage, $offset, $search);
             $warehouses = Warehouse::findAll($this->pdo, null);
             $customers = Customer::findAll($this->pdo, null, null, 500);
         } else {
@@ -134,6 +136,12 @@ class ContractsController
             header('Location: /girisler');
             exit;
         }
+        [$storedCondition, $storedConditionNote, $storedConditionError] = parseStoredItemsConditionFromRequest($_POST, true);
+        if ($storedConditionError) {
+            $_SESSION['flash_error'] = $storedConditionError;
+            header('Location: /girisler?newSale=1');
+            exit;
+        }
         $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== '' ? (float) str_replace(',', '.', $_POST['monthly_price']) : (float) $room['monthly_price'];
         $transportationFee = isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? (float) str_replace(',', '.', $_POST['transportation_fee']) : 0;
         $discount = isset($_POST['discount']) && $_POST['discount'] !== '' ? (float) str_replace(',', '.', $_POST['discount']) : 0;
@@ -178,6 +186,8 @@ class ContractsController
             'vehicle_plate' => $vehiclePlate ?: null,
             'contract_pdf_url' => $contractPdfUrl,
             'notes' => trim($_POST['notes'] ?? '') ?: null,
+            'stored_items_condition' => $storedCondition,
+            'stored_items_condition_note' => $storedConditionNote,
         ];
         try {
             $created = Contract::create($this->pdo, $data);
@@ -314,6 +324,12 @@ class ContractsController
         $endDate = trim($_POST['end_date'] ?? '') ?: null;
         if ($startDate) $startDate .= ' 00:00:00';
         if ($endDate) $endDate .= ' 23:59:59';
+        [$storedCondition, $storedConditionNote, $storedConditionError] = parseStoredItemsConditionFromRequest($_POST, true);
+        if ($storedConditionError) {
+            $_SESSION['flash_error'] = $storedConditionError;
+            header('Location: /girisler/' . $id . '/duzenle');
+            exit;
+        }
         try {
             Contract::update($this->pdo, $id, [
                 'start_date' => $startDate ?? $contract['start_date'],
@@ -325,6 +341,8 @@ class ContractsController
                 'driver_phone' => trim($_POST['driver_phone'] ?? '') ?: null,
                 'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
                 'notes' => trim($_POST['notes'] ?? '') ?: null,
+                'stored_items_condition' => $storedCondition,
+                'stored_items_condition_note' => $storedConditionNote,
             ]);
             $_SESSION['flash_success'] = 'Sözleşme güncellendi.';
         } catch (Exception $e) {

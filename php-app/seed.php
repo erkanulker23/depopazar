@@ -89,19 +89,18 @@ try {
     // expense_categories tablosu yoksa sessizce atla
 }
 
-// 3) Super admin: yoksa oluştur, varsa sadece şifreyi güncelle (içerik bozulmaz)
+// 3) Super admin: yoksa olustur — MEVCUT kullanicinin sifresini ASLA degistirme
 $seedEmail = 'erkanulker0@gmail.com';
 $seedPassword = 'password';
-$hash = password_hash($seedPassword, PASSWORD_BCRYPT, ['cost' => 10]);
 $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND deleted_at IS NULL');
 $stmt->execute([$seedEmail]);
 $existing = $stmt->fetch();
 if ($existing) {
-    $pdo->prepare('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?')->execute([$hash, $existing['id']]);
-    echo "Seed: Super admin zaten mevcut; sifre '$seedPassword' olarak guncellendi ($seedEmail).\n";
+    echo "Seed: Super admin zaten mevcut ($seedEmail); sifre ve veriler korundu.\n";
     exit(0);
 }
 
+$hash = password_hash($seedPassword, PASSWORD_BCRYPT, ['cost' => 10]);
 $id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 $stmt = $pdo->prepare(
     'INSERT INTO users (id, email, password, first_name, last_name, phone, role, company_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1)'

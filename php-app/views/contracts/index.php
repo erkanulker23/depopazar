@@ -19,9 +19,11 @@ ob_start();
 <?php
 $durumGet = isset($_GET['durum']) ? $_GET['durum'] : '';
 $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
+$qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
 ?>
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <form method="get" action="/girisler" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Sözleşme no, müşteri, oda, depo, plaka..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
         <input type="hidden" name="newSale" value="">
         <select name="durum" class="btn-touch flex-1 min-w-0 sm:w-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
             <option value="">Tüm Durumlar</option>
@@ -75,6 +77,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                         <p class="font-semibold text-gray-900 dark:text-white"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></p>
                         <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"><?= htmlspecialchars(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? '')) ?></p>
                         <p class="text-sm text-gray-500 dark:text-gray-500"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"><?= fmtDateTime($c['created_at'] ?? null) ?></p>
                     </a>
                     <p class="text-sm font-medium text-gray-900 dark:text-white mt-2"><?= fmtPrice($c['monthly_price'] ?? 0) ?>/ay</p>
                     <div class="flex flex-wrap gap-2 mt-3">
@@ -100,7 +103,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme No</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Müşteri</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Depo / Oda</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Başlangıç</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kayıt Tarihi</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Fiyat</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
@@ -113,7 +116,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? '')) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($c['start_date'] ?? '')) ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($c['created_at'] ?? null) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($c['monthly_price'] ?? 0) ?></td>
                             <td class="px-4 py-3">
                                 <?php
@@ -149,7 +152,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
         $contractsTotal = $contractsTotal ?? 0;
         $perPage = $perPage ?? 50;
         $page = $page ?? max(1, (int) ($_GET['page'] ?? 1));
-        $keepParams = array_filter(['durum' => $durumGet ?? '', 'borc' => $borcGet ?? '', 'newSale' => ($openNewSale ?? false) ? '1' : '']);
+        $keepParams = array_filter(['q' => $qGet !== '' ? $qGet : null, 'durum' => $durumGet !== '' ? $durumGet : null, 'borc' => $borcGet !== '' ? $borcGet : null, 'newSale' => ($openNewSale ?? false) ? '1' : null]);
         echo renderPagination($contractsTotal, $perPage, $page, '/girisler', $keepParams);
         ?>
     <?php endif; ?>
@@ -362,6 +365,21 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
                     </div>
                     <?php endif; ?>
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-box-seam"></i> Giriş Yapılan Ürün Durumu <span class="text-red-500">*</span></h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                            <?php foreach (storedItemsConditionOptions() as $code => $label): ?>
+                                <label class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 dark:has-[:checked]:bg-emerald-900/20">
+                                    <input type="radio" name="stored_items_condition" value="<?= htmlspecialchars($code) ?>" required class="rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500" onchange="toggleStoredItemsConditionNote(this.value)">
+                                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-200"><?= htmlspecialchars($label) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div id="newSale_stored_items_condition_note_block" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hasar Notu <span class="text-red-500">*</span></label>
+                            <textarea name="stored_items_condition_note" id="newSale_stored_items_condition_note" rows="2" placeholder="Hasarın açıklamasını yazın..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notlar</label>
                         <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
@@ -438,6 +456,16 @@ function toggleTransportationBlock(show) {
     if (block) block.classList.toggle('hidden', !show);
     if (hiddenInput) hiddenInput.value = show ? '1' : '0';
     if (show) loadNewSaleIller();
+}
+function toggleStoredItemsConditionNote(value) {
+    var block = document.getElementById('newSale_stored_items_condition_note_block');
+    var note = document.getElementById('newSale_stored_items_condition_note');
+    var show = value === 'hasarli';
+    if (block) block.classList.toggle('hidden', !show);
+    if (note) {
+        note.required = show;
+        if (!show) note.value = '';
+    }
 }
 function loadNewSaleIller() {
     var pickupIl = document.getElementById('newSale_pickup_il');
@@ -602,6 +630,27 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
     window.submitBulkDelete = submitBulkDelete;
     document.querySelectorAll('.contract-cb').forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
     if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.contract-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); updateBulkBar(); });
+})();
+(function() {
+    var form = document.getElementById('newSaleForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            var selected = form.querySelector('input[name="stored_items_condition"]:checked');
+            if (!selected) {
+                e.preventDefault();
+                alert('Giriş yapılan ürün durumu seçilmelidir.');
+                return;
+            }
+            if (selected.value === 'hasarli') {
+                var note = document.getElementById('newSale_stored_items_condition_note');
+                if (!note || !note.value.trim()) {
+                    e.preventDefault();
+                    alert('Hasarlı ürünler için hasar notu zorunludur.');
+                    if (note) note.focus();
+                }
+            }
+        });
+    }
 })();
 (function() {
     var sel = document.getElementById('newSale_vehicle_id');

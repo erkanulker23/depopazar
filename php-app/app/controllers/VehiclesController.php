@@ -67,6 +67,22 @@ class VehiclesController
         }
         usort($reportRows, fn($a, $b) => strcmp($a['plate'], $b['plate']));
 
+        $searchQ = isset($_GET['q']) ? trim($_GET['q']) : '';
+        if ($searchQ !== '') {
+            $q = mb_strtolower($searchQ);
+            $reportRows = array_values(array_filter($reportRows, function ($r) use ($q) {
+                return str_contains(mb_strtolower($r['plate'] ?? ''), $q)
+                    || str_contains(mb_strtolower($r['notes'] ?? ''), $q)
+                    || str_contains((string) ($r['model_year'] ?? ''), $q);
+            }));
+        }
+        $alertFilter = isset($_GET['alert']) && in_array($_GET['alert'], ['kasko', 'inspection'], true) ? $_GET['alert'] : null;
+        if ($alertFilter === 'kasko') {
+            $reportRows = array_values(array_filter($reportRows, fn($r) => !empty($r['kasko_date'])));
+        } elseif ($alertFilter === 'inspection') {
+            $reportRows = array_values(array_filter($reportRows, fn($r) => !empty($r['inspection_date'])));
+        }
+
         $daysAlert = 30;
         $today = date('Y-m-d');
         foreach ($reportRows as $row) {

@@ -1,7 +1,7 @@
 <?php
 class Contract
 {
-    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $statusFilter = null, ?string $debtFilter = null, ?int $limit = null, int $offset = 0): array
+    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $statusFilter = null, ?string $debtFilter = null, ?int $limit = null, int $offset = 0, ?string $search = null): array
     {
         $sql = 'SELECT c.*, 
           cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.email AS customer_email,
@@ -27,6 +27,7 @@ class Contract
         } elseif ($debtFilter === 'no_debt') {
             $sql .= ' AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.contract_id = c.id AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')) ';
         }
+        self::appendSearchFilter($sql, $params, $search);
         $sql .= ' ORDER BY c.created_at DESC ';
         if ($limit !== null) {
             $sql .= ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
@@ -36,9 +37,10 @@ class Contract
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function count(PDO $pdo, ?string $companyId = null, ?string $statusFilter = null, ?string $debtFilter = null): int
+    public static function count(PDO $pdo, ?string $companyId = null, ?string $statusFilter = null, ?string $debtFilter = null, ?string $search = null): int
     {
         $sql = 'SELECT COUNT(*) FROM contracts c
+          INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
           INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
           INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
           WHERE c.deleted_at IS NULL ';
@@ -57,17 +59,34 @@ class Contract
         } elseif ($debtFilter === 'no_debt') {
             $sql .= ' AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.contract_id = c.id AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')) ';
         }
+        self::appendSearchFilter($sql, $params, $search);
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return (int) $stmt->fetchColumn();
+    }
+
+    private static function appendSearchFilter(string &$sql, array &$params, ?string $search): void
+    {
+        $search = trim((string) $search);
+        if ($search === '') {
+            return;
+        }
+        $sql .= ' AND (
+            c.contract_number LIKE ? OR cu.first_name LIKE ? OR cu.last_name LIKE ?
+            OR cu.email LIKE ? OR cu.phone LIKE ? OR r.room_number LIKE ?
+            OR w.name LIKE ? OR COALESCE(c.vehicle_plate, \'\') LIKE ?
+            OR COALESCE(c.driver_name, \'\') LIKE ?
+        ) ';
+        $q = '%' . $search . '%';
+        $params = array_merge($params, array_fill(0, 9, $q));
     }
 
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
         $stmt = $pdo->prepare(
-            'INSERT INTO contracts (id, contract_number, customer_id, room_id, start_date, end_date, monthly_price, payment_frequency_months, is_active, sold_by_user_id, transportation_fee, pickup_location, discount, driver_name, driver_phone, vehicle_plate, contract_pdf_url, notes) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO contracts (id, contract_number, customer_id, room_id, start_date, end_date, monthly_price, payment_frequency_months, is_active, sold_by_user_id, transportation_fee, pickup_location, discount, driver_name, driver_phone, vehicle_plate, contract_pdf_url, notes, stored_items_condition, stored_items_condition_note) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $maxAttempts = 5;
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
@@ -90,6 +109,8 @@ class Contract
                     $data['vehicle_plate'] ?? null,
                     $data['contract_pdf_url'] ?? null,
                     $data['notes'] ?? null,
+                    $data['stored_items_condition'] ?? null,
+                    $data['stored_items_condition_note'] ?? null,
                 ]);
                 return self::findOne($pdo, $id);
             } catch (PDOException $e) {
@@ -128,7 +149,7 @@ class Contract
     public static function update(PDO $pdo, string $id, array $data): void
     {
         $stmt = $pdo->prepare(
-            'UPDATE contracts SET start_date = ?, end_date = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE contracts SET start_date = ?, end_date = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ?, stored_items_condition = ?, stored_items_condition_note = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
             $data['start_date'] ?? null,
@@ -140,6 +161,8 @@ class Contract
             $data['driver_phone'] ?? null,
             $data['vehicle_plate'] ?? null,
             $data['notes'] ?? null,
+            $data['stored_items_condition'] ?? null,
+            $data['stored_items_condition_note'] ?? null,
             $id,
         ]);
     }

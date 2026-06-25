@@ -49,7 +49,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#1a1614" media="(prefers-color-scheme: dark)">
     <meta name="description" content="<?= htmlspecialchars($seoDescription) ?>">
     <meta property="og:title" content="<?= $fullTitle ?>">
     <meta property="og:description" content="<?= htmlspecialchars($seoDescription) ?>">
@@ -64,7 +64,20 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
             extend: {
                 colors: {
                     primary: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46' },
-                    surface: { 50: '#f8fafc', 100: '#f1f5f9', 800: '#1e293b', 900: '#0f172a' }
+                    surface: { 50: '#f8fafc', 100: '#f1f5f9', 800: '#241e1b', 900: '#1a1614' },
+                    gray: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#9a8a7e',
+                        500: '#7a6b5e',
+                        600: '#4a3f36',
+                        700: '#352e28',
+                        800: '#2a2320',
+                        900: '#1a1614',
+                        950: '#120f0d',
+                    }
                 },
                 fontFamily: {
                     sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif']
@@ -88,6 +101,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); --safe-left: env(safe-area-inset-left); --safe-right: env(safe-area-inset-right); }
         html, body, input, select, textarea, button { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
+        .dark .nav-active { background: linear-gradient(135deg, #6b4c3b 0%, #5c4033 100%); box-shadow: 0 4px 14px rgba(92,64,51,.35); }
         .nav-active .nav-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: rgba(255,255,255,.9); border-radius: 0 3px 3px 0; }
         .sidebar-mobile { transform: translateX(-100%); transition: transform .3s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
         .sidebar-mobile.open { transform: translateX(0); box-shadow: 20px 0 40px rgba(0,0,0,.2); }
@@ -111,8 +125,8 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 box-shadow: 0 -4px 24px rgba(0,0,0,.06);
             }
             .dark #mobileBottomNav {
-                background: rgba(30,41,59,.98); border-top-color: rgb(51 65 85);
-                box-shadow: 0 -4px 24px rgba(0,0,0,.3);
+                background: rgba(26,22,20,.98); border-top-color: rgb(61 52 46);
+                box-shadow: 0 -4px 24px rgba(0,0,0,.35);
             }
         }
         @media (min-width: 768px) { #mobileBottomNav { display: none !important; } }
@@ -134,15 +148,15 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         .page-title { font-size: 1.5rem; line-height: 1.3; }
         @media (min-width: 768px) { .page-title { font-size: 1.875rem; } }
         .page-subtitle { color: rgb(107 114 128); }
-        .dark .page-subtitle { color: rgb(156 163 175); }
+        .dark .page-subtitle { color: rgb(154 138 126); }
         .gradient-title { background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .dark .gradient-title { background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .dark .gradient-title { background: linear-gradient(135deg, #d4a574 0%, #c4956a 50%, #a67c52 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .card-modern { border-radius: 1rem; border: 1px solid rgb(229 231 235); background: white; box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: all .2s; }
-        .dark .card-modern { border-color: rgb(75 85 99); background: rgb(31 41 55); }
+        .dark .card-modern { border-color: rgb(74 63 54); background: rgb(42 35 32); }
         .card-modern:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
-        .dark .card-modern:hover { box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+        .dark .card-modern:hover { box-shadow: 0 4px 12px rgba(0,0,0,.25); }
         .stat-card { border-radius: 1rem; border: 1px solid rgb(229 231 235); background: white; padding: 1.25rem; transition: all .2s; }
-        .dark .stat-card { border-color: rgb(75 85 99); background: rgb(31 41 55); }
+        .dark .stat-card { border-color: rgb(74 63 54); background: rgb(42 35 32); }
         .stat-card:hover { box-shadow: 0 4px 12px rgba(5,150,105,.1); }
         .modal-overlay { -webkit-overflow-scrolling: touch; }
         .modal-overlay .relative { max-height: min(90vh, 600px); }
@@ -151,7 +165,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 antialiased" style="touch-action: manipulation;">
     <div class="flex min-h-screen">
         <div id="sidebarOverlay" class="md:hidden fixed inset-0 bg-black/50 z-30 hidden transition-opacity" aria-hidden="true"></div>
-        <aside id="sidebar" class="sidebar-mobile fixed md:static inset-y-0 left-0 z-40 w-72 flex flex-col pt-6 bg-white dark:bg-gray-800 border-r border-gray-200/50 dark:border-gray-700 overflow-y-auto overflow-x-hidden">
+        <aside id="sidebar" class="sidebar-mobile fixed md:static inset-y-0 left-0 z-40 w-72 flex flex-col pt-6 bg-white dark:bg-[#241e1b] border-r border-gray-200/50 dark:border-[#3d342e] overflow-y-auto overflow-x-hidden">
             <div class="flex items-center flex-shrink-0 px-6 mb-6">
                 <div class="flex items-center gap-3">
                     <?php if (!empty($companyLogoUrl)): ?>
@@ -191,7 +205,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
             </div>
         </aside>
         <main class="flex-1 min-w-0 flex flex-col min-h-screen">
-            <div class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-4 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
+            <div class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-4 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-[#3d342e] bg-white/95 dark:bg-[#241e1b]/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
                 <div class="flex items-center gap-2 min-w-0 md:mr-auto">
                     <?php if (!empty($companyLogoUrl)): ?>
                         <img src="<?= htmlspecialchars($companyLogoUrl) ?>" alt="" class="h-8 w-auto object-contain flex-shrink-0 md:h-9" aria-hidden="true">
@@ -316,7 +330,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 var read = n.is_read == 1;
                 var li = document.createElement('li');
                 li.className = 'px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ' + (read ? '' : 'bg-emerald-50/50 dark:bg-emerald-900/10');
-                var time = n.created_at ? new Date(n.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                var time = n.created_at ? new Date(n.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
                 var actor = (n.metadata && n.metadata.actor_name) ? ' · ' + n.metadata.actor_name : '';
                 li.innerHTML = '<div class="flex items-start gap-3"><div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ' + (read ? 'bg-gray-100 dark:bg-gray-600 text-gray-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400') + '"><i class="bi bi-' + icon + '"></i></div><div class="flex-1 min-w-0"><p class="font-medium text-gray-900 dark:text-white text-sm">' + (n.title || '').replace(/</g,'&lt;') + '</p><p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">' + (n.message || '').replace(/</g,'&lt;').substring(0,120) + (n.message && n.message.length > 120 ? '…' : '') + actor + '</p><p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">' + time + '</p></div></div>';
                 listEl.appendChild(li);

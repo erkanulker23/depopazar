@@ -60,7 +60,12 @@ ob_start();
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödenme Tarihi</dt>
-                    <dd class="mt-1 text-gray-900 dark:text-gray-300"><?= !empty($payment['paid_at']) ? date('d.m.Y H:i', strtotime($payment['paid_at'])) : '–' ?></dd>
+                    <dd class="mt-1 text-gray-900 dark:text-gray-300">
+                        <?= fmtDateTime($payment['paid_at'] ?? null) ?>
+                        <?php if (paymentIsEarly($payment)): ?>
+                            <span class="block mt-1 text-xs font-medium text-blue-600 dark:text-blue-400">Vadesinden <?= paymentDaysEarly($payment) ?> gün önce tahsil edildi</span>
+                        <?php endif; ?>
+                    </dd>
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödeme Yöntemi</dt>

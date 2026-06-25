@@ -29,25 +29,30 @@ class Warehouse
         return (int) $stmt->fetchColumn();
     }
 
-    public static function findAll(PDO $pdo, ?string $companyId = null): array
+    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $search = null): array
     {
         if ($companyId) {
-            $stmt = $pdo->prepare(
-                'SELECT w.*, 
+            $sql = 'SELECT w.*, 
                   (SELECT COUNT(*) FROM rooms r WHERE r.warehouse_id = w.id AND r.deleted_at IS NULL) AS room_count
                  FROM warehouses w 
-                 WHERE w.company_id = ? AND w.deleted_at IS NULL 
-                 ORDER BY w.name'
-            );
-            $stmt->execute([$companyId]);
+                 WHERE w.company_id = ? AND w.deleted_at IS NULL ';
+            $params = [$companyId];
         } else {
-            $stmt = $pdo->query(
-                'SELECT w.*, 
+            $sql = 'SELECT w.*, 
                   (SELECT COUNT(*) FROM rooms r WHERE r.warehouse_id = w.id AND r.deleted_at IS NULL) AS room_count
                  FROM warehouses w 
-                 WHERE w.deleted_at IS NULL ORDER BY w.name'
-            );
+                 WHERE w.deleted_at IS NULL ';
+            $params = [];
         }
+        $search = trim((string) $search);
+        if ($search !== '') {
+            $sql .= ' AND (w.name LIKE ? OR w.city LIKE ? OR w.district LIKE ? OR w.address LIKE ? OR w.description LIKE ?) ';
+            $q = '%' . $search . '%';
+            $params = array_merge($params, array_fill(0, 5, $q));
+        }
+        $sql .= ' ORDER BY w.name ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

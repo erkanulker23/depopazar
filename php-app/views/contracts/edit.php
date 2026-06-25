@@ -60,6 +60,22 @@ ob_start();
             </div>
         </div>
         <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Giriş Yapılan Ürün Durumu <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                <?php $currentCondition = $contract['stored_items_condition'] ?? ''; ?>
+                <?php foreach (storedItemsConditionOptions() as $code => $label): ?>
+                    <label class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
+                        <input type="radio" name="stored_items_condition" value="<?= htmlspecialchars($code) ?>" required <?= $currentCondition === $code ? 'checked' : '' ?> class="rounded-full border-gray-300 text-emerald-600 focus:ring-emerald-500" onchange="toggleEditStoredItemsConditionNote(this.value)">
+                        <span class="ml-2 text-sm text-gray-700"><?= htmlspecialchars($label) ?></span>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+            <div id="edit_stored_items_condition_note_block" class="<?= ($currentCondition === 'hasarli') ? '' : 'hidden' ?>">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Hasar Notu <span class="text-red-500">*</span></label>
+                <textarea name="stored_items_condition_note" id="edit_stored_items_condition_note" rows="2" placeholder="Hasarın açıklamasını yazın..." class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" <?= ($currentCondition === 'hasarli') ? 'required' : '' ?>><?= htmlspecialchars($contract['stored_items_condition_note'] ?? '') ?></textarea>
+            </div>
+        </div>
+        <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Notlar</label>
             <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"><?= htmlspecialchars($contract['notes'] ?? '') ?></textarea>
         </div>
@@ -69,6 +85,19 @@ ob_start();
         <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
     </div>
 </form>
+
+<script>
+function toggleEditStoredItemsConditionNote(value) {
+    var block = document.getElementById('edit_stored_items_condition_note_block');
+    var note = document.getElementById('edit_stored_items_condition_note');
+    var show = value === 'hasarli';
+    if (block) block.classList.toggle('hidden', !show);
+    if (note) {
+        note.required = show;
+        if (!show) note.value = '';
+    }
+}
+</script>
 
 <?php
 $content = ob_get_clean();
