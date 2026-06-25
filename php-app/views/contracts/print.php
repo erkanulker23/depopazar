@@ -75,6 +75,7 @@ if (!function_exists('fmtPrice')) {
                     <tr>
                         <th class="border border-gray-300 px-3 py-2 text-left font-bold">#</th>
                         <th class="border border-gray-300 px-3 py-2 text-left font-bold">Eşya Adı</th>
+                        <th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th>
                         <th class="border border-gray-300 px-3 py-2 text-left font-bold">Adet</th>
                         <th class="border border-gray-300 px-3 py-2 text-left font-bold">Birim</th>
                         <th class="border border-gray-300 px-3 py-2 text-left font-bold">Açıklama</th>
@@ -85,6 +86,7 @@ if (!function_exists('fmtPrice')) {
                     <tr>
                         <td class="border border-gray-300 px-3 py-2"><?= $i + 1 ?></td>
                         <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['name'] ?? '') ?></td>
+                        <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(itemConditionLabel($item['condition'] ?? null)) ?></td>
                         <td class="border border-gray-300 px-3 py-2"><?= (int) ($item['quantity'] ?? 1) ?></td>
                         <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['unit'] ?? 'adet') ?></td>
                         <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['description'] ?? '-') ?></td>

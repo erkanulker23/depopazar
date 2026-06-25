@@ -99,10 +99,10 @@ ob_start();
     <?php if (!empty($items)): ?>
     <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Depo Eşya Listesi</h2>
     <table class="min-w-full border border-gray-300 text-sm mb-6">
-        <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">#</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Eşya Adı</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Adet</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Birim</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Açıklama</th></tr></thead>
+        <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">#</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Eşya Adı</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Adet</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Birim</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Açıklama</th></tr></thead>
         <tbody>
             <?php foreach ($items as $i => $item): ?>
-            <tr><td class="border border-gray-300 px-3 py-2"><?= $i + 1 ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['name'] ?? '') ?></td><td class="border border-gray-300 px-3 py-2"><?= (int) ($item['quantity'] ?? 1) ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['unit'] ?? 'adet') ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['description'] ?? '-') ?></td></tr>
+            <tr><td class="border border-gray-300 px-3 py-2"><?= $i + 1 ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['name'] ?? '') ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(itemConditionLabel($item['condition'] ?? null)) ?></td><td class="border border-gray-300 px-3 py-2"><?= (int) ($item['quantity'] ?? 1) ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['unit'] ?? 'adet') ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['description'] ?? '-') ?></td></tr>
             <?php endforeach; ?>
         </tbody>
     </table>
@@ -202,6 +202,7 @@ ob_start();
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">#</th>
                                 <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Eşya Adı</th>
+                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
                                 <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Adet</th>
                                 <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Birim</th>
                                 <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Açıklama</th>
@@ -212,6 +213,7 @@ ob_start();
                             <tr>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300"><?= $i + 1 ?></td>
                                 <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($item['name'] ?? '') ?></td>
+                                <td class="px-4 py-2 text-gray-900 dark:text-white"><?= htmlspecialchars(itemConditionLabel($item['condition'] ?? null)) ?></td>
                                 <td class="px-4 py-2 text-gray-900 dark:text-white"><?= (int) ($item['quantity'] ?? 1) ?></td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($item['unit'] ?? 'adet') ?></td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($item['description'] ?? '-') ?></td>

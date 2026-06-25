@@ -188,7 +188,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 <?php foreach ($navItems as $item):
                     $icon = $navIcons[$item['name']] ?? 'circle';
                 ?>
-                    <a href="<?= htmlspecialchars($item['href']) ?>" class="nav-link group relative flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 <?= !empty($item['active']) ? 'nav-active' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' ?>">
+                    <a href="<?= htmlspecialchars($item['href']) ?>" class="nav-link group relative flex items-center px-4 py-3 text-xs font-semibold uppercase tracking-wide rounded-xl transition-all duration-200 <?= !empty($item['active']) ? 'nav-active' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' ?>">
                         <?php if (!empty($item['active'])): ?><div class="nav-bar"></div><?php endif; ?>
                         <i class="bi bi-<?= $icon ?> mr-3 flex-shrink-0 h-5 w-5"></i>
                         <span class="flex-1 truncate"><?= htmlspecialchars($item['name']) ?></span>

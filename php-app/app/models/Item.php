@@ -5,7 +5,7 @@ class Item
     public static function findByContractId(PDO $pdo, string $contractId): array
     {
         $stmt = $pdo->prepare(
-            'SELECT id, name, description, quantity, unit
+            'SELECT id, name, description, quantity, unit, `condition`
              FROM items
              WHERE contract_id = ? AND deleted_at IS NULL
              ORDER BY created_at ASC, name ASC'
@@ -18,7 +18,7 @@ class Item
     public static function findByCustomerId(PDO $pdo, string $customerId): array
     {
         $stmt = $pdo->prepare(
-            'SELECT i.id, i.name, i.description, i.quantity, i.unit
+            'SELECT i.id, i.name, i.description, i.quantity, i.unit, i.`condition`
              FROM items i
              INNER JOIN contracts c ON c.id = i.contract_id AND c.deleted_at IS NULL
              WHERE c.customer_id = ? AND i.deleted_at IS NULL
@@ -42,9 +42,10 @@ class Item
         }
         $quantity = isset($item['quantity']) && $item['quantity'] !== '' ? max(1, (int) $item['quantity']) : 1;
         $unit = trim((string) ($item['unit'] ?? '')) ?: 'adet';
+        $condition = normalizeItemCondition($item['condition'] ?? 'sifir');
         $stmt = $pdo->prepare(
-            'INSERT INTO items (id, room_id, contract_id, name, description, quantity, unit, stored_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO items (id, room_id, contract_id, name, description, quantity, unit, `condition`, stored_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             self::uuid(),
@@ -54,6 +55,7 @@ class Item
             trim($item['description'] ?? '') ?: null,
             $quantity,
             $unit,
+            $condition,
             $storedAt ?: date('Y-m-d H:i:s'),
         ]);
     }

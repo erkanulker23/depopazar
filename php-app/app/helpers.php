@@ -331,6 +331,60 @@ if (!function_exists('parseStoredItemsConditionFromRequest')) {
     }
 }
 
+/** Depo eşya listesi — satır bazında ürün durumu */
+if (!function_exists('itemConditionOptions')) {
+    function itemConditionOptions(): array
+    {
+        return [
+            'sifir' => 'Sıfır',
+            'koli' => 'Koli',
+            'kullanilmis' => 'Kullanılmış',
+            'hasarli' => 'Hasarlı',
+        ];
+    }
+}
+
+if (!function_exists('normalizeItemCondition')) {
+    function normalizeItemCondition(?string $code): string
+    {
+        $code = trim((string) $code);
+        $legacy = [
+            'new' => 'sifir',
+            'paketlenmis' => 'koli',
+            'ikinci_el' => 'kullanilmis',
+        ];
+        if (isset($legacy[$code])) {
+            return $legacy[$code];
+        }
+        $allowed = array_keys(itemConditionOptions());
+        return in_array($code, $allowed, true) ? $code : 'sifir';
+    }
+}
+
+if (!function_exists('itemConditionLabel')) {
+    function itemConditionLabel(?string $code): string
+    {
+        if ($code === null || trim($code) === '') {
+            return '-';
+        }
+        return itemConditionOptions()[normalizeItemCondition($code)] ?? $code;
+    }
+}
+
+if (!function_exists('itemConditionSelectHtml')) {
+    function itemConditionSelectHtml(?string $selected = 'sifir'): string
+    {
+        $selected = normalizeItemCondition($selected ?: 'sifir');
+        $class = 'w-full min-w-[110px] px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white';
+        $html = '<select name="item_condition[]" required class="' . $class . '">';
+        foreach (itemConditionOptions() as $code => $label) {
+            $sel = $selected === $code ? ' selected' : '';
+            $html .= '<option value="' . htmlspecialchars($code) . '"' . $sel . '>' . htmlspecialchars($label) . '</option>';
+        }
+        return $html . '</select>';
+    }
+}
+
 /** Sözleşme eşya listesi — form satırlarını normalize eder */
 if (!function_exists('parseContractItemsFromRequest')) {
     function parseContractItemsFromRequest(array $post): array
@@ -342,6 +396,7 @@ if (!function_exists('parseContractItemsFromRequest')) {
         $quantities = $post['item_quantity'] ?? [];
         $units = $post['item_unit'] ?? [];
         $descriptions = $post['item_description'] ?? [];
+        $conditions = $post['item_condition'] ?? [];
         $items = [];
         foreach ($names as $i => $name) {
             $name = trim((string) $name);
@@ -352,11 +407,13 @@ if (!function_exists('parseContractItemsFromRequest')) {
             $quantity = ($qtyRaw !== '' && $qtyRaw !== null) ? max(1, (int) $qtyRaw) : 1;
             $unit = trim((string) ($units[$i] ?? '')) ?: 'adet';
             $description = trim((string) ($descriptions[$i] ?? ''));
+            $condition = normalizeItemCondition($conditions[$i] ?? 'sifir');
             $items[] = [
                 'name' => $name,
                 'quantity' => $quantity,
                 'unit' => $unit,
                 'description' => $description !== '' ? $description : null,
+                'condition' => $condition,
             ];
         }
         return $items;
