@@ -1,17 +1,45 @@
 ================================================================================
-LARAVEL FORGE – STANDART LARAVEL DEPLOY (diğer projelerinizle aynı)
+LARAVEL FORGE – DEPLOY SCRIPT (celebi.awapanel.com ve diger siteler)
 ================================================================================
-Bu proje Forge'un varsayılan Laravel deploy akışıyla uyumludur.
-Özel deploy.sh GEREKMEZ. Diğer Laravel sitelerinizde kullandığınız script'i
-aynı şekilde kullanabilirsiniz (zero-downtime + composer + npm + artisan migrate).
 
+!! ONEMLI – "not a git repository" HATASI !!
+Forge zero-downtime kullaniyorsaniz deploy script'inizde su satirlar
+OLMAMALI (site kokunde .git yoktur):
+
+  git pull origin $FORGE_SITE_BRANCH     <-- KALDIRIN
+  git fetch origin                       <-- KALDIRIN
+  cd $FORGE_SITE_PATH && bash deploy.sh  <-- KALDIRIN
+
+Kod guncellemesi $CREATE_RELEASE() ile otomatik yapilir.
+
+================================================================================
+FORGE DEPLOY SCRIPT ALANINA YAPISTIRIN (tam metin):
+================================================================================
+
+cd $FORGE_SITE_PATH
+
+$CREATE_RELEASE()
+
+cd $FORGE_RELEASE_DIRECTORY
+
+set -e
+
+bash forge-deploy.sh
+
+$ACTIVATE_RELEASE()
+
+$RESTART_QUEUES()
+
+================================================================================
 Forge Site → Settings:
-- Install Composer Dependencies: AÇIK
-- Install NPM Dependencies: AÇIK
-- Web directory: php-app/public   (Laravel'deki public yerine – BOŞLUK OLMASIN)
+- Install Composer Dependencies: KAPALI (forge-deploy.sh composer calistirir)
+- Install NPM Dependencies: KAPALI (forge-deploy.sh npm calistirir)
+- Web directory: php-app/public
 - Environment: DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+================================================================================
 
-Deploy script (Forge varsayılan zero-downtime – diğer sitelerinizle aynı):
+Alternatif (Composer/NPM toggle'lari ACIK ve diger Laravel sitelerinizle
+ayni satirlari kullanmak istiyorsaniz) – yine git pull OLMAMALI:
 
 cd $FORGE_SITE_PATH
 
@@ -30,10 +58,4 @@ $ACTIVATE_RELEASE()
 
 $RESTART_QUEUES()
 
-================================================================================
-Notlar:
-- Kök composer.json php-app/vendor kurulumunu otomatik tetikler.
-- package.json build script'i no-op (frontend yok).
-- php artisan migrate --force migration + idempotent seed yapar.
-- Web kökü php-app/public olmalı (403 önlemi).
 ================================================================================

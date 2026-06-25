@@ -51,29 +51,29 @@ Awapanel’de: Site ayarlarında **Environment** / **Ortam değişkenleri** benz
 
 ---
 
-## 4. Deploy script (Forge – diğer Laravel sitelerinizle aynı)
+## 4. Deploy script (Forge – zero-downtime)
 
-**Deploy Script:** Diğer Laravel projelerinizde kullandığınız Forge zero-downtime script’ini aynen kullanın. Özel `deploy.sh` **gerekmez**.
+**`git pull` kullanmayın.** Zero-downtime’da site kökü (`$FORGE_SITE_PATH`) git repo değildir; `git pull` → **“not a git repository”** hatası verir. Kod `$CREATE_RELEASE()` ile klonlanır.
 
-Hazır metin: **`docs/FORGE-DEPLOY-YAPISTIR.txt`**
+**Forge Deploy Script alanına yapıştırın** (`docs/FORGE-DEPLOY-YAPISTIR.txt`):
 
-Forge otomatik olarak şunları yapar:
+```bash
+cd $FORGE_SITE_PATH
 
-1. `$CREATE_RELEASE()` – kodu `releases/` altına klonlar
-2. `composer install` – kök `composer.json` → `php-app/vendor` kurulumunu tetikler
-3. `npm install && npm run build` – frontend yok, build no-op
-4. `php artisan migrate --force` – schema + migration + idempotent seed
-5. `$ACTIVATE_RELEASE()`
+$CREATE_RELEASE()
 
-**Site → Settings:**
+cd $FORGE_RELEASE_DIRECTORY
 
-| Ayar | Değer |
-|------|--------|
-| Install Composer Dependencies | Açık |
-| Install NPM Dependencies | Açık |
-| Web directory | `php-app/public` |
+set -e
 
-`deploy.sh` hâlâ manuel deploy veya Awapanel için kullanılabilir; Forge’da zorunlu değildir.
+bash forge-deploy.sh
+
+$ACTIVATE_RELEASE()
+
+$RESTART_QUEUES()
+```
+
+**Settings:** Install Composer / NPM → **Kapalı** (`forge-deploy.sh` hepsini yapar). Web directory → `php-app/public`.
 
 ---
 

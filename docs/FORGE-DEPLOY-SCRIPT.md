@@ -1,17 +1,22 @@
 # Forge / Awapanel Deploy
 
-**Tüm kurulum (Web Directory, Environment, deploy script):** **[SETUP.md](SETUP.md)**
+**Kurulum:** **[SETUP.md](SETUP.md)**
 
-**Forge deploy script (diğer Laravel sitelerinizle aynı):** **[FORGE-DEPLOY-YAPISTIR.txt](FORGE-DEPLOY-YAPISTIR.txt)**
+**Forge deploy script (kopyala-yapıştır):** **[FORGE-DEPLOY-YAPISTIR.txt](FORGE-DEPLOY-YAPISTIR.txt)**
 
-Bu proje Forge'un **standart Laravel deploy** akışıyla uyumludur. Özel `deploy.sh` zorunlu değildir.
+## Zero-downtime (Forge)
 
-Forge Site → Settings:
+Deploy script'te **`git pull` olmamalı** — site kökü git repo değildir.
 
-- **Install Composer Dependencies:** Açık
-- **Install NPM Dependencies:** Açık
-- **Web directory:** `php-app/public`
+```bash
+cd $FORGE_SITE_PATH
+$CREATE_RELEASE()
+cd $FORGE_RELEASE_DIRECTORY
+set -e && bash forge-deploy.sh
+$ACTIVATE_RELEASE()
+$RESTART_QUEUES()
+```
 
-Deploy script olarak diğer Laravel sitelerinizde kullandığınız zero-downtime script'i aynen kullanın (`composer` + `npm run build` + `php artisan migrate --force`).
+`forge-deploy.sh`: composer + npm build + `php artisan migrate --force` (git yok).
 
-Manuel deploy veya Awapanel için `deploy.sh` hâlâ kullanılabilir.
+Manuel / Awapanel için `deploy.sh` kullanılabilir.
