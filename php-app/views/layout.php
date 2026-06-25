@@ -50,11 +50,14 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1a1614" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-title" content="<?= htmlspecialchars($projectName) ?>">
     <meta name="description" content="<?= htmlspecialchars($seoDescription) ?>">
     <meta property="og:title" content="<?= $fullTitle ?>">
     <meta property="og:description" content="<?= htmlspecialchars($seoDescription) ?>">
     <meta property="og:type" content="website">
-    <link rel="icon" href="data:,">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/pwa-icon/192" type="image/png">
+    <link rel="apple-touch-icon" href="/pwa-icon/180">
     <title><?= $fullTitle ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -136,11 +139,11 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         }
         input, select, textarea { font-size: 16px !important; }
         .touch-manipulation { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
-        #pushBanner { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+        #pushBanner, #pwaInstallBanner { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
         @media (max-width: 767px) {
-            #pushBanner { flex-direction: column; align-items: stretch; text-align: center; gap: 0.75rem; padding: 0.75rem max(1rem, env(safe-area-inset-left)) 0.75rem max(1rem, env(safe-area-inset-right)); }
-            #pushBanner .push-banner-text { flex: none; min-width: 0; width: 100%; word-wrap: break-word; overflow-wrap: break-word; }
-            #pushBanner .push-banner-btns { flex-wrap: nowrap; justify-content: center; align-items: center; gap: 0.5rem; width: 100%; }
+            #pushBanner, #pwaInstallBanner { flex-direction: column; align-items: stretch; text-align: center; gap: 0.75rem; padding: 0.75rem max(1rem, env(safe-area-inset-left)) 0.75rem max(1rem, env(safe-area-inset-right)); }
+            #pushBanner .push-banner-text, #pwaInstallBanner .pwa-banner-text { flex: none; min-width: 0; width: 100%; word-wrap: break-word; overflow-wrap: break-word; }
+            #pushBanner .push-banner-btns, #pwaInstallBanner .pwa-banner-btns { flex-wrap: nowrap; justify-content: center; align-items: center; gap: 0.5rem; width: 100%; }
             #pushBanner .push-banner-btns button { min-width: 0; }
             #pushBanner #pushBannerAllow { flex: 1; max-width: 200px; }
             #pushBanner #pushBannerLater { flex: 0 0 auto; }
@@ -162,7 +165,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         .modal-overlay .relative { max-height: min(90vh, 600px); }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 antialiased" style="touch-action: manipulation;">
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 antialiased" style="touch-action: manipulation;" data-auth="<?= ($user && !empty($user['id'])) ? '1' : '0' ?>" data-app-name="<?= htmlspecialchars($projectName) ?>">
     <div class="flex min-h-screen">
         <div id="sidebarOverlay" class="md:hidden fixed inset-0 bg-black/50 z-30 hidden transition-opacity" aria-hidden="true"></div>
         <aside id="sidebar" class="sidebar-mobile fixed md:static inset-y-0 left-0 z-40 w-72 flex flex-col pt-6 bg-white dark:bg-[#241e1b] border-r border-gray-200/50 dark:border-[#3d342e] overflow-y-auto overflow-x-hidden">
@@ -244,6 +247,28 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                     </button>
                 </div>
             </div>
+            <?php if ($user && !empty($user['id'])): ?>
+            <div id="pwaInstallBanner" class="hidden mx-4 md:mx-6 lg:mx-8 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
+                <div class="pwa-banner-text flex items-center gap-2 min-w-0">
+                    <i class="bi bi-phone text-lg flex-shrink-0"></i>
+                    <span>Uygulamayı telefonunuza ekleyerek tek dokunuşla panele girin.</span>
+                </div>
+                <div class="pwa-banner-btns flex gap-2 flex-shrink-0">
+                    <button type="button" id="pwaInstallBtn" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 text-sm">Yükle</button>
+                    <button type="button" id="pwaInstallDismiss" class="px-3 py-2 rounded-xl text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-sm">Kapat</button>
+                </div>
+            </div>
+            <div id="pushBanner" class="hidden mx-4 md:mx-6 lg:mx-8 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-900 dark:text-blue-100">
+                <div class="push-banner-text flex items-center gap-2 min-w-0">
+                    <i class="bi bi-bell text-lg flex-shrink-0"></i>
+                    <span>Bildirimleri açın; ödeme ve işlem uyarıları telefonunuza gelsin. (iPhone: önce uygulamayı ana ekrana ekleyin)</span>
+                </div>
+                <div class="push-banner-btns flex gap-2 flex-shrink-0">
+                    <button type="button" id="pushBannerAllow" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 text-sm">Bildirimleri Aç</button>
+                    <button type="button" id="pushBannerLater" class="px-3 py-2 rounded-xl text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-sm">Sonra</button>
+                </div>
+            </div>
+            <?php endif; ?>
             <div class="flex-1 p-4 md:p-6 lg:p-8 pb-8 md:pb-6 min-h-0 main-content-wrap">
                 <?= $content ?? '' ?>
             </div>
@@ -397,5 +422,6 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         });
     })();
     </script>
+    <?php if ($user && !empty($user['id'])): ?><script src="/pwa.js" defer></script><?php endif; ?>
 </body>
 </html>

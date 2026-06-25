@@ -8,7 +8,12 @@ $error = $error ?? null;
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1a1614" media="(prefers-color-scheme: dark)">
-    <link rel="icon" href="data:,">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="<?= htmlspecialchars($projectName ?? 'DepoPazar') ?>">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/pwa-icon/192" type="image/png">
+    <link rel="apple-touch-icon" href="/pwa-icon/180">
     <title>Giriş - <?= htmlspecialchars($projectName ?? 'Depo ve Nakliye Takip') ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

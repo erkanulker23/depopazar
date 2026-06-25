@@ -1,4 +1,5 @@
 <?php
+require __DIR__ . '/env.php';
 return [
     'app_name'     => 'Depo ve Nakliye Takip',
     'timezone'     => 'Europe/Istanbul',

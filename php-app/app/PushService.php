@@ -38,7 +38,8 @@ class PushService
         $payload = json_encode([
             'title' => $title,
             'body'  => $message,
-            'icon'  => '/favicon.ico',
+            'icon'  => '/pwa-icon/192',
+            'url'   => '/bildirimler',
         ], JSON_UNESCAPED_UNICODE);
 
         try {
