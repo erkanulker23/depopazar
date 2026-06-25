@@ -56,6 +56,15 @@ ob_start();
     </div>
 </div>
 
+<?php if (!empty($_SESSION['flash_success'])): ?>
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm no-print"><?= htmlspecialchars($_SESSION['flash_success']) ?></div>
+    <?php unset($_SESSION['flash_success']); ?>
+<?php endif; ?>
+<?php if (!empty($_SESSION['flash_error'])): ?>
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm no-print"><?= htmlspecialchars($_SESSION['flash_error']) ?></div>
+    <?php unset($_SESSION['flash_error']); ?>
+<?php endif; ?>
+
 <!-- Çıktı: barkod sayfası tasarımına uyumlu -->
 <div class="print-fatura hidden bg-white p-6 max-w-4xl mx-auto border-2 border-gray-200 rounded-xl mb-8 print:border-gray-400">
     <h1 class="text-xl font-bold text-center text-gray-900 mb-6">Sözleşme Detayı</h1>
@@ -175,12 +184,17 @@ ob_start();
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <i class="bi bi-box-seam text-emerald-600"></i> Depo Eşya Listesi
-            </h2>
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="bi bi-box-seam text-emerald-600"></i> Depo Eşya Listesi
+                </h2>
+                <button type="button" onclick="openContractItemsModal()" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm flex-shrink-0" title="Eşya listesi ekle / düzenle">
+                    <i class="bi bi-plus-lg text-lg"></i>
+                </button>
+            </div>
             <?php $items = $items ?? []; ?>
             <?php if (empty($items)): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Henüz eşya listesi girilmemiş. <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/duzenle" class="text-emerald-600 dark:text-emerald-400 hover:underline">Düzenle</a> sayfasından ekleyebilirsiniz.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Henüz eşya listesi girilmemiş. Sağ üstteki <strong class="font-medium text-gray-700 dark:text-gray-300">+</strong> butonuna basarak ekleyebilirsiniz.</p>
             <?php else: ?>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
@@ -275,6 +289,58 @@ ob_start();
         </div>
     </div>
 </div>
+
+<!-- Eşya Listesi Modal -->
+<div id="contractItemsModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto no-print" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeContractItemsModal()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-600">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="bi bi-box-seam text-emerald-600"></i> Depo Eşya Listesi
+                </h3>
+                <button type="button" onclick="closeContractItemsModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form method="post" action="/girisler/esya-listesi-guncelle">
+                <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contract['id'] ?? '') ?>">
+                <?php
+                $storedItemsFormCompact = true;
+                require __DIR__ . '/_stored_items_form.php';
+                unset($storedItemsFormCompact);
+                ?>
+                <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-gray-100 dark:border-gray-600">
+                    <button type="button" onclick="closeContractItemsModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function openContractItemsModal() {
+    var modal = document.getElementById('contractItemsModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        if (window.renumberContractItems) window.renumberContractItems();
+    }
+}
+function closeContractItemsModal() {
+    var modal = document.getElementById('contractItemsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+}
+document.getElementById('contractItemsModal').addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeContractItemsModal();
+});
+<?php if (!empty($_GET['esyaListesi'])): ?>
+document.addEventListener('DOMContentLoaded', function() { openContractItemsModal(); });
+<?php endif; ?>
+</script>
 
 <!-- Ödeme Al Modal (aynı sayfada) -->
 <?php if (!empty($collectPayments)): ?>

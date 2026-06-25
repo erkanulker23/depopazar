@@ -362,6 +362,50 @@ class ContractsController
         exit;
     }
 
+    /** Sözleşme detayından eşya listesi güncelleme */
+    public function updateItems(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /girisler');
+            exit;
+        }
+        $id = trim($_POST['contract_id'] ?? '');
+        if (!$id) {
+            $_SESSION['flash_error'] = 'Sözleşme belirtilmedi.';
+            header('Location: /girisler');
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            header('Location: /girisler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            header('Location: /girisler');
+            exit;
+        }
+        $roomId = $contract['room_id'] ?? '';
+        if (!$roomId) {
+            $_SESSION['flash_error'] = 'Sözleşmeye bağlı oda bulunamadı.';
+            header('Location: /girisler/' . $id);
+            exit;
+        }
+        try {
+            $storedAt = $contract['start_date'] ?? date('Y-m-d H:i:s');
+            Item::syncForContract($this->pdo, $id, $roomId, parseContractItemsFromRequest($_POST), $storedAt);
+            $_SESSION['flash_success'] = 'Eşya listesi kaydedildi.';
+        } catch (Exception $e) {
+            $_SESSION['flash_error'] = 'Eşya listesi kaydedilemedi: ' . $e->getMessage();
+        }
+        header('Location: /girisler/' . $id);
+        exit;
+    }
+
     public function show(array $params): void
     {
         Auth::requireStaff();

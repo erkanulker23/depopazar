@@ -1,11 +1,14 @@
 <?php
 $items = $items ?? [];
+$storedItemsFormCompact = !empty($storedItemsFormCompact);
 ?>
-<div class="border-t border-gray-200 dark:border-gray-600 pt-4 mt-2">
+<div class="<?= $storedItemsFormCompact ? '' : 'border-t border-gray-200 dark:border-gray-600 pt-4 mt-2' ?>">
+    <?php if (!$storedItemsFormCompact): ?>
     <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
         <i class="bi bi-box-seam text-emerald-600"></i> Depo Eşya Listesi
     </h3>
     <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Depoya giren ürün ve eşyaları satır satır ekleyin.</p>
+    <?php endif; ?>
     <div class="overflow-x-auto">
         <table class="min-w-full border border-gray-200 dark:border-gray-600 rounded-xl" id="contractItemsTable">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
@@ -66,6 +69,7 @@ $items = $items ?? [];
         <i class="bi bi-plus-lg"></i> Satır Ekle
     </button>
 </div>
+<?php if (empty($storedItemsFormSkipScript)): ?>
 <script>
 (function() {
     if (window.__contractItemsFormInit) return;
@@ -106,3 +110,4 @@ $items = $items ?? [];
     };
 })();
 </script>
+<?php endif; ?>
