@@ -10,6 +10,8 @@ $command = isset($argv[1]) ? trim($argv[1]) : '';
 
 if ($command === '--help' || $command === '-h') {
     echo "Kullanım: php artisan migrate [--force]\n";
+    echo "          php artisan vapid:generate\n";
+    echo "          php artisan overdue:remind\n";
     echo "  Forge deploy: optimize, config:cache, route:cache, view:cache (no-op)\n";
     exit(0);
 }
@@ -52,10 +54,25 @@ if ($command === 'overdue:remind') {
     exit($ret);
 }
 
+if ($command === 'vapid:generate') {
+    $root = __DIR__;
+    if (basename($root) === 'php-app') {
+        $root = dirname($root);
+    }
+    $script = $root . '/php-app/scripts/generate-vapid-keys.php';
+    if (!is_file($script)) {
+        fwrite(STDERR, "Hata: generate-vapid-keys.php bulunamadi: $script\n");
+        fwrite(STDERR, "Proje kokunden calistirin: php artisan vapid:generate\n");
+        exit(1);
+    }
+    passthru('php ' . escapeshellarg($script), $ret);
+    exit($ret);
+}
+
 // migrate, migrate --force, veya boş komut (sadece "php artisan")
 if ($command !== 'migrate' && $command !== '' && $command !== '--force') {
     fwrite(STDERR, "Bilinmeyen komut: " . (string)$command . "\n");
-    fwrite(STDERR, "Kullanım: php artisan migrate [--force] | php artisan overdue:remind\n");
+    fwrite(STDERR, "Kullanım: php artisan migrate [--force] | php artisan overdue:remind | php artisan vapid:generate\n");
     exit(1);
 }
 

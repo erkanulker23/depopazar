@@ -2,8 +2,9 @@
 <?php
 /**
  * VAPID anahtarlarını üretir (Web Push için).
- * Kullanım: php scripts/generate-vapid-keys.php
- * veya proje kökünden: php php-app/scripts/generate-vapid-keys.php
+ * Kullanım (proje kökünden):
+ *   php artisan vapid:generate
+ *   php php-app/scripts/generate-vapid-keys.php
  *
  * Çıktıyı config.php içine veya ortam değişkenlerine ekleyin:
  * vapid_public_key  => '...',
