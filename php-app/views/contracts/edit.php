@@ -18,7 +18,7 @@ ob_start();
     <?php unset($_SESSION['flash_error']); ?>
 <?php endif; ?>
 
-<form method="post" action="/girisler/guncelle" class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 max-w-2xl">
+<form method="post" action="/girisler/guncelle" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 max-w-4xl">
     <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contract['id'] ?? '') ?>">
     <div class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -75,9 +75,10 @@ ob_start();
                 <textarea name="stored_items_condition_note" id="edit_stored_items_condition_note" rows="2" placeholder="Hasarın açıklamasını yazın..." class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" <?= ($currentCondition === 'hasarli') ? 'required' : '' ?>><?= htmlspecialchars($contract['stored_items_condition_note'] ?? '') ?></textarea>
             </div>
         </div>
+        <?php require __DIR__ . '/_stored_items_form.php'; ?>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Notlar</label>
-            <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"><?= htmlspecialchars($contract['notes'] ?? '') ?></textarea>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notlar</label>
+            <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($contract['notes'] ?? '') ?></textarea>
         </div>
     </div>
     <div class="mt-6 flex gap-2">

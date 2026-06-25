@@ -223,6 +223,10 @@ class ContractsController
                     $start->modify('+1 month');
                 }
                 Room::update($this->pdo, $roomId, ['status' => 'occupied']);
+                $contractItems = parseContractItemsFromRequest($_POST);
+                if (!empty($contractItems)) {
+                    Item::syncForContract($this->pdo, $contractId, $roomId, $contractItems, $startDate . ' 00:00:00');
+                }
             }
             $contractNumber = $created['contract_number'] ?? $contractId ?? '';
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
@@ -291,6 +295,7 @@ class ContractsController
             exit;
         }
         $pageTitle = 'Sözleşme Düzenle: ' . ($contract['contract_number'] ?? '');
+        $items = Item::findByContractId($this->pdo, $id);
         require __DIR__ . '/../../views/contracts/edit.php';
     }
 
@@ -344,6 +349,11 @@ class ContractsController
                 'stored_items_condition' => $storedCondition,
                 'stored_items_condition_note' => $storedConditionNote,
             ]);
+            $roomId = $contract['room_id'] ?? '';
+            if ($roomId) {
+                $storedAt = ($startDate ?? $contract['start_date'] ?? null) ?: date('Y-m-d H:i:s');
+                Item::syncForContract($this->pdo, $id, $roomId, parseContractItemsFromRequest($_POST), $storedAt);
+            }
             $_SESSION['flash_success'] = 'Sözleşme güncellendi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Güncellenemedi: ' . $e->getMessage();
@@ -407,6 +417,7 @@ class ContractsController
             $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $pageTitle = 'Sözleşme: ' . ($contract['contract_number'] ?? $id);
+        $items = Item::findByContractId($this->pdo, $id);
         require __DIR__ . '/../../views/contracts/detail.php';
     }
 
@@ -435,6 +446,7 @@ class ContractsController
         $payments = Payment::findByContractId($this->pdo, $id);
         $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
         $soldByName = trim(($contract['sold_by_first_name'] ?? '') . ' ' . ($contract['sold_by_last_name'] ?? '')) ?: '-';
+        $items = Item::findByContractId($this->pdo, $id);
         require __DIR__ . '/../../views/contracts/print.php';
     }
 

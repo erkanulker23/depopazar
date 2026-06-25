@@ -331,6 +331,38 @@ if (!function_exists('parseStoredItemsConditionFromRequest')) {
     }
 }
 
+/** Sözleşme eşya listesi — form satırlarını normalize eder */
+if (!function_exists('parseContractItemsFromRequest')) {
+    function parseContractItemsFromRequest(array $post): array
+    {
+        $names = $post['item_name'] ?? [];
+        if (!is_array($names)) {
+            return [];
+        }
+        $quantities = $post['item_quantity'] ?? [];
+        $units = $post['item_unit'] ?? [];
+        $descriptions = $post['item_description'] ?? [];
+        $items = [];
+        foreach ($names as $i => $name) {
+            $name = trim((string) $name);
+            if ($name === '') {
+                continue;
+            }
+            $qtyRaw = $quantities[$i] ?? 1;
+            $quantity = ($qtyRaw !== '' && $qtyRaw !== null) ? max(1, (int) $qtyRaw) : 1;
+            $unit = trim((string) ($units[$i] ?? '')) ?: 'adet';
+            $description = trim((string) ($descriptions[$i] ?? ''));
+            $items[] = [
+                'name' => $name,
+                'quantity' => $quantity,
+                'unit' => $unit,
+                'description' => $description !== '' ? $description : null,
+            ];
+        }
+        return $items;
+    }
+}
+
 /** Manuel borç (customer_charges) durum etiketi */
 if (!function_exists('chargeStatusDisplay')) {
     function chargeStatusDisplay(array $charge): array

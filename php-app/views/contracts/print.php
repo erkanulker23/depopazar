@@ -65,6 +65,34 @@ if (!function_exists('fmtPrice')) {
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ürün Durumu</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><span class="text-xs text-gray-600 mt-1 block">Hasar notu: <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?></span><?php endif; ?></td></tr>
             <?php endif; ?>
         </table>
+        <?php $items = $items ?? []; ?>
+        <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2 mt-6">Depo Eşya Listesi</h2>
+        <?php if (empty($items)): ?>
+            <p class="text-sm text-gray-500 mb-6">Eşya listesi girilmemiş.</p>
+        <?php else: ?>
+            <table class="min-w-full border border-gray-300 text-sm mb-6">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="border border-gray-300 px-3 py-2 text-left font-bold">#</th>
+                        <th class="border border-gray-300 px-3 py-2 text-left font-bold">Eşya Adı</th>
+                        <th class="border border-gray-300 px-3 py-2 text-left font-bold">Adet</th>
+                        <th class="border border-gray-300 px-3 py-2 text-left font-bold">Birim</th>
+                        <th class="border border-gray-300 px-3 py-2 text-left font-bold">Açıklama</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($items as $i => $item): ?>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2"><?= $i + 1 ?></td>
+                        <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['name'] ?? '') ?></td>
+                        <td class="border border-gray-300 px-3 py-2"><?= (int) ($item['quantity'] ?? 1) ?></td>
+                        <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['unit'] ?? 'adet') ?></td>
+                        <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['description'] ?? '-') ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Takvimi</h2>
         <table class="min-w-full border border-gray-300 text-sm">
             <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th></tr></thead>
