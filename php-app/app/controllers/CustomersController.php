@@ -452,13 +452,13 @@ class CustomersController
             header('Location: /musteriler/' . $id);
             exit;
         }
-        if ($phone !== null && formatPhoneInput($phone) === null) {
-            $_SESSION['flash_error'] = 'Telefon formatı geçersiz. Örn: 05551234567';
+        if ($phone !== null && !validatePhone($phone)) {
+            $_SESSION['flash_error'] = 'Telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx';
             header('Location: /musteriler/' . $id);
             exit;
         }
-        if ($phone2 !== null && formatPhoneInput($phone2) === null) {
-            $_SESSION['flash_error'] = '2. telefon formatı geçersiz. Örn: 05551234567';
+        if ($phone2 !== null && !validatePhone($phone2)) {
+            $_SESSION['flash_error'] = '2. telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx';
             header('Location: /musteriler/' . $id);
             exit;
         }
@@ -694,12 +694,12 @@ class CustomersController
             exit;
         }
         if ($phone !== null && !validatePhone($phone)) {
-            $_SESSION['flash_error'] = 'Telefon formatı geçersiz. Örn: 05551234567';
+            $_SESSION['flash_error'] = 'Telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx';
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         if ($phone2 !== null && !validatePhone($phone2)) {
-            $_SESSION['flash_error'] = '2. telefon formatı geçersiz. Örn: 05551234567';
+            $_SESSION['flash_error'] = '2. telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx';
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }

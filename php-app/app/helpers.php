@@ -49,35 +49,71 @@ if (!function_exists('validateTcIdentity')) {
     }
 }
 
-/** Türkiye telefon formatı: 05xx xxx xx xx veya +90 5xx xxx xx xx */
-if (!function_exists('validatePhone')) {
-    function validatePhone(?string $value): bool {
-        if ($value === null || $value === '') return true;
-        $v = preg_replace('/[\s\-\(\)\.]/', '', $value);
-        return preg_match('/^(\+90|0)?5\d{9}$/', $v) === 1;
+/** Ham telefon → sadece rakamlar (05xxxxxxxxx hedef) */
+if (!function_exists('normalizePhoneDigits')) {
+    function normalizePhoneDigits(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        $v = preg_replace('/\D/', '', $value);
+        if ($v === '') {
+            return null;
+        }
+        if (strlen($v) >= 12 && str_starts_with($v, '90')) {
+            $v = substr($v, 2);
+        }
+        if (strlen($v) === 10 && $v[0] === '5') {
+            $v = '0' . $v;
+        }
+        if ($v[0] !== '0') {
+            $v = '0' . $v;
+        }
+        if (strlen($v) > 11) {
+            $v = substr($v, 0, 11);
+        }
+        return $v;
     }
 }
 
-/** Telefon formatına çevir (girişten) - veritabanı için normalize */
+/** Türkiye telefon formatı: tam 11 hane 05xxxxxxxxx */
+if (!function_exists('validatePhone')) {
+    function validatePhone(?string $value): bool
+    {
+        if ($value === null || trim($value) === '') {
+            return true;
+        }
+        $v = normalizePhoneDigits($value);
+        return $v !== null && strlen($v) === 11 && $v[0] === '0' && $v[1] === '5';
+    }
+}
+
+/** Telefon formatına çevir (girişten) - veritabanı için normalize; eksik numara null */
 if (!function_exists('formatPhoneInput')) {
-    function formatPhoneInput(?string $value): ?string {
-        if ($value === null || $value === '') return null;
-        $v = preg_replace('/\D/', '', $value);
-        if (strlen($v) === 10 && $v[0] === '5') return '0' . $v;
-        if (strlen($v) === 11 && substr($v, 0, 2) === '90') return '0' . substr($v, 2);
-        if (strlen($v) >= 10) return $v;
-        return $value;
+    function formatPhoneInput(?string $value): ?string
+    {
+        $v = normalizePhoneDigits($value);
+        if ($v === null) {
+            return null;
+        }
+        if (strlen($v) === 11 && $v[0] === '0' && $v[1] === '5') {
+            return $v;
+        }
+        return null;
     }
 }
 
 /** Telefonu ekranda göstermek için maskeli formata çevir (05xx xxx xx xx) */
 if (!function_exists('formatPhoneDisplay')) {
-    function formatPhoneDisplay(?string $value): string {
-        if ($value === null || $value === '') return '';
-        $v = preg_replace('/\D/', '', $value);
-        if (strlen($v) === 10 && $v[0] === '5') $v = '0' . $v;
-        if (strlen($v) === 11 && substr($v, 0, 2) === '90') $v = '0' . substr($v, 2);
-        if (strlen($v) !== 11 || $v[0] !== '0' || $v[1] !== '5') return $value;
+    function formatPhoneDisplay(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $v = normalizePhoneDigits($value);
+        if ($v === null || strlen($v) !== 11 || $v[0] !== '0' || $v[1] !== '5') {
+            return trim($value);
+        }
         return $v[0] . ' ' . substr($v, 1, 3) . ' ' . substr($v, 4, 3) . ' ' . substr($v, 7, 2) . ' ' . substr($v, 9, 2);
     }
 }

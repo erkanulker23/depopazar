@@ -452,11 +452,11 @@ ob_start();
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon</label>
-                    <input type="tel" name="phone" inputmode="tel" value="<?= htmlspecialchars(formatPhoneDisplay($customer['phone'] ?? '')) ?>" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white phone-mask" data-phone-mask title="Örn: 05551234567">
+                    <input type="tel" name="phone" inputmode="numeric" autocomplete="tel" value="<?= htmlspecialchars(formatPhoneDisplay($customer['phone'] ?? '')) ?>" placeholder="0555 123 45 67" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" data-phone-mask title="11 hane: 05xx xxx xx xx">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefon 2</label>
-                    <input type="tel" name="phone_2" inputmode="tel" value="<?= htmlspecialchars(formatPhoneDisplay($customer['phone_2'] ?? '')) ?>" placeholder="0555 123 45 67" maxlength="14" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white phone-mask" data-phone-mask title="Örn: 05551234567">
+                    <input type="tel" name="phone_2" inputmode="numeric" autocomplete="tel" value="<?= htmlspecialchars(formatPhoneDisplay($customer['phone_2'] ?? '')) ?>" placeholder="0555 123 45 67" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" data-phone-mask title="11 hane: 05xx xxx xx xx">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TC Kimlik No</label>
@@ -630,29 +630,13 @@ $bankAccounts = $bankAccounts ?? [];
 </div>
 
 <script>
-(function() {
-    function applyPhoneMaskToInput(inp) {
-        if (!inp || !inp.matches || !inp.matches('input[data-phone-mask]')) return;
-        var v = inp.value.replace(/\D/g, '');
-        if (v.length > 0 && v.charAt(0) === '9' && v.charAt(1) === '0') v = v.substr(2);
-        if (v.length > 0 && v.charAt(0) !== '0') v = '0' + v;
-        if (v.length > 11) v = v.substr(0, 11);
-        if (v.length <= 1) { inp.value = v; return; }
-        var s = v.charAt(0);
-        if (v.length > 1) s += ' ' + v.substr(1, 3);
-        if (v.length > 4) s += ' ' + v.substr(4, 3);
-        if (v.length > 7) s += ' ' + v.substr(7, 2);
-        if (v.length > 9) s += ' ' + v.substr(9, 2);
-        inp.value = s;
+window.openEditCustomerModal = function() {
+    var modal = document.getElementById('editCustomerModal');
+    if (modal) {
+        if (window.initPhoneMasks) window.initPhoneMasks();
+        modal.classList.remove('hidden');
     }
-    window.openEditCustomerModal = function() {
-        var modal = document.getElementById('editCustomerModal');
-        if (modal) {
-            modal.querySelectorAll('input[data-phone-mask]').forEach(applyPhoneMaskToInput);
-            modal.classList.remove('hidden');
-        }
-    };
-})();
+};
 </script>
 
 <?php
