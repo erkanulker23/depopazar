@@ -1,19 +1,43 @@
 #!/usr/bin/env php
 <?php
 /**
- * DepoPazar – Artisan (migrate komutu)
- * Tüm tabloları ve eksik sütunları oluşturur. Mevcut veriyi bozmaz (CREATE TABLE IF NOT EXISTS / güvenli ALTER).
- * Kullanım: php artisan migrate [--force]
- * Proje kökünden veya php-app içinden çalıştırılabilir.
+ * DepoPazar – Artisan (Forge / Laravel deploy uyumlu)
+ * migrate: schema + SQL migration + idempotent seed (--force ile)
+ * optimize, config:cache, route:cache, view:cache vb.: no-op (saf PHP uygulaması)
  */
-// Argümansız veya "migrate" veya "migrate --force" kabul et (Forge deploy uyumluluğu)
 $command = isset($argv[1]) ? trim($argv[1]) : '';
+
 if ($command === '--help' || $command === '-h') {
     echo "Kullanım: php artisan migrate [--force]\n";
-    echo "  Eksik tabloları ve sütunları eklemek için schema + tüm migration'ları çalıştırır.\n";
+    echo "  Forge deploy: optimize, config:cache, route:cache, view:cache (no-op)\n";
     exit(0);
 }
-// migrate, migrate --force, veya boş komut (sadece "php artisan") kabul et
+
+// Laravel Forge standart deploy komutları – bu projede Laravel yok, güvenli no-op
+$noopCommands = [
+    'optimize',
+    'config:cache',
+    'route:cache',
+    'view:cache',
+    'event:cache',
+    'config:clear',
+    'route:clear',
+    'view:clear',
+    'cache:clear',
+    'clear-compiled',
+    'storage:link',
+    'queue:restart',
+    'down',
+    'up',
+    'about',
+    'env',
+    'inspire',
+];
+if (in_array($command, $noopCommands, true)) {
+    exit(0);
+}
+
+// migrate, migrate --force, veya boş komut (sadece "php artisan")
 if ($command !== 'migrate' && $command !== '' && $command !== '--force') {
     fwrite(STDERR, "Bilinmeyen komut: " . (string)$command . "\n");
     fwrite(STDERR, "Kullanım: php artisan migrate [--force]\n");
