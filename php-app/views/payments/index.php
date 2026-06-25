@@ -225,17 +225,10 @@ $page = $page ?? 1;
                 <div id="selectedAmountSummary" class="mb-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-sm font-medium"></div>
                 <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme yöntemini seçin.</p>
                 <div class="space-y-3">
-                    <button type="button" onclick="setPaymentMethod('cash')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 flex items-center gap-3 text-left" data-method="cash">
-                        <i class="bi bi-cash-stack text-2xl text-green-600"></i>
-                        <div>
-                            <p class="font-semibold text-gray-900 dark:text-white">Nakit</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Nakit ödeme al</p>
-                        </div>
-                    </button>
-                    <button type="button" onclick="setPaymentMethod('bank_transfer')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 flex items-center gap-3 text-left" data-method="bank_transfer">
+                    <button type="button" onclick="setPaymentMethod('bank_transfer')" class="collect-method w-full p-4 border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-xl hover:border-emerald-500 flex items-center gap-3 text-left" data-method="bank_transfer">
                         <i class="bi bi-bank text-2xl text-blue-600"></i>
                         <div>
-                            <p class="font-semibold text-gray-900 dark:text-white">Havale</p>
+                            <p class="font-semibold text-gray-900 dark:text-white">Havale / EFT</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">Banka havalesi ile ödeme al</p>
                         </div>
                     </button>
@@ -285,21 +278,10 @@ $page = $page ?? 1;
                 </form>
             </div>
 
-            <!-- Nakit / Kredi kartı için tek butonla gönderim -->
-            <div id="stepSubmitSimple" class="step-content hidden">
-                <button type="button" onclick="collectStep(3)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline mb-4">← Ödeme yöntemi</button>
-                <form id="collectFormSimple" method="post" action="/odemeler/odeme-al">
-                    <input type="hidden" name="payment_method" id="form_payment_method_simple" value="">
-                    <div id="collectFormSimpleIds"></div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" onclick="collectStep(3)" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">İptal</button>
-                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
-                    </div>
-                </form>
-            </div>
+            <!-- Kredi kartı bilgi -->
             <div id="stepCreditCardNote" class="step-content hidden">
                 <button type="button" onclick="collectStep(3)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline mb-4">← Ödeme yöntemi</button>
-                <p class="text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl text-sm">Kredi kartı ile ödeme için PayTR entegrasyonu gereklidir. Ayarlar sayfasından PayTR bilgilerinizi girip aktif edin. Şu an sadece Nakit veya Havale ile kayıt yapabilirsiniz.</p>
+                <p class="text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl text-sm">Kredi kartı ile ödeme için PayTR entegrasyonu gereklidir. Ayarlar sayfasından PayTR bilgilerinizi girip aktif edin. Şu an Havale/EFT ile kayıt yapabilirsiniz.</p>
             </div>
         </div>
     </div>
@@ -382,7 +364,6 @@ function collectStep(n) {
     if (n === 2) document.getElementById('stepPayment').classList.remove('hidden');
     if (n === 3) document.getElementById('stepMethod').classList.remove('hidden');
     document.getElementById('stepBankTransfer').classList.add('hidden');
-    document.getElementById('stepSubmitSimple').classList.add('hidden');
     document.getElementById('stepCreditCardNote').classList.add('hidden');
 }
 function selectCustomer(customerId, payments, customerName) {
@@ -436,19 +417,6 @@ function setPaymentMethod(method) {
                 container.appendChild(inp);
             });
         }
-    } else if (method === 'cash') {
-        document.getElementById('stepMethod').classList.add('hidden');
-        document.getElementById('stepSubmitSimple').classList.remove('hidden');
-        document.getElementById('form_payment_method_simple').value = 'cash';
-        var container = document.getElementById('collectFormSimpleIds');
-        container.innerHTML = '';
-        collectSelectedPayments.forEach(function(p) {
-            var inp = document.createElement('input');
-            inp.type = 'hidden';
-            inp.name = 'payment_ids[]';
-            inp.value = p.id;
-            container.appendChild(inp);
-        });
     } else {
         document.getElementById('stepMethod').classList.add('hidden');
         document.getElementById('stepCreditCardNote').classList.remove('hidden');

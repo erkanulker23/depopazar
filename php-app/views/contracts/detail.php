@@ -229,20 +229,15 @@ ob_start();
             </div>
             <div id="collectError" class="hidden mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 text-sm"></div>
             <div id="collectStepMethod">
-                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme yöntemini seçin.</p>
-                <div class="space-y-3 mb-4">
-                    <button type="button" onclick="setCollectMethod('cash')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 flex items-center gap-3 text-left" data-method="cash">
-                        <i class="bi bi-cash-stack text-2xl text-green-600"></i>
-                        <div><p class="font-semibold text-gray-900 dark:text-white">Nakit</p><p class="text-xs text-gray-500">Nakit ödeme al</p></div>
-                    </button>
-                    <button type="button" onclick="setCollectMethod('bank_transfer')" class="collect-method w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-emerald-500 flex items-center gap-3 text-left" data-method="bank_transfer">
-                        <i class="bi bi-bank text-2xl text-blue-600"></i>
-                        <div><p class="font-semibold text-gray-900 dark:text-white">Havale</p><p class="text-xs text-gray-500">Banka havalesi ile ödeme al</p></div>
-                    </button>
-                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme banka havalesi / EFT ile alınır.</p>
+                <button type="button" onclick="setCollectMethod('bank_transfer')" class="w-full p-4 border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl flex items-center gap-3 text-left mb-4">
+                    <i class="bi bi-bank text-2xl text-blue-600"></i>
+                    <div><p class="font-semibold text-gray-900 dark:text-white">Havale / EFT</p><p class="text-xs text-gray-500">Banka havalesi ile ödeme al</p></div>
+                </button>
             </div>
             <div id="collectStepBank" class="hidden">
                 <form method="post" action="/odemeler/odeme-al">
+                    <input type="hidden" name="payment_method" value="bank_transfer">
                     <input type="hidden" name="redirect" value="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>">
                     <div id="collectFormIds"></div>
                     <div class="space-y-4 mb-4">
@@ -268,17 +263,6 @@ ob_start();
                     </div>
                 </form>
             </div>
-            <div id="collectStepCash" class="hidden">
-                <form method="post" action="/odemeler/odeme-al">
-                    <input type="hidden" name="payment_method" value="cash">
-                    <input type="hidden" name="redirect" value="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>">
-                    <div id="collectFormIdsCash"></div>
-                    <div class="flex gap-2">
-                        <button type="button" onclick="backCollectMethod()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700">← Geri</button>
-                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Ödemeyi Kaydet</button>
-                    </div>
-                </form>
-            </div>
         </div>
     </div>
 </div>
@@ -287,32 +271,19 @@ var collectPayments = <?= json_encode(array_map(fn($p) => ['id' => $p['id'], 'pa
 function openCollectModal(payments) {
     collectPayments = Array.isArray(payments) && payments.length ? payments : collectPayments;
     document.getElementById('collectModal').classList.remove('hidden');
-    document.getElementById('collectStepMethod').classList.remove('hidden');
-    document.getElementById('collectStepBank').classList.add('hidden');
-    document.getElementById('collectStepCash').classList.add('hidden');
-    document.querySelectorAll('.collect-method').forEach(function(b) { b.classList.remove('border-emerald-500', 'bg-emerald-50'); });
+    setCollectMethod('bank_transfer');
 }
 function closeCollectModal() { document.getElementById('collectModal').classList.add('hidden'); }
 function setCollectMethod(method) {
-    document.querySelectorAll('.collect-method').forEach(function(b) { b.classList.remove('border-emerald-500', 'bg-emerald-50'); });
-    var btn = document.querySelector('.collect-method[data-method="' + method + '"]'); if (btn) btn.classList.add('border-emerald-500', 'bg-emerald-50');
     var ids = collectPayments.map(function(p) { return p.id; });
-    if (method === 'bank_transfer') {
-        document.getElementById('collectStepMethod').classList.add('hidden');
-        document.getElementById('collectStepBank').classList.remove('hidden');
-        var c = document.getElementById('collectFormIds'); c.innerHTML = '';
-        ids.forEach(function(id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'payment_ids[]'; i.value = id; c.appendChild(i); });
-    } else {
-        document.getElementById('collectStepMethod').classList.add('hidden');
-        document.getElementById('collectStepCash').classList.remove('hidden');
-        var c = document.getElementById('collectFormIdsCash'); c.innerHTML = '';
-        ids.forEach(function(id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'payment_ids[]'; i.value = id; c.appendChild(i); });
-    }
+    document.getElementById('collectStepMethod').classList.add('hidden');
+    document.getElementById('collectStepBank').classList.remove('hidden');
+    var c = document.getElementById('collectFormIds'); c.innerHTML = '';
+    ids.forEach(function(id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'payment_ids[]'; i.value = id; c.appendChild(i); });
 }
 function backCollectMethod() {
     document.getElementById('collectStepMethod').classList.remove('hidden');
     document.getElementById('collectStepBank').classList.add('hidden');
-    document.getElementById('collectStepCash').classList.add('hidden');
 }
 document.getElementById('collectModal').addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCollectModal(); });
 <?php if (!empty($_GET['collectPay'])): ?>document.addEventListener('DOMContentLoaded', function() { openCollectModal(); });<?php endif; ?>

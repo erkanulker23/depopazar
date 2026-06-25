@@ -354,11 +354,11 @@ ob_start();
             </button>
             <?php endif; ?>
         </div>
-        <?php $documents = $documents ?? []; if (!empty($documents)): ?>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <i class="bi bi-file-earmark text-emerald-600"></i> Belgeler
             </h3>
+            <?php $documents = $documents ?? []; if (!empty($documents)): ?>
             <ul class="space-y-2">
                 <?php foreach ($documents as $doc): ?>
                 <li class="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
@@ -371,8 +371,13 @@ ob_start();
                 </li>
                 <?php endforeach; ?>
             </ul>
+            <?php else: ?>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Henüz belge yüklenmemiş.</p>
+            <?php endif; ?>
+            <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/belge-ekle" class="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+                <i class="bi bi-file-earmark-plus"></i> Belge ekle
+            </a>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 
@@ -496,8 +501,7 @@ ob_start();
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme yöntemi <span class="text-red-500">*</span></label>
                             <select name="payment_method" required class="payment-method-select w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                <option value="cash">Nakit</option>
-                                <option value="bank_transfer">Havale</option>
+                                <option value="bank_transfer" selected>Havale / EFT</option>
                                 <option value="credit_card">Kredi Kartı</option>
                             </select>
                         </div>

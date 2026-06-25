@@ -128,8 +128,8 @@ class PaymentsController
         $bankAccountId = trim($_POST['bank_account_id'] ?? '') ?: null;
         $transactionId = trim($_POST['transaction_id'] ?? '') ?: null;
         $notes = trim($_POST['notes'] ?? '') ?: null;
-        if (empty($paymentIds) || !in_array($paymentMethod, ['cash', 'bank_transfer', 'credit_card'], true)) {
-            $_SESSION['flash_error'] = 'Geçersiz istek. Ödeme seçin ve ödeme yöntemini belirleyin.';
+        if (empty($paymentIds) || !in_array($paymentMethod, ['bank_transfer', 'credit_card'], true)) {
+            $_SESSION['flash_error'] = 'Geçersiz istek. Ödeme seçin ve ödeme yöntemini belirleyin (Havale veya Kredi Kartı).';
             header('Location: /odemeler');
             exit;
         }
@@ -297,7 +297,7 @@ class PaymentsController
         $paidAt = $payment['paid_at'] ?? null;
         $odemeTarihi = $paidAt ? date('d.m.Y H:i', strtotime($paidAt)) : date('d.m.Y H:i');
         $pm = $payment['payment_method'] ?? '';
-        $odemeYontemi = $pm === 'cash' ? 'Nakit' : ($pm === 'bank_transfer' ? 'Havale/EFT' : ($pm === 'credit_card' ? 'Kredi Kartı' : ($pm !== '' ? $pm : 'Belirtilmedi')));
+        $odemeYontemi = in_array($pm, ['cash', 'nakit'], true) ? 'Havale/EFT' : ($pm === 'bank_transfer' || $pm === 'havale' ? 'Havale/EFT' : ($pm === 'credit_card' || $pm === 'kredi_karti' ? 'Kredi Kartı' : ($pm !== '' ? $pm : 'Belirtilmedi')));
         $hesapAdi = '';
         if (!empty($payment['bank_account_id'])) {
             $stmt = $this->pdo->prepare('SELECT bank_name, account_holder_name FROM bank_accounts WHERE id = ? AND deleted_at IS NULL LIMIT 1');

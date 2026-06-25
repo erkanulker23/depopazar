@@ -61,17 +61,17 @@ ob_start();
     </a>
 </div>
 
-<?php $paymentBreakdown = $paymentBreakdown ?? ['cash' => 0, 'credit_card' => 0, 'bank' => 0]; $monthDisplay = $monthDisplay ?? (int)date('n'); ?>
-<!-- Ödeme yöntemine göre: Nakit, Kredi kartı, Banka -->
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+<?php $paymentBreakdown = $paymentBreakdown ?? ['credit_card' => 0, 'bank' => 0]; $monthDisplay = $monthDisplay ?? (int)date('n'); ?>
+<!-- Ödeme yöntemine göre: Havale, Kredi kartı -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
     <div class="stat-card">
         <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <i class="bi bi-cash-coin text-amber-600 dark:text-amber-400 text-xl"></i>
+            <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <i class="bi bi-bank text-emerald-600 dark:text-emerald-400 text-xl"></i>
             </div>
             <div>
-                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Nakit Alınanlar (<?= ($monthDisplay ?? 0) === 0 ? 'Yıllık ' . $year : ($monthNames[($monthDisplay ?? 1) - 1] ?? '') . ' ' . $year ?>)</p>
-                <p class="text-xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($paymentBreakdown['cash'] ?? 0) ?> ₺</p>
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Havale / EFT (<?= ($monthDisplay ?? 0) === 0 ? 'Yıllık ' . $year : ($monthNames[($monthDisplay ?? 1) - 1] ?? '') . ' ' . $year ?>)</p>
+                <p class="text-xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($paymentBreakdown['bank'] ?? 0) ?> ₺</p>
             </div>
         </div>
     </div>
@@ -83,17 +83,6 @@ ob_start();
             <div>
                 <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kredi Kartı Alınanlar</p>
                 <p class="text-xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($paymentBreakdown['credit_card'] ?? 0) ?> ₺</p>
-            </div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <i class="bi bi-bank text-emerald-600 dark:text-emerald-400 text-xl"></i>
-            </div>
-            <div>
-                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Banka Hesabına Alınanlar</p>
-                <p class="text-xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($paymentBreakdown['bank'] ?? 0) ?> ₺</p>
             </div>
         </div>
     </div>

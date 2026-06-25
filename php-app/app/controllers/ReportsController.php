@@ -311,7 +311,7 @@ class ReportsController
         return (float) $stmt->fetchColumn();
     }
 
-    /** Ödeme yöntemine göre: Nakit, Kredi kartı, Banka hesabı (month=0: tüm yıl) */
+    /** Ödeme yöntemine göre: Havale (eski nakit dahil), Kredi kartı */
     private function getPaymentBreakdownByMethod(?string $companyId, int $year, int $month): array
     {
         $start = $month === 0 ? sprintf('%04d-01-01', $year) : sprintf('%04d-%02d-01', $year, $month);
@@ -327,19 +327,15 @@ class ReportsController
             $base .= ' AND w.company_id = ? ';
             $params[] = $companyId;
         }
-        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(p.amount), 0) AS t ' . $base . ' AND LOWER(TRIM(COALESCE(p.payment_method,""))) IN ("nakit", "cash")');
+        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(p.amount), 0) AS t ' . $base . ' AND (p.bank_account_id IS NOT NULL OR LOWER(TRIM(COALESCE(p.payment_method,""))) IN ("havale","bank_transfer","banka","nakit","cash"))');
         $stmt->execute($params);
-        $cashTotal = (float) $stmt->fetchColumn();
+        $bankTotal = (float) $stmt->fetchColumn();
         $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(p.amount), 0) AS t ' . $base . ' AND (LOWER(TRIM(COALESCE(p.payment_method,""))) LIKE "%kredi%" OR LOWER(TRIM(COALESCE(p.payment_method,""))) = "credit_card")');
         $stmt->execute($params);
         $creditTotal = (float) $stmt->fetchColumn();
-        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(p.amount), 0) AS t ' . $base . ' AND (p.bank_account_id IS NOT NULL OR LOWER(TRIM(COALESCE(p.payment_method,""))) IN ("havale","bank_transfer","banka"))');
-        $stmt->execute($params);
-        $bankTotal = (float) $stmt->fetchColumn();
         return [
-            'cash' => $cashTotal,
-            'credit_card' => $creditTotal,
             'bank' => $bankTotal,
+            'credit_card' => $creditTotal,
         ];
     }
 

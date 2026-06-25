@@ -5,7 +5,12 @@ ob_start();
 ?>
 <div class="mb-6">
     <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Kullanıcı Yetkileri</h1>
-    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Rol ve yetkiler</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Rol tanımları</p>
+</div>
+
+<div class="mb-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-sm text-blue-900 dark:text-blue-200">
+    Kullanıcılara rol atamak için <a href="/kullanicilar" class="font-semibold underline hover:no-underline">Kullanıcılar</a> sayfasından ilgili personeli düzenleyin.
+    Süper Admin tüm rolleri (Personel, Muhasebe, Şirket Sahibi vb.) atayabilir ve şirket bağlayabilir.
 </div>
 
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">

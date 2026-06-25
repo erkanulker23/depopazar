@@ -82,6 +82,21 @@ if (!function_exists('timeAgoTr')) {
     }
 }
 
+/** Ödeme yöntemi etiketi (DB değerinden okunabilir metin) */
+if (!function_exists('paymentMethodLabel')) {
+    function paymentMethodLabel(?string $method): string {
+        $m = strtolower(trim((string) $method));
+        if ($m === '' ) return '–';
+        if (in_array($m, ['cash', 'nakit', 'bank_transfer', 'havale', 'banka'], true)) {
+            return 'Havale / EFT';
+        }
+        if (str_contains($m, 'kredi') || $m === 'credit_card') {
+            return 'Kredi Kartı';
+        }
+        return $method;
+    }
+}
+
 /** Sayfalama çubuğu HTML üretir. $keepParams: sayfa değişirken korunacak GET parametreleri (örn. ['q' => 'arama']) */
 if (!function_exists('renderPagination')) {
     function renderPagination(int $total, int $perPage, int $currentPage, string $baseUrl, array $keepParams = []): string

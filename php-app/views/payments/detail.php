@@ -63,7 +63,7 @@ ob_start();
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödeme Yöntemi</dt>
-                    <dd class="mt-1 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($payment['payment_method'] ?? '–') ?></dd>
+                    <dd class="mt-1 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(paymentMethodLabel($payment['payment_method'] ?? '')) ?></dd>
                 </div>
                 <?php if (!empty($payment['transaction_id'])): ?>
                 <div>

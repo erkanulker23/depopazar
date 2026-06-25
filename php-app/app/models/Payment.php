@@ -358,7 +358,7 @@ class Payment
             'UPDATE payments SET status = \'paid\', paid_at = NOW(), payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
-            $paymentMethod === 'cash' ? 'nakit' : ($paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti'),
+            $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti',
             $transactionId,
             $notes,
             $bankAccountId,
@@ -368,7 +368,7 @@ class Payment
 
     public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null): void
     {
-        $method = $paymentMethod === 'cash' ? 'nakit' : ($paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti');
+        $method = $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti';
         $placeholders = implode(',', array_fill(0, count($paymentIds), '?'));
         $params = array_merge([$method, $transactionId, $notes, $bankAccountId], $paymentIds);
         $stmt = $pdo->prepare(
