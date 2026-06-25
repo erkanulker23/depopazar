@@ -1,16 +1,39 @@
 ================================================================================
-LARAVEL FORGE – DEPLOY SCRIPT ALANINA SADECE BUNU YAPIŞTIRIN
+LARAVEL FORGE – STANDART LARAVEL DEPLOY (diğer projelerinizle aynı)
 ================================================================================
-Farklı veya uzun bir script kullanmayın. Site yolunu (celebi, depo vb.) yazmayın;
-Forge otomatik olarak doğru dizini ($FORGE_SITE_PATH) verir.
-================================================================================
+Bu proje Forge'un varsayılan Laravel deploy akışıyla uyumludur.
+Özel deploy.sh GEREKMEZ. Diğer Laravel sitelerinizde kullandığınız script'i
+aynı şekilde kullanabilirsiniz (zero-downtime + composer + npm + artisan migrate).
 
-cd $FORGE_SITE_PATH && bash deploy.sh
+Forge Site → Settings:
+- Install Composer Dependencies: AÇIK
+- Install NPM Dependencies: AÇIK
+- Web directory: php-app/public   (Laravel'deki public yerine – BOŞLUK OLMASIN)
+- Environment: DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+
+Deploy script (Forge varsayılan zero-downtime – diğer sitelerinizle aynı):
+
+cd $FORGE_SITE_PATH
+
+$CREATE_RELEASE()
+
+cd $FORGE_RELEASE_DIRECTORY
+
+$FORGE_COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+$FORGE_NPM ci || $FORGE_NPM install
+$FORGE_NPM run build
+
+$FORGE_PHP artisan migrate --force
+
+$ACTIVATE_RELEASE()
+
+$RESTART_QUEUES()
 
 ================================================================================
-Ayarlar (Settings) kontrolü:
-- Install Composer Dependencies: KAPALI (bu projede composer.json php-app/ içinde)
-- Root directory: /home/forge/SITENIZ.com   (Forge otomatik doldurur)
-- Web directory:  php-app/public            (sadece bu; başında/sonunda BOŞLUK OLMASIN)
-- Environment:   DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD mutlaka dolu (.env boş gelirse buraya yazın)
+Notlar:
+- Kök composer.json php-app/vendor kurulumunu otomatik tetikler.
+- package.json build script'i no-op (frontend yok).
+- php artisan migrate --force migration + idempotent seed yapar.
+- Web kökü php-app/public olmalı (403 önlemi).
 ================================================================================

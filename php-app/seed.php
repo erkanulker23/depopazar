@@ -26,9 +26,11 @@ if (!is_readable(APP_ROOT . '/config/db.php')) {
 
 $pdo = require APP_ROOT . '/config/db.php';
 
+$skipMigrate = in_array('--skip-migrate', $argv, true);
+
 // 1) Tablolar ve sütunlar: önce migrate çalıştır (IF NOT EXISTS / güvenli ALTER – mevcut veriyi bozmaz)
 $artisan = $root . '/artisan';
-if (is_file($artisan)) {
+if (!$skipMigrate && is_file($artisan)) {
     echo "Tablolar ve sutunlar kontrol ediliyor (migrate)...\n";
     $origCwd = getcwd();
     chdir($root);
@@ -37,7 +39,7 @@ if (is_file($artisan)) {
     if ($migrateRet !== 0) {
         echo "Uyari: migrate bazi dosyalarda hata/uyari verdi; devam ediliyor.\n";
     }
-} else {
+} elseif (!$skipMigrate) {
     echo "Uyari: artisan bulunamadi; sadece veri ekleniyor (tablolar zaten mevcut olmali).\n";
 }
 

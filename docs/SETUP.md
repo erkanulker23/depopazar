@@ -8,7 +8,7 @@ Bu rehberi takip ederseniz ilk deploy’da **403 Forbidden**, **migration** ve *
 
 Forge, Awapanel veya kullandığınız panelde siteyi ekleyin (domain, PHP sürümü 8.0+). Repo’yu bağlayın (örn. `erkanulker23/depopazar`), branch’i seçin.
 
-**Laravel Forge:** Proje kökünde minimal bir `composer.json` vardır (ilk kurulumda Forge "composer.json bulunamadı" vermesin diye). Asıl bağımlılıklar **php-app/** içinde; `deploy.sh` orada `composer install` çalıştırır. İsterseniz **Install Composer Dependencies** açık bırakabilirsiniz (kökte boş kurulum yapılır).
+**Laravel Forge:** Diğer Laravel sitelerinizle **aynı standart deploy script**'ini kullanın. **Install Composer Dependencies** ve **Install NPM Dependencies** **açık** olmalı. Kök `composer.json` otomatik olarak `php-app/vendor` kurar; `npm run build` no-op'tur. `php artisan migrate --force` migration + seed yapar. Tek fark: **Web directory** = `php-app/public` (Laravel'deki `public` değil).
 
 ---
 
@@ -51,31 +51,29 @@ Awapanel’de: Site ayarlarında **Environment** / **Ortam değişkenleri** benz
 
 ---
 
-## 4. Deploy script (çok önemli)
+## 4. Deploy script (Forge – diğer Laravel sitelerinizle aynı)
 
-**Bir sitede güncelleme gelmiyor, diğer sitelerde geliyorsa:** Forge’da o site için **Settings → General → Branch** değerini kontrol edin. Push yaptığınız dal (genelde `main`) seçili olmalı. Yanlış veya eski bir dal seçiliyse deploy aynı eski kodu çeker.
-
-**Forge’da “Deploy Script” alanına sadece aşağıdaki tek satırı yapıştırın.** Kendi yazdığınız veya farklı siteden kopyaladığınız script’i (örn. `depo.awapanel.com` yolu geçen) **kullanmayın**; yanlış dizine deploy edilir ve 403 / çalışmama olur.
-
-**Kopyalanacak satır:**
-
-```bash
-cd $FORGE_SITE_PATH && bash deploy.sh
-```
-
-- `$FORGE_SITE_PATH` Forge tarafından otomatik verilir (o anki site: celebi.awapanel.com ise o dizin olur).
-- Proje içindeki `deploy.sh` kullanılır; git pull sonrası güncel script çalışır.
+**Deploy Script:** Diğer Laravel projelerinizde kullandığınız Forge zero-downtime script’ini aynen kullanın. Özel `deploy.sh` **gerekmez**.
 
 Hazır metin: **`docs/FORGE-DEPLOY-YAPISTIR.txt`**
 
-`deploy.sh` şunları yapar:
+Forge otomatik olarak şunları yapar:
 
-- Git pull / fetch
-- `.env` veya panel Environment’tan `db.local.php` oluşturur
-- `php artisan migrate --force` (schema + migrations)
-- Composer install (php-app)
-- Seed (ilk şirket + super admin)
-- `php-app/public` ve uploads izinleri (403 önlemi)
+1. `$CREATE_RELEASE()` – kodu `releases/` altına klonlar
+2. `composer install` – kök `composer.json` → `php-app/vendor` kurulumunu tetikler
+3. `npm install && npm run build` – frontend yok, build no-op
+4. `php artisan migrate --force` – schema + migration + idempotent seed
+5. `$ACTIVATE_RELEASE()`
+
+**Site → Settings:**
+
+| Ayar | Değer |
+|------|--------|
+| Install Composer Dependencies | Açık |
+| Install NPM Dependencies | Açık |
+| Web directory | `php-app/public` |
+
+`deploy.sh` hâlâ manuel deploy veya Awapanel için kullanılabilir; Forge’da zorunlu değildir.
 
 ---
 
@@ -89,7 +87,7 @@ Panelden **Deploy Now** / **Deploy** çalıştırın.
   - **Laravel Forge:** Site → **Settings** → **General** → **Web directory** alanı **mutlaka** `php-app/public` olmalı (varsayılan `public` **yanlış**). Kaydedin; Forge Nginx config’i bu alana göre günceller.
   - **Nginx’i elle düzenliyorsanız:** `root` satırı `.../php-app/public` olmalı; `.../public` (Laravel gibi) 403 verir.
   - Web directory’de başında/sonunda veya path içinde **boşluk olmamalı**.
-  - Deploy script olarak **sadece** `cd $FORGE_SITE_PATH && bash deploy.sh` kullanın.
+  - Deploy script olarak diğer Laravel sitelerinizdeki standart Forge script’ini kullanın.
   - Deploy’u tekrar çalıştırın (izinler güncellenir). Hâlâ 403 ise sunucuda `ls -la /home/forge/celebi.awapanel.com/php-app/public/` ile `index.php` var mı ve okunabilir mi kontrol edin.
 - **Veritabanı / Access denied:** Environment’ta DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD dolu mu kontrol edin.
 - **Migration hatası:** Aynı şekilde DB_* değişkenleri; gerekirse sunucuda `cd $FORGE_SITE_PATH && php artisan migrate --force` çalıştırın.

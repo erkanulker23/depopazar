@@ -18,7 +18,7 @@ Projeyi ilk kez sunucuya kurarken **tek rehber:** **[docs/SETUP.md](docs/SETUP.m
 
 1. **Web Directory / Document Root** = `php-app/public` (aksi halde 403 Forbidden).
 2. Panel **Environment**’a `.env.example` içindeki değişkenleri ekleyin (özellikle DB_*).
-3. Deploy script: Forge’da **sadece** `cd $FORGE_SITE_PATH && bash deploy.sh` (bkz. `docs/FORGE-DEPLOY-YAPISTIR.txt`).
+3. Deploy: Forge’da **diğer Laravel sitelerinizle aynı standart script** (bkz. `docs/FORGE-DEPLOY-YAPISTIR.txt`). Composer + NPM açık.
 
 Bu üç adım tamamsa migration ve 403 sorunu çıkmaz.
 

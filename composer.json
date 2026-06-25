@@ -1,8 +1,24 @@
 {
   "name": "depopazar/root",
-  "description": "DepoPazar – Proje kökü. Asıl uygulama ve bağımlılıklar php-app/ içindedir; Forge 'Install Composer Dependencies' açık kalsa bile deploy kırılmasın diye bu dosya bulunur.",
-  "require": {},
+  "description": "DepoPazar proje kökü – Forge standart Laravel deploy uyumluluğu (composer/npm/artisan kökten çalışır; uygulama php-app/ içinde).",
+  "type": "project",
+  "require": {
+    "php": ">=8.1"
+  },
+  "scripts": {
+    "post-install-cmd": [
+      "@composer install-app-deps"
+    ],
+    "post-update-cmd": [
+      "@composer install-app-deps"
+    ],
+    "install-app-deps": [
+      "Composer\\Config::disableProcessTimeout",
+      "@php -r \"passthru('composer install --working-dir=php-app --no-dev --optimize-autoloader --no-interaction');\""
+    ]
+  },
   "config": {
-    "allow-plugins": {}
+    "allow-plugins": {},
+    "sort-packages": true
   }
 }

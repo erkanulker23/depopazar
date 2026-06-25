@@ -167,4 +167,20 @@ echo "Toplam $done migration çalıştırıldı.\n";
 if (!empty($failed)) {
     echo count($failed) . " dosya hata/uyarı verdi (zaten uygulanmış veya DELIMITER kullanıyorsa mysql CLI gerekir).\n";
 }
+
+// Forge standart deploy: php artisan migrate --force sonrası idempotent seed
+$runSeed = in_array('--force', $argv, true) && getenv('ARTISAN_SKIP_SEED') !== '1';
+if ($runSeed) {
+    $seedScript = $phpApp . '/seed.php';
+    if (is_file($seedScript)) {
+        echo "Seed kontrol ediliyor...\n";
+        passthru('php ' . escapeshellarg($seedScript) . ' --skip-migrate', $seedRet);
+        if ($seedRet !== 0) {
+            fwrite(STDERR, "Uyarı: seed.php çıkış kodu: $seedRet\n");
+        }
+    }
+}
+
+@mkdir($phpApp . '/public/uploads/company', 0755, true);
+
 exit(0);

@@ -13,10 +13,14 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# Proje kökü: panel FORGE_SITE_PATH veya SITE_PATH veriyorsa onu kullan, yoksa script'in bulunduğu dizin
-if [ -n "${FORGE_SITE_PATH}" ]; then
+# Proje kökü: Forge zero-downtime (releases/) veya klasik tek dizin kurulumu
+if [ -n "${FORGE_RELEASE_DIRECTORY}" ] && [ -d "${FORGE_RELEASE_DIRECTORY}/php-app/public" ]; then
+  ROOT="${FORGE_RELEASE_DIRECTORY}"
+elif [ -n "${FORGE_SITE_PATH}" ] && [ -d "${FORGE_SITE_PATH}/current/php-app/public" ]; then
+  ROOT="${FORGE_SITE_PATH}/current"
+elif [ -n "${FORGE_SITE_PATH}" ] && [ -d "${FORGE_SITE_PATH}/php-app/public" ]; then
   ROOT="${FORGE_SITE_PATH}"
-elif [ -n "${SITE_PATH}" ]; then
+elif [ -n "${SITE_PATH}" ] && [ -d "${SITE_PATH}/php-app/public" ]; then
   ROOT="${SITE_PATH}"
 else
   ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -25,7 +29,7 @@ cd "$ROOT"
 
 if [ ! -d "$ROOT/php-app/public" ]; then
   echo "Hata: php-app/public bulunamadı. ROOT yanlış olabilir (şu an: $ROOT)."
-  echo "Forge'da Deploy Script'e sadece şunu yapıştırın: cd \$FORGE_SITE_PATH && bash deploy.sh"
+  echo "Forge zero-downtime için deploy script: docs/FORGE-DEPLOY-YAPISTIR.txt"
   exit 1
 fi
 
@@ -36,14 +40,20 @@ echo -e "${GREEN}[1/8] Deploy başlatıldı (ROOT=$ROOT)${NC}"
 # php-app/public içindeki dosyalar www-data tarafından oluşturulmuşsa git reset "Permission denied" verir; önce sahipliği düzeltiyoruz.
 # -----------------------------------------------------------------------------
 BRANCH="${FORGE_SITE_BRANCH:-main}"
-if [ "${SKIP_GIT}" != "1" ]; then
-  if [ -d "$ROOT/php-app/public" ]; then
-    DEPLOY_USER=$(whoami 2>/dev/null || id -un 2>/dev/null)
-    if [ -n "$DEPLOY_USER" ]; then
-      sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "$ROOT/php-app/public" 2>/dev/null || true
-    fi
-    chmod -R u+w "$ROOT/php-app/public" 2>/dev/null || true
+# Forge zero-downtime: CREATE_RELEASE zaten yeni kodu klonladı; git pull gerekmez
+if [ -n "${FORGE_RELEASE_DIRECTORY}" ]; then
+  SKIP_GIT=1
+fi
+
+if [ -d "$ROOT/php-app/public" ]; then
+  DEPLOY_USER=$(whoami 2>/dev/null || id -un 2>/dev/null)
+  if [ -n "$DEPLOY_USER" ]; then
+    sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "$ROOT/php-app/public" 2>/dev/null || true
   fi
+  chmod -R u+w "$ROOT/php-app/public" 2>/dev/null || true
+fi
+
+if [ "${SKIP_GIT}" != "1" ] && [ -d "$ROOT/.git" ]; then
   echo -e "${YELLOW}[2/8] Kod güncelleniyor (branch: $BRANCH)...${NC}"
   git fetch origin
   git reset --hard "origin/$BRANCH"
@@ -52,7 +62,12 @@ if [ "${SKIP_GIT}" != "1" ]; then
   COMMIT_MSG=$(git log -1 --format='%s' 2>/dev/null || true)
   echo "  Deploy edilen commit: ${COMMIT} - ${COMMIT_MSG}"
 else
-  echo -e "${YELLOW}[2/8] Git atlandı (SKIP_GIT=1)${NC}"
+  echo -e "${YELLOW}[2/8] Git atlandı (Forge release veya SKIP_GIT=1)${NC}"
+  COMMIT=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || true)
+  COMMIT_MSG=$(git -C "$ROOT" log -1 --format='%s' 2>/dev/null || true)
+  if [ -n "$COMMIT" ]; then
+    echo "  Deploy edilen commit: ${COMMIT} - ${COMMIT_MSG}"
+  fi
 fi
 
 # -----------------------------------------------------------------------------
@@ -62,9 +77,17 @@ fi
 # -----------------------------------------------------------------------------
 echo -e "${YELLOW}[3/8] Yapılandırma kontrol ediliyor...${NC}"
 
-if [ -f "$ROOT/.env" ]; then
+ENV_FILE=""
+for candidate in "$ROOT/.env" "${FORGE_SITE_PATH}/.env" "${FORGE_SITE_PATH}/shared/.env"; do
+  if [ -n "$candidate" ] && [ -f "$candidate" ]; then
+    ENV_FILE="$candidate"
+    break
+  fi
+done
+if [ -n "$ENV_FILE" ]; then
   set -a
-  source "$ROOT/.env" 2>/dev/null || true
+  # shellcheck disable=SC1090
+  source "$ENV_FILE" 2>/dev/null || true
   set +a
 fi
 
@@ -76,7 +99,7 @@ DB_USERNAME="${DB_USERNAME:-root}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 
 if [ -z "$DB_USERNAME" ] || [ "$DB_USERNAME" = "root" ]; then
-  if [ ! -f "$ROOT/.env" ]; then
+  if [ -z "$ENV_FILE" ]; then
     echo -e "  ${YELLOW}Uyarı: .env yok ve DB_USERNAME boş. Forge → Site → Environment'ta DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD ekleyin.${NC}" >&2
   fi
 fi

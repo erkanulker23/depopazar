@@ -2,12 +2,16 @@
 
 **Tüm kurulum (Web Directory, Environment, deploy script):** **[SETUP.md](SETUP.md)**
 
-**Forge’da Deploy Script alanına yapıştırılacak tek satır:** **[FORGE-DEPLOY-YAPISTIR.txt](FORGE-DEPLOY-YAPISTIR.txt)**
+**Forge deploy script (diğer Laravel sitelerinizle aynı):** **[FORGE-DEPLOY-YAPISTIR.txt](FORGE-DEPLOY-YAPISTIR.txt)**
 
-Panelde deploy script alanına **sadece** şunu yazın (site adı/path yazmayın; Forge otomatik verir):
+Bu proje Forge'un **standart Laravel deploy** akışıyla uyumludur. Özel `deploy.sh` zorunlu değildir.
 
-```bash
-cd $FORGE_SITE_PATH && bash deploy.sh
-```
+Forge Site → Settings:
 
-Farklı path’li (örn. `depo.awapanel.com`) script kullanırsanız yanlış dizine deploy olur ve 403 veya çalışmama görülür.
+- **Install Composer Dependencies:** Açık
+- **Install NPM Dependencies:** Açık
+- **Web directory:** `php-app/public`
+
+Deploy script olarak diğer Laravel sitelerinizde kullandığınız zero-downtime script'i aynen kullanın (`composer` + `npm run build` + `php artisan migrate --force`).
+
+Manuel deploy veya Awapanel için `deploy.sh` hâlâ kullanılabilir.
