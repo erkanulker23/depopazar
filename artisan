@@ -62,11 +62,11 @@ if ($command === 'vapid:generate') {
     $script = $root . '/php-app/scripts/generate-vapid-keys.php';
     if (!is_file($script)) {
         fwrite(STDERR, "Hata: generate-vapid-keys.php bulunamadi: $script\n");
-        fwrite(STDERR, "Proje kokunden calistirin: php artisan vapid:generate\n");
+        fwrite(STDERR, "Site kokunden calistirin (ornek: cd .../current && php artisan vapid:generate)\n");
         exit(1);
     }
-    passthru('php ' . escapeshellarg($script), $ret);
-    exit($ret);
+    require $script;
+    exit(0);
 }
 
 // migrate, migrate --force, veya boş komut (sadece "php artisan")
