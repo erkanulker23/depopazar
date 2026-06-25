@@ -22,9 +22,7 @@ $CREATE_RELEASE()
 
 cd $FORGE_RELEASE_DIRECTORY
 
-set -e
-
-bash forge-deploy.sh
+bash ./forge-deploy.sh
 
 $ACTIVATE_RELEASE()
 
