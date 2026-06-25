@@ -82,4 +82,41 @@ class Auth
             exit;
         }
     }
+
+    /** Belirtilen rollerden biri değilse erişimi reddeder */
+    public static function requireRoles(array $roles): void
+    {
+        self::requireStaff();
+        $role = self::$user['role'] ?? '';
+        if (!in_array($role, $roles, true)) {
+            $_SESSION['flash_error'] = 'Bu işlem için yetkiniz yok.';
+            header('Location: /genel-bakis');
+            exit;
+        }
+    }
+
+    /** Menü ve sayfa erişimi için rol kontrolü */
+    public static function canAccessNav(string $href): bool
+    {
+        $role = self::$user['role'] ?? '';
+        if (in_array($role, ['super_admin', 'company_owner'], true)) {
+            return true;
+        }
+        $restricted = [
+            '/ayarlar' => ['super_admin', 'company_owner'],
+            '/kullanicilar' => ['super_admin', 'company_owner'],
+            '/yetkiler' => ['super_admin', 'company_owner'],
+            '/raporlar' => ['super_admin', 'company_owner', 'accounting', 'company_staff'],
+            '/masraflar' => ['super_admin', 'company_owner', 'accounting'],
+        ];
+        foreach ($restricted as $path => $allowed) {
+            if ($href === $path || str_starts_with($href, $path . '/')) {
+                return in_array($role, $allowed, true);
+            }
+        }
+        if ($role === 'data_entry') {
+            return !in_array($href, ['/ayarlar', '/kullanicilar', '/yetkiler', '/masraflar'], true);
+        }
+        return true;
+    }
 }

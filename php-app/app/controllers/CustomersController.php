@@ -115,6 +115,12 @@ class CustomersController
         } catch (Throwable $e) {
             // customer_charges tablosu yoksa yoksay
         }
+        $charges = [];
+        try {
+            $charges = CustomerCharge::findByCustomerId($this->pdo, $id, $companyId);
+        } catch (Throwable $e) {
+            // customer_charges tablosu yoksa yoksay
+        }
         $documents = [];
         try {
             $documents = CustomerDocument::findByCustomerId($this->pdo, $id, $companyId);

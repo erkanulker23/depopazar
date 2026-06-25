@@ -73,7 +73,10 @@ class ContractsController
         }
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $stmt = $this->pdo->prepare(
-            "SELECT contract_id, SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) AS overdue_cnt, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_cnt FROM payments WHERE contract_id IN ($placeholders) AND deleted_at IS NULL GROUP BY contract_id"
+            "SELECT contract_id,
+                SUM(CASE WHEN status IN ('pending','overdue') AND due_date IS NOT NULL AND DATE(due_date) < CURDATE() THEN 1 ELSE 0 END) AS overdue_cnt,
+                SUM(CASE WHEN status IN ('pending','overdue') AND (due_date IS NULL OR DATE(due_date) >= CURDATE()) THEN 1 ELSE 0 END) AS pending_cnt
+             FROM payments WHERE contract_id IN ($placeholders) AND deleted_at IS NULL GROUP BY contract_id"
         );
         $stmt->execute($ids);
         $result = [];
@@ -374,7 +377,7 @@ class ContractsController
             unset($mp);
         }
         $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
-        $collectPayments = array_values(array_filter($payments, fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue'])));
+        $collectPayments = array_values(array_filter($payments, fn($p) => paymentIsCollectible($p)));
         $bankAccounts = [];
         $cid = $contract['company_id'] ?? $companyId;
         if ($cid) {

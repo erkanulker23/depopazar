@@ -3,8 +3,9 @@ $currentPage = 'odemeler';
 $statusLabels = $statusLabels ?? [];
 $customerName = trim(($payment['customer_first_name'] ?? '') . ' ' . ($payment['customer_last_name'] ?? ''));
 $status = $payment['status'] ?? 'pending';
-$statusClass = ['pending' => 'bg-amber-100 text-amber-800', 'paid' => 'bg-green-100 text-green-800', 'overdue' => 'bg-red-100 text-red-800', 'cancelled' => 'bg-gray-100 text-gray-800'][$status] ?? 'bg-gray-100 text-gray-800';
-$statusLabel = $statusLabels[$status] ?? $status;
+$ps = paymentStatusDisplay($payment);
+$statusClass = $ps['badge'];
+$statusLabel = $ps['label'];
 $company = $company ?? null;
 ob_start();
 ?>

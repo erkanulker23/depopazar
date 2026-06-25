@@ -87,8 +87,8 @@ ob_start();
     <table class="min-w-full border border-gray-300 text-sm">
         <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th></tr></thead>
         <tbody>
-            <?php foreach ($payments as $p): $s = $p['status'] ?? 'pending'; $l = $s === 'paid' ? 'Ödendi' : ($s === 'overdue' ? 'Gecikmiş' : ($s === 'pending' && !empty($p['due_date']) && strtotime($p['due_date']) > time() ? 'Vadesi gelmemiş' : 'Bekliyor')); ?>
-            <tr><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td><td class="border border-gray-300 px-3 py-2"><?= $l ?></td></tr>
+            <?php foreach ($payments as $p): $ps = paymentStatusDisplay($p); ?>
+            <tr><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($ps['label']) ?></td></tr>
             <?php endforeach; ?>
         </tbody>
     </table>
@@ -167,20 +167,12 @@ ob_start();
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td>
                                     <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= fmtPrice($p['amount'] ?? 0) ?></td>
                                     <td class="px-4 py-3">
-                                        <?php
-                                        $status = $p['status'] ?? 'pending';
-                                        $label = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'][$status] ?? $status;
-                                        if ($status === 'pending' && !empty($p['due_date']) && strtotime($p['due_date']) > time()) {
-                                            $label = 'Vadesi gelmemiş';
-                                        }
-                                        $badge = ['pending' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300', 'paid' => 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', 'overdue' => 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300', 'cancelled' => 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'][$status] ?? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
-                                        if ($label === 'Vadesi gelmemiş') $badge = 'bg-slate-100 dark:bg-slate-900/30 text-slate-800 dark:text-slate-300';
-                                        ?>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $badge ?>"><?= $label ?></span>
+                                        <?php $ps = paymentStatusDisplay($p); ?>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= !empty($p['paid_at']) ? date('d.m.Y', strtotime($p['paid_at'])) : '–' ?></td>
                                     <td class="px-4 py-3">
-                                        <?php if (($p['status'] ?? '') === 'pending' || ($p['status'] ?? '') === 'overdue'): ?>
+                                        <?php if (paymentIsCollectible($p)): ?>
                                             <button type="button" onclick="openCollectModal(<?= htmlspecialchars(json_encode([['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']])) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</button>
                                         <?php else: ?>
                                             <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm">Detay</a>
@@ -253,6 +245,10 @@ ob_start();
                                     <?php endforeach; ?>
                                 </select>
                             <?php endif; ?>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Tarihi</label>
+                            <input type="date" name="paid_at" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
                         </div>
                         <input type="text" name="transaction_id" placeholder="İşlem no (opsiyonel)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
                         <textarea name="notes" rows="2" placeholder="Not (opsiyonel)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>

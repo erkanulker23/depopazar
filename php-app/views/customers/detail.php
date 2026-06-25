@@ -207,9 +207,15 @@ ob_start();
             $monthsStatus[$key]['amount'] += (float)($p['amount'] ?? 0);
         }
         foreach ($monthsStatus as $k => $v) {
-            $statuses = $v['statuses'];
-            $allPaid = count(array_filter($statuses, fn($s) => $s === 'paid')) === count($statuses);
-            $anyOverdue = in_array('overdue', $statuses, true);
+            $labels = [];
+            $idx = 0;
+            foreach ($payments as $p) {
+                $due = $p['due_date'] ?? '';
+                if ($due === '' || date('Y-m', strtotime($due)) !== $k) continue;
+                $labels[] = paymentStatusDisplay($p)['label'];
+            }
+            $allPaid = !empty($labels) && count(array_filter($labels, fn($l) => $l === 'Ödendi')) === count($labels);
+            $anyOverdue = in_array('Vadesi geçmiş', $labels, true);
             $monthsStatus[$k]['status'] = $allPaid ? 'paid' : ($anyOverdue ? 'overdue' : 'pending');
             $monthsStatus[$k]['label'] = $monthsStatus[$k]['status'] === 'paid' ? 'Ödendi' : ($monthsStatus[$k]['status'] === 'overdue' ? 'Gecikmede' : 'Ödenmedi');
         }
@@ -266,6 +272,45 @@ ob_start();
             </div>
         </div>
 
+        </div>
+
+        <!-- Manuel borçlar (Borçlandır) -->
+        <?php $charges = $charges ?? []; ?>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="bi bi-receipt text-emerald-600"></i> Ek Borçlar
+                </h2>
+                <a href="/musteriler/<?= htmlspecialchars($customer['id'] ?? '') ?>/borclandir" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium">+ Borçlandır</a>
+            </div>
+            <?php if (empty($charges)): ?>
+                <div class="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">Manuel borç kaydı yok.</div>
+            <?php else: ?>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Açıklama</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Vade</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                            <?php foreach ($charges as $ch): $cs = chargeStatusDisplay($ch); ?>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-white"><?= htmlspecialchars($ch['description'] ?? 'Ek borç') ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= !empty($ch['due_date']) ? date('d.m.Y', strtotime($ch['due_date'])) : '–' ?></td>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)($ch['amount'] ?? 0), 2, ',', '.') ?> ₺</td>
+                                    <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $cs['badge'] ?>"><?= htmlspecialchars($cs['label']) ?></span></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+
         <!-- Ödeme takvimi (son ödemeler) -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
@@ -293,36 +338,12 @@ ob_start();
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td>
                                     <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</td>
                                     <td class="px-4 py-3">
-                                        <?php
-                                        $status = $p['status'] ?? 'pending';
-                                        $dueTs = !empty($p['due_date']) ? strtotime($p['due_date']) : false;
-                                        $todayStart = strtotime(date('Y-m-d'));
-                                        $monthEnd = strtotime(date('Y-m-t 23:59:59'));
-                                        if ($status === 'paid') {
-                                            $label = 'Ödendi';
-                                            $badge = 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
-                                        } elseif ($status === 'cancelled') {
-                                            $label = 'İptal';
-                                            $badge = 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
-                                        } elseif ($status === 'overdue' || ($status === 'pending' && $dueTs !== false && $dueTs < $todayStart)) {
-                                            $label = 'Vadesi geçmiş';
-                                            $badge = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
-                                        } elseif ($status === 'pending' && $dueTs !== false && $dueTs >= $todayStart && $dueTs <= $monthEnd) {
-                                            $label = 'Ödeme bekliyor';
-                                            $badge = 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300';
-                                        } elseif ($status === 'pending' && $dueTs !== false && $dueTs > $monthEnd) {
-                                            $label = 'Vadesi gelmemiş';
-                                            $badge = 'bg-slate-100 dark:bg-slate-900/30 text-slate-800 dark:text-slate-300';
-                                        } else {
-                                            $label = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Vadesi geçmiş', 'cancelled' => 'İptal'][$status] ?? $status;
-                                            $badge = ['pending' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300', 'paid' => 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', 'overdue' => 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300', 'cancelled' => 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'][$status] ?? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
-                                        }
-                                        ?>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $badge ?>"><?= $label ?></span>
+                                        <?php $ps = paymentStatusDisplay($p); ?>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= !empty($p['paid_at']) ? date('d.m.Y', strtotime($p['paid_at'])) : '–' ?></td>
                                     <td class="px-4 py-3">
-                                        <?php if (($p['status'] ?? '') === 'pending' || ($p['status'] ?? '') === 'overdue'): ?>
+                                        <?php if (paymentIsCollectible($p)): ?>
                                             <a href="/odemeler?payment=<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</a>
                                         <?php else: ?>
                                             <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm">Detay</a>
@@ -466,7 +487,12 @@ ob_start();
     </div>
 </div>
 
-<?php $unpaidPayments = array_filter($payments ?? [], fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue'])); $bankAccounts = $bankAccounts ?? []; ?>
+<?php
+$charges = $charges ?? [];
+$unpaidPayments = array_filter($payments ?? [], fn($p) => paymentIsCollectible($p));
+$unpaidCharges = array_filter($charges, fn($c) => ($c['status'] ?? '') === 'pending');
+$bankAccounts = $bankAccounts ?? [];
+?>
 <!-- Modal: Ödeme Gir -->
 <div id="paymentModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-full items-center justify-center p-4">
@@ -476,8 +502,8 @@ ob_start();
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i class="bi bi-currency-dollar text-emerald-600 mr-2"></i> Ödeme Gir – <?= htmlspecialchars($customerName) ?></h3>
                 <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
             </div>
-            <?php if (empty($unpaidPayments)): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 py-4">Bu müşteriye ait bekleyen ödeme yok.</p>
+            <?php if (empty($unpaidPayments) && empty($unpaidCharges)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4">Bu müşteriye ait bekleyen ödeme veya borç yok.</p>
                 <div class="flex justify-end">
                     <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Kapat</button>
                 </div>
@@ -494,6 +520,16 @@ ob_start();
                                     <span class="text-xs text-gray-500 dark:text-gray-400">Vade: <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></span>
                                 </span>
                                 <span class="font-semibold text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</span>
+                            </label>
+                        <?php endforeach; ?>
+                        <?php foreach ($unpaidCharges as $ch): ?>
+                            <label class="flex items-center justify-between gap-2 p-3 border border-amber-200 dark:border-amber-800 rounded-xl hover:bg-amber-50/50 dark:hover:bg-amber-900/10 cursor-pointer">
+                                <span class="flex items-center gap-2">
+                                    <input type="checkbox" name="charge_ids[]" value="<?= htmlspecialchars($ch['id']) ?>" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
+                                    <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($ch['description'] ?? 'Ek borç') ?></span>
+                                    <span class="text-xs text-amber-600 dark:text-amber-400">Manuel borç</span>
+                                </span>
+                                <span class="font-semibold text-gray-900 dark:text-white"><?= number_format((float)($ch['amount'] ?? 0), 2, ',', '.') ?> ₺</span>
                             </label>
                         <?php endforeach; ?>
                     </div>
@@ -517,6 +553,10 @@ ob_start();
                                     <?php endforeach; ?>
                                 </select>
                             <?php endif; ?>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme tarihi</label>
+                            <input type="date" name="paid_at" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İşlem no (opsiyonel)</label>

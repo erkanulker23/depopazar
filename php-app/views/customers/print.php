@@ -127,12 +127,12 @@ if (!function_exists('fmtPrice')) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($payments as $p): $s = $p['status'] ?? 'pending'; $l = $s === 'paid' ? 'Ödendi' : ($s === 'overdue' ? 'Gecikmiş' : 'Bekliyor'); ?>
+                <?php foreach ($payments as $p): $ps = paymentStatusDisplay($p); ?>
                 <tr>
                     <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td>
-                    <td class="border border-gray-300 px-3 py-2"><?= $l ?></td>
+                    <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($ps['label']) ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= !empty($p['paid_at']) ? date('d.m.Y', strtotime($p['paid_at'])) : '–' ?></td>
                 </tr>
                 <?php endforeach; ?>

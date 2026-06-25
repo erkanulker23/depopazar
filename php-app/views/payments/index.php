@@ -137,24 +137,16 @@ $page = $page ?? 1;
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                                 <?php foreach ($payList as $p):
-                                    $st = $p['status'] ?? 'pending';
-                                    $canCollect = in_array($st, ['pending', 'overdue']);
+                                    $ps = paymentStatusDisplay($p);
+                                    $canCollect = $ps['collectible'];
                                     $pJson = json_encode(['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']);
-                                    $displayLabel = $statusLabels[$st] ?? $st;
-                                    if ($st === 'pending' && !empty($p['due_date'])) {
-                                        $dueTs = strtotime($p['due_date']);
-                                        if ($dueTs !== false && $dueTs > time()) {
-                                            $displayLabel = 'Vadesi gelmemiş';
-                                        }
-                                    }
-                                    $cls = $st === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ($st === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : ($st === 'cancelled' ? 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300' : ($displayLabel === 'Vadesi gelmemiş' ? 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300')));
                                 ?>
                                 <tr class="hover:bg-gray-100/50 dark:hover:bg-gray-700/30">
                                     <td class="py-2 pr-4 font-medium"><a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($p['payment_number'] ?? '-') ?></a></td>
                                     <td class="py-2 pr-4 text-gray-600 dark:text-gray-300"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></td>
                                     <td class="py-2 pr-4 text-gray-600 dark:text-gray-300"><?= $p['due_date'] ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></td>
                                     <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</td>
-                                    <td class="py-2 pr-4"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $cls ?>"><?= htmlspecialchars($displayLabel) ?></span></td>
+                                    <td class="py-2 pr-4"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span></td>
                                     <td class="py-2">
                                         <?php if ($canCollect): ?>
                                             <button type="button" onclick="event.stopPropagation(); openCollectForPayment(<?= htmlspecialchars($pJson) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Ödeme Al</button>
@@ -261,6 +253,10 @@ $page = $page ?? 1;
                                     <?php endforeach; ?>
                                 </select>
                             <?php endif; ?>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Tarihi</label>
+                            <input type="date" name="paid_at" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İşlem No (opsiyonel)</label>

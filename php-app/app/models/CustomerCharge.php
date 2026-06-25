@@ -15,6 +15,14 @@ class CustomerCharge
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public static function findOne(PDO $pdo, string $id): ?array
+    {
+        $stmt = $pdo->prepare('SELECT * FROM customer_charges WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public static function sumUnpaidByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): float
     {
         $sql = 'SELECT COALESCE(SUM(amount), 0) FROM customer_charges WHERE customer_id = ? AND deleted_at IS NULL AND status = \'pending\' ';
@@ -25,6 +33,15 @@ class CustomerCharge
         }
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    public static function sumUnpaidByCompany(PDO $pdo, string $companyId): float
+    {
+        $stmt = $pdo->prepare(
+            'SELECT COALESCE(SUM(amount), 0) FROM customer_charges WHERE company_id = ? AND deleted_at IS NULL AND status = \'pending\''
+        );
+        $stmt->execute([$companyId]);
         return (float) $stmt->fetchColumn();
     }
 
@@ -45,6 +62,31 @@ class CustomerCharge
             $data['notes'] ?? null,
         ]);
         return $id;
+    }
+
+    public static function markAsPaid(PDO $pdo, string $chargeId, ?string $notes = null, ?string $paidAt = null): void
+    {
+        $paidAtValue = normalizePaidAt($paidAt);
+        $stmt = $pdo->prepare(
+            'UPDATE customer_charges SET status = \'paid\', paid_at = ?, notes = COALESCE(?, notes) WHERE id = ? AND deleted_at IS NULL AND status = \'pending\''
+        );
+        $stmt->execute([$paidAtValue, $notes, $chargeId]);
+    }
+
+    public static function markManyAsPaid(PDO $pdo, array $chargeIds, ?string $notes = null, ?string $paidAt = null): void
+    {
+        foreach ($chargeIds as $id) {
+            self::markAsPaid($pdo, $id, $notes, $paidAt);
+        }
+    }
+
+    public static function cancel(PDO $pdo, string $chargeId): bool
+    {
+        $stmt = $pdo->prepare(
+            'UPDATE customer_charges SET status = \'cancelled\', paid_at = NULL WHERE id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([$chargeId]);
+        return $stmt->rowCount() > 0;
     }
 
     private static function uuid(): string

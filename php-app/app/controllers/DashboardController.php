@@ -39,10 +39,14 @@ class DashboardController
             $activeContracts = Contract::countActiveByCompany($this->pdo, $companyId);
             $monthlyRevenue = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
             $pendingPayments = Payment::countByStatus($this->pdo, $companyId, 'pending');
-            $overduePayments = Payment::countByStatus($this->pdo, $companyId, 'overdue');
+            $overduePayments = Payment::countOverdueByDueDate($this->pdo, $companyId);
             $debtOverdue = Payment::sumOverdueByCompany($this->pdo, $companyId);
             $debtDueThisMonth = Payment::sumDueThisMonthByCompany($this->pdo, $companyId);
             $totalDebt = Payment::sumUnpaidByCompany($this->pdo, $companyId);
+            try {
+                $totalDebt += CustomerCharge::sumUnpaidByCompany($this->pdo, $companyId);
+            } catch (Throwable $e) {
+            }
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehousesCount = Warehouse::countAll($this->pdo);
             $rooms = Room::findAll($this->pdo, null);
@@ -53,10 +57,15 @@ class DashboardController
             $activeContracts = Contract::countActiveGlobal($this->pdo);
             $monthlyRevenue = Payment::sumPaidThisMonthGlobal($this->pdo);
             $pendingPayments = Payment::countByStatusGlobal($this->pdo, 'pending');
-            $overduePayments = Payment::countByStatusGlobal($this->pdo, 'overdue');
+            $overduePayments = Payment::countOverdueByDueDateGlobal($this->pdo);
             $debtOverdue = Payment::sumOverdueGlobal($this->pdo);
             $debtDueThisMonth = Payment::sumDueThisMonthGlobal($this->pdo);
             $totalDebt = Payment::sumUnpaidGlobal($this->pdo);
+            try {
+                $stmt = $this->pdo->query('SELECT COALESCE(SUM(amount), 0) FROM customer_charges WHERE deleted_at IS NULL AND status = \'pending\'');
+                $totalDebt += (float) $stmt->fetchColumn();
+            } catch (Throwable $e) {
+            }
         }
 
         $upcomingPayments = [];
@@ -85,8 +94,16 @@ class DashboardController
             'vehicles'  => ['done' => false, 'label' => 'Araçlarınızı ekleyin', 'href' => '/araclar', 'icon' => 'bi-truck'],
             'services'  => ['done' => false, 'label' => 'Hizmetlerinizi ekleyin', 'href' => '/hizmetler', 'icon' => 'bi-list-check'],
         ];
+        $isSuperAdmin = ($user['role'] ?? '') === 'super_admin';
         try {
-            if ($companyId) {
+            if ($isSuperAdmin) {
+                $setupSteps['company']['done'] = true;
+                $setupSteps['warehouses']['done'] = Warehouse::countAll($this->pdo) > 0;
+                $setupSteps['rooms']['done'] = count(Room::findAll($this->pdo, null)) > 0;
+                $setupSteps['staff']['done'] = count(User::findStaff($this->pdo, null)) >= 1;
+                $setupSteps['vehicles']['done'] = count(Vehicle::findAll($this->pdo, null)) > 0;
+                $setupSteps['services']['done'] = count(Service::findAll($this->pdo, null)) > 0;
+            } elseif ($companyId) {
                 if ($brand) {
                     $name = trim($brand['name'] ?? '');
                     $projectNameVal = trim($brand['project_name'] ?? '');
@@ -101,13 +118,6 @@ class DashboardController
                 $setupSteps['vehicles']['done'] = count($vehicles) > 0;
                 $services = Service::findAll($this->pdo, $companyId);
                 $setupSteps['services']['done'] = count($services) > 0;
-            } elseif (($user['role'] ?? '') === 'super_admin') {
-                $setupSteps['company']['done'] = true;
-                $setupSteps['warehouses']['done'] = $warehousesCount > 0;
-                $setupSteps['rooms']['done'] = $roomsCount > 0;
-                $setupSteps['staff']['done'] = count(User::findStaff($this->pdo, null)) >= 1;
-                $setupSteps['vehicles']['done'] = count(Vehicle::findAll($this->pdo, null)) > 0;
-                $setupSteps['services']['done'] = count(Service::findAll($this->pdo, null)) > 0;
             }
         } catch (Throwable $e) {
             // Tablo/class eksikse sayfa kırılmasın; rehber tüm adımları gösterir

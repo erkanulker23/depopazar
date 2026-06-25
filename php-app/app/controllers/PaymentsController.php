@@ -22,9 +22,9 @@ class PaymentsController
         }
         $statusFilter = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'paid', 'overdue', 'cancelled', 'unpaid'], true) ? $_GET['status'] : '';
         if ($statusFilter === 'unpaid') {
-            $payments = array_filter($payments, fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue']));
+            $payments = array_filter($payments, fn($p) => paymentMatchesStatusFilter($p, 'unpaid'));
         } elseif ($statusFilter !== '') {
-            $payments = array_filter($payments, fn($p) => ($p['status'] ?? '') === $statusFilter);
+            $payments = array_filter($payments, fn($p) => paymentMatchesStatusFilter($p, $statusFilter));
         }
         $dateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
         $dateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
@@ -48,7 +48,7 @@ class PaymentsController
             });
         }
         $payments = array_values($payments);
-        $unpaid = array_filter($payments, fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue']));
+        $unpaid = array_filter($payments, fn($p) => paymentIsCollectible($p));
         $unpaidPaymentsByCustomer = [];
         foreach ($unpaid as $p) {
             $cid = $p['customer_id'] ?? '';
@@ -124,16 +124,23 @@ class PaymentsController
             exit;
         }
         $paymentIds = isset($_POST['payment_ids']) && is_array($_POST['payment_ids']) ? array_filter($_POST['payment_ids']) : (isset($_POST['payment_id']) && $_POST['payment_id'] !== '' ? [$_POST['payment_id']] : []);
+        $chargeIds = isset($_POST['charge_ids']) && is_array($_POST['charge_ids']) ? array_filter($_POST['charge_ids']) : [];
         $paymentMethod = trim($_POST['payment_method'] ?? '');
         $bankAccountId = trim($_POST['bank_account_id'] ?? '') ?: null;
         $transactionId = trim($_POST['transaction_id'] ?? '') ?: null;
         $notes = trim($_POST['notes'] ?? '') ?: null;
-        if (empty($paymentIds) || !in_array($paymentMethod, ['bank_transfer', 'credit_card'], true)) {
-            $_SESSION['flash_error'] = 'Geçersiz istek. Ödeme seçin ve ödeme yöntemini belirleyin (Havale veya Kredi Kartı).';
+        $paidAt = trim($_POST['paid_at'] ?? '') ?: null;
+        if (empty($paymentIds) && empty($chargeIds)) {
+            $_SESSION['flash_error'] = 'Geçersiz istek. Ödeme/borç seçin.';
             header('Location: /odemeler');
             exit;
         }
-        if ($paymentMethod === 'bank_transfer' && !$bankAccountId) {
+        if (!empty($paymentIds) && !in_array($paymentMethod, ['bank_transfer', 'credit_card'], true)) {
+            $_SESSION['flash_error'] = 'Geçersiz istek. Ödeme yöntemini belirleyin (Havale veya Kredi Kartı).';
+            header('Location: /odemeler');
+            exit;
+        }
+        if (!empty($paymentIds) && $paymentMethod === 'bank_transfer' && !$bankAccountId) {
             $_SESSION['flash_error'] = 'Havale ile ödeme için banka hesabı seçin.';
             header('Location: /odemeler');
             exit;
@@ -149,9 +156,18 @@ class PaymentsController
                 exit;
             }
         }
+        foreach ($chargeIds as $cid) {
+            $charge = CustomerCharge::findOne($this->pdo, $cid);
+            if (!$charge) continue;
+            if ($companyId && ($charge['company_id'] ?? '') !== $companyId) {
+                $_SESSION['flash_error'] = 'Bu borç kaydına erişim yetkiniz yok.';
+                header('Location: /odemeler');
+                exit;
+            }
+        }
         try {
-            if (count($paymentIds) === 1) {
-                Payment::markAsPaid($this->pdo, $paymentIds[0], $paymentMethod, $transactionId, $notes, $bankAccountId);
+            if (count($paymentIds) === 1 && empty($chargeIds)) {
+                Payment::markAsPaid($this->pdo, $paymentIds[0], $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt);
                 $firstPayment = Payment::findOne($this->pdo, $paymentIds[0]);
                 if ($firstPayment && !empty($firstPayment['contract_id'])) {
                     $contract = Contract::findOne($this->pdo, $firstPayment['contract_id']);
@@ -160,9 +176,18 @@ class PaymentsController
                         $this->sendPaymentReceivedEmails($firstPayment);
                     }
                 }
-            } else {
-                Payment::markManyAsPaid($this->pdo, $paymentIds, $paymentMethod, $transactionId, $notes, $bankAccountId);
+            } elseif (!empty($paymentIds)) {
+                Payment::markManyAsPaid($this->pdo, $paymentIds, $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt);
+                foreach ($paymentIds as $pid) {
+                    $p = Payment::findOne($this->pdo, $pid);
+                    if ($p) {
+                        $this->sendPaymentReceivedEmails($p);
+                    }
+                }
                 Notification::createForCompany($this->pdo, $companyId, 'payment', 'Ödemeler alındı', count($paymentIds) . ' adet ödeme kaydedildi.');
+            }
+            if (!empty($chargeIds)) {
+                CustomerCharge::markManyAsPaid($this->pdo, $chargeIds, $notes, $paidAt);
             }
             $_SESSION['flash_success'] = 'Ödeme kaydedildi.';
         } catch (Exception $e) {

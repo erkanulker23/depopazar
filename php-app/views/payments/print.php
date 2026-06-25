@@ -1,9 +1,9 @@
 <?php
 $customerName = trim(($payment['customer_first_name'] ?? '') . ' ' . ($payment['customer_last_name'] ?? ''));
 $company = $company ?? null;
-$statusLabels = $statusLabels ?? [];
 $status = $payment['status'] ?? 'pending';
-$statusLabel = $statusLabels[$status] ?? $status;
+$ps = paymentStatusDisplay($payment);
+$statusLabel = $ps['label'];
 $seoAppName = trim($_SESSION['company_project_name'] ?? '') !== '' ? $_SESSION['company_project_name'] : 'Depo ve Nakliye Takip';
 $seoCn = trim($_SESSION['company_name'] ?? '');
 $seoDescription = ($seoCn !== '' && $seoAppName !== '') ? ($seoCn . ' - ' . $seoAppName . '. Depo ve nakliye yönetimi.') : ($seoAppName . '. Depo ve nakliye işlemlerinizi tek panelden yönetin.');

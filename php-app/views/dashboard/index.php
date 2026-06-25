@@ -28,9 +28,40 @@ if (empty($setupSteps)) {
 }
 ?>
 <div class="mb-8">
-    <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent">Genel Bakış</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Sistem özeti ve hızlı erişim</p>
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent">Genel Bakış</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Sistem özeti ve hızlı erişim</p>
+        </div>
+        <div class="inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm text-sm shrink-0" aria-live="polite">
+            <span class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                <i class="bi bi-calendar3 text-emerald-600 dark:text-emerald-400 text-base"></i>
+                <span id="dashboardToday" class="font-medium tabular-nums">—</span>
+            </span>
+            <span class="w-px h-5 bg-gray-200 dark:bg-gray-600" aria-hidden="true"></span>
+            <span class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                <i class="bi bi-clock text-emerald-600 dark:text-emerald-400 text-base"></i>
+                <span id="dashboardClock" class="font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">—</span>
+            </span>
+        </div>
+    </div>
 </div>
+<script>
+(function() {
+    var days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+    var months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    var dateEl = document.getElementById('dashboardToday');
+    var clockEl = document.getElementById('dashboardClock');
+    if (!dateEl || !clockEl) return;
+    function tick() {
+        var now = new Date();
+        dateEl.textContent = 'Bugün ' + days[now.getDay()] + ', ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+        clockEl.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
 
 <?php if (!empty($setupSteps) && !$setupComplete): ?>
 <div class="setup-guide mb-8 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 shadow-sm overflow-hidden" role="region" aria-label="Kurulum rehberi">

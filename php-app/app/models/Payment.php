@@ -1,6 +1,97 @@
 <?php
 class Payment
 {
+    /** Vadesi geçmiş ödeme adedi (vade tarihine göre; status overdue olmasa da sayılır) */
+    public static function countOverdueByDueDate(PDO $pdo, string $companyId): int
+    {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM payments p
+             INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+             INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+             INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+             WHERE w.company_id = ? AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+             AND DATE(p.due_date) < CURDATE()'
+        );
+        $stmt->execute([$companyId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public static function countOverdueByDueDateGlobal(PDO $pdo): int
+    {
+        $stmt = $pdo->query(
+            'SELECT COUNT(*) FROM payments p
+             INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+             INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+             INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+             WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+             AND DATE(p.due_date) < CURDATE()'
+        );
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** Vadesi geçmiş ödemesi olan müşteriler (raporlar için) */
+    public static function findCustomersWithOverduePayments(PDO $pdo, ?string $companyId, int $limit = 50): array
+    {
+        $sql = 'SELECT cu.id, cu.first_name, cu.last_name, cu.email, SUM(p.amount) AS total_debt
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND DATE(p.due_date) < CURDATE() ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY cu.id, cu.first_name, cu.last_name, cu.email ORDER BY total_debt DESC LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Vadesi gelmemiş/bekleyen ödemesi olan müşteriler (gecikmiş hariç) */
+    public static function findCustomersWithPendingNotOverdue(PDO $pdo, ?string $companyId, int $limit = 50): array
+    {
+        $sql = 'SELECT cu.id, cu.first_name, cu.last_name, cu.email, SUM(p.amount) AS total_debt
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND (p.due_date IS NULL OR DATE(p.due_date) >= CURDATE()) ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY cu.id, cu.first_name, cu.last_name, cu.email ORDER BY total_debt DESC LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Vadesi geçmiş ödemeler (e-posta hatırlatması için) */
+    public static function findOverdueForReminder(PDO $pdo, string $companyId): array
+    {
+        $stmt = $pdo->prepare(
+            'SELECT p.*, c.contract_number, w.company_id, c.customer_id, cu.first_name AS customer_first_name,
+                    cu.last_name AS customer_last_name, cu.email AS customer_email
+             FROM payments p
+             INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+             INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+             INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+             INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+             WHERE w.company_id = ? AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+             AND DATE(p.due_date) < CURDATE()
+             ORDER BY p.due_date ASC'
+        );
+        $stmt->execute([$companyId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public static function countByStatus(PDO $pdo, string $companyId, string $status): int
     {
         $stmt = $pdo->prepare(
@@ -352,12 +443,14 @@ class Payment
         return $stmt->rowCount() > 0;
     }
 
-    public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null): void
+    public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null): void
     {
+        $paidAtValue = self::normalizePaidAt($paidAt);
         $stmt = $pdo->prepare(
-            'UPDATE payments SET status = \'paid\', paid_at = NOW(), payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
+            $paidAtValue,
             $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti',
             $transactionId,
             $notes,
@@ -366,14 +459,29 @@ class Payment
         ]);
     }
 
-    public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null): void
+    public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null): void
     {
         $method = $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti';
+        $paidAtValue = self::normalizePaidAt($paidAt);
         $placeholders = implode(',', array_fill(0, count($paymentIds), '?'));
-        $params = array_merge([$method, $transactionId, $notes, $bankAccountId], $paymentIds);
+        $params = array_merge([$paidAtValue, $method, $transactionId, $notes, $bankAccountId], $paymentIds);
         $stmt = $pdo->prepare(
-            "UPDATE payments SET status = 'paid', paid_at = NOW(), payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ? WHERE id IN ($placeholders) AND deleted_at IS NULL"
+            "UPDATE payments SET status = 'paid', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ? WHERE id IN ($placeholders) AND deleted_at IS NULL"
         );
         $stmt->execute($params);
+    }
+
+    /** POST paid_at (Y-m-d veya datetime) → MySQL datetime; boşsa şimdi */
+    private static function normalizePaidAt(?string $paidAt): string
+    {
+        $paidAt = trim((string) $paidAt);
+        if ($paidAt === '') {
+            return date('Y-m-d H:i:s');
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $paidAt)) {
+            return $paidAt . ' ' . date('H:i:s');
+        }
+        $ts = strtotime($paidAt);
+        return $ts !== false ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s');
     }
 }

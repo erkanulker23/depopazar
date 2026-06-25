@@ -97,6 +97,120 @@ if (!function_exists('paymentMethodLabel')) {
     }
 }
 
+/**
+ * Ödeme durumu etiketi ve rozet sınıfı (vade tarihine göre; DB overdue status kullanılmaz).
+ * @return array{label: string, badge: string, collectible: bool}
+ */
+if (!function_exists('paymentStatusDisplay')) {
+    function paymentStatusDisplay(array $payment): array
+    {
+        $status = $payment['status'] ?? 'pending';
+        $dueRaw = trim((string) ($payment['due_date'] ?? ''));
+        $dueDay = $dueRaw !== '' ? strtotime(explode(' ', $dueRaw)[0]) : false;
+        $todayStart = strtotime(date('Y-m-d'));
+
+        if ($status === 'paid') {
+            return [
+                'label' => 'Ödendi',
+                'badge' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                'collectible' => false,
+            ];
+        }
+        if ($status === 'cancelled') {
+            return [
+                'label' => 'İptal',
+                'badge' => 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300',
+                'collectible' => false,
+            ];
+        }
+        if ($status === 'overdue' || ($status === 'pending' && $dueDay !== false && $dueDay < $todayStart)) {
+            return [
+                'label' => 'Vadesi geçmiş',
+                'badge' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                'collectible' => true,
+            ];
+        }
+        if ($status === 'pending' && $dueDay !== false && $dueDay > $todayStart) {
+            return [
+                'label' => 'Vadesi gelmemiş',
+                'badge' => 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300',
+                'collectible' => true,
+            ];
+        }
+        return [
+            'label' => 'Bekliyor',
+            'badge' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+            'collectible' => true,
+        ];
+    }
+}
+
+/** Tahsil edilebilir mi (pending ve vadesi gelmemiş dahil) */
+if (!function_exists('paymentIsCollectible')) {
+    function paymentIsCollectible(array $payment): bool
+    {
+        return paymentStatusDisplay($payment)['collectible'];
+    }
+}
+
+/** Liste filtresi: status GET parametresine göre ödeme eşleşir mi */
+if (!function_exists('paymentMatchesStatusFilter')) {
+    function paymentMatchesStatusFilter(array $payment, string $filter): bool
+    {
+        $display = paymentStatusDisplay($payment);
+        $dbStatus = $payment['status'] ?? 'pending';
+        return match ($filter) {
+            'paid' => $dbStatus === 'paid',
+            'cancelled' => $dbStatus === 'cancelled',
+            'overdue' => $display['label'] === 'Vadesi geçmiş',
+            'pending' => in_array($display['label'], ['Bekliyor', 'Vadesi gelmemiş'], true),
+            'unpaid' => $display['collectible'],
+            default => true,
+        };
+    }
+}
+
+/** Manuel borç (customer_charges) durum etiketi */
+if (!function_exists('chargeStatusDisplay')) {
+    function chargeStatusDisplay(array $charge): array
+    {
+        $status = $charge['status'] ?? 'pending';
+        $dueRaw = trim((string) ($charge['due_date'] ?? ''));
+        $dueDay = $dueRaw !== '' ? strtotime($dueRaw) : false;
+        $todayStart = strtotime(date('Y-m-d'));
+
+        if ($status === 'paid') {
+            return ['label' => 'Ödendi', 'badge' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', 'collectible' => false];
+        }
+        if ($status === 'cancelled') {
+            return ['label' => 'İptal', 'badge' => 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300', 'collectible' => false];
+        }
+        if ($dueDay !== false && $dueDay < $todayStart) {
+            return ['label' => 'Vadesi geçmiş', 'badge' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', 'collectible' => true];
+        }
+        if ($dueDay !== false && $dueDay > $todayStart) {
+            return ['label' => 'Vadesi gelmemiş', 'badge' => 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300', 'collectible' => true];
+        }
+        return ['label' => 'Bekliyor', 'badge' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300', 'collectible' => true];
+    }
+}
+
+/** POST paid_at (Y-m-d veya datetime) → MySQL datetime; boşsa şimdi */
+if (!function_exists('normalizePaidAt')) {
+    function normalizePaidAt(?string $paidAt): string
+    {
+        $paidAt = trim((string) $paidAt);
+        if ($paidAt === '') {
+            return date('Y-m-d H:i:s');
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $paidAt)) {
+            return $paidAt . ' ' . date('H:i:s');
+        }
+        $ts = strtotime($paidAt);
+        return $ts !== false ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s');
+    }
+}
+
 /** Sayfalama çubuğu HTML üretir. $keepParams: sayfa değişirken korunacak GET parametreleri (örn. ['q' => 'arama']) */
 if (!function_exists('renderPagination')) {
     function renderPagination(int $total, int $perPage, int $currentPage, string $baseUrl, array $keepParams = []): string

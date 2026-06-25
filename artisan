@@ -37,10 +37,24 @@ if (in_array($command, $noopCommands, true)) {
     exit(0);
 }
 
+if ($command === 'overdue:remind') {
+    $root = __DIR__;
+    if (basename($root) === 'php-app') {
+        $root = dirname($root);
+    }
+    $script = $root . '/php-app/scripts/overdue-remind.php';
+    if (!is_file($script)) {
+        fwrite(STDERR, "Hata: overdue-remind.php bulunamadı\n");
+        exit(1);
+    }
+    passthru('php ' . escapeshellarg($script), $ret);
+    exit($ret);
+}
+
 // migrate, migrate --force, veya boş komut (sadece "php artisan")
 if ($command !== 'migrate' && $command !== '' && $command !== '--force') {
     fwrite(STDERR, "Bilinmeyen komut: " . (string)$command . "\n");
-    fwrite(STDERR, "Kullanım: php artisan migrate [--force]\n");
+    fwrite(STDERR, "Kullanım: php artisan migrate [--force] | php artisan overdue:remind\n");
     exit(1);
 }
 

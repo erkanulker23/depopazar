@@ -19,24 +19,33 @@ class ReportsController
         $allMonths = ($monthRaw === 0);
         if ($companyId) {
             $totalUnpaid = Payment::sumUnpaidByCompany($this->pdo, $companyId);
+            try {
+                $totalUnpaid += CustomerCharge::sumUnpaidByCompany($this->pdo, $companyId);
+            } catch (Throwable $e) {
+            }
             $paidThisMonth = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
             $activeContracts = Contract::countActiveByCompany($this->pdo, $companyId);
             $pendingCount = Payment::countByStatus($this->pdo, $companyId, 'pending');
-            $overdueCount = Payment::countByStatus($this->pdo, $companyId, 'overdue');
+            $overdueCount = Payment::countOverdueByDueDate($this->pdo, $companyId);
         } else {
             $totalUnpaid = Payment::sumUnpaidGlobal($this->pdo);
+            try {
+                $stmt = $this->pdo->query('SELECT COALESCE(SUM(amount), 0) FROM customer_charges WHERE deleted_at IS NULL AND status = \'pending\'');
+                $totalUnpaid += (float) $stmt->fetchColumn();
+            } catch (Throwable $e) {
+            }
             $paidThisMonth = Payment::sumPaidThisMonthGlobal($this->pdo);
             $activeContracts = Contract::countActiveGlobal($this->pdo);
             $pendingCount = Payment::countByStatusGlobal($this->pdo, 'pending');
-            $overdueCount = Payment::countByStatusGlobal($this->pdo, 'overdue');
+            $overdueCount = Payment::countOverdueByDueDateGlobal($this->pdo);
         }
         $paidInYear = $this->sumPaidInYear($companyId, $year);
         $occupancy = $this->getOccupancy($companyId);
         $revenueByMonth = $this->getRevenueByMonth($companyId, $year, $allMonths ? 0 : $month);
         $paymentBreakdown = $this->getPaymentBreakdownByMethod($companyId, $year, $allMonths ? 0 : $month);
         $monthDisplay = $monthRaw;
-        $pendingCustomers = $this->getCustomersWithPaymentsByStatus($companyId, 'pending');
-        $overdueCustomers = $this->getCustomersWithPaymentsByStatus($companyId, 'overdue');
+        $pendingCustomers = Payment::findCustomersWithPendingNotOverdue($this->pdo, $companyId);
+        $overdueCustomers = Payment::findCustomersWithOverduePayments($this->pdo, $companyId);
         $pageTitle = 'Raporlar';
         require __DIR__ . '/../../views/reports/index.php';
     }

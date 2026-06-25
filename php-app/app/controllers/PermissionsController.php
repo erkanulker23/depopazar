@@ -3,7 +3,7 @@ class PermissionsController
 {
     public function index(): void
     {
-        Auth::requireStaff();
+        Auth::requireRoles(['super_admin', 'company_owner']);
         $roles = [
             ['id' => 'super_admin', 'name' => 'Süper Admin', 'desc' => 'Tüm şirketler ve kullanıcılar; rol atama, ayarlar, raporlar, depo/müşteri/ödeme yönetimi'],
             ['id' => 'company_owner', 'name' => 'Şirket Sahibi', 'desc' => 'Kendi şirketinde tam yönetim; personel ekleme, depo, müşteri, ödeme, raporlar'],

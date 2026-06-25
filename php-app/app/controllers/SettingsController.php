@@ -8,6 +8,11 @@ class SettingsController
         $this->pdo = $pdo;
     }
 
+    private function ensureCanManageSettings(): void
+    {
+        Auth::requireRoles(['super_admin', 'company_owner']);
+    }
+
     public function index(): void
     {
         Auth::requireStaff();
@@ -81,7 +86,7 @@ class SettingsController
 
     public function updateCompany(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar');
             exit;
@@ -141,7 +146,7 @@ class SettingsController
 
     public function deleteCompanyLogo(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=firma');
             exit;
@@ -171,7 +176,7 @@ class SettingsController
 
     public function createBankAccount(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=banka');
             exit;
@@ -210,7 +215,7 @@ class SettingsController
 
     public function updateBankAccount(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=banka');
             exit;
@@ -246,7 +251,7 @@ class SettingsController
 
     public function deleteBankAccount(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=banka');
             exit;
@@ -271,7 +276,7 @@ class SettingsController
 
     public function createCreditCard(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=kredi-karti');
             exit;
@@ -312,7 +317,7 @@ class SettingsController
 
     public function updateCreditCard(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=kredi-karti');
             exit;
@@ -346,7 +351,7 @@ class SettingsController
 
     public function deleteCreditCard(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=kredi-karti');
             exit;
@@ -371,7 +376,7 @@ class SettingsController
 
     public function updateMailSettings(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=eposta');
             exit;
@@ -436,7 +441,7 @@ class SettingsController
 
     public function updatePaytrSettings(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=paytr');
             exit;
@@ -477,7 +482,7 @@ class SettingsController
 
     public function updateSmsSettings(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=sms');
             exit;
@@ -519,7 +524,7 @@ class SettingsController
 
     public function testSms(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=sms');
             exit;
@@ -577,7 +582,7 @@ class SettingsController
 
     public function testEmail(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=eposta');
             exit;
@@ -628,7 +633,7 @@ class SettingsController
 
     public function updateEmailTemplates(): void
     {
-        Auth::requireStaff();
+        $this->ensureCanManageSettings();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /ayarlar?tab=sablonlar');
             exit;
