@@ -21,9 +21,7 @@ class ProposalsController
         } else {
             $proposals = [];
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/proposals/index.php';
     }
 
@@ -54,14 +52,14 @@ class ProposalsController
         $id = $params['id'] ?? '';
         $proposal = $id ? Proposal::findOne($this->pdo, $id) : null;
         if (!$proposal) {
-            $_SESSION['flash_error'] = 'Teklif bulunamadı.';
+            Auth::setSession('flash_error', 'Teklif bulunamadı.');
             header('Location: /teklifler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($proposal['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu teklife erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu teklife erişim yetkiniz yok.');
             header('Location: /teklifler');
             exit;
         }
@@ -93,9 +91,7 @@ class ProposalsController
             $services = [];
             $warehouses = [];
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/proposals/new.php';
     }
 
@@ -109,7 +105,7 @@ class ProposalsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId && ($user['role'] ?? '') !== 'super_admin') {
-            $_SESSION['flash_error'] = 'Şirket bilgisi gerekli.';
+            Auth::setSession('flash_error', 'Şirket bilgisi gerekli.');
             header('Location: /teklifler');
             exit;
         }
@@ -118,7 +114,7 @@ class ProposalsController
             $companyId = $row ? $row['id'] : null;
         }
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bulunamadı.');
             header('Location: /teklifler');
             exit;
         }
@@ -156,7 +152,7 @@ class ProposalsController
         }
         $warehouseId = ($proposalType === 'depo' && trim($_POST['warehouse_id'] ?? '')) ? trim($_POST['warehouse_id']) : null;
         if ($proposalType === 'depo' && !$warehouseId) {
-            $_SESSION['flash_error'] = 'Depo teklifi için depo seçimi zorunludur.';
+            Auth::setSession('flash_error', 'Depo teklifi için depo seçimi zorunludur.');
             header('Location: /teklifler/yeni');
             exit;
         }
@@ -175,7 +171,7 @@ class ProposalsController
             'items' => $items,
         ]);
         Notification::createForCompany($this->pdo, $companyId, 'proposal', 'Teklif oluşturuldu', $title . ' teklifi oluşturuldu.');
-        $_SESSION['flash_success'] = 'Teklif oluşturuldu.';
+        Auth::setSession('flash_success', 'Teklif oluşturuldu.');
         header('Location: /teklifler');
         exit;
     }
@@ -187,12 +183,12 @@ class ProposalsController
         $id = trim($_POST['id'] ?? '');
         $status = trim($_POST['status'] ?? '');
         $p = $id ? Proposal::findOne($this->pdo, $id) : null;
-        if (!$p) { $_SESSION['flash_error'] = 'Teklif bulunamadı.'; header('Location: /teklifler'); exit; }
+        if (!$p) { Auth::setSession('flash_error', 'Teklif bulunamadı.'); header('Location: /teklifler'); exit; }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($p['company_id'] ?? '') !== $companyId) { header('Location: /teklifler'); exit; }
         Proposal::updateStatus($this->pdo, $id, $status);
-        $_SESSION['flash_success'] = 'Teklif durumu güncellendi.';
+        Auth::setSession('flash_success', 'Teklif durumu güncellendi.');
         header('Location: /teklifler');
         exit;
     }
@@ -206,7 +202,7 @@ class ProposalsController
             $id = trim($_POST['id'] ?? '');
             if ($id !== '') $ids = [$id];
         }
-        if (empty($ids)) { $_SESSION['flash_error'] = 'Teklif seçilmedi.'; header('Location: /teklifler'); exit; }
+        if (empty($ids)) { Auth::setSession('flash_error', 'Teklif seçilmedi.'); header('Location: /teklifler'); exit; }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $deleted = 0;
@@ -219,9 +215,9 @@ class ProposalsController
             $deleted++;
         }
         if ($deleted > 0) {
-            $_SESSION['flash_success'] = $deleted === 1 ? 'Teklif silindi.' : $deleted . ' teklif silindi.';
+            Auth::setSession('flash_success', $deleted === 1 ? 'Teklif silindi.' : $deleted . ' teklif silindi.');
         } else {
-            $_SESSION['flash_error'] = 'Silinecek teklif bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Silinecek teklif bulunamadı veya yetkiniz yok.');
         }
         header('Location: /teklifler');
         exit;
@@ -233,7 +229,7 @@ class ProposalsController
         $id = $params['id'] ?? '';
         $proposal = $id ? Proposal::findOne($this->pdo, $id) : null;
         if (!$proposal) {
-            $_SESSION['flash_error'] = 'Teklif bulunamadı.';
+            Auth::setSession('flash_error', 'Teklif bulunamadı.');
             header('Location: /teklifler');
             exit;
         }
@@ -253,9 +249,7 @@ class ProposalsController
             $warehouses = Warehouse::findAll($this->pdo, null);
         }
         $proposal['items'] = ProposalItem::findByProposalId($this->pdo, $id);
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/proposals/edit.php';
     }
 
@@ -266,7 +260,7 @@ class ProposalsController
         $id = trim($_POST['id'] ?? '');
         $proposal = $id ? Proposal::findOne($this->pdo, $id) : null;
         if (!$proposal) {
-            $_SESSION['flash_error'] = 'Teklif bulunamadı.';
+            Auth::setSession('flash_error', 'Teklif bulunamadı.');
             header('Location: /teklifler');
             exit;
         }
@@ -300,7 +294,7 @@ class ProposalsController
         }
         $warehouseId = ($proposalType === 'depo' && trim($_POST['warehouse_id'] ?? '')) ? trim($_POST['warehouse_id']) : null;
         if ($proposalType === 'depo' && !$warehouseId) {
-            $_SESSION['flash_error'] = 'Depo teklifi için depo seçimi zorunludur.';
+            Auth::setSession('flash_error', 'Depo teklifi için depo seçimi zorunludur.');
             header('Location: /teklifler/' . $id . '/duzenle');
             exit;
         }
@@ -319,7 +313,7 @@ class ProposalsController
         ]);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $proposalCompanyId, 'proposal', 'Teklif güncellendi', ($proposal['title'] ?? '') . ' teklifi güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Teklif güncellendi.';
+        Auth::setSession('flash_success', 'Teklif güncellendi.');
         header('Location: /teklifler');
         exit;
     }

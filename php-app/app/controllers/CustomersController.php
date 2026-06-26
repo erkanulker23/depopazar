@@ -47,9 +47,7 @@ class CustomersController
         if (!empty($customers) || $customersTotal > 0) {
             $duplicateFullNames = Customer::getDuplicateFullNames($this->pdo, $companyId ?? null);
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/customers/index.php';
     }
 
@@ -61,7 +59,7 @@ class CustomersController
         $ids = isset($_POST['ids']) && is_array($_POST['ids']) ? array_map('trim', $_POST['ids']) : [];
         $ids = array_filter($ids, fn($id) => $id !== '');
         if (empty($ids)) {
-            $_SESSION['flash_error'] = 'Silinecek müşteri seçin.';
+            Auth::setSession('flash_error', 'Silinecek müşteri seçin.');
             header('Location: /musteriler');
             exit;
         }
@@ -81,9 +79,9 @@ class CustomersController
         if ($deleted > 0) {
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri silindi', $deleted . ' müşteri silindi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = $deleted . ' müşteri silindi.';
+            Auth::setSession('flash_success', $deleted . ' müşteri silindi.');
         } else {
-            $_SESSION['flash_error'] = 'Seçilen müşteriler silinemedi veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Seçilen müşteriler silinemedi veya yetkiniz yok.');
         }
         $redirectParams = array_filter([
             'q' => isset($_GET['q']) ? trim($_GET['q']) : null,
@@ -105,14 +103,14 @@ class CustomersController
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
@@ -188,40 +186,40 @@ class CustomersController
         }
         $id = $params['id'] ?? '';
         if (!$id) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
         $phone = trim($customer['phone'] ?? '');
         if ($phone === '') {
-            $_SESSION['flash_error'] = 'Müşteride telefon numarası kayıtlı değil.';
+            Auth::setSession('flash_error', 'Müşteride telefon numarası kayıtlı değil.');
             header('Location: /musteriler/' . $id);
             exit;
         }
         $message = trim($_POST['message'] ?? '');
         if ($message === '') {
-            $_SESSION['flash_error'] = 'Mesaj metni girin.';
+            Auth::setSession('flash_error', 'Mesaj metni girin.');
             header('Location: /musteriler/' . $id);
             exit;
         }
         $result = SmsService::send($this->pdo, $customer['company_id'], $phone, $message);
         if ($result['success']) {
-            $_SESSION['flash_success'] = 'SMS gönderildi.';
+            Auth::setSession('flash_success', 'SMS gönderildi.');
         } else {
-            $_SESSION['flash_error'] = $result['error'] ?? 'SMS gönderilemedi.';
+            Auth::setSession('flash_error', $result['error'] ?? 'SMS gönderilemedi.');
         }
         header('Location: /musteriler/' . $id);
         exit;
@@ -238,14 +236,14 @@ class CustomersController
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
@@ -266,20 +264,20 @@ class CustomersController
         $customerId = trim($_POST['customer_id'] ?? '');
         $amount = isset($_POST['amount']) ? (float) str_replace(',', '.', $_POST['amount']) : 0;
         if (!$customerId || $amount <= 0) {
-            $_SESSION['flash_error'] = 'Müşteri ve tutar (0\'dan büyük) zorunludur.';
+            Auth::setSession('flash_error', 'Müşteri ve tutar (0\'dan büyük) zorunludur.');
             header('Location: /musteriler/' . $customerId);
             exit;
         }
         $customer = Customer::findOne($this->pdo, $customerId);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
@@ -291,7 +289,7 @@ class CustomersController
             'due_date' => trim($_POST['due_date'] ?? '') ?: null,
             'notes' => trim($_POST['notes'] ?? '') ?: null,
         ]);
-        $_SESSION['flash_success'] = 'Borç kaydı eklendi.';
+        Auth::setSession('flash_success', 'Borç kaydı eklendi.');
         header('Location: /musteriler/' . $customerId);
         exit;
     }
@@ -307,14 +305,14 @@ class CustomersController
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
@@ -334,33 +332,33 @@ class CustomersController
         }
         $customerId = trim($_POST['customer_id'] ?? '');
         if (!$customerId) {
-            $_SESSION['flash_error'] = 'Müşteri gerekli.';
+            Auth::setSession('flash_error', 'Müşteri gerekli.');
             header('Location: /musteriler');
             exit;
         }
         $customer = Customer::findOne($this->pdo, $customerId);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
         $file = $_FILES['document'] ?? null;
         if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
-            $_SESSION['flash_error'] = 'Lütfen bir dosya seçin veya yükleme hatası oluştu.';
+            Auth::setSession('flash_error', 'Lütfen bir dosya seçin veya yükleme hatası oluştu.');
             header('Location: /musteriler/' . $customerId);
             exit;
         }
         $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx'];
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, $allowedExt, true)) {
-            $_SESSION['flash_error'] = 'İzin verilen formatlar: ' . implode(', ', $allowedExt);
+            Auth::setSession('flash_error', 'İzin verilen formatlar: ' . implode(', ', $allowedExt));
             header('Location: /musteriler/' . $customerId);
             exit;
         }
@@ -371,7 +369,7 @@ class CustomersController
         $filename = $customerId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
         $filePath = $uploadDir . '/' . $filename;
         if (!move_uploaded_file($file['tmp_name'], $filePath)) {
-            $_SESSION['flash_error'] = 'Dosya kaydedilemedi.';
+            Auth::setSession('flash_error', 'Dosya kaydedilemedi.');
             header('Location: /musteriler/' . $customerId);
             exit;
         }
@@ -385,7 +383,7 @@ class CustomersController
             'mime_type' => $file['type'] ?? null,
             'notes' => trim($_POST['notes'] ?? '') ?: null,
         ]);
-        $_SESSION['flash_success'] = 'Belge eklendi.';
+        Auth::setSession('flash_success', 'Belge eklendi.');
         header('Location: /musteriler/' . $customerId);
         exit;
     }
@@ -401,25 +399,25 @@ class CustomersController
         $docId = trim($_POST['id'] ?? '');
         $redirect = trim($_POST['redirect'] ?? '/musteriler');
         if (!$docId) {
-            $_SESSION['flash_error'] = 'Belge seçilmedi.';
+            Auth::setSession('flash_error', 'Belge seçilmedi.');
             header('Location: ' . $redirect);
             exit;
         }
         $doc = CustomerDocument::findOne($this->pdo, $docId);
         if (!$doc) {
-            $_SESSION['flash_error'] = 'Belge bulunamadı.';
+            Auth::setSession('flash_error', 'Belge bulunamadı.');
             header('Location: ' . $redirect);
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($doc['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Yetkisiz.';
+            Auth::setSession('flash_error', 'Yetkisiz.');
             header('Location: /musteriler');
             exit;
         }
         CustomerDocument::softDelete($this->pdo, $docId);
-        $_SESSION['flash_success'] = 'Belge silindi.';
+        Auth::setSession('flash_success', 'Belge silindi.');
         header('Location: /musteriler/' . ($doc['customer_id'] ?? ''));
         exit;
     }
@@ -434,13 +432,13 @@ class CustomersController
         }
         $id = trim($_POST['id'] ?? '');
         if (!$id) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
@@ -448,7 +446,7 @@ class CustomersController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $customerCompanyId = $customer['company_id'] ?? null;
         if ($companyId && $customerCompanyId !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
@@ -459,22 +457,22 @@ class CustomersController
         $phone2 = trim($_POST['phone_2'] ?? '') !== '' ? trim($_POST['phone_2']) : null;
         $identityNumber = trim($_POST['identity_number'] ?? '') !== '' ? trim($_POST['identity_number']) : null;
         if ($firstName === '' || $lastName === '') {
-            $_SESSION['flash_error'] = 'Ad ve soyad zorunludur.';
+            Auth::setSession('flash_error', 'Ad ve soyad zorunludur.');
             header('Location: /musteriler/' . $id);
             exit;
         }
         if ($phone !== null && !validatePhone($phone)) {
-            $_SESSION['flash_error'] = 'Telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx';
+            Auth::setSession('flash_error', 'Telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx');
             header('Location: /musteriler/' . $id);
             exit;
         }
         if ($phone2 !== null && !validatePhone($phone2)) {
-            $_SESSION['flash_error'] = '2. telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx';
+            Auth::setSession('flash_error', '2. telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx');
             header('Location: /musteriler/' . $id);
             exit;
         }
         if ($email !== '' && !validateEmail($email)) {
-            $_SESSION['flash_error'] = 'E-posta formatı geçersiz.';
+            Auth::setSession('flash_error', 'E-posta formatı geçersiz.');
             header('Location: /musteriler/' . $id);
             exit;
         }
@@ -482,17 +480,17 @@ class CustomersController
         $phone2Formatted = $phone2 !== null ? formatPhoneInput($phone2) : null;
         $checkCompanyId = $customerCompanyId ?? $companyId;
         if ($checkCompanyId && $email !== '' && Customer::findByEmail($this->pdo, $checkCompanyId, $email, $id)) {
-            $_SESSION['flash_error'] = 'Bu e-posta adresi başka bir müşteride kayıtlı.';
+            Auth::setSession('flash_error', 'Bu e-posta adresi başka bir müşteride kayıtlı.');
             header('Location: /musteriler/' . $id);
             exit;
         }
         if ($checkCompanyId && $phoneFormatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $checkCompanyId, $phoneFormatted, $id)) {
-            $_SESSION['flash_error'] = 'Bu telefon numarası başka bir müşteride kayıtlı. Aynı telefon numarasına ait başka bir müşteri olamaz.';
+            Auth::setSession('flash_error', 'Bu telefon numarası başka bir müşteride kayıtlı. Aynı telefon numarasına ait başka bir müşteri olamaz.');
             header('Location: /musteriler/' . $id);
             exit;
         }
         if ($checkCompanyId && $phone2Formatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $checkCompanyId, $phone2Formatted, $id)) {
-            $_SESSION['flash_error'] = 'Bu 2. telefon numarası başka bir müşteride kayıtlı. Aynı telefon numarasına ait başka bir müşteri olamaz.';
+            Auth::setSession('flash_error', 'Bu 2. telefon numarası başka bir müşteride kayıtlı. Aynı telefon numarasına ait başka bir müşteri olamaz.');
             header('Location: /musteriler/' . $id);
             exit;
         }
@@ -509,7 +507,7 @@ class CustomersController
             'is_active'       => isset($_POST['is_active']) ? 1 : 0,
         ];
         Customer::update($this->pdo, $id, $data);
-        $_SESSION['flash_success'] = 'Müşteri bilgileri güncellendi.';
+        Auth::setSession('flash_success', 'Müşteri bilgileri güncellendi.');
         header('Location: /musteriler/' . $id);
         exit;
     }
@@ -529,20 +527,20 @@ class CustomersController
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
         $notes = trim($_POST['notes'] ?? '');
         Customer::update($this->pdo, $id, ['notes' => $notes]);
-        $_SESSION['flash_success'] = 'Not güncellendi.';
+        Auth::setSession('flash_success', 'Not güncellendi.');
         header('Location: /musteriler/' . $id);
         exit;
     }
@@ -558,14 +556,14 @@ class CustomersController
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
@@ -588,14 +586,14 @@ class CustomersController
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
@@ -646,14 +644,14 @@ class CustomersController
         }
         $customer = Customer::findOne($this->pdo, $id);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Müşteri bulunamadı.';
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
             header('Location: /musteriler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu müşteriye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
             header('Location: /musteriler');
             exit;
         }
@@ -672,19 +670,19 @@ class CustomersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı. Depo/müşteri eklemek için Ayarlar\'dan firma oluşturun veya yöneticiye şirket ataması yaptırın.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı. Depo/müşteri eklemek için Ayarlar\'dan firma oluşturun veya yöneticiye şirket ataması yaptırın.');
             header('Location: /musteriler');
             exit;
         }
         if (!Company::findOne($this->pdo, $companyId)) {
-            $_SESSION['flash_error'] = 'Şirket kaydı veritabanında bulunamadı. Sunucuda "php php-app/seed.php" veya "php artisan migrate" çalıştırın; yönetici kullanıcınıza geçerli bir şirket atasın.';
+            Auth::setSession('flash_error', 'Şirket kaydı veritabanında bulunamadı. Sunucuda "php php-app/seed.php" veya "php artisan migrate" çalıştırın; yönetici kullanıcınıza geçerli bir şirket atasın.');
             header('Location: /musteriler');
             exit;
         }
         $firstName = trim($_POST['first_name'] ?? '');
         $lastName = trim($_POST['last_name'] ?? '');
         if ($firstName === '' || $lastName === '') {
-            $_SESSION['flash_error'] = 'Ad ve soyad zorunludur.';
+            Auth::setSession('flash_error', 'Ad ve soyad zorunludur.');
             $redirectTo = $_POST['redirect_to'] ?? '';
             if ($redirectTo === 'new_sale') {
                 header('Location: /girisler?newSale=1');
@@ -700,39 +698,39 @@ class CustomersController
         $phone2 = trim($_POST['phone_2'] ?? '') ?: null;
         $identityNumber = trim($_POST['identity_number'] ?? '') ?: null;
         if ($identityNumber !== null && !validateTcIdentity($identityNumber)) {
-            $_SESSION['flash_error'] = 'Müşteri numarası (TC Kimlik No) en fazla 11 haneli rakam olmalıdır.';
+            Auth::setSession('flash_error', 'Müşteri numarası (TC Kimlik No) en fazla 11 haneli rakam olmalıdır.');
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         if ($phone !== null && !validatePhone($phone)) {
-            $_SESSION['flash_error'] = 'Telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx';
+            Auth::setSession('flash_error', 'Telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx');
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         if ($phone2 !== null && !validatePhone($phone2)) {
-            $_SESSION['flash_error'] = '2. telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx';
+            Auth::setSession('flash_error', '2. telefon formatı geçersiz. 11 hane girin: 05xx xxx xx xx');
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         if ($email !== '' && !validateEmail($email)) {
-            $_SESSION['flash_error'] = 'E-posta formatı geçersiz.';
+            Auth::setSession('flash_error', 'E-posta formatı geçersiz.');
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         $phoneFormatted = $phone !== null ? formatPhoneInput($phone) : null;
         $phone2Formatted = $phone2 !== null ? formatPhoneInput($phone2) : null;
         if ($email !== '' && Customer::findByEmail($this->pdo, $companyId, $email, null)) {
-            $_SESSION['flash_error'] = 'Bu e-posta adresi ile kayıtlı bir müşteri zaten var. Aynı e-posta ile müşteri kaydedilemez.';
+            Auth::setSession('flash_error', 'Bu e-posta adresi ile kayıtlı bir müşteri zaten var. Aynı e-posta ile müşteri kaydedilemez.');
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         if ($phoneFormatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $companyId, $phoneFormatted, null)) {
-            $_SESSION['flash_error'] = 'Bu telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarasına ait başka bir müşteri olamaz.';
+            Auth::setSession('flash_error', 'Bu telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarasına ait başka bir müşteri olamaz.');
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         if ($phone2Formatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $companyId, $phone2Formatted, null)) {
-            $_SESSION['flash_error'] = 'Bu 2. telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarasına ait başka bir müşteri olamaz.';
+            Auth::setSession('flash_error', 'Bu 2. telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarasına ait başka bir müşteri olamaz.');
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
@@ -748,25 +746,31 @@ class CustomersController
             'notes'           => trim($_POST['notes'] ?? '') ?: null,
             'invoice_info'    => trim($_POST['invoice_info'] ?? '') ?: null,
         ];
+        $dedupeKey = hash('sha256', $companyId . '|' . mb_strtolower($firstName) . '|' . mb_strtolower($lastName) . '|' . ($phoneFormatted ?? '') . '|' . ($email ?? ''));
+        $lastCreate = request_dedupe_hit('customer_create', $dedupeKey);
+        if ($lastCreate !== null && !empty($lastCreate['id']) && Customer::findOne($this->pdo, (string) $lastCreate['id'])) {
+            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', ['id' => (string) $lastCreate['id']]);
+        }
         try {
             $customer = Customer::create($this->pdo, $data);
         } catch (Throwable $e) {
-            $_SESSION['flash_error'] = 'Müşteri eklenemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Müşteri eklenemedi: ' . $e->getMessage());
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
             exit;
         }
         $name = trim($firstName . ' ' . $lastName);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri eklendi', $name . ' müşterisi eklendi.', ['customer_id' => $customer['id'], 'actor_name' => $actorName]);
+        request_dedupe_store('customer_create', $dedupeKey, ['id' => $customer['id']]);
         $redirectTo = $_POST['redirect_to'] ?? '';
         if ($redirectTo === 'new_sale') {
-            $_SESSION['flash_success'] = 'Müşteri eklendi. Yeni satış formunda seçebilirsiniz.';
+            Auth::setSession('flash_success', 'Müşteri eklendi. Yeni satış formunda seçebilirsiniz.');
             header('Location: /girisler?newSale=1&newCustomerId=' . urlencode($customer['id']));
         } elseif ($redirectTo === 'new_job') {
-            $_SESSION['flash_success'] = 'Müşteri eklendi. Nakliye formunda seçebilirsiniz.';
+            Auth::setSession('flash_success', 'Müşteri eklendi. Nakliye formunda seçebilirsiniz.');
             header('Location: /nakliye-isler?newCustomerId=' . urlencode($customer['id']));
         } else {
-            $_SESSION['flash_success'] = 'Müşteri eklendi.';
+            Auth::setSession('flash_success', 'Müşteri eklendi.');
             header('Location: /musteriler');
         }
         exit;
@@ -774,14 +778,63 @@ class CustomersController
 
     private function redirectAfterCreate(string $redirectTo, ?array $customer): void
     {
+        $customerId = $customer['id'] ?? null;
         if ($redirectTo === 'new_sale') {
-            header('Location: /girisler?newSale=1');
+            $url = '/girisler?newSale=1';
+            if ($customerId) {
+                $url .= '&newCustomerId=' . urlencode((string) $customerId);
+            }
+            header('Location: ' . $url);
         } elseif ($redirectTo === 'new_job') {
-            header('Location: /nakliye-isler');
+            $url = '/nakliye-isler';
+            if ($customerId) {
+                $url .= '?newCustomerId=' . urlencode((string) $customerId);
+            }
+            header('Location: ' . $url);
         } else {
             header('Location: /musteriler');
         }
         exit;
+    }
+
+    /** AJAX: müşteri arama (Yeni Satış vb. formlar için) */
+    public function apiSearch(): void
+    {
+        Auth::requireStaff();
+        header('Content-Type: application/json; charset=utf-8');
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (!$companyId) {
+            echo json_encode(['data' => []]);
+            return;
+        }
+        $id = trim($_GET['id'] ?? '');
+        if ($id !== '') {
+            $row = Customer::findOne($this->pdo, $id);
+            if (!$row || ($row['company_id'] ?? '') !== $companyId) {
+                echo json_encode(['data' => null]);
+                return;
+            }
+            echo json_encode(['data' => [
+                'id' => $row['id'],
+                'name' => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+                'phone' => $row['phone'] ?? null,
+                'email' => $row['email'] ?? null,
+            ]]);
+            return;
+        }
+        $q = trim($_GET['q'] ?? '');
+        $limit = min(100, max(1, (int) ($_GET['limit'] ?? 50)));
+        $rows = Customer::findAll($this->pdo, $companyId, $q !== '' ? $q : null, $limit);
+        $data = array_map(static function (array $row): array {
+            return [
+                'id' => $row['id'],
+                'name' => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+                'phone' => $row['phone'] ?? null,
+                'email' => $row['email'] ?? null,
+            ];
+        }, $rows);
+        echo json_encode(['data' => $data]);
     }
 
     /** Excel (CSV) dışa aktar – mevcut filtreye göre müşteri listesini indirir */
@@ -874,9 +927,7 @@ class CustomersController
     public function importForm(): void
     {
         Auth::requireStaff();
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $customers = [];
         $currentPage = 'musteriler';
         $q = '';
@@ -894,14 +945,14 @@ class CustomersController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /musteriler/excel-ice-aktar');
             exit;
         }
 
         $file = $_FILES['csv_file'] ?? null;
         if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
-            $_SESSION['flash_error'] = 'Lütfen bir CSV dosyası seçin veya yükleme hatası oluştu.';
+            Auth::setSession('flash_error', 'Lütfen bir CSV dosyası seçin veya yükleme hatası oluştu.');
             header('Location: /musteriler/excel-ice-aktar');
             exit;
         }
@@ -909,7 +960,7 @@ class CustomersController
         $tmp = $file['tmp_name'];
         $handle = @fopen($tmp, 'rb');
         if (!$handle) {
-            $_SESSION['flash_error'] = 'Dosya okunamadı.';
+            Auth::setSession('flash_error', 'Dosya okunamadı.');
             header('Location: /musteriler/excel-ice-aktar');
             exit;
         }
@@ -1047,15 +1098,16 @@ class CustomersController
         if ($added > 0) {
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'customer', 'Toplu müşteri ekleme', $added . ' müşteri Excel ile eklendi.' . ($skipped > 0 ? ' ' . $skipped . ' kayıt atlandı.' : ''), ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = $added . ' müşteri eklendi.';
+            $successMsg = $added . ' müşteri eklendi.';
             if ($skipped > 0) {
-                $_SESSION['flash_success'] .= ' ' . $skipped . ' kayıt atlandı.';
+                $successMsg .= ' ' . $skipped . ' kayıt atlandı.';
             }
+            Auth::setSession('flash_success', $successMsg);
         }
         if (!empty($errors)) {
-            $_SESSION['flash_error'] = implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : '');
+            Auth::setSession('flash_error', implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : ''));
         } elseif ($added === 0 && $skipped === 0) {
-            $_SESSION['flash_error'] = 'İşlenecek geçerli satır bulunamadı. CSV formatı: Ad; Soyad; E-posta; Telefon; TC Kimlik No; Adres; Notlar; Aktif';
+            Auth::setSession('flash_error', 'İşlenecek geçerli satır bulunamadı. CSV formatı: Ad; Soyad; E-posta; Telefon; TC Kimlik No; Adres; Notlar; Aktif');
         }
 
         header('Location: /musteriler/excel-ice-aktar');

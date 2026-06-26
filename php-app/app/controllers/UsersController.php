@@ -37,9 +37,7 @@ class UsersController
             $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $canManageUsers = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/users/index.php';
     }
 
@@ -53,14 +51,14 @@ class UsersController
         }
         $profile = User::findOne($this->pdo, $id);
         if (!$profile) {
-            $_SESSION['flash_error'] = 'Kullanıcı bulunamadı.';
+            Auth::setSession('flash_error', 'Kullanıcı bulunamadı.');
             header('Location: /kullanicilar');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
-            $_SESSION['flash_error'] = 'Bu kullanıcıya erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu kullanıcıya erişim yetkiniz yok.');
             header('Location: /kullanicilar');
             exit;
         }
@@ -91,7 +89,7 @@ class UsersController
         }
         $profile = User::findOne($this->pdo, $id);
         if (!$profile) {
-            $_SESSION['flash_error'] = 'Kullanıcı bulunamadı.';
+            Auth::setSession('flash_error', 'Kullanıcı bulunamadı.');
             header('Location: /kullanicilar');
             exit;
         }
@@ -99,12 +97,12 @@ class UsersController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
         if (!$canManage) {
-            $_SESSION['flash_error'] = 'Bu kullanıcıyı düzenleyemezsiniz.';
+            Auth::setSession('flash_error', 'Bu kullanıcıyı düzenleyemezsiniz.');
             header('Location: /kullanicilar');
             exit;
         }
         if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
-            $_SESSION['flash_error'] = 'Bu kullanıcıyı düzenleyemezsiniz.';
+            Auth::setSession('flash_error', 'Bu kullanıcıyı düzenleyemezsiniz.');
             header('Location: /kullanicilar');
             exit;
         }
@@ -122,9 +120,7 @@ class UsersController
             'customer' => 'Müşteri',
         ];
         $currentUserIsSuperAdmin = ($user['role'] ?? '') === 'super_admin';
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/users/edit.php';
     }
 
@@ -139,7 +135,7 @@ class UsersController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canAdd = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
         if (!$canAdd) {
-            $_SESSION['flash_error'] = 'Kullanıcı ekleme yetkiniz yok.';
+            Auth::setSession('flash_error', 'Kullanıcı ekleme yetkiniz yok.');
             header('Location: /kullanicilar');
             exit;
         }
@@ -147,18 +143,18 @@ class UsersController
         $firstName = trim($_POST['first_name'] ?? '');
         $lastName = trim($_POST['last_name'] ?? '');
         if ($email === '' || $firstName === '' || $lastName === '') {
-            $_SESSION['flash_error'] = 'E-posta, ad ve soyad zorunludur.';
+            Auth::setSession('flash_error', 'E-posta, ad ve soyad zorunludur.');
             header('Location: /kullanicilar');
             exit;
         }
         if (User::findByEmail($this->pdo, $email)) {
-            $_SESSION['flash_error'] = 'Bu e-posta adresi zaten kayıtlı.';
+            Auth::setSession('flash_error', 'Bu e-posta adresi zaten kayıtlı.');
             header('Location: /kullanicilar');
             exit;
         }
         $password = $_POST['password'] ?? '';
         if ($password === '') {
-            $_SESSION['flash_error'] = 'Şifre girin.';
+            Auth::setSession('flash_error', 'Şifre girin.');
             header('Location: /kullanicilar');
             exit;
         }
@@ -187,7 +183,7 @@ class UsersController
         } catch (Throwable $e) {
             // Bildirim hatası kullanıcı eklemeyi bozmasın
         }
-        $_SESSION['flash_success'] = 'Kullanıcı eklendi.';
+        Auth::setSession('flash_success', 'Kullanıcı eklendi.');
         header('Location: /kullanicilar');
         exit;
     }
@@ -206,7 +202,7 @@ class UsersController
         }
         $profile = User::findOne($this->pdo, $id);
         if (!$profile) {
-            $_SESSION['flash_error'] = 'Kullanıcı bulunamadı.';
+            Auth::setSession('flash_error', 'Kullanıcı bulunamadı.');
             header('Location: /kullanicilar');
             exit;
         }
@@ -214,19 +210,19 @@ class UsersController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
         if (!$canManage) {
-            $_SESSION['flash_error'] = 'Bu kullanıcıyı düzenleyemezsiniz.';
+            Auth::setSession('flash_error', 'Bu kullanıcıyı düzenleyemezsiniz.');
             header('Location: /kullanicilar');
             exit;
         }
         if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
-            $_SESSION['flash_error'] = 'Bu kullanıcıyı düzenleyemezsiniz.';
+            Auth::setSession('flash_error', 'Bu kullanıcıyı düzenleyemezsiniz.');
             header('Location: /kullanicilar');
             exit;
         }
         $email = trim($_POST['email'] ?? '');
         $existing = User::findByEmail($this->pdo, $email);
         if ($existing && ($existing['id'] ?? '') !== $id) {
-            $_SESSION['flash_error'] = 'Bu e-posta adresi başka bir kullanıcıda kayıtlı.';
+            Auth::setSession('flash_error', 'Bu e-posta adresi başka bir kullanıcıda kayıtlı.');
             header('Location: /kullanicilar/' . $id . '/duzenle');
             exit;
         }
@@ -263,7 +259,7 @@ class UsersController
         $fullName = trim(($data['first_name'] ?? $profile['first_name'] ?? '') . ' ' . ($data['last_name'] ?? $profile['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Kullanıcı güncellendi.';
+        Auth::setSession('flash_success', 'Kullanıcı güncellendi.');
         header('Location: /kullanicilar/' . $id);
         exit;
     }
@@ -278,13 +274,13 @@ class UsersController
         $id = trim($_POST['id'] ?? '');
         $password = trim($_POST['password'] ?? '');
         if (!$id || !$password) {
-            $_SESSION['flash_error'] = 'Kullanıcı ve şifre gerekli.';
+            Auth::setSession('flash_error', 'Kullanıcı ve şifre gerekli.');
             header('Location: /kullanicilar');
             exit;
         }
         $profile = User::findOne($this->pdo, $id);
         if (!$profile) {
-            $_SESSION['flash_error'] = 'Kullanıcı bulunamadı.';
+            Auth::setSession('flash_error', 'Kullanıcı bulunamadı.');
             header('Location: /kullanicilar');
             exit;
         }
@@ -292,17 +288,17 @@ class UsersController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
         if (!$canManage) {
-            $_SESSION['flash_error'] = 'Bu kullanıcının şifresini değiştirme yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu kullanıcının şifresini değiştirme yetkiniz yok.');
             header('Location: /kullanicilar');
             exit;
         }
         if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId && ($profile['role'] ?? '') !== 'super_admin') {
-            $_SESSION['flash_error'] = 'Bu kullanıcının şifresini değiştirme yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu kullanıcının şifresini değiştirme yetkiniz yok.');
             header('Location: /kullanicilar');
             exit;
         }
         User::update($this->pdo, $id, ['password' => $password]);
-        $_SESSION['flash_success'] = 'Şifre güncellendi.';
+        Auth::setSession('flash_success', 'Şifre güncellendi.');
         header('Location: /kullanicilar');
         exit;
     }
@@ -321,25 +317,25 @@ class UsersController
         }
         $profile = User::findOne($this->pdo, $id);
         if (!$profile) {
-            $_SESSION['flash_error'] = 'Kullanıcı bulunamadı.';
+            Auth::setSession('flash_error', 'Kullanıcı bulunamadı.');
             header('Location: /kullanicilar');
             exit;
         }
         $user = Auth::user();
         if ($id === ($user['id'] ?? '')) {
-            $_SESSION['flash_error'] = 'Kendinizi silemezsiniz.';
+            Auth::setSession('flash_error', 'Kendinizi silemezsiniz.');
             header('Location: /kullanicilar');
             exit;
         }
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $canManage = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
         if (!$canManage) {
-            $_SESSION['flash_error'] = 'Bu kullanıcıyı silemezsiniz.';
+            Auth::setSession('flash_error', 'Bu kullanıcıyı silemezsiniz.');
             header('Location: /kullanicilar');
             exit;
         }
         if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($profile['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu kullanıcıyı silemezsiniz.';
+            Auth::setSession('flash_error', 'Bu kullanıcıyı silemezsiniz.');
             header('Location: /kullanicilar');
             exit;
         }
@@ -347,7 +343,7 @@ class UsersController
         User::remove($this->pdo, $id);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Kullanıcı silindi.';
+        Auth::setSession('flash_success', 'Kullanıcı silindi.');
         header('Location: /kullanicilar');
         exit;
     }

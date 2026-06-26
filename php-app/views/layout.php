@@ -237,9 +237,10 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
             main form:not(.modal-overlay form) > div:last-child:has(button[type="submit"]) button[type="submit"] {
                 min-height: 48px;
             }
-            /* Modallar — tam ekran, alt butonlar güvenli alanda */
+            /* Modallar — tam ekran, alt menünün üstünde */
             .modal-overlay {
                 padding: 0;
+                z-index: 60 !important;
             }
             .modal-overlay > div.flex {
                 min-height: 100%;
@@ -268,10 +269,14 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 position: sticky;
                 bottom: 0;
                 margin-top: auto;
-                padding-bottom: max(0.75rem, var(--safe-bottom));
+                padding-bottom: max(1rem, var(--safe-bottom));
                 background: rgba(255,255,255,0.98);
                 border-top: 1px solid rgb(229 231 235);
                 z-index: 10;
+            }
+            body.modal-open #mobileBottomNav {
+                visibility: hidden;
+                pointer-events: none;
             }
             .dark .modal-overlay .form-submit-bar {
                 background: rgba(42,35,32,0.98);
@@ -476,6 +481,18 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         document.querySelectorAll('.nav-link').forEach(function(el){ el.addEventListener('click', closeSidebar); });
     })();
     (function(){
+        function updateModalState() {
+            var any = document.querySelector('.modal-overlay:not(.hidden)');
+            document.body.classList.toggle('modal-open', !!any);
+            document.body.style.overflow = any ? 'hidden' : '';
+        }
+        var obs = new MutationObserver(updateModalState);
+        document.querySelectorAll('.modal-overlay').forEach(function(el) {
+            obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+        });
+        updateModalState();
+    })();
+    (function(){
         var themeToggle = document.getElementById('themeToggle');
         if (themeToggle) {
             themeToggle.addEventListener('click', function() {
@@ -572,6 +589,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
     })();
     </script>
     <script src="/phone-mask.js" defer></script>
+    <script src="/form-guard.js" defer></script>
     <?php if ($user && !empty($user['id'])): ?><script src="/pwa.js" defer></script><?php endif; ?>
 </body>
 </html>

@@ -107,9 +107,7 @@ class PaymentsController
             $stmt = $this->pdo->query('SELECT * FROM bank_accounts WHERE deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
             $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $paymentsByCustomer = $paymentsByCustomer ?? [];
         $totalPayments = $totalPayments ?? 0;
         $preselectedCustomerId = $preselectedCustomerId ?? '';
@@ -131,17 +129,17 @@ class PaymentsController
         $notes = trim($_POST['notes'] ?? '') ?: null;
         $paidAt = trim($_POST['paid_at'] ?? '') ?: null;
         if (empty($paymentIds) && empty($chargeIds)) {
-            $_SESSION['flash_error'] = 'Geçersiz istek. Ödeme/borç seçin.';
+            Auth::setSession('flash_error', 'Geçersiz istek. Ödeme/borç seçin.');
             header('Location: /odemeler');
             exit;
         }
         if (!empty($paymentIds) && !in_array($paymentMethod, ['bank_transfer', 'credit_card'], true)) {
-            $_SESSION['flash_error'] = 'Geçersiz istek. Ödeme yöntemini belirleyin (Havale veya Kredi Kartı).';
+            Auth::setSession('flash_error', 'Geçersiz istek. Ödeme yöntemini belirleyin (Havale veya Kredi Kartı).');
             header('Location: /odemeler');
             exit;
         }
         if (!empty($paymentIds) && $paymentMethod === 'bank_transfer' && !$bankAccountId) {
-            $_SESSION['flash_error'] = 'Havale ile ödeme için banka hesabı seçin.';
+            Auth::setSession('flash_error', 'Havale ile ödeme için banka hesabı seçin.');
             header('Location: /odemeler');
             exit;
         }
@@ -151,7 +149,7 @@ class PaymentsController
             $payment = Payment::findOne($this->pdo, $pid);
             if (!$payment) continue;
             if ($companyId && ($payment['company_id'] ?? '') !== $companyId) {
-                $_SESSION['flash_error'] = 'Bu ödemeye erişim yetkiniz yok.';
+                Auth::setSession('flash_error', 'Bu ödemeye erişim yetkiniz yok.');
                 header('Location: /odemeler');
                 exit;
             }
@@ -160,7 +158,7 @@ class PaymentsController
             $charge = CustomerCharge::findOne($this->pdo, $cid);
             if (!$charge) continue;
             if ($companyId && ($charge['company_id'] ?? '') !== $companyId) {
-                $_SESSION['flash_error'] = 'Bu borç kaydına erişim yetkiniz yok.';
+                Auth::setSession('flash_error', 'Bu borç kaydına erişim yetkiniz yok.');
                 header('Location: /odemeler');
                 exit;
             }
@@ -189,11 +187,11 @@ class PaymentsController
             if (!empty($chargeIds)) {
                 CustomerCharge::markManyAsPaid($this->pdo, $chargeIds, $notes, $paidAt);
             }
-            $_SESSION['flash_success'] = count($paymentIds) > 1
+            Auth::setSession('flash_success', count($paymentIds) > 1
                 ? count($paymentIds) . ' ödeme kaydedildi.'
-                : 'Ödeme kaydedildi.';
+                : 'Ödeme kaydedildi.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Kayıt yapılamadı: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Kayıt yapılamadı: ' . $e->getMessage());
         }
         $redirect = trim($_POST['redirect'] ?? '');
         if ($redirect !== '' && preg_match('#^/[a-z0-9/\-]+$#i', $redirect)) {
@@ -214,14 +212,14 @@ class PaymentsController
         }
         $payment = Payment::findOne($this->pdo, $id);
         if (!$payment) {
-            $_SESSION['flash_error'] = 'Ödeme kaydı bulunamadı.';
+            Auth::setSession('flash_error', 'Ödeme kaydı bulunamadı.');
             header('Location: /odemeler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($payment['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu ödemeye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu ödemeye erişim yetkiniz yok.');
             header('Location: /odemeler');
             exit;
         }
@@ -241,32 +239,32 @@ class PaymentsController
         }
         $id = $params['id'] ?? '';
         if (!$id) {
-            $_SESSION['flash_error'] = 'Ödeme bulunamadı.';
+            Auth::setSession('flash_error', 'Ödeme bulunamadı.');
             header('Location: /odemeler');
             exit;
         }
         $payment = Payment::findOne($this->pdo, $id);
         if (!$payment) {
-            $_SESSION['flash_error'] = 'Ödeme kaydı bulunamadı.';
+            Auth::setSession('flash_error', 'Ödeme kaydı bulunamadı.');
             header('Location: /odemeler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($payment['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu ödemeyi iptal etme yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu ödemeyi iptal etme yetkiniz yok.');
             header('Location: /odemeler');
             exit;
         }
         if (($payment['status'] ?? '') !== 'paid') {
-            $_SESSION['flash_error'] = 'Sadece ödenmiş ödemeler iptal edilebilir.';
+            Auth::setSession('flash_error', 'Sadece ödenmiş ödemeler iptal edilebilir.');
             header('Location: /odemeler/' . $id);
             exit;
         }
         if (Payment::cancel($this->pdo, $id)) {
-            $_SESSION['flash_success'] = 'Ödeme iptal edildi.';
+            Auth::setSession('flash_success', 'Ödeme iptal edildi.');
         } else {
-            $_SESSION['flash_error'] = 'İptal işlemi yapılamadı.';
+            Auth::setSession('flash_error', 'İptal işlemi yapılamadı.');
         }
         $redirect = isset($_POST['redirect']) ? trim($_POST['redirect']) : '';
         if ($redirect !== '' && (str_starts_with($redirect, '/raporlar/') || str_starts_with($redirect, '/odemeler'))) {
@@ -287,14 +285,14 @@ class PaymentsController
         }
         $payment = Payment::findOne($this->pdo, $id);
         if (!$payment) {
-            $_SESSION['flash_error'] = 'Ödeme kaydı bulunamadı.';
+            Auth::setSession('flash_error', 'Ödeme kaydı bulunamadı.');
             header('Location: /odemeler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($payment['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu ödemeye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu ödemeye erişim yetkiniz yok.');
             header('Location: /odemeler');
             exit;
         }

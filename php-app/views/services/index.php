@@ -28,10 +28,10 @@ ob_start();
         </select>
         <button type="submit" class="btn-touch px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium">Filtrele</button>
     </form>
-    <button type="button" onclick="document.getElementById('addCategoryModal').classList.remove('hidden')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
+    <button type="button" onclick="openSvcModal('addCategoryModal')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Kategori Ekle
     </button>
-    <button type="button" onclick="document.getElementById('addServiceModal').classList.remove('hidden')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl border border-emerald-600 text-emerald-600 dark:text-emerald-400 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+    <button type="button" onclick="openAddServiceModal()" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl border border-emerald-600 text-emerald-600 dark:text-emerald-400 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20" <?= empty($categories) ? 'title="Önce kategori ekleyin"' : '' ?>>
         <i class="bi bi-plus-lg mr-2"></i> Hizmet Ekle
     </button>
 </div>
@@ -111,13 +111,13 @@ ob_start();
 </div>
 
 <!-- Modal: Kategori Ekle -->
-<div id="addCategoryModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('addCategoryModal').classList.add('hidden')"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Kategori Ekle</h3>
-            <form method="post" action="/hizmetler/kategori/ekle">
-                <div class="space-y-3">
+<div id="addCategoryModal" class="modal-overlay hidden fixed inset-0 z-[60] overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4 md:p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeSvcModal('addCategoryModal')"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 flex flex-col max-h-[min(90vh,640px)] md:max-h-[90vh]">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 shrink-0">Kategori Ekle</h3>
+            <form method="post" action="/hizmetler/kategori/ekle" class="flex flex-col flex-1 min-h-0">
+                <div class="flex-1 overflow-y-auto space-y-3 min-h-0 pr-1">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori Adı *</label>
                         <input type="text" name="name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
@@ -127,8 +127,8 @@ ob_start();
                         <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="form-submit-bar mt-4 flex justify-end gap-2">
-                    <button type="button" onclick="document.getElementById('addCategoryModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                <div class="form-submit-bar mt-4 flex justify-end gap-2 shrink-0">
+                    <button type="button" onclick="closeSvcModal('addCategoryModal')" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
                     <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Kaydet</button>
                 </div>
             </form>
@@ -137,14 +137,14 @@ ob_start();
 </div>
 
 <!-- Modal: Kategori Düzenle -->
-<div id="editCategoryModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('editCategoryModal').classList.add('hidden')"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Kategori Düzenle</h3>
-            <form method="post" action="/hizmetler/kategori/guncelle">
+<div id="editCategoryModal" class="modal-overlay hidden fixed inset-0 z-[60] overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4 md:p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeSvcModal('editCategoryModal')"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 flex flex-col max-h-[min(90vh,640px)] md:max-h-[90vh]">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 shrink-0">Kategori Düzenle</h3>
+            <form method="post" action="/hizmetler/kategori/guncelle" class="flex flex-col flex-1 min-h-0">
                 <input type="hidden" name="id" id="editCat_id">
-                <div class="space-y-3">
+                <div class="flex-1 overflow-y-auto space-y-3 min-h-0 pr-1">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori Adı *</label>
                         <input type="text" name="name" id="editCat_name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
@@ -154,8 +154,8 @@ ob_start();
                         <textarea name="description" id="editCat_description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="form-submit-bar mt-4 flex justify-end gap-2">
-                    <button type="button" onclick="document.getElementById('editCategoryModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                <div class="form-submit-bar mt-4 flex justify-end gap-2 shrink-0">
+                    <button type="button" onclick="closeSvcModal('editCategoryModal')" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
                     <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Güncelle</button>
                 </div>
             </form>
@@ -164,13 +164,19 @@ ob_start();
 </div>
 
 <!-- Modal: Hizmet Ekle -->
-<div id="addServiceModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('addServiceModal').classList.add('hidden')"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Hizmet Ekle</h3>
-            <form method="post" action="/hizmetler/hizmet/ekle">
-                <div class="space-y-3">
+<div id="addServiceModal" class="modal-overlay hidden fixed inset-0 z-[60] overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4 md:p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeSvcModal('addServiceModal')"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 flex flex-col max-h-[min(90vh,640px)] md:max-h-[90vh]">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 shrink-0">Hizmet Ekle</h3>
+            <?php if (empty($categories)): ?>
+                <p class="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl mb-4">Hizmet eklemek için önce en az bir kategori oluşturmalısınız.</p>
+                <div class="flex justify-end">
+                    <button type="button" onclick="closeSvcModal('addServiceModal'); openSvcModal('addCategoryModal');" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Kategori Ekle</button>
+                </div>
+            <?php else: ?>
+            <form method="post" action="/hizmetler/hizmet/ekle" class="flex flex-col flex-1 min-h-0">
+                <div class="flex-1 overflow-y-auto space-y-3 min-h-0 pr-1">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori *</label>
                         <select name="category_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
@@ -186,7 +192,7 @@ ob_start();
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birim Fiyat (₺)</label>
-                        <input type="text" name="unit_price" value="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
+                        <input type="text" name="unit_price" value="0" inputmode="decimal" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birim</label>
@@ -197,24 +203,25 @@ ob_start();
                         <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="form-submit-bar mt-4 flex justify-end gap-2">
-                    <button type="button" onclick="document.getElementById('addServiceModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                <div class="form-submit-bar mt-4 flex justify-end gap-2 shrink-0">
+                    <button type="button" onclick="closeSvcModal('addServiceModal')" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
                     <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Kaydet</button>
                 </div>
             </form>
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
 <!-- Modal: Hizmet Düzenle -->
-<div id="editServiceModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('editServiceModal').classList.add('hidden')"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Hizmet Düzenle</h3>
-            <form method="post" action="/hizmetler/hizmet/guncelle">
+<div id="editServiceModal" class="modal-overlay hidden fixed inset-0 z-[60] overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4 md:p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeSvcModal('editServiceModal')"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 flex flex-col max-h-[min(90vh,640px)] md:max-h-[90vh]">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 shrink-0">Hizmet Düzenle</h3>
+            <form method="post" action="/hizmetler/hizmet/guncelle" class="flex flex-col flex-1 min-h-0">
                 <input type="hidden" name="id" id="editSvc_id">
-                <div class="space-y-3">
+                <div class="flex-1 overflow-y-auto space-y-3 min-h-0 pr-1">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
                         <select name="category_id" id="editSvc_category_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
@@ -229,7 +236,7 @@ ob_start();
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birim Fiyat (₺)</label>
-                        <input type="text" name="unit_price" id="editSvc_unit_price" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
+                        <input type="text" name="unit_price" id="editSvc_unit_price" inputmode="decimal" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birim</label>
@@ -240,8 +247,8 @@ ob_start();
                         <textarea name="description" id="editSvc_description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="form-submit-bar mt-4 flex justify-end gap-2">
-                    <button type="button" onclick="document.getElementById('editServiceModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                <div class="form-submit-bar mt-4 flex justify-end gap-2 shrink-0">
+                    <button type="button" onclick="closeSvcModal('editServiceModal')" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
                     <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Güncelle</button>
                 </div>
             </form>
@@ -250,11 +257,28 @@ ob_start();
 </div>
 
 <script>
+var svcHasCategories = <?= empty($categories) ? 'false' : 'true' ?>;
+function openSvcModal(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('hidden');
+}
+function closeSvcModal(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+}
+function openAddServiceModal() {
+    if (!svcHasCategories) {
+        alert('Hizmet eklemek için önce kategori oluşturun.');
+        openSvcModal('addCategoryModal');
+        return;
+    }
+    openSvcModal('addServiceModal');
+}
 function openEditCat(d) {
     document.getElementById('editCat_id').value = d.id || '';
     document.getElementById('editCat_name').value = d.name || '';
     document.getElementById('editCat_description').value = d.description || '';
-    document.getElementById('editCategoryModal').classList.remove('hidden');
+    openSvcModal('editCategoryModal');
 }
 function openEditSvc(d) {
     document.getElementById('editSvc_id').value = d.id || '';
@@ -263,7 +287,7 @@ function openEditSvc(d) {
     document.getElementById('editSvc_unit_price').value = d.unit_price ?? '';
     document.getElementById('editSvc_unit').value = d.unit || '';
     document.getElementById('editSvc_description').value = d.description || '';
-    document.getElementById('editServiceModal').classList.remove('hidden');
+    openSvcModal('editServiceModal');
 }
 </script>
 <?php

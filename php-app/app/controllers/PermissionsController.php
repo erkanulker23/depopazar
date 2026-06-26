@@ -34,8 +34,65 @@ class PermissionsController
         $staff = $this->fetchStaffUsers();
         $companies = $this->fetchCompanies();
 
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
+        $canEditSelectedRole = in_array($selectedRole, RolePermissions::EDITABLE_ROLES, true);
+        $hasCustomOverrides = RolePermissions::hasCustomOverrides($selectedRole);
+
         $pageTitle = 'Kullanıcı Yetkileri';
         require __DIR__ . '/../../views/permissions/index.php';
+    }
+
+    public function update(): void
+    {
+        Auth::requireRoles(['super_admin']);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /yetkiler');
+            exit;
+        }
+        $role = trim($_POST['role'] ?? '');
+        if (!in_array($role, RolePermissions::EDITABLE_ROLES, true)) {
+            Auth::setSession('flash_error', 'Bu rol düzenlenemez.');
+            header('Location: /yetkiler');
+            exit;
+        }
+
+        $actions = ['nav', 'view', 'create', 'edit', 'delete', 'export', 'print'];
+        $rolePerms = [];
+        $posted = $_POST['perm'] ?? [];
+        foreach (RolePermissions::modules() as $module) {
+            $moduleId = $module['id'];
+            $rolePerms[$moduleId] = [];
+            foreach ($actions as $action) {
+                $rolePerms[$moduleId][$action] = !empty($posted[$moduleId][$action]);
+            }
+        }
+
+        $overrides = RolePermissions::loadOverrides();
+        $overrides[$role] = $rolePerms;
+        RolePermissions::saveOverrides($overrides);
+
+        Auth::setSession('flash_success', (RolePermissions::roleLabels()[$role] ?? $role) . ' rolü için yetkiler kaydedildi.');
+        header('Location: /yetkiler?role=' . urlencode($role) . '#rol-matrisi');
+        exit;
+    }
+
+    public function resetRole(): void
+    {
+        Auth::requireRoles(['super_admin']);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /yetkiler');
+            exit;
+        }
+        $role = trim($_POST['role'] ?? '');
+        if (!in_array($role, RolePermissions::EDITABLE_ROLES, true)) {
+            Auth::setSession('flash_error', 'Bu rol sıfırlanamaz.');
+            header('Location: /yetkiler');
+            exit;
+        }
+        RolePermissions::resetRoleOverrides($role);
+        Auth::setSession('flash_success', (RolePermissions::roleLabels()[$role] ?? $role) . ' rolü varsayılan yetkilere döndürüldü.');
+        header('Location: /yetkiler?role=' . urlencode($role) . '#rol-matrisi');
+        exit;
     }
 
     private function fetchStaffUsers(): array

@@ -319,6 +319,10 @@ class Customer
             );
             $stmt->execute($paramsNew);
         } catch (PDOException $e) {
+            $existing = self::findOne($pdo, $id);
+            if ($existing) {
+                return $existing;
+            }
             if (strpos($e->getMessage(), 'phone_2') === false && strpos($e->getMessage(), 'external_id') === false) {
                 throw $e;
             }

@@ -102,9 +102,7 @@ class VehiclesController
             }
         }
 
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $pageTitle = 'Araçlar';
         require __DIR__ . '/../../views/vehicles/index.php';
     }
@@ -115,26 +113,26 @@ class VehiclesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Araç eklemek için şirket seçili olmalı.';
+            Auth::setSession('flash_error', 'Araç eklemek için şirket seçili olmalı.');
             http_response_code(303);
             header('Location: /araclar');
             exit;
         }
         if (!$this->vehiclesTableExists()) {
-            $_SESSION['flash_error'] = 'Araçlar tablosu bulunamadı. Deploy sırasında migration\'lar otomatik çalışır. Sorun devam ederse yöneticinize başvurun.';
+            Auth::setSession('flash_error', 'Araçlar tablosu bulunamadı. Deploy sırasında migration\'lar otomatik çalışır. Sorun devam ederse yöneticinize başvurun.');
             http_response_code(303);
             header('Location: /araclar');
             exit;
         }
         $plate = Vehicle::normalizePlate($_POST['plate'] ?? '');
         if ($plate === '') {
-            $_SESSION['flash_error'] = 'Plaka girin.';
+            Auth::setSession('flash_error', 'Plaka girin.');
             http_response_code(303);
             header('Location: /araclar');
             exit;
         }
         if (Vehicle::existsByCompanyAndPlate($this->pdo, $companyId, $plate)) {
-            $_SESSION['flash_error'] = sprintf('Bu plaka (%s) zaten kayıtlı. Farklı bir plaka girin veya listeden mevcut aracı düzenleyin.', $plate);
+            Auth::setSession('flash_error', sprintf('Bu plaka (%s) zaten kayıtlı. Farklı bir plaka girin veya listeden mevcut aracı düzenleyin.', $plate));
             http_response_code(303);
             header('Location: /araclar');
             exit;
@@ -151,14 +149,14 @@ class VehiclesController
             ]);
         } catch (Throwable $e) {
             $this->logError('VehiclesController::create', $e);
-            $_SESSION['flash_error'] = $this->friendlyVehicleError($e, $plate, 'ekleme');
+            Auth::setSession('flash_error', $this->friendlyVehicleError($e, $plate, 'ekleme'));
             http_response_code(303);
             header('Location: /araclar');
             exit;
         }
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'vehicle', 'Araç eklendi', $plate . ' plakalı araç eklendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Araç eklendi.';
+        Auth::setSession('flash_success', 'Araç eklendi.');
         http_response_code(303);
         header('Location: /araclar');
         exit;
@@ -172,14 +170,14 @@ class VehiclesController
         $id = trim($_POST['id'] ?? '');
         $redirectId = trim($_POST['redirect_id'] ?? '');
         if ($id === '') {
-            $_SESSION['flash_error'] = 'Araç bulunamadı.';
+            Auth::setSession('flash_error', 'Araç bulunamadı.');
             http_response_code(303);
             header('Location: ' . ($redirectId !== '' ? '/araclar/' . $redirectId : '/araclar'));
             exit;
         }
         $plate = Vehicle::normalizePlate($_POST['plate'] ?? '');
         if ($plate === '') {
-            $_SESSION['flash_error'] = 'Plaka girin.';
+            Auth::setSession('flash_error', 'Plaka girin.');
             http_response_code(303);
             header('Location: ' . ($redirectId !== '' ? '/araclar/' . $redirectId : '/araclar'));
             exit;
@@ -196,13 +194,13 @@ class VehiclesController
             if ($ok) {
                 $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
                 Notification::createForCompany($this->pdo, $companyId, 'vehicle', 'Araç güncellendi', $plate . ' plakalı araç güncellendi.', ['actor_name' => $actorName]);
-                $_SESSION['flash_success'] = 'Araç güncellendi.';
+                Auth::setSession('flash_success', 'Araç güncellendi.');
             } else {
-                $_SESSION['flash_error'] = 'Araç güncellenemedi veya yetkiniz yok.';
+                Auth::setSession('flash_error', 'Araç güncellenemedi veya yetkiniz yok.');
             }
         } catch (Throwable $e) {
             $this->logError('VehiclesController::update', $e);
-            $_SESSION['flash_error'] = $this->friendlyVehicleError($e, $plate, 'güncelleme');
+            Auth::setSession('flash_error', $this->friendlyVehicleError($e, $plate, 'güncelleme'));
         }
         http_response_code(303);
         if ($redirectId !== '') {
@@ -220,7 +218,7 @@ class VehiclesController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $id = trim($_POST['id'] ?? '');
         if ($id === '') {
-            $_SESSION['flash_error'] = 'Araç bulunamadı.';
+            Auth::setSession('flash_error', 'Araç bulunamadı.');
             http_response_code(303);
             header('Location: /araclar');
             exit;
@@ -229,9 +227,9 @@ class VehiclesController
         if ($ok) {
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'vehicle', 'Araç silindi', 'Araç kaydı silindi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'Araç kaydı silindi.';
+            Auth::setSession('flash_success', 'Araç kaydı silindi.');
         } else {
-            $_SESSION['flash_error'] = 'Araç silinemedi veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Araç silinemedi veya yetkiniz yok.');
         }
         http_response_code(303);
         header('Location: /araclar');
@@ -250,7 +248,7 @@ class VehiclesController
         }
         $vehicle = Vehicle::findById($this->pdo, $id, $companyId);
         if (!$vehicle) {
-            $_SESSION['flash_error'] = 'Araç bulunamadı.';
+            Auth::setSession('flash_error', 'Araç bulunamadı.');
             header('Location: /araclar');
             exit;
         }
@@ -292,9 +290,7 @@ class VehiclesController
                 $accidentDocs[$a['id']] = VehicleAccidentDocument::findByAccidentId($this->pdo, $a['id']);
             }
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $pageTitle = 'Araç: ' . $vehicle['plate'];
         require __DIR__ . '/../../views/vehicles/show.php';
     }
@@ -306,13 +302,13 @@ class VehiclesController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $vehicleId = trim($_POST['vehicle_id'] ?? '');
         if ($vehicleId === '') {
-            $_SESSION['flash_error'] = 'Araç bulunamadı.';
+            Auth::setSession('flash_error', 'Araç bulunamadı.');
             header('Location: /araclar');
             exit;
         }
         $vehicle = Vehicle::findById($this->pdo, $vehicleId, $companyId);
         if (!$vehicle) {
-            $_SESSION['flash_error'] = 'Araç bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Araç bulunamadı veya yetkiniz yok.');
             header('Location: /araclar');
             exit;
         }
@@ -337,10 +333,10 @@ class VehiclesController
                     ]);
                 }
             }
-            $_SESSION['flash_success'] = 'Trafik sigortası eklendi.';
+            Auth::setSession('flash_success', 'Trafik sigortası eklendi.');
         } catch (Throwable $e) {
             $this->logError('VehiclesController::addTrafficInsurance', $e);
-            $_SESSION['flash_error'] = 'Eklenemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Eklenemedi: ' . $e->getMessage());
         }
         header('Location: /araclar/' . $vehicleId);
         exit;
@@ -356,7 +352,7 @@ class VehiclesController
                 'end_date' => $_POST['end_date'] ?? null,
                 'notes' => $_POST['notes'] ?? null,
             ], $vehicleId);
-            $_SESSION[$ok ? 'flash_success' : 'flash_error'] = $ok ? 'Trafik sigortası güncellendi.' : 'Güncellenemedi.';
+            Auth::setSession($ok ? 'flash_success' : 'flash_error', $ok ? 'Trafik sigortası güncellendi.' : 'Güncellenemedi.');
         });
     }
 
@@ -374,13 +370,13 @@ class VehiclesController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $vehicleId = trim($_POST['vehicle_id'] ?? '');
         if ($vehicleId === '') {
-            $_SESSION['flash_error'] = 'Araç bulunamadı.';
+            Auth::setSession('flash_error', 'Araç bulunamadı.');
             header('Location: /araclar');
             exit;
         }
         $vehicle = Vehicle::findById($this->pdo, $vehicleId, $companyId);
         if (!$vehicle) {
-            $_SESSION['flash_error'] = 'Araç bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Araç bulunamadı veya yetkiniz yok.');
             header('Location: /araclar');
             exit;
         }
@@ -406,10 +402,10 @@ class VehiclesController
                     ]);
                 }
             }
-            $_SESSION['flash_success'] = 'Kasko eklendi.';
+            Auth::setSession('flash_success', 'Kasko eklendi.');
         } catch (Throwable $e) {
             $this->logError('VehiclesController::addKasko', $e);
-            $_SESSION['flash_error'] = 'Eklenemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Eklenemedi: ' . $e->getMessage());
         }
         header('Location: /araclar/' . $vehicleId);
         exit;
@@ -426,7 +422,7 @@ class VehiclesController
                 'premium_amount' => $_POST['premium_amount'] ?? null,
                 'notes' => $_POST['notes'] ?? null,
             ], $vehicleId);
-            $_SESSION[$ok ? 'flash_success' : 'flash_error'] = $ok ? 'Kasko güncellendi.' : 'Güncellenemedi.';
+            Auth::setSession($ok ? 'flash_success' : 'flash_error', $ok ? 'Kasko güncellendi.' : 'Güncellenemedi.');
         });
     }
 
@@ -461,7 +457,7 @@ class VehiclesController
                 'repair_cost' => $_POST['repair_cost'] ?? null,
                 'notes' => $_POST['notes'] ?? null,
             ], $vehicleId);
-            $_SESSION[$ok ? 'flash_success' : 'flash_error'] = $ok ? 'Kaza kaydı güncellendi.' : 'Güncellenemedi.';
+            Auth::setSession($ok ? 'flash_success' : 'flash_error', $ok ? 'Kaza kaydı güncellendi.' : 'Güncellenemedi.');
         });
     }
 
@@ -477,12 +473,12 @@ class VehiclesController
         $this->uploadVehicleDoc('traffic_insurance', function (string $vehicleId, array $vehicle) {
             $tid = trim($_POST['traffic_insurance_id'] ?? '');
             if ($tid === '') {
-                $_SESSION['flash_error'] = 'Trafik sigortası seçilmedi.';
+                Auth::setSession('flash_error', 'Trafik sigortası seçilmedi.');
                 return null;
             }
             $ti = VehicleTrafficInsurance::findById($this->pdo, $tid, $vehicleId);
             if (!$ti) {
-                $_SESSION['flash_error'] = 'Trafik sigortası bulunamadı.';
+                Auth::setSession('flash_error', 'Trafik sigortası bulunamadı.');
                 return null;
             }
             $info = $this->saveUploadedVehicleDoc('traffic_insurance', $tid);
@@ -494,7 +490,7 @@ class VehiclesController
                 'file_size' => $info['file_size'],
                 'mime_type' => $info['mime_type'],
             ]);
-            $_SESSION['flash_success'] = 'Belge eklendi.';
+            Auth::setSession('flash_success', 'Belge eklendi.');
             return $vehicleId;
         });
     }
@@ -512,12 +508,12 @@ class VehiclesController
         $this->uploadVehicleDoc('kasko', function (string $vehicleId, array $vehicle) {
             $kid = trim($_POST['kasko_id'] ?? '');
             if ($kid === '') {
-                $_SESSION['flash_error'] = 'Kasko seçilmedi.';
+                Auth::setSession('flash_error', 'Kasko seçilmedi.');
                 return null;
             }
             $k = VehicleKasko::findById($this->pdo, $kid, $vehicleId);
             if (!$k) {
-                $_SESSION['flash_error'] = 'Kasko bulunamadı.';
+                Auth::setSession('flash_error', 'Kasko bulunamadı.');
                 return null;
             }
             $info = $this->saveUploadedVehicleDoc('kasko', $kid);
@@ -529,7 +525,7 @@ class VehiclesController
                 'file_size' => $info['file_size'],
                 'mime_type' => $info['mime_type'],
             ]);
-            $_SESSION['flash_success'] = 'Belge eklendi.';
+            Auth::setSession('flash_success', 'Belge eklendi.');
             return $vehicleId;
         });
     }
@@ -547,12 +543,12 @@ class VehiclesController
         $this->uploadVehicleDoc('accident', function (string $vehicleId, array $vehicle) {
             $aid = trim($_POST['accident_id'] ?? '');
             if ($aid === '') {
-                $_SESSION['flash_error'] = 'Kaza kaydı seçilmedi.';
+                Auth::setSession('flash_error', 'Kaza kaydı seçilmedi.');
                 return null;
             }
             $a = VehicleAccident::findById($this->pdo, $aid, $vehicleId);
             if (!$a) {
-                $_SESSION['flash_error'] = 'Kaza kaydı bulunamadı.';
+                Auth::setSession('flash_error', 'Kaza kaydı bulunamadı.');
                 return null;
             }
             $kind = in_array($_POST['document_kind'] ?? '', ['ruhsat', 'kimlik', 'kaza_foto', 'diger'], true) ? $_POST['document_kind'] : 'diger';
@@ -566,7 +562,7 @@ class VehiclesController
                 'file_size' => $info['file_size'],
                 'mime_type' => $info['mime_type'],
             ]);
-            $_SESSION['flash_success'] = 'Belge eklendi.';
+            Auth::setSession('flash_success', 'Belge eklendi.');
             return $vehicleId;
         });
     }
@@ -586,13 +582,13 @@ class VehiclesController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $vehicleId = trim($_POST['vehicle_id'] ?? '');
         if ($vehicleId === '') {
-            $_SESSION['flash_error'] = 'Araç bulunamadı.';
+            Auth::setSession('flash_error', 'Araç bulunamadı.');
             header('Location: /araclar');
             exit;
         }
         $vehicle = Vehicle::findById($this->pdo, $vehicleId, $companyId);
         if (!$vehicle) {
-            $_SESSION['flash_error'] = 'Araç bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Araç bulunamadı veya yetkiniz yok.');
             header('Location: /araclar');
             exit;
         }
@@ -605,13 +601,13 @@ class VehiclesController
     {
         $file = $_FILES['document'] ?? null;
         if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
-            $_SESSION['flash_error'] = 'Lütfen bir dosya seçin (PDF veya resim).';
+            Auth::setSession('flash_error', 'Lütfen bir dosya seçin (PDF veya resim).');
             return null;
         }
         $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'];
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, $allowedExt, true)) {
-            $_SESSION['flash_error'] = 'İzin verilen formatlar: ' . implode(', ', $allowedExt);
+            Auth::setSession('flash_error', 'İzin verilen formatlar: ' . implode(', ', $allowedExt));
             return null;
         }
         $baseDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/vehicle_docs' : __DIR__ . '/../../public/uploads/vehicle_docs';
@@ -622,7 +618,7 @@ class VehiclesController
         $filename = $parentId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
         $path = $dir . '/' . $filename;
         if (!move_uploaded_file($file['tmp_name'], $path)) {
-            $_SESSION['flash_error'] = 'Dosya kaydedilemedi.';
+            Auth::setSession('flash_error', 'Dosya kaydedilemedi.');
             return null;
         }
         $relativePath = '/uploads/vehicle_docs/' . preg_replace('/[^a-z_]/', '', $subdir) . '/' . $filename;
@@ -640,7 +636,7 @@ class VehiclesController
         $docId = trim($_POST['id'] ?? '');
         $vehicleId = trim($_POST['vehicle_id'] ?? '');
         if ($docId === '' || $vehicleId === '') {
-            $_SESSION['flash_error'] = 'Eksik parametre.';
+            Auth::setSession('flash_error', 'Eksik parametre.');
             header('Location: /araclar' . ($vehicleId ? '/' . $vehicleId : ''));
             exit;
         }
@@ -648,12 +644,12 @@ class VehiclesController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $vehicle = Vehicle::findById($this->pdo, $vehicleId, $companyId);
         if (!$vehicle) {
-            $_SESSION['flash_error'] = 'Yetkisiz.';
+            Auth::setSession('flash_error', 'Yetkisiz.');
             header('Location: /araclar');
             exit;
         }
         $ok = $doDelete($docId);
-        $_SESSION[$ok ? 'flash_success' : 'flash_error'] = $ok ? 'Belge silindi.' : 'Belge silinemedi.';
+        Auth::setSession($ok ? 'flash_success' : 'flash_error', $ok ? 'Belge silindi.' : 'Belge silinemedi.');
         header('Location: /araclar/' . $vehicleId);
         exit;
     }
@@ -666,28 +662,28 @@ class VehiclesController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $vehicleId = trim($_POST['vehicle_id'] ?? '');
         if ($vehicleId === '') {
-            $_SESSION['flash_error'] = 'Araç bulunamadı.';
+            Auth::setSession('flash_error', 'Araç bulunamadı.');
             header('Location: /araclar');
             exit;
         }
         $vehicle = Vehicle::findById($this->pdo, $vehicleId, $companyId);
         if (!$vehicle) {
-            $_SESSION['flash_error'] = 'Araç bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Araç bulunamadı veya yetkiniz yok.');
             header('Location: /araclar');
             exit;
         }
         if ($onDelete !== null) {
             $ok = $onDelete($vehicleId);
-            $_SESSION[$ok ? 'flash_success' : 'flash_error'] = $ok ? $successMessage : 'Silinemedi.';
+            Auth::setSession($ok ? 'flash_success' : 'flash_error', $ok ? $successMessage : 'Silinemedi.');
         } elseif ($onSuccess !== null) {
             try {
                 $onSuccess($vehicleId);
                 if ($successMessage !== null) {
-                    $_SESSION['flash_success'] = $successMessage;
+                    Auth::setSession('flash_success', $successMessage);
                 }
             } catch (Throwable $e) {
                 $this->logError('VehiclesController redirectVehicleId', $e);
-                $_SESSION['flash_error'] = 'İşlem yapılamadı: ' . $e->getMessage();
+                Auth::setSession('flash_error', 'İşlem yapılamadı: ' . $e->getMessage());
             }
         }
         header('Location: /araclar/' . $vehicleId);

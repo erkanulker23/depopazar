@@ -29,8 +29,7 @@ class SettingsController
                 ? 'Veritabanında aktif şirket yok. Lütfen sunucuda seed çalıştırın (php php-app/seed.php) veya önce bir şirket ekleyin.'
                 : 'Bu kullanıcının bir şirkete atanması gerekiyor. Kullanıcılar sayfasından kullanıcıyı düzenleyip şirket atayın.';
             $activeTab = $_GET['tab'] ?? 'firma';
-            $flashSuccess = $_SESSION['flash_success'] ?? null;
-            unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+            ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
             $pageTitle = 'Ayarlar';
             $noCompany = true;
             $company = [];
@@ -55,8 +54,7 @@ class SettingsController
         if (!$company) {
             $flashError = 'Şirket kaydı bulunamadı. Sunucuda seed çalıştırın (php php-app/seed.php) veya veritabanında companies tablosunu kontrol edin.';
             $activeTab = $_GET['tab'] ?? 'firma';
-            $flashSuccess = $_SESSION['flash_success'] ?? null;
-            unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+            ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
             $pageTitle = 'Ayarlar';
             $noCompany = true;
             $company = [];
@@ -77,9 +75,7 @@ class SettingsController
         $smsSettings = $this->getSmsSettings($companyId);
         $emailLogEntries = MailService::getLogEntries(50);
         $activeTab = $_GET['tab'] ?? 'firma';
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $pageTitle = 'Ayarlar';
         require __DIR__ . '/../../views/settings/index.php';
     }
@@ -94,7 +90,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -134,12 +130,12 @@ class SettingsController
         }
         Company::update($this->pdo, $companyId, $data);
         $company = Company::findOne($this->pdo, $companyId);
-        $_SESSION['company_project_name'] = trim($company['project_name'] ?? '') !== '' ? $company['project_name'] : null;
-        $_SESSION['company_name'] = trim($company['name'] ?? '') !== '' ? $company['name'] : null;
-        $_SESSION['company_logo_url'] = $company['logo_url'] ?? null;
+        Auth::setSession('company_project_name', trim($company['project_name'] ?? '') !== '' ? $company['project_name'] : null);
+        Auth::setSession('company_name', trim($company['name'] ?? '') !== '' ? $company['name'] : null);
+        Auth::setSession('company_logo_url', $company['logo_url'] ?? null);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'Firma bilgileri güncellendi', 'Firma bilgileri ' . ($actorName ?: 'sistem') . ' tarafından güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Firma bilgileri güncellendi.';
+        Auth::setSession('flash_success', 'Firma bilgileri güncellendi.');
         header('Location: /ayarlar?tab=firma');
         exit;
     }
@@ -154,7 +150,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -167,8 +163,8 @@ class SettingsController
             }
             Company::update($this->pdo, $companyId, ['logo_url' => null]);
             $company = Company::findOne($this->pdo, $companyId);
-            $_SESSION['company_logo_url'] = $company['logo_url'] ?? null;
-            $_SESSION['flash_success'] = 'Firma logosu kaldırıldı.';
+            Auth::setSession('company_logo_url', $company['logo_url'] ?? null);
+            Auth::setSession('flash_success', 'Firma logosu kaldırıldı.');
         }
         header('Location: /ayarlar?tab=firma');
         exit;
@@ -184,7 +180,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -192,7 +188,7 @@ class SettingsController
         $accountHolder = trim($_POST['account_holder_name'] ?? '');
         $accountNumber = trim($_POST['account_number'] ?? '');
         if ($bankName === '' || $accountHolder === '' || $accountNumber === '') {
-            $_SESSION['flash_error'] = 'Banka adı, hesap sahibi ve hesap numarası zorunludur.';
+            Auth::setSession('flash_error', 'Banka adı, hesap sahibi ve hesap numarası zorunludur.');
             header('Location: /ayarlar?tab=banka');
             exit;
         }
@@ -208,7 +204,7 @@ class SettingsController
         ]);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı eklendi', $bankName . ' banka hesabı ' . ($actorName ?: 'sistem') . ' tarafından eklendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Banka hesabı eklendi.';
+        Auth::setSession('flash_success', 'Banka hesabı eklendi.');
         header('Location: /ayarlar?tab=banka');
         exit;
     }
@@ -223,7 +219,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -244,7 +240,7 @@ class SettingsController
         BankAccount::update($this->pdo, $id, $data, $companyId);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı güncellendi', ($data['bank_name'] ?? '') . ' banka hesabı güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Banka hesabı güncellendi.';
+        Auth::setSession('flash_success', 'Banka hesabı güncellendi.');
         header('Location: /ayarlar?tab=banka');
         exit;
     }
@@ -259,7 +255,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -268,7 +264,7 @@ class SettingsController
             BankAccount::remove($this->pdo, $id, $companyId);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı silindi', 'Banka hesabı silindi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'Banka hesabı silindi.';
+            Auth::setSession('flash_success', 'Banka hesabı silindi.');
         }
         header('Location: /ayarlar?tab=banka');
         exit;
@@ -282,21 +278,21 @@ class SettingsController
             exit;
         }
         if (!$this->checkExpensesMigration()) {
-            $_SESSION['flash_error'] = 'Kredi kartları özelliği şu an kullanılamıyor.';
+            Auth::setSession('flash_error', 'Kredi kartları özelliği şu an kullanılamıyor.');
             header('Location: /ayarlar?tab=kredi-karti');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
         $bankName = trim($_POST['bank_name'] ?? '');
         $cardHolder = trim($_POST['card_holder_name'] ?? '');
         if ($bankName === '' || $cardHolder === '') {
-            $_SESSION['flash_error'] = 'Banka adı ve kart sahibi zorunludur.';
+            Auth::setSession('flash_error', 'Banka adı ve kart sahibi zorunludur.');
             header('Location: /ayarlar?tab=kredi-karti');
             exit;
         }
@@ -310,7 +306,7 @@ class SettingsController
         ]);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'Kredi kartı eklendi', $bankName . ' kredi kartı eklendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Kredi kartı eklendi.';
+        Auth::setSession('flash_success', 'Kredi kartı eklendi.');
         header('Location: /ayarlar?tab=kredi-karti');
         exit;
     }
@@ -325,7 +321,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -344,7 +340,7 @@ class SettingsController
         CreditCard::update($this->pdo, $id, $data, $companyId);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'Kredi kartı güncellendi', 'Kredi kartı bilgileri güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Kredi kartı güncellendi.';
+        Auth::setSession('flash_success', 'Kredi kartı güncellendi.');
         header('Location: /ayarlar?tab=kredi-karti');
         exit;
     }
@@ -359,7 +355,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -368,7 +364,7 @@ class SettingsController
             CreditCard::remove($this->pdo, $id, $companyId);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'settings', 'Kredi kartı silindi', 'Kredi kartı silindi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'Kredi kartı silindi.';
+            Auth::setSession('flash_success', 'Kredi kartı silindi.');
         }
         header('Location: /ayarlar?tab=kredi-karti');
         exit;
@@ -384,7 +380,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -434,7 +430,7 @@ class SettingsController
         }
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'E-posta ayarları güncellendi', 'E-posta (SMTP) ayarları güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'E-posta ayarları güncellendi.';
+        Auth::setSession('flash_success', 'E-posta ayarları güncellendi.');
         header('Location: /ayarlar?tab=eposta');
         exit;
     }
@@ -449,7 +445,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -475,7 +471,7 @@ class SettingsController
         }
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'PayTR ayarları güncellendi', 'PayTR ayarları güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'PayTR ayarları güncellendi.';
+        Auth::setSession('flash_success', 'PayTR ayarları güncellendi.');
         header('Location: /ayarlar?tab=paytr');
         exit;
     }
@@ -490,7 +486,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -517,7 +513,7 @@ class SettingsController
         }
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'SMS ayarları güncellendi', 'SMS (Netgsm) ayarları güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'SMS (Netgsm) ayarları güncellendi.';
+        Auth::setSession('flash_success', 'SMS (Netgsm) ayarları güncellendi.');
         header('Location: /ayarlar?tab=sms');
         exit;
     }
@@ -532,13 +528,13 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /ayarlar?tab=sms');
             exit;
         }
         $phone = preg_replace('/\D/', '', trim($_POST['test_phone'] ?? ''));
         if (strlen($phone) < 10) {
-            $_SESSION['flash_error'] = 'Geçerli bir cep telefonu numarası girin (5xxxxxxxxx).';
+            Auth::setSession('flash_error', 'Geçerli bir cep telefonu numarası girin (5xxxxxxxxx).');
             header('Location: /ayarlar?tab=sms');
             exit;
         }
@@ -553,7 +549,7 @@ class SettingsController
         }
         $sms = $this->getSmsSettings($companyId);
         if (!$sms || empty($sms['username']) || empty($sms['sender_id'])) {
-            $_SESSION['flash_error'] = 'SMS ayarları eksik. Kullanıcı kodu ve gönderici adını kaydedin.';
+            Auth::setSession('flash_error', 'SMS ayarları eksik. Kullanıcı kodu ve gönderici adını kaydedin.');
             header('Location: /ayarlar?tab=sms');
             exit;
         }
@@ -561,9 +557,9 @@ class SettingsController
         $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
         $result = SmsService::send($this->pdo, $companyId, $phone, $appName . ' SMS testi. Bu mesaj ayarlarınızı doğrulamak için gönderilmiştir.');
         if ($result['success']) {
-            $_SESSION['flash_success'] = 'Test SMS gönderildi: ' . $phone;
+            Auth::setSession('flash_success', 'Test SMS gönderildi: ' . $phone);
         } else {
-            $_SESSION['flash_error'] = 'SMS gönderilemedi: ' . ($result['error'] ?? 'Bilinmeyen hata');
+            Auth::setSession('flash_error', 'SMS gönderilemedi: ' . ($result['error'] ?? 'Bilinmeyen hata'));
         }
         header('Location: /ayarlar?tab=sms');
         exit;
@@ -590,24 +586,24 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /ayarlar?tab=eposta');
             exit;
         }
         $to = trim($_POST['test_email'] ?? '');
         if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['flash_error'] = 'Geçerli bir e-posta adresi girin.';
+            Auth::setSession('flash_error', 'Geçerli bir e-posta adresi girin.');
             header('Location: /ayarlar?tab=eposta');
             exit;
         }
         $mail = $this->getMailSettings($companyId);
         if (!$mail || empty($mail['smtp_host'])) {
-            $_SESSION['flash_error'] = 'E-posta ayarları eksik. SMTP bilgilerini kaydedin.';
+            Auth::setSession('flash_error', 'E-posta ayarları eksik. SMTP bilgilerini kaydedin.');
             header('Location: /ayarlar?tab=eposta');
             exit;
         }
         if (empty($mail['smtp_password'])) {
-            $_SESSION['flash_error'] = 'Test e-postası için SMTP şifresi gerekli. Yukarıdaki formda şifreyi girip Kaydet\'e basın (güvenlik nedeniyle şifre sayfada gösterilmez).';
+            Auth::setSession('flash_error', 'Test e-postası için SMTP şifresi gerekli. Yukarıdaki formda şifreyi girip Kaydet\'e basın (güvenlik nedeniyle şifre sayfada gösterilmez).');
             header('Location: /ayarlar?tab=eposta');
             exit;
         }
@@ -623,9 +619,9 @@ class SettingsController
         );
         $result = MailService::sendSmtp($mail, $to, $subject, $bodyPlain, $bodyHtml);
         if ($result['success']) {
-            $_SESSION['flash_success'] = 'Test e-postası sunucuya gönderildi: ' . $to . '. Gelen kutusu ve spam klasörünü kontrol edin; gelmiyorsa aşağıdaki «Son e-posta gönderimleri» tablosunda durumu inceleyin.';
+            Auth::setSession('flash_success', 'Test e-postası sunucuya gönderildi: ' . $to . '. Gelen kutusu ve spam klasörünü kontrol edin; gelmiyorsa aşağıdaki «Son e-posta gönderimleri» tablosunda durumu inceleyin.');
         } else {
-            $_SESSION['flash_error'] = 'E-posta gönderilemedi: ' . ($result['error'] ?? 'SMTP sunucusu ve port ayarlarını kontrol edin.');
+            Auth::setSession('flash_error', 'E-posta gönderilemedi: ' . ($result['error'] ?? 'SMTP sunucusu ve port ayarlarını kontrol edin.'));
         }
         header('Location: /ayarlar?tab=eposta');
         exit;
@@ -641,7 +637,7 @@ class SettingsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /ayarlar?tab=sablonlar');
             exit;
         }
@@ -677,9 +673,9 @@ class SettingsController
             }
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'settings', 'E-posta şablonları güncellendi', 'E-posta şablonları kaydedildi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'E-posta şablonları kaydedildi.';
+            Auth::setSession('flash_success', 'E-posta şablonları kaydedildi.');
         } catch (Throwable $e) {
-            $_SESSION['flash_error'] = 'Kaydedilemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Kaydedilemedi: ' . $e->getMessage());
         }
         header('Location: /ayarlar?tab=sablonlar');
         exit;

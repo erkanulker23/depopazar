@@ -62,7 +62,7 @@ class NotificationsController
             echo json_encode(['ok' => true]);
             return;
         }
-        $_SESSION['flash_success'] = 'Tüm bildirimler okundu olarak işaretlendi.';
+        Auth::setSession('flash_success', 'Tüm bildirimler okundu olarak işaretlendi.');
         header('Location: /bildirimler');
         exit;
     }
@@ -84,7 +84,7 @@ class NotificationsController
             echo json_encode(['ok' => true]);
             return;
         }
-        $_SESSION['flash_success'] = 'Tüm bildirimler silindi.';
+        Auth::setSession('flash_success', 'Tüm bildirimler silindi.');
         header('Location: /bildirimler');
         exit;
     }

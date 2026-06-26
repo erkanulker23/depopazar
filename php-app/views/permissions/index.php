@@ -9,6 +9,11 @@ $roleSummary = $roleSummary ?? [];
 $staff = $staff ?? [];
 $companies = $companies ?? [];
 $roleLabels = RolePermissions::roleLabels();
+$canEditSelectedRole = $canEditSelectedRole ?? false;
+$hasCustomOverrides = $hasCustomOverrides ?? false;
+$flashSuccess = $flashSuccess ?? null;
+$flashError = $flashError ?? null;
+$permActions = ['nav', 'view', 'create', 'edit', 'delete', 'export', 'print'];
 
 function permIcon(bool $allowed, string $type = 'check'): string {
     if ($allowed) {
@@ -24,6 +29,15 @@ function permBadge(bool $allowed, string $label): string {
     return '';
 }
 
+function permCheckbox(string $role, string $moduleId, string $action, bool $checked): string {
+    $id = 'perm_' . htmlspecialchars($moduleId . '_' . $action, ENT_QUOTES);
+    $checkedAttr = $checked ? ' checked' : '';
+    return '<label class="inline-flex items-center justify-center cursor-pointer" for="' . $id . '">'
+        . '<input type="checkbox" id="' . $id . '" name="perm[' . htmlspecialchars($moduleId, ENT_QUOTES) . '][' . htmlspecialchars($action, ENT_QUOTES) . ']" value="1"' . $checkedAttr
+        . ' class="w-5 h-5 rounded border-gray-300 dark:border-gray-500 text-emerald-600 focus:ring-emerald-500 dark:bg-gray-700">'
+        . '</label>';
+}
+
 ob_start();
 ?>
 <div class="mb-6">
@@ -32,9 +46,16 @@ ob_start();
 </div>
 
 <div class="mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-sm text-blue-900 dark:text-blue-200">
-    <p class="mb-2"><strong>Süper Admin</strong> olarak hangi rolün hangi sayfada ne yapabildiğini buradan inceleyebilirsiniz.</p>
-    <p>Kullanıcılara rol atamak için <a href="/kullanicilar" class="font-semibold underline hover:no-underline">Kullanıcılar</a> sayfasını kullanın. Yetkiler role göre otomatik uygulanır.</p>
+    <p class="mb-2"><strong>Süper Admin</strong> olarak her rolün hangi sayfada ne yapabileceğini buradan düzenleyebilirsiniz. Kutuları işaretleyip <strong>Kaydet</strong>’e basın.</p>
+    <p>Kullanıcılara rol atamak için <a href="/kullanicilar" class="font-semibold underline hover:no-underline">Kullanıcılar</a> sayfasını kullanın. Süper Admin rolü her zaman tam yetkilidir ve düzenlenemez.</p>
 </div>
+
+<?php if ($flashSuccess): ?>
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
+<?php endif; ?>
+<?php if ($flashError): ?>
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
+<?php endif; ?>
 
 <!-- Rol seçici -->
 <div class="mb-6">
@@ -65,11 +86,25 @@ ob_start();
 
 <!-- Seçili rol detay tablosu -->
 <div id="rol-matrisi" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-8">
-    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600">
+    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">
             <?= htmlspecialchars($roleLabels[$selectedRole] ?? $selectedRole) ?> — Sayfa ve işlem yetkileri
+            <?php if ($hasCustomOverrides): ?>
+                <span class="ml-2 text-xs font-normal px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">Özelleştirilmiş</span>
+            <?php endif; ?>
         </h2>
+        <?php if ($canEditSelectedRole): ?>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Kutuları işaretleyerek yetki verin veya kaldırın</p>
+        <?php else: ?>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Süper Admin — tam yetki (düzenlenemez)</p>
+        <?php endif; ?>
     </div>
+
+    <?php if ($canEditSelectedRole): ?>
+    <form method="post" action="/yetkiler/guncelle" class="perm-matrix-form">
+        <input type="hidden" name="role" value="<?= htmlspecialchars($selectedRole) ?>">
+    <?php endif; ?>
+
     <div class="table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
@@ -91,24 +126,40 @@ ob_start();
                     $a = $row['actions'];
                     $hasAny = ($a['view'] ?? false) || ($a['nav'] ?? false);
                 ?>
-                    <tr class="<?= $hasAny ? 'hover:bg-gray-50 dark:hover:bg-gray-700/50' : 'opacity-50 bg-gray-50/50 dark:bg-gray-900/20' ?>">
+                    <tr class="<?= $hasAny ? 'hover:bg-gray-50 dark:hover:bg-gray-700/50' : 'opacity-70' ?>">
                         <td class="px-4 py-3">
                             <div class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($m['label']) ?></div>
                             <div class="text-xs text-gray-500 dark:text-gray-400 font-mono"><?= htmlspecialchars($m['href']) ?></div>
                         </td>
-                        <td class="px-3 py-3 text-center"><?= permIcon($a['nav'] ?? false) ?></td>
-                        <td class="px-3 py-3 text-center"><?= permIcon($a['view'] ?? false) ?></td>
-                        <td class="px-3 py-3 text-center"><?= permIcon($a['create'] ?? false) ?></td>
-                        <td class="px-3 py-3 text-center"><?= permIcon($a['edit'] ?? false) ?></td>
-                        <td class="px-3 py-3 text-center"><?= permIcon($a['delete'] ?? false) ?></td>
-                        <td class="px-3 py-3 text-center"><?= permIcon($a['export'] ?? false) ?></td>
-                        <td class="px-3 py-3 text-center"><?= permIcon($a['print'] ?? false) ?></td>
+                        <?php foreach ($permActions as $action): ?>
+                        <td class="px-3 py-3 text-center">
+                            <?php if ($canEditSelectedRole): ?>
+                                <?= permCheckbox($selectedRole, $m['id'], $action, !empty($a[$action])) ?>
+                            <?php else: ?>
+                                <?= permIcon(!empty($a[$action])) ?>
+                            <?php endif; ?>
+                        </td>
+                        <?php endforeach; ?>
                         <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400"><?= $hasAny ? htmlspecialchars($m['special']) : '—' ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
     </div>
+
+    <?php if ($canEditSelectedRole): ?>
+        <div class="form-submit-bar px-4 py-4 border-t border-gray-100 dark:border-gray-600 flex flex-wrap items-center justify-end gap-2">
+            <?php if ($hasCustomOverrides): ?>
+            <button type="submit" formaction="/yetkiler/sifirla" formmethod="post" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm" onclick="return confirm('Bu rolün özelleştirilmiş yetkileri silinip varsayılana dönecek. Emin misiniz?');">
+                Varsayılana Dön
+            </button>
+            <?php endif; ?>
+            <button type="submit" class="btn-touch px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+                <i class="bi bi-check-lg mr-1"></i> Yetkileri Kaydet
+            </button>
+        </div>
+    </form>
+    <?php endif; ?>
 </div>
 
 <!-- Tüm roller karşılaştırma -->

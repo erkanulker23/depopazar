@@ -20,13 +20,11 @@ class WarehousesController
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehouses = Warehouse::findAll($this->pdo, null, $search);
         } else {
-            $_SESSION['flash_error'] = 'Kullanıcı bir şirkete bağlı değil.';
+            Auth::setSession('flash_error', 'Kullanıcı bir şirkete bağlı değil.');
             header('Location: /genel-bakis');
             exit;
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/warehouses/index.php';
     }
 
@@ -40,14 +38,14 @@ class WarehousesController
         }
         $warehouse = Warehouse::findOne($this->pdo, $id);
         if (!$warehouse) {
-            $_SESSION['flash_error'] = 'Depo bulunamadı.';
+            Auth::setSession('flash_error', 'Depo bulunamadı.');
             header('Location: /depolar');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($user['role'] !== 'super_admin' && $warehouse['company_id'] !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu depoya erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu depoya erişim yetkiniz yok.');
             header('Location: /depolar');
             exit;
         }
@@ -107,9 +105,7 @@ class WarehousesController
         } else {
             $warehouseCustomers = [];
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/warehouses/detail.php';
     }
 
@@ -123,12 +119,12 @@ class WarehousesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Kullanıcı bir şirkete bağlı değil. Depo eklemek için önce Ayarlar\'dan firma bilgilerini doldurun veya yöneticiye şirket ataması yaptırın.';
+            Auth::setSession('flash_error', 'Kullanıcı bir şirkete bağlı değil. Depo eklemek için önce Ayarlar\'dan firma bilgilerini doldurun veya yöneticiye şirket ataması yaptırın.');
             header('Location: /depolar');
             exit;
         }
         if (!Company::findOne($this->pdo, $companyId)) {
-            $_SESSION['flash_error'] = 'Şirket kaydı bulunamadı. Hesabınız eski bir şirkete bağlı olabilir; yönetici ile iletişime geçin veya çıkış yapıp tekrar giriş yapın.';
+            Auth::setSession('flash_error', 'Şirket kaydı bulunamadı. Hesabınız eski bir şirkete bağlı olabilir; yönetici ile iletişime geçin veya çıkış yapıp tekrar giriş yapın.');
             header('Location: /depolar');
             exit;
         }
@@ -137,7 +133,7 @@ class WarehousesController
         $city = trim($_POST['city'] ?? '');
         $district = trim($_POST['district'] ?? '');
         if ($name === '') {
-            $_SESSION['flash_error'] = 'Depo adı gerekli.';
+            Auth::setSession('flash_error', 'Depo adı gerekli.');
             header('Location: /depolar');
             exit;
         }
@@ -157,9 +153,9 @@ class WarehousesController
             Warehouse::create($this->pdo, $data);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'warehouse', 'Depo eklendi', $name . ' depo olarak eklendi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'Depo eklendi.';
+            Auth::setSession('flash_success', 'Depo eklendi.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Depo eklenemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Depo eklenemedi: ' . $e->getMessage());
         }
         header('Location: /depolar');
         exit;
@@ -174,13 +170,13 @@ class WarehousesController
         }
         $id = $_POST['id'] ?? '';
         if ($id === '') {
-            $_SESSION['flash_error'] = 'Depo bulunamadı.';
+            Auth::setSession('flash_error', 'Depo bulunamadı.');
             header('Location: /depolar');
             exit;
         }
         $warehouse = Warehouse::findOne($this->pdo, $id);
         if (!$warehouse) {
-            $_SESSION['flash_error'] = 'Depo bulunamadı.';
+            Auth::setSession('flash_error', 'Depo bulunamadı.');
             header('Location: /depolar');
             exit;
         }
@@ -188,7 +184,7 @@ class WarehousesController
         if ($user['role'] !== 'super_admin') {
             $companyId = Company::getCompanyIdForUser($this->pdo, $user);
             if (!$companyId || $warehouse['company_id'] !== $companyId) {
-                $_SESSION['flash_error'] = 'Bu depoya erişim yetkiniz yok.';
+                Auth::setSession('flash_error', 'Bu depoya erişim yetkiniz yok.');
                 header('Location: /depolar');
                 exit;
             }
@@ -207,7 +203,7 @@ class WarehousesController
         Warehouse::update($this->pdo, $id, $data);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo güncellendi', ($data['name'] ?? $warehouse['name']) . ' depo bilgileri güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Depo güncellendi.';
+        Auth::setSession('flash_success', 'Depo güncellendi.');
         header('Location: /depolar');
         exit;
     }
@@ -225,7 +221,7 @@ class WarehousesController
             if ($id !== '') $ids = [$id];
         }
         if (empty($ids)) {
-            $_SESSION['flash_error'] = 'Depo seçilmedi.';
+            Auth::setSession('flash_error', 'Depo seçilmedi.');
             header('Location: /depolar');
             exit;
         }
@@ -247,12 +243,12 @@ class WarehousesController
             $deleted++;
         }
         if (!empty($errors)) {
-            $_SESSION['flash_error'] = 'Bazı depolar silinemedi (aktif sözleşme var): ' . implode(', ', $errors);
+            Auth::setSession('flash_error', 'Bazı depolar silinemedi (aktif sözleşme var): ' . implode(', ', $errors));
         }
         if ($deleted > 0) {
-            $_SESSION['flash_success'] = $deleted === 1 ? 'Depo silindi.' : $deleted . ' depo silindi.';
+            Auth::setSession('flash_success', $deleted === 1 ? 'Depo silindi.' : $deleted . ' depo silindi.');
         } elseif (empty($errors)) {
-            $_SESSION['flash_error'] = 'Silinecek depo bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Silinecek depo bulunamadı veya yetkiniz yok.');
         }
         header('Location: /depolar');
         exit;
@@ -313,9 +309,7 @@ class WarehousesController
     public function importForm(): void
     {
         Auth::requireStaff();
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $currentPage = 'depolar';
         require __DIR__ . '/../../views/warehouses/import.php';
     }
@@ -331,19 +325,19 @@ class WarehousesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /depolar/excel-ice-aktar');
             exit;
         }
         $file = $_FILES['csv_file'] ?? null;
         if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
-            $_SESSION['flash_error'] = 'Lütfen bir CSV dosyası seçin.';
+            Auth::setSession('flash_error', 'Lütfen bir CSV dosyası seçin.');
             header('Location: /depolar/excel-ice-aktar');
             exit;
         }
         $handle = @fopen($file['tmp_name'], 'rb');
         if (!$handle) {
-            $_SESSION['flash_error'] = 'Dosya okunamadı.';
+            Auth::setSession('flash_error', 'Dosya okunamadı.');
             header('Location: /depolar/excel-ice-aktar');
             exit;
         }
@@ -394,8 +388,8 @@ class WarehousesController
             }
         }
         fclose($handle);
-        if ($added > 0) $_SESSION['flash_success'] = $added . ' depo eklendi.';
-        if (!empty($errors)) $_SESSION['flash_error'] = implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : '');
+        if ($added > 0) Auth::setSession('flash_success', $added . ' depo eklendi.');
+        if (!empty($errors)) Auth::setSession('flash_error', implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : ''));
         header('Location: /depolar/excel-ice-aktar');
         exit;
     }

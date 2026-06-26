@@ -512,3 +512,35 @@ if (!function_exists('renderPagination')) {
         return $html;
     }
 }
+
+/** Flash mesajlarını okur ve oturumdan siler */
+if (!function_exists('flash_consume')) {
+    /** @return array{success: ?string, error: ?string} */
+    function flash_consume(): array
+    {
+        return Auth::consumeFlash();
+    }
+}
+
+/** Aynı POST'un kısa sürede tekrarlanmasını engeller (çift tıklama / kuyruk) */
+if (!function_exists('request_dedupe_hit')) {
+    function request_dedupe_hit(string $action, string $key, int $ttlSeconds = 10): ?array
+    {
+        $last = Auth::getSession('dedupe_' . $action);
+        if (!is_array($last) || ($last['key'] ?? '') !== $key) {
+            return null;
+        }
+        if ((time() - (int) ($last['at'] ?? 0)) >= $ttlSeconds) {
+            return null;
+        }
+        return $last;
+    }
+}
+
+if (!function_exists('request_dedupe_store')) {
+    /** @param array<string, mixed> $extra */
+    function request_dedupe_store(string $action, string $key, array $extra = []): void
+    {
+        Auth::setSession('dedupe_' . $action, array_merge(['key' => $key, 'at' => time()], $extra));
+    }
+}

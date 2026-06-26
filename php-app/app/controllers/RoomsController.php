@@ -29,9 +29,7 @@ class RoomsController
             $warehouses = [];
             $rooms = [];
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         // Oda başına aktif sözleşme sayısı (silinmemiş müşteriye ait, detay sayfasıyla aynı mantık)
         $activeContractCountByRoom = [];
         if (!empty($rooms)) {
@@ -57,14 +55,14 @@ class RoomsController
         $id = $params['id'] ?? '';
         $room = Room::findOne($this->pdo, $id);
         if (!$room) {
-            $_SESSION['flash_error'] = 'Oda bulunamadı.';
+            Auth::setSession('flash_error', 'Oda bulunamadı.');
             header('Location: /odalar');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($user['role'] !== 'super_admin' && $room['company_id'] !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu odaya erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu odaya erişim yetkiniz yok.');
             header('Location: /odalar');
             exit;
         }
@@ -92,14 +90,14 @@ class RoomsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Kullanıcı bir şirkete bağlı değil.';
+            Auth::setSession('flash_error', 'Kullanıcı bir şirkete bağlı değil.');
             header('Location: /odalar');
             exit;
         }
         $warehouseId = trim($_POST['warehouse_id'] ?? '');
         $warehouse = $warehouseId ? Warehouse::findOne($this->pdo, $warehouseId) : null;
         if (!$warehouse || $warehouse['company_id'] !== $companyId) {
-            $_SESSION['flash_error'] = 'Geçerli bir depo seçin.';
+            Auth::setSession('flash_error', 'Geçerli bir depo seçin.');
             header('Location: /odalar');
             exit;
         }
@@ -107,7 +105,7 @@ class RoomsController
         $areaM2 = isset($_POST['area_m2']) ? (float) str_replace(',', '.', $_POST['area_m2']) : 0;
         $monthlyPrice = isset($_POST['monthly_price']) ? (float) str_replace(',', '.', $_POST['monthly_price']) : 0;
         if ($roomNumber === '' || $areaM2 <= 0 || $monthlyPrice < 0) {
-            $_SESSION['flash_error'] = 'Oda numarası, alan (m²) ve aylık fiyat gerekli.';
+            Auth::setSession('flash_error', 'Oda numarası, alan (m²) ve aylık fiyat gerekli.');
             header('Location: /odalar');
             exit;
         }
@@ -127,9 +125,9 @@ class RoomsController
             Room::create($this->pdo, $data);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'room', 'Oda eklendi', $roomNumber . ' numaralı oda ' . ($warehouse['name'] ?? '') . ' deposuna eklendi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'Oda eklendi.';
+            Auth::setSession('flash_success', 'Oda eklendi.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Oda eklenemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Oda eklenemedi: ' . $e->getMessage());
         }
         header('Location: /odalar');
         exit;
@@ -145,26 +143,26 @@ class RoomsController
         $id = $_POST['id'] ?? '';
         $room = $id ? Room::findOne($this->pdo, $id) : null;
         if (!$room) {
-            $_SESSION['flash_error'] = 'Oda bulunamadı.';
+            Auth::setSession('flash_error', 'Oda bulunamadı.');
             header('Location: /odalar');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($user['role'] !== 'super_admin' && $room['company_id'] !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu odaya erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu odaya erişim yetkiniz yok.');
             header('Location: /odalar');
             exit;
         }
         $warehouseId = trim($_POST['warehouse_id'] ?? '');
         if (!$warehouseId) {
-            $_SESSION['flash_error'] = 'Depo seçimi zorunludur.';
+            Auth::setSession('flash_error', 'Depo seçimi zorunludur.');
             header('Location: /odalar');
             exit;
         }
         $warehouse = Warehouse::findOne($this->pdo, $warehouseId);
         if (!$warehouse || ($user['role'] !== 'super_admin' && ($warehouse['company_id'] ?? '') !== $companyId)) {
-            $_SESSION['flash_error'] = 'Geçersiz depo.';
+            Auth::setSession('flash_error', 'Geçersiz depo.');
             header('Location: /odalar');
             exit;
         }
@@ -183,7 +181,7 @@ class RoomsController
         Room::update($this->pdo, $id, $data);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda güncellendi', ($data['room_number'] ?? $room['room_number']) . ' oda bilgileri güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Oda güncellendi.';
+        Auth::setSession('flash_success', 'Oda güncellendi.');
         header('Location: /odalar');
         exit;
     }
@@ -201,7 +199,7 @@ class RoomsController
             if ($id !== '') $ids = [$id];
         }
         if (empty($ids)) {
-            $_SESSION['flash_error'] = 'Oda seçilmedi.';
+            Auth::setSession('flash_error', 'Oda seçilmedi.');
             header('Location: /odalar');
             exit;
         }
@@ -223,12 +221,12 @@ class RoomsController
             $deleted++;
         }
         if (!empty($errors)) {
-            $_SESSION['flash_error'] = 'Bazı odalar silinemedi (aktif sözleşme var): ' . implode(', ', $errors);
+            Auth::setSession('flash_error', 'Bazı odalar silinemedi (aktif sözleşme var): ' . implode(', ', $errors));
         }
         if ($deleted > 0) {
-            $_SESSION['flash_success'] = $deleted === 1 ? 'Oda silindi.' : $deleted . ' oda silindi.';
+            Auth::setSession('flash_success', $deleted === 1 ? 'Oda silindi.' : $deleted . ' oda silindi.');
         } elseif (empty($errors)) {
-            $_SESSION['flash_error'] = 'Silinecek oda bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Silinecek oda bulunamadı veya yetkiniz yok.');
         }
         header('Location: /odalar');
         exit;
@@ -300,9 +298,7 @@ class RoomsController
     public function importForm(): void
     {
         Auth::requireStaff();
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $currentPage = 'odalar';
         require __DIR__ . '/../../views/rooms/import.php';
     }
@@ -318,19 +314,19 @@ class RoomsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /odalar/excel-ice-aktar');
             exit;
         }
         $file = $_FILES['csv_file'] ?? null;
         if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
-            $_SESSION['flash_error'] = 'Lütfen bir CSV dosyası seçin.';
+            Auth::setSession('flash_error', 'Lütfen bir CSV dosyası seçin.');
             header('Location: /odalar/excel-ice-aktar');
             exit;
         }
         $handle = @fopen($file['tmp_name'], 'rb');
         if (!$handle) {
-            $_SESSION['flash_error'] = 'Dosya okunamadı.';
+            Auth::setSession('flash_error', 'Dosya okunamadı.');
             header('Location: /odalar/excel-ice-aktar');
             exit;
         }
@@ -401,8 +397,8 @@ class RoomsController
             }
         }
         fclose($handle);
-        if ($added > 0) $_SESSION['flash_success'] = $added . ' oda eklendi.';
-        if (!empty($errors)) $_SESSION['flash_error'] = implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : '');
+        if ($added > 0) Auth::setSession('flash_success', $added . ' oda eklendi.');
+        if (!empty($errors)) Auth::setSession('flash_error', implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : ''));
         header('Location: /odalar/excel-ice-aktar');
         exit;
     }

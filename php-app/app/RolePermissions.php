@@ -7,6 +7,11 @@ class RolePermissions
 {
     public const STAFF_ROLES = ['super_admin', 'company_owner', 'company_staff', 'data_entry', 'accounting'];
 
+    /** Süper admin dışındaki roller düzenlenebilir */
+    public const EDITABLE_ROLES = ['company_owner', 'company_staff', 'data_entry', 'accounting'];
+
+    private static ?array $matrixCache = null;
+
     public static function roleLabels(): array
     {
         return [
@@ -67,14 +72,87 @@ class RolePermissions
     }
 
     /**
-     * Rol × modül × işlem matrisi.
+     * Rol × modül × işlem matrisi (varsayılan + kayıtlı özelleştirmeler).
      * @return array<string, array<string, array<string, bool>>>
      */
     public static function matrix(): array
     {
-        static $matrix = null;
-        if ($matrix !== null) {
-            return $matrix;
+        if (self::$matrixCache !== null) {
+            return self::$matrixCache;
+        }
+        self::$matrixCache = self::mergeMatrix(self::defaultMatrix(), self::loadOverrides());
+        return self::$matrixCache;
+    }
+
+    public static function clearCache(): void
+    {
+        self::$matrixCache = null;
+    }
+
+    /** @return array<string, array<string, array<string, bool>>> */
+    public static function loadOverrides(): array
+    {
+        $path = self::overridesPath();
+        if (!is_file($path)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        return is_array($data) ? $data : [];
+    }
+
+    /** @param array<string, array<string, array<string, bool>>> $overrides */
+    public static function saveOverrides(array $overrides): void
+    {
+        $path = self::overridesPath();
+        $dir = dirname($path);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        file_put_contents($path, json_encode($overrides, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        self::clearCache();
+    }
+
+    private static function overridesPath(): string
+    {
+        return (defined('APP_ROOT') ? APP_ROOT : dirname(__DIR__)) . '/storage/role_permissions.json';
+    }
+
+    /**
+     * @param array<string, array<string, array<string, bool>>> $defaults
+     * @param array<string, array<string, array<string, bool>>> $overrides
+     * @return array<string, array<string, array<string, bool>>>
+     */
+    private static function mergeMatrix(array $defaults, array $overrides): array
+    {
+        $out = $defaults;
+        foreach ($overrides as $role => $modules) {
+            if (!is_array($modules) || !in_array($role, self::STAFF_ROLES, true)) {
+                continue;
+            }
+            foreach ($modules as $moduleId => $perms) {
+                if (!is_array($perms)) {
+                    continue;
+                }
+                if (!isset($out[$role][$moduleId])) {
+                    $out[$role][$moduleId] = [];
+                }
+                foreach ($perms as $action => $allowed) {
+                    $out[$role][$moduleId][$action] = (bool) $allowed;
+                }
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Kod içi varsayılan matris.
+     * @return array<string, array<string, array<string, bool>>>
+     */
+    public static function defaultMatrix(): array
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
         }
 
         $fullCrudExport = ['view' => true, 'create' => true, 'edit' => true, 'delete' => true, 'export' => true, 'print' => true];
@@ -114,7 +192,7 @@ class RolePermissions
             return $base;
         };
 
-        $matrix = [
+        $cached = [
             'super_admin' => $build([
                 'kullanicilar' => $usersSuper,
                 'yetkiler' => $permissionsView,
@@ -138,7 +216,7 @@ class RolePermissions
             ]),
         ];
 
-        return $matrix;
+        return $cached;
     }
 
     /** Menüde görünür mü (href bazlı) */
@@ -147,34 +225,30 @@ class RolePermissions
         if ($role === 'customer') {
             return false;
         }
-        if (in_array($role, ['super_admin', 'company_owner'], true)) {
-            if ($role === 'company_owner' && self::hrefMatches($href, '/yetkiler')) {
-                return false;
-            }
+        if ($role === 'super_admin') {
             return true;
         }
+        if ($role === 'company_owner' && self::hrefMatches($href, '/yetkiler')) {
+            return false;
+        }
 
-        $path = self::normalizeHref($href);
-        $restricted = [
-            '/ayarlar' => ['super_admin', 'company_owner'],
-            '/kullanicilar' => ['super_admin', 'company_owner'],
-            '/yetkiler' => ['super_admin'],
-            '/raporlar' => ['super_admin', 'company_owner', 'accounting', 'company_staff'],
-            '/masraflar' => ['super_admin', 'company_owner', 'accounting'],
-        ];
-        foreach ($restricted as $prefix => $allowed) {
-            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
-                return in_array($role, $allowed, true);
+        $module = self::findModuleByHref($href);
+        if ($module !== null) {
+            $perms = self::matrix()[$role][$module['id']] ?? [];
+            if (array_key_exists('nav', $perms)) {
+                return !empty($perms['nav']);
             }
+            return !empty($perms['view']);
         }
-        if ($role === 'data_entry') {
-            return !in_array($path, ['/ayarlar', '/kullanicilar', '/yetkiler', '/masraflar'], true);
-        }
+
         return true;
     }
 
     public static function can(string $role, string $moduleId, string $action): bool
     {
+        if ($role === 'super_admin') {
+            return true;
+        }
         if ($action === 'nav') {
             $module = self::findModule($moduleId);
             if (!$module) {
@@ -184,6 +258,24 @@ class RolePermissions
         }
         $matrix = self::matrix();
         return !empty($matrix[$role][$moduleId][$action]);
+    }
+
+    public static function findModuleByHref(string $href): ?array
+    {
+        $path = self::normalizeHref($href);
+        $best = null;
+        $bestLen = 0;
+        foreach (self::modules() as $m) {
+            $mh = $m['href'];
+            if ($path === $mh || str_starts_with($path, $mh . '/')) {
+                $len = strlen($mh);
+                if ($len > $bestLen) {
+                    $best = $m;
+                    $bestLen = $len;
+                }
+            }
+        }
+        return $best;
     }
 
     public static function findModule(string $moduleId): ?array
@@ -205,11 +297,15 @@ class RolePermissions
         foreach (self::modules() as $module) {
             $id = $module['id'];
             $perms = $matrix[$id] ?? [];
-            $nav = self::canViewNav($role, $module['href']);
+            $nav = array_key_exists('nav', $perms)
+                ? !empty($perms['nav'])
+                : self::canViewNav($role, $module['href']);
             $row = ['module' => $module, 'nav' => $nav, 'actions' => []];
             foreach ($actions as $action) {
                 if ($action === 'nav') {
                     $row['actions']['nav'] = $nav;
+                } elseif ($role === 'super_admin') {
+                    $row['actions'][$action] = true;
                 } else {
                     $row['actions'][$action] = !empty($perms[$action]);
                 }
@@ -217,6 +313,21 @@ class RolePermissions
             $out[] = $row;
         }
         return $out;
+    }
+
+    /** Rol için kayıtlı özelleştirme var mı */
+    public static function hasCustomOverrides(string $role): bool
+    {
+        $overrides = self::loadOverrides();
+        return !empty($overrides[$role]);
+    }
+
+    /** Rol özelleştirmesini varsayılana döndür */
+    public static function resetRoleOverrides(string $role): void
+    {
+        $overrides = self::loadOverrides();
+        unset($overrides[$role]);
+        self::saveOverrides($overrides);
     }
 
     public static function countAllowedModules(string $role): int

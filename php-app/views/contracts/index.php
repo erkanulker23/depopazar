@@ -164,14 +164,20 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
         <div class="fixed inset-0 bg-black/50" onclick="closeNewSaleModal()"></div>
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
             <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-600">
-                <div class="flex items-center gap-2">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white"><i class="bi bi-plus-lg text-lg"></i></div>
-                    <div>
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0"><i class="bi bi-plus-lg text-lg"></i></div>
+                    <div class="min-w-0">
                         <h3 class="text-lg font-bold text-gray-900 dark:text-white">Yeni Satış Gir</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Sözleşme bilgilerini doldurun</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeNewSaleModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"><i class="bi bi-x-lg"></i></button>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold whitespace-nowrap" title="Kayıtlı müşteri sayısı">
+                        <i class="bi bi-people"></i>
+                        <?= number_format((int) ($customersTotal ?? 0), 0, ',', '.') ?> müşteri
+                    </span>
+                    <button type="button" onclick="closeNewSaleModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"><i class="bi bi-x-lg"></i></button>
+                </div>
             </div>
             <form method="post" action="/girisler/ekle" id="newSaleForm" enctype="multipart/form-data">
                 <div class="space-y-6">
@@ -180,15 +186,15 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
                         <div class="space-y-3">
                             <div>
                                 <div class="flex items-center justify-between gap-2 mb-1">
-                                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Müşteri <span class="text-red-500">*</span></label>
+                                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="newSale_customer_search">Müşteri <span class="text-red-500">*</span></label>
                                     <button type="button" onclick="event.preventDefault(); document.getElementById('quickAddCustomerModal').classList.remove('hidden'); document.getElementById('quickAddCustomerModal').setAttribute('aria-hidden','false');" class="text-xs font-medium text-emerald-600 hover:text-emerald-700">+ Hızlı müşteri ekle</button>
                                 </div>
-                                <select name="customer_id" id="newSale_customer_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                    <option value="">Müşteri seçin</option>
-                                    <?php foreach ($customers as $cu): ?>
-                                        <option value="<?= htmlspecialchars($cu['id']) ?>"><?= htmlspecialchars($cu['first_name'] . ' ' . $cu['last_name'] . ' - ' . ($cu['email'] ?? '')) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <input type="hidden" name="customer_id" id="newSale_customer_id" value="">
+                                <div class="relative">
+                                    <input type="search" id="newSale_customer_search" placeholder="Ad, e-posta veya telefon ile ara..." autocomplete="off" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <div id="newSale_customer_results" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-52 overflow-y-auto"></div>
+                                </div>
+                                <p id="newSale_customer_selected" class="hidden mt-2 text-sm text-emerald-700 dark:text-emerald-300 font-medium"></p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo <span class="text-red-500">*</span></label>
@@ -452,6 +458,7 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
     </div>
 </div>
 
+<script src="/customer-picker.js"></script>
 <script>
 function toggleTransportationBlock(show) {
     var block = document.getElementById('newSale_transportation_block');
@@ -667,9 +674,15 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
     }
 })();
 var newCustomerId = <?= json_encode($newCustomerId) ?>;
-if (newCustomerId && document.getElementById('newSale_customer_id')) {
-    var sel = document.getElementById('newSale_customer_id');
-    if (sel.querySelector('option[value="' + newCustomerId + '"]')) { sel.value = newCustomerId; }
+var newSaleCustomerPicker = null;
+if (typeof initCustomerPicker === 'function') {
+    newSaleCustomerPicker = initCustomerPicker({
+        hiddenInputId: 'newSale_customer_id',
+        searchInputId: 'newSale_customer_search',
+        resultsId: 'newSale_customer_results',
+        selectedLabelId: 'newSale_customer_selected',
+        initialCustomerId: newCustomerId || ''
+    });
 }
 <?php if ($openNewSale): ?>openNewSaleModal();<?php endif; ?>
 </script>

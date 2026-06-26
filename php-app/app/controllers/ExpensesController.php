@@ -14,7 +14,7 @@ class ExpensesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -31,9 +31,7 @@ class ExpensesController
         $expenses = $this->safeExpensesFindAll($companyId, $categoryId ?: null, $startDate, $endDate, $paymentSourceType ?: null, $paymentSourceId ?: null, $search);
         $totalAmount = array_sum(array_map(fn($e) => (float) ($e['amount'] ?? 0), $expenses));
         $expensesMigrationOk = $this->checkExpensesMigration();
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $pageTitle = 'Masraflar';
         require __DIR__ . '/../../views/expenses/index.php';
     }
@@ -46,14 +44,14 @@ class ExpensesController
             exit;
         }
         if (!$this->checkExpensesMigration()) {
-            $_SESSION['flash_error'] = 'Masraflar modülü şu an kullanılamıyor.';
+            Auth::setSession('flash_error', 'Masraflar modülü şu an kullanılamıyor.');
             header('Location: /masraflar');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -63,12 +61,12 @@ class ExpensesController
         $paymentSourceType = trim($_POST['payment_source_type'] ?? 'bank_account');
         $paymentSourceId = trim($_POST['payment_source_id'] ?? '');
         if (!$categoryId || $amount <= 0 || !$paymentSourceId) {
-            $_SESSION['flash_error'] = 'Kategori, tutar ve ödeme kaynağı zorunludur.';
+            Auth::setSession('flash_error', 'Kategori, tutar ve ödeme kaynağı zorunludur.');
             header('Location: /masraflar');
             exit;
         }
         if (!in_array($paymentSourceType, ['bank_account', 'credit_card'], true)) {
-            $_SESSION['flash_error'] = 'Geçersiz ödeme kaynağı.';
+            Auth::setSession('flash_error', 'Geçersiz ödeme kaynağı.');
             header('Location: /masraflar');
             exit;
         }
@@ -85,7 +83,7 @@ class ExpensesController
         ]);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf kaydedildi', number_format($amount, 2, ',', '.') . ' ₺ tutarında masraf ' . ($actorName ?: 'sistem') . ' tarafından kaydedildi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Masraf kaydedildi.';
+        Auth::setSession('flash_success', 'Masraf kaydedildi.');
         header('Location: /masraflar');
         exit;
     }
@@ -100,7 +98,7 @@ class ExpensesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -115,7 +113,7 @@ class ExpensesController
         $paymentSourceType = trim($_POST['payment_source_type'] ?? 'bank_account');
         $paymentSourceId = trim($_POST['payment_source_id'] ?? '');
         if (!$categoryId || $amount <= 0 || !$paymentSourceId) {
-            $_SESSION['flash_error'] = 'Kategori, tutar ve ödeme kaynağı zorunludur.';
+            Auth::setSession('flash_error', 'Kategori, tutar ve ödeme kaynağı zorunludur.');
             header('Location: /masraflar');
             exit;
         }
@@ -130,7 +128,7 @@ class ExpensesController
         ], $companyId);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf güncellendi', number_format($amount, 2, ',', '.') . ' ₺ tutarında masraf güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Masraf güncellendi.';
+        Auth::setSession('flash_success', 'Masraf güncellendi.');
         header('Location: /masraflar');
         exit;
     }
@@ -145,7 +143,7 @@ class ExpensesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
@@ -154,7 +152,7 @@ class ExpensesController
             Expense::remove($this->pdo, $id, $companyId);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf silindi', 'Masraf kaydı silindi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'Masraf silindi.';
+            Auth::setSession('flash_success', 'Masraf silindi.');
         }
         header('Location: /masraflar');
         exit;
@@ -170,13 +168,13 @@ class ExpensesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
         $name = trim($_POST['name'] ?? '');
         if ($name === '') {
-            $_SESSION['flash_error'] = 'Kategori adı zorunludur.';
+            Auth::setSession('flash_error', 'Kategori adı zorunludur.');
             header('Location: /masraflar');
             exit;
         }
@@ -188,7 +186,7 @@ class ExpensesController
         ]);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf kategorisi eklendi', $name . ' masraf kategorisi eklendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Masraf kategorisi eklendi.';
+        Auth::setSession('flash_success', 'Masraf kategorisi eklendi.');
         header('Location: /masraflar');
         exit;
     }
@@ -203,14 +201,14 @@ class ExpensesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
         $id = trim($_POST['id'] ?? '');
         $name = trim($_POST['name'] ?? '');
         if (!$id || $name === '') {
-            $_SESSION['flash_error'] = 'Kategori adı zorunludur.';
+            Auth::setSession('flash_error', 'Kategori adı zorunludur.');
             header('Location: /masraflar');
             exit;
         }
@@ -221,7 +219,7 @@ class ExpensesController
         ], $companyId);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf kategorisi güncellendi', $name . ' masraf kategorisi güncellendi.', ['actor_name' => $actorName]);
-        $_SESSION['flash_success'] = 'Masraf kategorisi güncellendi.';
+        Auth::setSession('flash_success', 'Masraf kategorisi güncellendi.');
         header('Location: /masraflar');
         exit;
     }
@@ -236,19 +234,19 @@ class ExpensesController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bilgisi bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bilgisi bulunamadı.');
             header('Location: /genel-bakis');
             exit;
         }
         $id = trim($_POST['id'] ?? '');
         if ($id) {
             if (ExpenseCategory::hasExpenses($this->pdo, $id)) {
-                $_SESSION['flash_error'] = 'Bu kategoriye bağlı masraflar var, silinemez.';
+                Auth::setSession('flash_error', 'Bu kategoriye bağlı masraflar var, silinemez.');
             } else {
                 ExpenseCategory::remove($this->pdo, $id, $companyId);
                 $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
                 Notification::createForCompany($this->pdo, $companyId, 'expense', 'Masraf kategorisi silindi', 'Masraf kategorisi silindi.', ['actor_name' => $actorName]);
-                $_SESSION['flash_success'] = 'Masraf kategorisi silindi.';
+                Auth::setSession('flash_success', 'Masraf kategorisi silindi.');
             }
         }
         header('Location: /masraflar');

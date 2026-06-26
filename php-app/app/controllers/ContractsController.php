@@ -56,9 +56,7 @@ class ContractsController
         $openNewSale = isset($_GET['newSale']) && $_GET['newSale'] !== '0';
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
         $contractDebt = $this->getContractDebtCounts($contracts);
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $rooms = $roomsEmpty;
         require __DIR__ . '/../../views/contracts/index.php';
     }
@@ -103,7 +101,7 @@ class ContractsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId && ($user['role'] ?? '') !== 'super_admin') {
-            $_SESSION['flash_error'] = 'Şirket bilgisi gerekli.';
+            Auth::setSession('flash_error', 'Şirket bilgisi gerekli.');
             header('Location: /girisler');
             exit;
         }
@@ -112,13 +110,13 @@ class ContractsController
         $startDate = trim($_POST['start_date'] ?? '');
         $endDate = trim($_POST['end_date'] ?? '');
         if (!$customerId || !$roomId || !$startDate || !$endDate) {
-            $_SESSION['flash_error'] = 'Müşteri, oda ve tarihler zorunludur.';
+            Auth::setSession('flash_error', 'Müşteri, oda ve tarihler zorunludur.');
             header('Location: /girisler');
             exit;
         }
         $room = Room::findOne($this->pdo, $roomId);
         if (!$room) {
-            $_SESSION['flash_error'] = 'Geçersiz oda.';
+            Auth::setSession('flash_error', 'Geçersiz oda.');
             header('Location: /girisler');
             exit;
         }
@@ -127,18 +125,18 @@ class ContractsController
         $stmt->execute([$customerId]);
         $customer = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$customer) {
-            $_SESSION['flash_error'] = 'Geçersiz müşteri.';
+            Auth::setSession('flash_error', 'Geçersiz müşteri.');
             header('Location: /girisler');
             exit;
         }
         if ($user['role'] !== 'super_admin' && $companyId && $room['company_id'] !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu odaya erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu odaya erişim yetkiniz yok.');
             header('Location: /girisler');
             exit;
         }
         [$storedCondition, $storedConditionNote, $storedConditionError] = parseStoredItemsConditionFromRequest($_POST, true);
         if ($storedConditionError) {
-            $_SESSION['flash_error'] = $storedConditionError;
+            Auth::setSession('flash_error', $storedConditionError);
             header('Location: /girisler?newSale=1');
             exit;
         }
@@ -265,9 +263,9 @@ class ContractsController
                 }
             }
 
-            $_SESSION['flash_success'] = 'Sözleşme oluşturuldu.';
+            Auth::setSession('flash_success', 'Sözleşme oluşturuldu.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Kayıt oluşturulamadı: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Kayıt oluşturulamadı: ' . $e->getMessage());
         }
         header('Location: /girisler');
         exit;
@@ -283,14 +281,14 @@ class ContractsController
         }
         $contract = Contract::findOne($this->pdo, $id);
         if (!$contract) {
-            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
             header('Location: /girisler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
             header('Location: /girisler');
             exit;
         }
@@ -308,20 +306,20 @@ class ContractsController
         }
         $id = trim($_POST['contract_id'] ?? '');
         if (!$id) {
-            $_SESSION['flash_error'] = 'Sözleşme belirtilmedi.';
+            Auth::setSession('flash_error', 'Sözleşme belirtilmedi.');
             header('Location: /girisler');
             exit;
         }
         $contract = Contract::findOne($this->pdo, $id);
         if (!$contract) {
-            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
             header('Location: /girisler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
             header('Location: /girisler');
             exit;
         }
@@ -331,7 +329,7 @@ class ContractsController
         if ($endDate) $endDate .= ' 23:59:59';
         [$storedCondition, $storedConditionNote, $storedConditionError] = parseStoredItemsConditionFromRequest($_POST, true);
         if ($storedConditionError) {
-            $_SESSION['flash_error'] = $storedConditionError;
+            Auth::setSession('flash_error', $storedConditionError);
             header('Location: /girisler/' . $id . '/duzenle');
             exit;
         }
@@ -354,9 +352,9 @@ class ContractsController
                 $storedAt = ($startDate ?? $contract['start_date'] ?? null) ?: date('Y-m-d H:i:s');
                 Item::syncForContract($this->pdo, $id, $roomId, parseContractItemsFromRequest($_POST), $storedAt);
             }
-            $_SESSION['flash_success'] = 'Sözleşme güncellendi.';
+            Auth::setSession('flash_success', 'Sözleşme güncellendi.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Güncellenemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Güncellenemedi: ' . $e->getMessage());
         }
         header('Location: /girisler/' . $id);
         exit;
@@ -372,35 +370,35 @@ class ContractsController
         }
         $id = trim($_POST['contract_id'] ?? '');
         if (!$id) {
-            $_SESSION['flash_error'] = 'Sözleşme belirtilmedi.';
+            Auth::setSession('flash_error', 'Sözleşme belirtilmedi.');
             header('Location: /girisler');
             exit;
         }
         $contract = Contract::findOne($this->pdo, $id);
         if (!$contract) {
-            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
             header('Location: /girisler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
             header('Location: /girisler');
             exit;
         }
         $roomId = $contract['room_id'] ?? '';
         if (!$roomId) {
-            $_SESSION['flash_error'] = 'Sözleşmeye bağlı oda bulunamadı.';
+            Auth::setSession('flash_error', 'Sözleşmeye bağlı oda bulunamadı.');
             header('Location: /girisler/' . $id);
             exit;
         }
         try {
             $storedAt = $contract['start_date'] ?? date('Y-m-d H:i:s');
             Item::syncForContract($this->pdo, $id, $roomId, parseContractItemsFromRequest($_POST), $storedAt);
-            $_SESSION['flash_success'] = 'Eşya listesi kaydedildi.';
+            Auth::setSession('flash_success', 'Eşya listesi kaydedildi.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Eşya listesi kaydedilemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Eşya listesi kaydedilemedi: ' . $e->getMessage());
         }
         header('Location: /girisler/' . $id);
         exit;
@@ -416,14 +414,14 @@ class ContractsController
         }
         $contract = Contract::findOne($this->pdo, $id);
         if (!$contract) {
-            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
             header('Location: /girisler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
             header('Location: /girisler');
             exit;
         }
@@ -476,14 +474,14 @@ class ContractsController
         }
         $contract = Contract::findOne($this->pdo, $id);
         if (!$contract) {
-            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
             header('Location: /girisler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
             header('Location: /girisler');
             exit;
         }
@@ -504,14 +502,14 @@ class ContractsController
         $id = trim($_POST['id'] ?? '');
         $contract = $id ? Contract::findOne($this->pdo, $id) : null;
         if (!$contract) {
-            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
             header('Location: /girisler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Yetkisiz.';
+            Auth::setSession('flash_error', 'Yetkisiz.');
             header('Location: /girisler');
             exit;
         }
@@ -520,7 +518,7 @@ class ContractsController
         if ($roomId) {
             Room::update($this->pdo, $roomId, ['status' => 'empty']);
         }
-        $_SESSION['flash_success'] = 'Sözleşme sonlandırıldı.';
+        Auth::setSession('flash_success', 'Sözleşme sonlandırıldı.');
         header('Location: /girisler');
         exit;
     }
@@ -536,14 +534,14 @@ class ContractsController
         }
         $contract = Contract::findOne($this->pdo, $id);
         if (!$contract) {
-            $_SESSION['flash_error'] = 'Sözleşme bulunamadı.';
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
             header('Location: /girisler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu sözleşmeye erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
             header('Location: /girisler');
             exit;
         }
@@ -567,7 +565,7 @@ class ContractsController
             if ($id !== '') $ids = [$id];
         }
         if (empty($ids)) {
-            $_SESSION['flash_error'] = 'Sözleşme seçilmedi.';
+            Auth::setSession('flash_error', 'Sözleşme seçilmedi.');
             header('Location: /girisler');
             exit;
         }
@@ -586,9 +584,9 @@ class ContractsController
             $deleted++;
         }
         if ($deleted > 0) {
-            $_SESSION['flash_success'] = $deleted === 1 ? 'Sözleşme silindi.' : $deleted . ' sözleşme silindi.';
+            Auth::setSession('flash_success', $deleted === 1 ? 'Sözleşme silindi.' : $deleted . ' sözleşme silindi.');
         } else {
-            $_SESSION['flash_error'] = 'Silinecek sözleşme bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Silinecek sözleşme bulunamadı veya yetkiniz yok.');
         }
         header('Location: /girisler');
         exit;

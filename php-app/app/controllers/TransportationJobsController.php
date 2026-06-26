@@ -75,9 +75,7 @@ class TransportationJobsController
         } catch (Throwable $e) {
             // masraflar tablosu veya transportation_job_id kolonu yoksa modal gösterilmez
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
         require __DIR__ . '/../../views/transportation_jobs/index.php';
     }
@@ -92,14 +90,14 @@ class TransportationJobsController
         }
         $job = TransportationJob::findOne($this->pdo, $id);
         if (!$job) {
-            $_SESSION['flash_error'] = 'Nakliye işi bulunamadı.';
+            Auth::setSession('flash_error', 'Nakliye işi bulunamadı.');
             header('Location: /nakliye-isler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($job['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu işe erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu işe erişim yetkiniz yok.');
             header('Location: /nakliye-isler');
             exit;
         }
@@ -139,9 +137,7 @@ class TransportationJobsController
                 // masraflar modülü veya transportation_job_id kolonu yoksa formu göstermeyiz
             }
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/transportation_jobs/detail.php';
     }
 
@@ -160,14 +156,14 @@ class TransportationJobsController
         }
         $job = TransportationJob::findOne($this->pdo, $id);
         if (!$job) {
-            $_SESSION['flash_error'] = 'Nakliye işi bulunamadı.';
+            Auth::setSession('flash_error', 'Nakliye işi bulunamadı.');
             header('Location: /nakliye-isler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($job['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu işe erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu işe erişim yetkiniz yok.');
             header('Location: /nakliye-isler');
             exit;
         }
@@ -177,7 +173,7 @@ class TransportationJobsController
             $companyId = $row ? $row['id'] : null;
         }
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bulunamadı.');
             header('Location: /nakliye-isler/' . $id);
             exit;
         }
@@ -192,17 +188,17 @@ class TransportationJobsController
         $paymentSourceType = trim($_POST['payment_source_type'] ?? 'bank_account');
         $paymentSourceId = trim($_POST['payment_source_id'] ?? '');
         if (!array_filter($amounts, fn($a) => $a > 0)) {
-            $_SESSION['flash_error'] = 'En az bir masraf türüne tutar girin.';
+            Auth::setSession('flash_error', 'En az bir masraf türüne tutar girin.');
             header('Location: /nakliye-isler/' . $id);
             exit;
         }
         if (!in_array($paymentSourceType, ['bank_account', 'credit_card', 'nakit'], true)) {
-            $_SESSION['flash_error'] = 'Geçersiz ödeme kaynağı.';
+            Auth::setSession('flash_error', 'Geçersiz ödeme kaynağı.');
             header('Location: /nakliye-isler/' . $id);
             exit;
         }
         if ($paymentSourceType !== 'nakit' && !$paymentSourceId) {
-            $_SESSION['flash_error'] = 'Ödeme kaynağı seçin.';
+            Auth::setSession('flash_error', 'Ödeme kaynağı seçin.');
             header('Location: /nakliye-isler/' . $id);
             exit;
         }
@@ -231,9 +227,9 @@ class TransportationJobsController
                 ]);
                 $created++;
             }
-            $_SESSION['flash_success'] = $created === 1 ? 'Nakliye masrafı kaydedildi.' : $created . ' nakliye masrafı bu işe bağlandı.';
+            Auth::setSession('flash_success', $created === 1 ? 'Nakliye masrafı kaydedildi.' : $created . ' nakliye masrafı bu işe bağlandı.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Masraf kaydedilemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Masraf kaydedilemedi: ' . $e->getMessage());
         }
         header('Location: /nakliye-isler/' . $id);
         exit;
@@ -249,14 +245,14 @@ class TransportationJobsController
         }
         $job = TransportationJob::findOne($this->pdo, $id);
         if (!$job) {
-            $_SESSION['flash_error'] = 'Nakliye işi bulunamadı.';
+            Auth::setSession('flash_error', 'Nakliye işi bulunamadı.');
             header('Location: /nakliye-isler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($job['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu işe erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu işe erişim yetkiniz yok.');
             header('Location: /nakliye-isler');
             exit;
         }
@@ -286,9 +282,7 @@ class TransportationJobsController
                 $vehicles = [];
             }
         }
-        $flashSuccess = $_SESSION['flash_success'] ?? null;
-        $flashError = $_SESSION['flash_error'] ?? null;
-        unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/transportation_jobs/edit.php';
     }
 
@@ -302,7 +296,7 @@ class TransportationJobsController
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId && ($user['role'] ?? '') !== 'super_admin') {
-            $_SESSION['flash_error'] = 'Şirket bilgisi gerekli.';
+            Auth::setSession('flash_error', 'Şirket bilgisi gerekli.');
             header('Location: /nakliye-isler');
             exit;
         }
@@ -312,19 +306,19 @@ class TransportationJobsController
             $companyId = $row ? $row['id'] : null;
         }
         if (!$companyId) {
-            $_SESSION['flash_error'] = 'Şirket bulunamadı.';
+            Auth::setSession('flash_error', 'Şirket bulunamadı.');
             header('Location: /nakliye-isler');
             exit;
         }
         $customerId = trim($_POST['customer_id'] ?? '');
         if (!$customerId) {
-            $_SESSION['flash_error'] = 'Müşteri seçin.';
+            Auth::setSession('flash_error', 'Müşteri seçin.');
             header('Location: /nakliye-isler');
             exit;
         }
         $customer = Customer::findOne($this->pdo, $customerId);
         if (!$customer || ($companyId && ($customer['company_id'] ?? '') !== $companyId)) {
-            $_SESSION['flash_error'] = 'Geçersiz müşteri.';
+            Auth::setSession('flash_error', 'Geçersiz müşteri.');
             header('Location: /nakliye-isler');
             exit;
         }
@@ -354,9 +348,9 @@ class TransportationJobsController
             ]);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'transport', 'Nakliye işi eklendi', 'Yeni nakliye işi oluşturuldu.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'Nakliye işi eklendi.';
+            Auth::setSession('flash_success', 'Nakliye işi eklendi.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Kayıt oluşturulamadı: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Kayıt oluşturulamadı: ' . $e->getMessage());
         }
         header('Location: /nakliye-isler');
         exit;
@@ -376,14 +370,14 @@ class TransportationJobsController
         }
         $job = TransportationJob::findOne($this->pdo, $id);
         if (!$job) {
-            $_SESSION['flash_error'] = 'Nakliye işi bulunamadı.';
+            Auth::setSession('flash_error', 'Nakliye işi bulunamadı.');
             header('Location: /nakliye-isler');
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($job['company_id'] ?? '') !== $companyId) {
-            $_SESSION['flash_error'] = 'Bu işe erişim yetkiniz yok.';
+            Auth::setSession('flash_error', 'Bu işe erişim yetkiniz yok.');
             header('Location: /nakliye-isler');
             exit;
         }
@@ -410,9 +404,9 @@ class TransportationJobsController
             ]);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $job['company_id'] ?? null, 'transport', 'Nakliye işi güncellendi', 'Nakliye işi güncellendi.', ['actor_name' => $actorName]);
-            $_SESSION['flash_success'] = 'Nakliye işi güncellendi.';
+            Auth::setSession('flash_success', 'Nakliye işi güncellendi.');
         } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Güncellenemedi: ' . $e->getMessage();
+            Auth::setSession('flash_error', 'Güncellenemedi: ' . $e->getMessage());
         }
         header('Location: /nakliye-isler');
         exit;
@@ -431,7 +425,7 @@ class TransportationJobsController
             if ($id !== '') $ids = [$id];
         }
         if (empty($ids)) {
-            $_SESSION['flash_error'] = 'Nakliye işi seçilmedi.';
+            Auth::setSession('flash_error', 'Nakliye işi seçilmedi.');
             header('Location: /nakliye-isler');
             exit;
         }
@@ -448,9 +442,9 @@ class TransportationJobsController
             $deleted++;
         }
         if ($deleted > 0) {
-            $_SESSION['flash_success'] = $deleted === 1 ? 'Nakliye işi silindi.' : $deleted . ' nakliye işi silindi.';
+            Auth::setSession('flash_success', $deleted === 1 ? 'Nakliye işi silindi.' : $deleted . ' nakliye işi silindi.');
         } else {
-            $_SESSION['flash_error'] = 'Silinecek nakliye işi bulunamadı veya yetkiniz yok.';
+            Auth::setSession('flash_error', 'Silinecek nakliye işi bulunamadı veya yetkiniz yok.');
         }
         header('Location: /nakliye-isler');
         exit;
