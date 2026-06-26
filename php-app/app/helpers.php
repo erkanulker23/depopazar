@@ -476,7 +476,15 @@ if (!function_exists('renderPagination')) {
         }
         $totalPages = (int) ceil($total / $perPage);
         $currentPage = max(1, min($currentPage, $totalPages));
-        $keepParams = array_filter($keepParams, fn($v) => $v !== '' && $v !== null);
+        $keepParams = array_filter($keepParams, static function ($v, $k) {
+            if ($v === null) {
+                return false;
+            }
+            if ($v === '' && $k !== 'borc') {
+                return false;
+            }
+            return true;
+        }, ARRAY_FILTER_USE_BOTH);
 
         $url = function (int $p) use ($baseUrl, $keepParams) {
             $params = $keepParams;
@@ -485,30 +493,42 @@ if (!function_exists('renderPagination')) {
             return $baseUrl . (strpos($baseUrl, '?') !== false ? '&' : '?') . $qs;
         };
 
-        $html = '<nav class="flex items-center justify-between gap-2 py-3 px-4 border-t border-gray-200 dark:border-gray-600" aria-label="Sayfalama">';
-        $html .= '<p class="text-sm text-gray-500 dark:text-gray-400">';
+        $html = '<nav class="pagination-bar relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 py-3 px-4 mt-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-800/80 touch-manipulation" aria-label="Sayfalama">';
+        $html .= '<p class="text-sm text-gray-500 dark:text-gray-400 shrink-0">';
         $from = ($currentPage - 1) * $perPage + 1;
         $to = min($currentPage * $perPage, $total);
-        $html .= $from . '–' . $to . ' / ' . $total . ' kayıt</p>';
-        $html .= '<div class="flex items-center gap-1 flex-wrap justify-end">';
+        $html .= $from . '–' . $to . ' / ' . $total . ' kayıt';
+        if ($totalPages > 1) {
+            $html .= ' · Sayfa ' . $currentPage . ' / ' . $totalPages;
+        }
+        $html .= '</p>';
+        $html .= '<div class="pagination-links-wrap overflow-x-auto -mx-1 px-1">';
+        $html .= '<div class="flex items-center gap-1 flex-nowrap justify-end min-w-max">';
+
+        $linkClass = 'inline-flex items-center justify-center min-w-[2.5rem] min-h-[2.75rem] px-3 py-1.5 rounded-lg text-sm font-medium touch-manipulation';
+        $idleClass = $linkClass . ' text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700';
+        $activeClass = $linkClass . ' bg-emerald-600 text-white pointer-events-none';
 
         if ($currentPage > 1) {
-            $html .= '<a href="' . htmlspecialchars($url(1)) . '" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" title="İlk"><i class="bi bi-chevron-double-left"></i></a>';
-            $html .= '<a href="' . htmlspecialchars($url($currentPage - 1)) . '" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" title="Önceki"><i class="bi bi-chevron-left"></i></a>';
+            $html .= '<a href="' . htmlspecialchars($url(1)) . '" class="' . $idleClass . '" title="İlk" rel="nofollow"><i class="bi bi-chevron-double-left"></i></a>';
+            $html .= '<a href="' . htmlspecialchars($url($currentPage - 1)) . '" class="' . $idleClass . '" title="Önceki" rel="nofollow"><i class="bi bi-chevron-left"></i></a>';
         }
 
         $start = max(1, $currentPage - 2);
         $end = min($totalPages, $currentPage + 2);
         for ($i = $start; $i <= $end; $i++) {
-            $active = $i === $currentPage;
-            $html .= '<a href="' . htmlspecialchars($url($i)) . '" class="px-3 py-1.5 rounded-lg text-sm font-medium ' . ($active ? 'bg-emerald-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700') . '">' . $i . '</a>';
+            if ($i === $currentPage) {
+                $html .= '<span class="' . $activeClass . '" aria-current="page">' . $i . '</span>';
+            } else {
+                $html .= '<a href="' . htmlspecialchars($url($i)) . '" class="' . $idleClass . '" rel="nofollow">' . $i . '</a>';
+            }
         }
 
         if ($currentPage < $totalPages) {
-            $html .= '<a href="' . htmlspecialchars($url($currentPage + 1)) . '" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" title="Sonraki"><i class="bi bi-chevron-right"></i></a>';
-            $html .= '<a href="' . htmlspecialchars($url($totalPages)) . '" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" title="Son"><i class="bi bi-chevron-double-right"></i></a>';
+            $html .= '<a href="' . htmlspecialchars($url($currentPage + 1)) . '" class="' . $idleClass . '" title="Sonraki" rel="nofollow"><i class="bi bi-chevron-right"></i></a>';
+            $html .= '<a href="' . htmlspecialchars($url($totalPages)) . '" class="' . $idleClass . '" title="Son" rel="nofollow"><i class="bi bi-chevron-double-right"></i></a>';
         }
-        $html .= '</div></nav>';
+        $html .= '</div></div></nav>';
         return $html;
     }
 }

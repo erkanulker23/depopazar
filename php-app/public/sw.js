@@ -1,7 +1,6 @@
 /* DepoPazar Service Worker – PWA + Web Push */
-var CACHE_NAME = 'depopazar-v2';
+var CACHE_NAME = 'depopazar-v3';
 var SHELL_URLS = [
-  '/genel-bakis',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -29,11 +28,23 @@ self.addEventListener('activate', function (event) {
   );
 });
 
+function isHtmlNavigation(request) {
+  if (request.mode === 'navigate') return true;
+  var accept = request.headers.get('accept') || '';
+  return accept.indexOf('text/html') !== -1;
+}
+
 self.addEventListener('fetch', function (event) {
   if (event.request.method !== 'GET') return;
   var url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.indexOf('/api/') === 0) return;
+
+  /* Dinamik sayfalar (liste, sayfalama) önbelleğe alınmaz — eski sayfa gösterilmesin */
+  if (isHtmlNavigation(event.request)) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   event.respondWith(
     fetch(event.request).then(function (response) {
@@ -45,9 +56,7 @@ self.addEventListener('fetch', function (event) {
       }
       return response;
     }).catch(function () {
-      return caches.match(event.request).then(function (cached) {
-        return cached || caches.match('/genel-bakis');
-      });
+      return caches.match(event.request);
     })
   );
 });

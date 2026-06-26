@@ -43,6 +43,14 @@ class CustomersController
             $customers = [];
         }
 
+        $totalPages = $customersTotal > 0 ? (int) ceil($customersTotal / $perPage) : 1;
+        if ($page > $totalPages && $customersTotal > 0) {
+            $params = $_GET;
+            $params['page'] = $totalPages;
+            header('Location: /musteriler?' . http_build_query($params));
+            exit;
+        }
+
         $duplicateFullNames = [];
         if (!empty($customers) || $customersTotal > 0) {
             $duplicateFullNames = Customer::getDuplicateFullNames($this->pdo, $companyId ?? null);

@@ -75,7 +75,7 @@ ob_start();
 <?php endif; ?>
 
 <form id="bulkDeleteForm" method="post" action="/musteriler/toplu-sil<?= $filterQuery !== '' ? '?' . $filterQuery : '' ?>" onsubmit="return confirm('Seçilen müşterileri silmek istediğinize emin misiniz?');">
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible">
     <?php if (empty($customers)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz müşteri kaydı yok<?= $filterQuery !== '' ? ' veya filtreye uygun müşteri bulunamadı.' : '.' ?></div>
     <?php else: ?>
@@ -85,7 +85,7 @@ ob_start();
                 <div class="p-4 active:bg-gray-50 dark:active:bg-gray-700/50" data-customer-id="<?= htmlspecialchars($c['id']) ?>">
                     <div class="flex items-start gap-3">
                         <label class="flex-shrink-0 flex items-center mt-1 cursor-pointer">
-                            <input type="checkbox" name="ids[]" value="<?= htmlspecialchars($c['id']) ?>" class="customer-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
+                            <input type="checkbox" name="ids[]" value="<?= htmlspecialchars($c['id']) ?>" form="bulkDeleteForm" class="customer-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
                         </label>
                         <div class="flex-shrink-0 w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold text-sm">
                             <?= strtoupper(mb_substr($c['first_name'] ?? '?', 0, 1) . mb_substr($c['last_name'] ?? '', 0, 1)) ?>
@@ -133,7 +133,7 @@ ob_start();
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-10">
-                            <label class="cursor-pointer flex items-center gap-1"><input type="checkbox" id="selectAllCb" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500" title="Tümünü seç"><span class="sr-only">Tümünü seç</span></label>
+                            <label class="cursor-pointer flex items-center gap-1"><input type="checkbox" id="selectAllCb" form="bulkDeleteForm" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500" title="Tümünü seç"><span class="sr-only">Tümünü seç</span></label>
                         </th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-10"></th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ad Soyad</th>
@@ -161,7 +161,7 @@ ob_start();
                     ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50" data-customer-id="<?= htmlspecialchars($c['id']) ?>">
                             <td class="px-4 py-3">
-                                <label class="cursor-pointer"><input type="checkbox" name="ids[]" value="<?= htmlspecialchars($c['id']) ?>" class="customer-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500"></label>
+                                <label class="cursor-pointer"><input type="checkbox" name="ids[]" value="<?= htmlspecialchars($c['id']) ?>" form="bulkDeleteForm" class="customer-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500"></label>
                             </td>
                             <td class="px-4 py-3">
                                 <button type="button" class="expand-row p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white" title="Detayı göster" aria-expanded="false">
@@ -214,20 +214,24 @@ ob_start();
                 </tbody>
             </table>
         </div>
-        <?php
-        $customersTotal = $customersTotal ?? 0;
-        $perPage = $perPage ?? 50;
-        $page = $page ?? max(1, (int) ($_GET['page'] ?? 1));
-        echo renderPagination($customersTotal, $perPage, $page, '/musteriler', array_filter([
-            'q' => $q ?? '',
-            'in_depo' => $inDepo !== '' ? $inDepo : null,
-            'warehouse_id' => $warehouseId !== '' ? $warehouseId : null,
-            'borc' => array_key_exists('borc', $_GET) ? ($borc !== '' ? $borc : null) : ($borc !== '' ? $borc : null),
-        ], fn($v) => $v !== null && $v !== ''));
-        ?>
     <?php endif; ?>
 </div>
 </form>
+<?php
+if (!empty($customers)):
+    $paginationParams = array_filter([
+        'q' => $q !== '' ? $q : null,
+        'in_depo' => $inDepo !== '' ? $inDepo : null,
+        'warehouse_id' => $warehouseId !== '' ? $warehouseId : null,
+    ], fn($v) => $v !== null && $v !== '');
+    if (array_key_exists('borc', $_GET)) {
+        $paginationParams['borc'] = $borc !== '' ? $borc : '';
+    }
+    $pageNum = $page ?? max(1, (int) ($_GET['page'] ?? 1));
+    $perPageNum = $perPage ?? 50;
+    echo renderPagination((int) $customersTotal, $perPageNum, $pageNum, '/musteriler', $paginationParams);
+endif;
+?>
 
 <!-- Modal: Yeni Müşteri -->
 <div id="addCustomerModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">

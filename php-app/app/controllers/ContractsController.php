@@ -38,6 +38,13 @@ class ContractsController
             $contracts = $warehouses = $customers = [];
             $customersTotal = 0;
         }
+        $totalPages = $contractsTotal > 0 ? (int) ceil($contractsTotal / $perPage) : 1;
+        if ($page > $totalPages && $contractsTotal > 0) {
+            $params = $_GET;
+            $params['page'] = $totalPages;
+            header('Location: /girisler?' . http_build_query($params));
+            exit;
+        }
         $rooms = Room::findAll($this->pdo, null);
         if ($companyId) {
             $rooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
@@ -172,6 +179,7 @@ class ContractsController
                 }
             }
         }
+        $pickupLocation = $this->resolvePickupLocation($_POST);
         $data = [
             'customer_id' => $customerId,
             'room_id' => $roomId,
@@ -180,7 +188,7 @@ class ContractsController
             'monthly_price' => $monthlyPrice,
             'sold_by_user_id' => $soldBy,
             'transportation_fee' => $transportationFee,
-            'pickup_location' => trim($_POST['pickup_location'] ?? '') ?: null,
+            'pickup_location' => $pickupLocation,
             'discount' => $discount,
             'driver_name' => trim($_POST['driver_name'] ?? '') ?: null,
             'driver_phone' => trim($_POST['driver_phone'] ?? '') ?: null,
@@ -236,9 +244,8 @@ class ContractsController
 
             // Nakliye bilgisi işaretlendiyse nakliye işi oluştur (nakliye-isler listesine düşer)
             $hasTransportation = isset($_POST['has_transportation']) && $_POST['has_transportation'] === '1';
-            $pickupLocation = trim($_POST['pickup_location'] ?? '');
             $deliveryLocation = trim($_POST['delivery_location'] ?? '');
-            if ($hasTransportation && ($pickupLocation !== '' || $deliveryLocation !== '' || $transportationFee > 0)) {
+            if ($hasTransportation && ($pickupLocation !== null && $pickupLocation !== '' || $deliveryLocation !== '' || $transportationFee > 0)) {
                 $warehouse = !empty($room['warehouse_id']) ? Warehouse::findOne($this->pdo, $room['warehouse_id']) : null;
                 $deliveryAddress = $deliveryLocation;
                 if ($deliveryAddress === '' && $warehouse) {
@@ -248,11 +255,17 @@ class ContractsController
                 if ($deliveryAddress === '' && !empty($room['warehouse_name'])) {
                     $deliveryAddress = $room['warehouse_name'];
                 }
+                $pickupType = trim($_POST['pickup_source_type'] ?? 'evden');
+                $jobTypes = [
+                    'evden' => 'Evden depo nakliyesi',
+                    'ofisten' => 'Ofisten depo nakliyesi',
+                    'depo' => 'Depodan depo nakliyesi',
+                ];
                 try {
                     TransportationJob::create($this->pdo, [
                         'company_id' => $room['company_id'] ?? $companyId,
                         'customer_id' => $customerId,
-                        'job_type' => 'Depo girişi nakliyesi',
+                        'job_type' => $jobTypes[$pickupType] ?? 'Depo girişi nakliyesi',
                         'pickup_address' => $pickupLocation ?: null,
                         'delivery_address' => $deliveryAddress ?: null,
                         'price' => $transportationFee,
@@ -654,6 +667,33 @@ class ContractsController
                 }
             }
         }
+    }
+
+    private function resolvePickupLocation(array $post): ?string
+    {
+        $composed = trim($post['pickup_location'] ?? '');
+        if ($composed !== '') {
+            return $composed;
+        }
+        $type = trim($post['pickup_source_type'] ?? 'evden');
+        if ($type === 'depo') {
+            $whId = trim($post['pickup_warehouse_id'] ?? '');
+            if ($whId === '') {
+                return null;
+            }
+            $wh = Warehouse::findOne($this->pdo, $whId);
+            if (!$wh) {
+                return null;
+            }
+            $parts = array_filter([$wh['name'] ?? '', $wh['address'] ?? '', $wh['district'] ?? '', $wh['city'] ?? '']);
+            return 'Depo: ' . implode(', ', $parts);
+        }
+        $detail = trim($post['pickup_address_detail'] ?? '');
+        if ($detail === '') {
+            return null;
+        }
+        $label = $type === 'ofisten' ? 'Ofisten' : 'Evden';
+        return $label . ': ' . $detail;
     }
 
     private static function uuid(): string

@@ -10,6 +10,17 @@ foreach ($rooms as $r) {
     $roomsByWarehouse[$wid][] = $r;
 }
 $owners = $owners ?? [];
+if (!function_exists('formatWarehouseAddress')) {
+    function formatWarehouseAddress(array $wh): string
+    {
+        return trim(implode(', ', array_filter([
+            $wh['name'] ?? '',
+            $wh['address'] ?? '',
+            $wh['district'] ?? '',
+            $wh['city'] ?? '',
+        ])));
+    }
+}
 ob_start();
 ?>
 <div class="mb-6">
@@ -59,7 +70,7 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
     </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible">
     <?php if (empty($contracts)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz sözleşme yok. "Yeni Satış Gir" ile ekleyebilirsiniz.</div>
     <?php else: ?>
@@ -151,15 +162,15 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
                 </tbody>
             </table>
         </div>
-        <?php
-        $contractsTotal = $contractsTotal ?? 0;
-        $perPage = $perPage ?? 50;
-        $page = $page ?? max(1, (int) ($_GET['page'] ?? 1));
-        $keepParams = array_filter(['q' => $qGet !== '' ? $qGet : null, 'durum' => $durumGet !== '' ? $durumGet : null, 'borc' => $borcGet !== '' ? $borcGet : null, 'newSale' => ($openNewSale ?? false) ? '1' : null]);
-        echo renderPagination($contractsTotal, $perPage, $page, '/girisler', $keepParams);
-        ?>
     <?php endif; ?>
 </div>
+<?php if (!empty($contracts)):
+    $contractsTotal = $contractsTotal ?? 0;
+    $perPage = $perPage ?? 50;
+    $page = $page ?? max(1, (int) ($_GET['page'] ?? 1));
+    $keepParams = array_filter(['q' => $qGet !== '' ? $qGet : null, 'durum' => $durumGet !== '' ? $durumGet : null, 'borc' => $borcGet !== '' ? $borcGet : null, 'newSale' => ($openNewSale ?? false) ? '1' : null]);
+    echo renderPagination($contractsTotal, $perPage, $page, '/girisler', $keepParams);
+endif; ?>
 
 <!-- Modal: Yeni Satış Gir -->
 <div id="newSaleModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
@@ -205,21 +216,18 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
                                     <option value="">Depo Seçin</option>
                                     <?php foreach ($warehouses as $w): ?>
                                         <?php $whFee = isset($w['monthly_base_fee']) && $w['monthly_base_fee'] !== null && $w['monthly_base_fee'] !== '' ? (float)$w['monthly_base_fee'] : null; ?>
-                                        <option value="<?= htmlspecialchars($w['id']) ?>" data-monthly-base-fee="<?= $whFee !== null ? htmlspecialchars(number_format((float)$whFee, 2, '.', '')) : '' ?>"><?= htmlspecialchars($w['name']) ?><?= $whFee !== null ? ' (' . fmtPrice($whFee) . ')' : '' ?></option>
+                                        <option value="<?= htmlspecialchars($w['id']) ?>" data-monthly-base-fee="<?= $whFee !== null ? htmlspecialchars(number_format((float)$whFee, 2, '.', '')) : '' ?>" data-full-address="<?= htmlspecialchars(formatWarehouseAddress($w)) ?>"><?= htmlspecialchars($w['name']) ?><?= $whFee !== null ? ' (' . fmtPrice($whFee) . ')' : '' ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Oda <span class="text-red-500">*</span></label>
-                                <select name="room_id" id="newSale_room" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                    <option value="">Önce Depo Seçin</option>
-                                    <?php foreach ($rooms as $r):
-                                        $roomLabel = preg_replace('/\s*\([^)]*\)\s*$/', '', (string)($r['room_number'] ?? '')); // Sadece oda numarası (parantez içi fiyat varsa kaldır)
-                                        $roomPrice = isset($r['monthly_price']) && $r['monthly_price'] !== null && $r['monthly_price'] !== '' ? (float)$r['monthly_price'] : null;
-                                    ?>
-                                        <option value="<?= htmlspecialchars($r['id']) ?>" data-warehouse="<?= htmlspecialchars($r['warehouse_id']) ?>" data-monthly-price="<?= $roomPrice !== null ? htmlspecialchars(number_format((float)$roomPrice, 2, '.', '')) : '' ?>"><?= htmlspecialchars($roomLabel) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="newSale_room_search">Oda <span class="text-red-500">*</span></label>
+                                <input type="hidden" name="room_id" id="newSale_room_id" value="">
+                                <div class="relative">
+                                    <input type="search" id="newSale_room_search" placeholder="Önce depo seçin" autocomplete="off" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed">
+                                    <div id="newSale_room_results" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-52 overflow-y-auto"></div>
+                                </div>
+                                <p id="newSale_room_hint" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Önce depo seçin</p>
                             </div>
                         </div>
                     </div>
@@ -240,61 +248,56 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
                         </div>
                         <div id="newSale_transportation_block" class="space-y-4 mt-3 hidden">
                             <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2"><i class="bi bi-geo-alt text-emerald-600"></i> Eşyanın Alınacağı Yer</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Eşyanın nereden alınacağını seçin (ör. müşterinin evinden veya başka bir depodan).</p>
+                            <div class="flex flex-wrap gap-2" id="newSale_pickup_type_group">
+                                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 cursor-pointer pickup-type-label">
+                                    <input type="radio" name="pickup_source_type" value="evden" class="text-emerald-600 focus:ring-emerald-500" checked onchange="togglePickupSourceType('evden')">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Evden</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 cursor-pointer pickup-type-label">
+                                    <input type="radio" name="pickup_source_type" value="ofisten" class="text-emerald-600 focus:ring-emerald-500" onchange="togglePickupSourceType('ofisten')">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Ofisten</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 cursor-pointer pickup-type-label">
+                                    <input type="radio" name="pickup_source_type" value="depo" class="text-emerald-600 focus:ring-emerald-500" onchange="togglePickupSourceType('depo')">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Depo</span>
+                                </label>
+                            </div>
+                            <div id="newSale_pickup_address_block" class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İl / İlçe</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select id="newSale_pickup_il" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                            <option value="">İl seçin</option>
+                                        </select>
+                                        <select id="newSale_pickup_ilce" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                            <option value="">Önce il seçin</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres</label>
+                                    <input type="text" name="pickup_address_detail" id="newSale_pickup_address_detail" placeholder="Mahalle, sokak, bina no..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                </div>
+                            </div>
                             <?php if (!empty($warehouses)): ?>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo adresinden seç (opsiyonel)</label>
-                                <select id="newSale_pickup_warehouse" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                    <option value="">Serbest giriş / Depo seçmeyin</option>
+                            <div id="newSale_pickup_depo_block" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alınacak depo <span class="text-red-500">*</span></label>
+                                <select name="pickup_warehouse_id" id="newSale_pickup_warehouse_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <option value="">Depo seçin</option>
                                     <?php foreach ($warehouses as $wh): ?>
-                                        <?php $whAddr = trim(($wh['name'] ?? '') . ($wh['address'] ? ', ' . $wh['address'] : '') . ($wh['city'] ? ', ' . $wh['city'] : '') . ($wh['district'] ? ' / ' . $wh['district'] : '')); ?>
-                                        <option value="<?= htmlspecialchars($whAddr) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+                                        <option value="<?= htmlspecialchars($wh['id']) ?>" data-address="<?= htmlspecialchars(formatWarehouseAddress($wh)) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <?php endif; ?>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Veya İl / İlçe ile belirtin</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <select id="newSale_pickup_il" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                        <option value="">İl seçin</option>
-                                    </select>
-                                    <select id="newSale_pickup_ilce" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                        <option value="">Önce il seçin</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres (Eşyanın alındığı yer)</label>
-                                <input type="text" name="pickup_location" id="newSale_pickup_location" placeholder="İl, İlçe veya tam adres" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
+                            <input type="hidden" name="pickup_location" id="newSale_pickup_location" value="">
                             <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 mt-4"><i class="bi bi-geo-alt text-green-600"></i> Eşyanın Gideceği Yer (Depo)</h4>
-                            <?php if (!empty($warehouses)): ?>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo adresinden seç</label>
-                                <select id="newSale_delivery_warehouse" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                    <option value="">Yukarıda seçtiğiniz depo kullanılır</option>
-                                    <?php foreach ($warehouses as $wh): ?>
-                                        <?php $whAddr = trim(($wh['name'] ?? '') . ($wh['address'] ? ', ' . $wh['address'] : '') . ($wh['city'] ? ', ' . $wh['city'] : '') . ($wh['district'] ? ' / ' . $wh['district'] : '')); ?>
-                                        <option value="<?= htmlspecialchars($whAddr) ?>"><?= htmlspecialchars($wh['name'] ?? '') ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Eşya, sözleşmede seçtiğiniz depoya gidecektir.</p>
+                            <div class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
+                                <p id="newSale_delivery_preview" class="text-sm font-medium text-emerald-800 dark:text-emerald-300">Önce sözleşme deposu seçin</p>
                             </div>
-                            <?php endif; ?>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Veya İl / İlçe ile belirtin</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <select id="newSale_delivery_il" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                        <option value="">İl seçin</option>
-                                    </select>
-                                    <select id="newSale_delivery_ilce" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                                        <option value="">Önce il seçin</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açık Adres (Gideceği yer – boş bırakılırsa seçilen depo kullanılır)</label>
-                                <input type="text" name="delivery_location" id="newSale_delivery_location" placeholder="İl, İlçe veya tam adres" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            </div>
+                            <input type="hidden" name="delivery_location" id="newSale_delivery_location" value="">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200 dark:border-gray-600">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İndirim (₺)</label>
@@ -462,13 +465,91 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
 </div>
 
 <script src="/customer-picker.js"></script>
+<script src="/room-picker.js"></script>
+<?php
+$newSaleRoomsJson = [];
+foreach ($rooms as $r) {
+    $roomNum = preg_replace('/\s*\([^)]*\)\s*$/', '', (string) ($r['room_number'] ?? ''));
+    $roomPrice = isset($r['monthly_price']) && $r['monthly_price'] !== null && $r['monthly_price'] !== ''
+        ? (float) $r['monthly_price'] : null;
+    $newSaleRoomsJson[] = [
+        'id' => $r['id'] ?? '',
+        'warehouse_id' => $r['warehouse_id'] ?? '',
+        'room_number' => $roomNum,
+        'monthly_price' => $roomPrice,
+        'status' => $r['status'] ?? '',
+    ];
+}
+?>
 <script>
 function toggleTransportationBlock(show) {
     var block = document.getElementById('newSale_transportation_block');
     var hiddenInput = document.getElementById('newSale_has_transportation_val');
     if (block) block.classList.toggle('hidden', !show);
     if (hiddenInput) hiddenInput.value = show ? '1' : '0';
-    if (show) loadNewSaleIller();
+    if (show) {
+        loadNewSaleIller();
+        syncDeliveryFromContractWarehouse();
+        composePickupLocation();
+    }
+}
+function togglePickupSourceType(type) {
+    var addressBlock = document.getElementById('newSale_pickup_address_block');
+    var depoBlock = document.getElementById('newSale_pickup_depo_block');
+    var depoSelect = document.getElementById('newSale_pickup_warehouse_id');
+    if (addressBlock) addressBlock.classList.toggle('hidden', type === 'depo');
+    if (depoBlock) depoBlock.classList.toggle('hidden', type !== 'depo');
+    if (depoSelect) depoSelect.required = type === 'depo';
+    document.querySelectorAll('#newSale_pickup_type_group .pickup-type-label').forEach(function(label) {
+        var input = label.querySelector('input[type="radio"]');
+        var active = input && input.value === type;
+        label.classList.toggle('border-emerald-500', active);
+        label.classList.toggle('bg-emerald-50', active);
+        label.classList.toggle('dark:bg-emerald-900/20', active);
+        label.classList.toggle('border-gray-300', !active);
+        label.classList.toggle('dark:border-gray-600', !active);
+    });
+    composePickupLocation();
+}
+function getPickupSourceType() {
+    var checked = document.querySelector('input[name="pickup_source_type"]:checked');
+    return checked ? checked.value : 'evden';
+}
+function composePickupLocation() {
+    var hidden = document.getElementById('newSale_pickup_location');
+    if (!hidden) return;
+    var type = getPickupSourceType();
+    if (type === 'depo') {
+        var depoSelect = document.getElementById('newSale_pickup_warehouse_id');
+        var opt = depoSelect && depoSelect.options[depoSelect.selectedIndex];
+        var addr = opt && opt.getAttribute('data-address');
+        hidden.value = addr ? ('Depo: ' + addr) : '';
+        return;
+    }
+    var parts = [];
+    var il = document.getElementById('newSale_pickup_il');
+    var ilce = document.getElementById('newSale_pickup_ilce');
+    var detail = document.getElementById('newSale_pickup_address_detail');
+    if (il && il.selectedIndex > 0) parts.push(il.options[il.selectedIndex].text);
+    if (ilce && ilce.value) parts.push(ilce.value);
+    if (detail && detail.value.trim()) parts.push(detail.value.trim());
+    var label = type === 'ofisten' ? 'Ofisten' : 'Evden';
+    hidden.value = parts.length ? (label + ': ' + parts.join(', ')) : '';
+}
+function syncDeliveryFromContractWarehouse() {
+    var whSelect = document.getElementById('newSale_warehouse');
+    var preview = document.getElementById('newSale_delivery_preview');
+    var hidden = document.getElementById('newSale_delivery_location');
+    if (!whSelect || !preview || !hidden) return;
+    var opt = whSelect.options[whSelect.selectedIndex];
+    if (!whSelect.value || !opt) {
+        preview.textContent = 'Önce sözleşme deposu seçin';
+        hidden.value = '';
+        return;
+    }
+    var addr = opt.getAttribute('data-full-address') || opt.textContent.trim();
+    preview.textContent = addr;
+    hidden.value = addr;
 }
 function toggleStoredItemsConditionNote(value) {
     var block = document.getElementById('newSale_stored_items_condition_note_block');
@@ -485,11 +566,8 @@ function loadNewSaleIller() {
     if (!pickupIl || pickupIl.options.length > 1) return;
     fetch('/api/iller', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(res){
         var list = (res && res.data) ? res.data : [];
-        [pickupIl, document.getElementById('newSale_delivery_il')].forEach(function(sel){
-            if (!sel) return;
-            sel.innerHTML = '<option value="">İl seçin</option>';
-            list.forEach(function(p){ var o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
-        });
+        pickupIl.innerHTML = '<option value="">İl seçin</option>';
+        list.forEach(function(p){ var o = document.createElement('option'); o.value = p.id; o.textContent = p.name; pickupIl.appendChild(o); });
     });
 }
 function closeQuickAddCustomer() {
@@ -499,6 +577,17 @@ function closeQuickAddCustomer() {
 function openNewSaleModal() {
     document.getElementById('newSaleModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    var wh = document.getElementById('newSale_warehouse');
+    if (wh) wh.value = '';
+    if (window.newSaleRoomPicker) {
+        window.newSaleRoomPicker.clearSelected();
+        window.newSaleRoomPicker.setEnabled(false);
+    }
+    var roomSearch = document.getElementById('newSale_room_search');
+    if (roomSearch) {
+        roomSearch.value = '';
+        roomSearch.placeholder = 'Önce depo seçin';
+    }
 }
 function closeNewSaleModal() {
     document.getElementById('newSaleModal').classList.add('hidden');
@@ -506,41 +595,43 @@ function closeNewSaleModal() {
 }
 (function() {
     var whSelect = document.getElementById('newSale_warehouse');
-    var roomSelect = document.getElementById('newSale_room');
-    var roomOptions = [];
-    roomSelect.querySelectorAll('option[data-warehouse]').forEach(function(o) {
-        roomOptions.push({
-            value: o.value,
-            warehouse: o.getAttribute('data-warehouse'),
-            text: o.textContent.trim(),
-            monthlyPrice: o.getAttribute('data-monthly-price') || ''
-        });
-    });
-    whSelect.addEventListener('change', function() {
-        var wh = this.value;
-        roomSelect.innerHTML = '<option value="">' + (wh ? 'Oda Seçin' : 'Önce Depo Seçin') + '</option>';
-        roomOptions.forEach(function(o) {
-            if (o.warehouse === wh) {
-                var opt = document.createElement('option');
-                opt.value = o.value;
-                opt.textContent = o.text;
-                opt.setAttribute('data-monthly-price', o.monthlyPrice || '');
-                roomSelect.appendChild(opt);
-            }
-        });
+    var monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    function applyWarehouseBaseFee() {
         var priceEl = document.getElementById('newSale_monthly_price');
-        if (priceEl) priceEl.value = '';
-    });
-    roomSelect.addEventListener('change', function() {
+        if (!priceEl || !whSelect) return;
+        var opt = whSelect.options[whSelect.selectedIndex];
+        var baseFee = opt && opt.getAttribute('data-monthly-base-fee');
+        priceEl.value = baseFee ? baseFee.replace('.', ',') : '';
+    }
+    function applyRoomMonthlyPrice(room) {
         var priceEl = document.getElementById('newSale_monthly_price');
-        if (priceEl) {
-            var opt = this.options[this.selectedIndex];
-            var roomFee = opt && opt.getAttribute('data-monthly-price');
-            priceEl.value = roomFee ? roomFee.replace('.', ',') : '';
+        if (!priceEl || !room) return;
+        if (room.monthly_price !== null && room.monthly_price !== undefined && room.monthly_price !== '') {
+            priceEl.value = String(room.monthly_price).replace('.', ',');
         }
         buildMonthlyPricesList();
-    });
-    var monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    }
+    if (typeof initRoomPicker === 'function') {
+        window.newSaleRoomPicker = initRoomPicker({
+            hiddenInputId: 'newSale_room_id',
+            searchInputId: 'newSale_room_search',
+            resultsId: 'newSale_room_results',
+            warehouseSelectId: 'newSale_warehouse',
+            hintId: 'newSale_room_hint',
+            rooms: <?= json_encode($newSaleRoomsJson, JSON_UNESCAPED_UNICODE) ?>,
+            onWarehouseChange: function () {
+                applyWarehouseBaseFee();
+                buildMonthlyPricesList();
+                syncDeliveryFromContractWarehouse();
+            },
+            onSelect: function (room) {
+                applyRoomMonthlyPrice(room);
+            },
+            onClear: function () {
+                applyWarehouseBaseFee();
+            }
+        });
+    }
     function buildMonthlyPricesList() {
         var startEl = document.getElementById('newSale_start_date');
         var endEl = document.getElementById('newSale_end_date');
@@ -581,16 +672,11 @@ function closeNewSaleModal() {
         var val = this.value.replace(',', '.');
         list.querySelectorAll('input').forEach(function(inp) { if (!inp.value || inp.value === '0') inp.value = val ? val.replace('.', ',') : ''; });
     });
-    var pickupWh = document.getElementById('newSale_pickup_warehouse');
-    var deliveryWh = document.getElementById('newSale_delivery_warehouse');
-    var pickupAddr = document.getElementById('newSale_pickup_location');
-    var deliveryAddr = document.getElementById('newSale_delivery_location');
-    if (pickupWh && pickupAddr) pickupWh.addEventListener('change', function() { if (this.value) pickupAddr.value = this.value; });
-    if (deliveryWh && deliveryAddr) deliveryWh.addEventListener('change', function() { if (this.value) deliveryAddr.value = this.value; });
+    var pickupAddrDetail = document.getElementById('newSale_pickup_address_detail');
+    var pickupDepo = document.getElementById('newSale_pickup_warehouse_id');
+    if (pickupDepo) pickupDepo.addEventListener('change', composePickupLocation);
     var pickupIl = document.getElementById('newSale_pickup_il');
     var pickupIlce = document.getElementById('newSale_pickup_ilce');
-    var deliveryIl = document.getElementById('newSale_delivery_il');
-    var deliveryIlce = document.getElementById('newSale_delivery_ilce');
     function loadIlceler(ilId, ilceSelect) {
         if (!ilceSelect) return;
         ilceSelect.innerHTML = '<option value="">Yükleniyor...</option>';
@@ -602,13 +688,11 @@ function closeNewSaleModal() {
         });
     }
     if (pickupIl && pickupIlce) {
-        pickupIl.addEventListener('change', function(){ loadIlceler(this.value, pickupIlce); pickupAddr.value = ''; });
-        pickupIlce.addEventListener('change', function(){ if (this.value && pickupIl.options[pickupIl.selectedIndex]) pickupAddr.value = pickupIl.options[pickupIl.selectedIndex].text + ', ' + this.value; });
+        pickupIl.addEventListener('change', function(){ loadIlceler(this.value, pickupIlce); composePickupLocation(); });
+        pickupIlce.addEventListener('change', composePickupLocation);
     }
-    if (deliveryIl && deliveryIlce) {
-        deliveryIl.addEventListener('change', function(){ loadIlceler(this.value, deliveryIlce); deliveryAddr.value = ''; });
-        deliveryIlce.addEventListener('change', function(){ if (this.value && deliveryIl.options[deliveryIl.selectedIndex]) deliveryAddr.value = deliveryIl.options[deliveryIl.selectedIndex].text + ', ' + this.value; });
-    }
+    if (pickupAddrDetail) pickupAddrDetail.addEventListener('input', composePickupLocation);
+    if (whSelect) whSelect.addEventListener('change', syncDeliveryFromContractWarehouse);
 })();
 document.getElementById('newSaleModal').addEventListener('keydown', function(e) { if (e.key === 'Escape') closeNewSaleModal(); });
 (function() {
@@ -648,6 +732,30 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
     var form = document.getElementById('newSaleForm');
     if (form) {
         form.addEventListener('submit', function(e) {
+            composePickupLocation();
+            syncDeliveryFromContractWarehouse();
+            var hasTransport = document.getElementById('newSale_has_transportation_val');
+            if (hasTransport && hasTransport.value === '1') {
+                var type = getPickupSourceType();
+                if (type === 'depo') {
+                    var depoSel = document.getElementById('newSale_pickup_warehouse_id');
+                    if (!depoSel || !depoSel.value) {
+                        e.preventDefault();
+                        alert('Nakliye için alınacak depoyu seçin.');
+                        if (depoSel) depoSel.focus();
+                        return;
+                    }
+                } else {
+                    var pickupHidden = document.getElementById('newSale_pickup_location');
+                    if (!pickupHidden || !pickupHidden.value.trim()) {
+                        e.preventDefault();
+                        alert(type === 'ofisten' ? 'Ofis adresini girin.' : 'Ev adresini girin.');
+                        var detail = document.getElementById('newSale_pickup_address_detail');
+                        if (detail) detail.focus();
+                        return;
+                    }
+                }
+            }
             var selected = form.querySelector('input[name="stored_items_condition"]:checked');
             if (!selected) {
                 e.preventDefault();
