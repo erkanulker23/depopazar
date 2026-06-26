@@ -102,7 +102,7 @@ class PermissionsController
              FROM users u
              LEFT JOIN companies c ON c.id = u.company_id AND c.deleted_at IS NULL
              WHERE u.deleted_at IS NULL
-             AND u.role IN (\'super_admin\', \'company_owner\', \'company_staff\', \'data_entry\', \'accounting\')
+             AND u.role IN (' . RolePermissions::sqlStaffRoles() . ')
              ORDER BY u.role, u.first_name, u.last_name'
         );
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

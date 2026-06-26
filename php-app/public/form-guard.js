@@ -2,10 +2,16 @@
     'use strict';
 
     var lockedForms = new WeakSet();
+    var unlockTimers = new WeakMap();
 
     function unlockForm(form) {
         if (!form) {
             return;
+        }
+        var timer = unlockTimers.get(form);
+        if (timer) {
+            clearTimeout(timer);
+            unlockTimers.delete(form);
         }
         lockedForms.delete(form);
         delete form.dataset.submitting;
@@ -22,6 +28,9 @@
         if (!form || form.tagName !== 'FORM' || lockedForms.has(form)) {
             return false;
         }
+        if (form.dataset.noGuard === '1') {
+            return true;
+        }
         lockedForms.add(form);
         form.dataset.submitting = '1';
         form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
@@ -31,6 +40,9 @@
                 btn.textContent = 'Kaydediliyor...';
             }
         });
+        unlockTimers.set(form, setTimeout(function () {
+            unlockForm(form);
+        }, 60000));
         return true;
     }
 
@@ -47,10 +59,7 @@
             return;
         }
         var method = (form.getAttribute('method') || 'get').toLowerCase();
-        if (method === 'get') {
-            return;
-        }
-        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        if (method === 'get' || form.dataset.noGuard === '1') {
             return;
         }
         if (form.dataset.submitting === '1' && lockedForms.has(form)) {
@@ -62,9 +71,13 @@
             e.preventDefault();
             e.stopImmediatePropagation();
         }
-    }, true);
+    });
 
     window.resetSubmitForm = unlockForm;
+
+    window.addEventListener('pageshow', function () {
+        document.querySelectorAll('form[data-submitting="1"]').forEach(unlockForm);
+    });
 
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
@@ -74,6 +87,10 @@
                 }
             });
             obs.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        });
+
+        document.querySelectorAll('[data-flash-error]').forEach(function (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
     });
 })();

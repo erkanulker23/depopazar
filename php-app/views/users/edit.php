@@ -3,6 +3,7 @@ $currentPage = 'kullanicilar';
 $profile = $profile ?? [];
 $companies = $companies ?? [];
 $roleLabels = $roleLabels ?? [];
+$formRoleOptions = $formRoleOptions ?? RolePermissions::formRoleOptions(false);
 $flashSuccess = $flashSuccess ?? null;
 $flashError = $flashError ?? null;
 ob_start();
@@ -50,13 +51,9 @@ ob_start();
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rol</label>
             <select name="role" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                <option value="company_staff" <?= ($profile['role'] ?? '') === 'company_staff' ? 'selected' : '' ?>>Personel</option>
-                <option value="company_owner" <?= ($profile['role'] ?? '') === 'company_owner' ? 'selected' : '' ?>>Şirket Sahibi</option>
-                <option value="data_entry" <?= ($profile['role'] ?? '') === 'data_entry' ? 'selected' : '' ?>>Veri Girişi</option>
-                <option value="accounting" <?= ($profile['role'] ?? '') === 'accounting' ? 'selected' : '' ?>>Muhasebe</option>
-                <?php if (!empty($currentUserIsSuperAdmin) || ($profile['role'] ?? '') === 'super_admin'): ?>
-                <option value="super_admin" <?= ($profile['role'] ?? '') === 'super_admin' ? 'selected' : '' ?>>Süper Admin</option>
-                <?php endif; ?>
+                <?php foreach ($formRoleOptions as $roleKey => $roleLabel): ?>
+                    <option value="<?= htmlspecialchars($roleKey) ?>" <?= ($profile['role'] ?? '') === $roleKey ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
         <?php if (!empty($companies)): ?>

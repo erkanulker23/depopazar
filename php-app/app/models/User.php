@@ -42,13 +42,14 @@ class User
 
     public static function findStaff(PDO $pdo, ?string $companyId = null, ?string $search = null, ?string $roleFilter = null, ?string $activeFilter = null): array
     {
-        $sql = 'SELECT id, first_name, last_name, email, phone, role, is_active, created_at FROM users WHERE deleted_at IS NULL AND role IN (\'super_admin\', \'company_owner\', \'company_staff\', \'data_entry\', \'accounting\') ';
+        $staffRoles = RolePermissions::sqlStaffRoles();
+        $sql = 'SELECT id, first_name, last_name, email, phone, role, is_active, created_at FROM users WHERE deleted_at IS NULL AND role IN (' . $staffRoles . ') ';
         $params = [];
         if ($companyId) {
             $sql .= ' AND company_id = ? ';
             $params[] = $companyId;
         }
-        if ($roleFilter !== null && $roleFilter !== '' && in_array($roleFilter, ['super_admin', 'company_owner', 'company_staff', 'data_entry', 'accounting'], true)) {
+        if ($roleFilter !== null && $roleFilter !== '' && in_array($roleFilter, RolePermissions::STAFF_ROLES, true)) {
             $sql .= ' AND role = ? ';
             $params[] = $roleFilter;
         }

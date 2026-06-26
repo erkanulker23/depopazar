@@ -23,20 +23,14 @@ class UsersController
         } else {
             $staff = User::findStaff($this->pdo, $companyId, $search, $roleFilter, $activeFilter);
         }
-        $roleLabels = [
-            'super_admin' => 'Süper Admin',
-            'company_owner' => 'Şirket Sahibi',
-            'company_staff' => 'Personel',
-            'data_entry' => 'Veri Girişi',
-            'accounting' => 'Muhasebe',
-            'customer' => 'Müşteri',
-        ];
         $companies = [];
         if (($user['role'] ?? '') === 'super_admin') {
             $stmt = $this->pdo->query('SELECT id, name FROM companies WHERE deleted_at IS NULL ORDER BY name');
             $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $canManageUsers = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
+        $roleLabels = RolePermissions::roleLabels();
+        $formRoleOptions = RolePermissions::formRoleOptions(($user['role'] ?? '') === 'super_admin');
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/users/index.php';
     }
@@ -62,14 +56,7 @@ class UsersController
             header('Location: /kullanicilar');
             exit;
         }
-        $roleLabels = [
-            'super_admin' => 'Süper Admin',
-            'company_owner' => 'Şirket Sahibi',
-            'company_staff' => 'Personel',
-            'data_entry' => 'Veri Girişi',
-            'accounting' => 'Muhasebe',
-            'customer' => 'Müşteri',
-        ];
+        $roleLabels = RolePermissions::roleLabels();
         $companyName = null;
         if (!empty($profile['company_id'])) {
             $c = Company::findOne($this->pdo, $profile['company_id']);
@@ -111,15 +98,9 @@ class UsersController
             $stmt = $this->pdo->query('SELECT id, name FROM companies WHERE deleted_at IS NULL ORDER BY name');
             $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
-        $roleLabels = [
-            'super_admin' => 'Süper Admin',
-            'company_owner' => 'Şirket Sahibi',
-            'company_staff' => 'Personel',
-            'data_entry' => 'Veri Girişi',
-            'accounting' => 'Muhasebe',
-            'customer' => 'Müşteri',
-        ];
+        $roleLabels = RolePermissions::roleLabels();
         $currentUserIsSuperAdmin = ($user['role'] ?? '') === 'super_admin';
+        $formRoleOptions = RolePermissions::formRoleOptions($currentUserIsSuperAdmin || ($profile['role'] ?? '') === 'super_admin');
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/users/edit.php';
     }
@@ -163,11 +144,29 @@ class UsersController
             $autoPassword = true;
         }
         $role = $_POST['role'] ?? 'company_staff';
+        if (!in_array($role, array_keys(RolePermissions::formRoleOptions(($user['role'] ?? '') === 'super_admin')), true)) {
+            $role = 'company_staff';
+        }
         $newCompanyId = null;
         if (($user['role'] ?? '') === 'super_admin') {
             $newCompanyId = trim($_POST['company_id'] ?? '') ?: null;
+            if (!$newCompanyId) {
+                Auth::setSession('flash_error', 'Personel eklerken şirket seçmelisiniz.');
+                header('Location: /kullanicilar');
+                exit;
+            }
+            if (!Company::findOne($this->pdo, $newCompanyId)) {
+                Auth::setSession('flash_error', 'Seçilen şirket bulunamadı.');
+                header('Location: /kullanicilar');
+                exit;
+            }
         } else {
             $newCompanyId = $companyId;
+            if (!$newCompanyId) {
+                Auth::setSession('flash_error', 'Şirket bilginiz tanımlı değil; kullanıcı eklenemedi.');
+                header('Location: /kullanicilar');
+                exit;
+            }
         }
         $data = [
             'email' => $email,
@@ -179,7 +178,22 @@ class UsersController
             'company_id' => $newCompanyId,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ];
-        User::create($this->pdo, $data);
+        try {
+            User::create($this->pdo, $data);
+        } catch (PDOException $e) {
+            $msg = ($e->getCode() === '23000' || str_contains($e->getMessage(), 'Duplicate'))
+                ? 'Bu e-posta adresi zaten kayıtlı.'
+                : 'Kullanıcı eklenemedi. Lütfen tekrar deneyin.';
+            error_log('User create failed: ' . $e->getMessage());
+            Auth::setSession('flash_error', $msg);
+            header('Location: /kullanicilar');
+            exit;
+        } catch (Throwable $e) {
+            error_log('User create failed: ' . $e->getMessage());
+            Auth::setSession('flash_error', 'Kullanıcı eklenemedi. Lütfen tekrar deneyin.');
+            header('Location: /kullanicilar');
+            exit;
+        }
         $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         try {
@@ -241,12 +255,19 @@ class UsersController
             header('Location: /kullanicilar/' . $id . '/duzenle');
             exit;
         }
+        $allowedRoles = array_keys(RolePermissions::formRoleOptions(
+            ($user['role'] ?? '') === 'super_admin' || ($profile['role'] ?? '') === 'super_admin'
+        ));
+        $submittedRole = $_POST['role'] ?? $profile['role'];
+        if (!in_array($submittedRole, $allowedRoles, true)) {
+            $submittedRole = $profile['role'];
+        }
         $data = [
             'first_name' => trim($_POST['first_name'] ?? ''),
             'last_name' => trim($_POST['last_name'] ?? ''),
             'email' => $email,
             'phone' => trim($_POST['phone'] ?? '') ?: null,
-            'role' => $_POST['role'] ?? $profile['role'],
+            'role' => $submittedRole,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ];
         if (($user['role'] ?? '') === 'super_admin') {

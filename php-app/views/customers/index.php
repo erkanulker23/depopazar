@@ -7,6 +7,7 @@ $debtFilter = $debtFilter ?? null;
 $borc = $debtFilter ?? '';
 $warehouses = $warehouses ?? [];
 $customers = $customers ?? [];
+$customersTotal = $customersTotal ?? 0;
 $duplicateFullNames = $duplicateFullNames ?? [];
 $borcQuery = array_key_exists('borc', $_GET)
     ? ($borc !== '' ? $borc : '')
@@ -23,7 +24,9 @@ ob_start();
 ?>
 <div class="mb-6">
     <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Müşteriler</h1>
-    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Müşteri yönetimi</p>
+    <p class="text-sm text-gray-600 dark:text-gray-400">
+        <span class="font-semibold text-emerald-700 dark:text-emerald-400"><?= number_format((int) $customersTotal, 0, ',', '.') ?> müşteri</span>
+    </p>
 </div>
 
 <div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

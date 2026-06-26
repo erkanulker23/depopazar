@@ -127,7 +127,7 @@ class Auth
 
     public static function isStaff(): bool
     {
-        return in_array(self::$user['role'] ?? '', ['super_admin', 'company_owner', 'company_staff', 'data_entry', 'accounting'], true);
+        return in_array(self::$user['role'] ?? '', RolePermissions::STAFF_ROLES, true);
     }
 
     public static function requireLogin(): void

@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `first_name` VARCHAR(100) NOT NULL,
   `last_name` VARCHAR(100) NOT NULL,
   `phone` VARCHAR(20) DEFAULT NULL,
-  `role` ENUM('super_admin','company_owner','company_staff','data_entry','accounting','customer') DEFAULT 'customer',
+  `role` ENUM('super_admin','company_owner','company_staff','data_entry','accounting','warehouse_manager','customer') DEFAULT 'customer',
   `company_id` CHAR(36) DEFAULT NULL,
   `is_active` TINYINT(1) DEFAULT 1,
   `last_login_at` DATETIME DEFAULT NULL,

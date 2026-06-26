@@ -64,7 +64,7 @@ class Notification
     {
         $userIds = [];
         if ($companyId) {
-            $stmt = $pdo->prepare('SELECT id FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (\'company_owner\', \'company_staff\', \'data_entry\', \'accounting\')');
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (' . RolePermissions::sqlCompanyOperativeRoles() . ')');
             $stmt->execute([$companyId]);
             $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }

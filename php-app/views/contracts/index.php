@@ -2,6 +2,7 @@
 $currentPage = 'girisler';
 $openNewSale = $openNewSale ?? false;
 $newCustomerId = $newCustomerId ?? '';
+$contractsTotal = $contractsTotal ?? 0;
 $roomsByWarehouse = [];
 foreach ($rooms as $r) {
     $wid = $r['warehouse_id'] ?? '';
@@ -13,7 +14,9 @@ ob_start();
 ?>
 <div class="mb-6">
     <h1 class="page-title gradient-title">Tüm Girişler</h1>
-    <p class="page-subtitle uppercase tracking-widest font-bold">Sözleşme bilgileri</p>
+    <p class="text-sm text-gray-600 dark:text-gray-400">
+        <span class="font-semibold text-emerald-700 dark:text-emerald-400"><?= number_format((int) $contractsTotal, 0, ',', '.') ?> sözleşme</span>
+    </p>
 </div>
 
 <?php

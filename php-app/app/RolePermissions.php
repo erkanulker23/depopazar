@@ -5,10 +5,13 @@
  */
 class RolePermissions
 {
-    public const STAFF_ROLES = ['super_admin', 'company_owner', 'company_staff', 'data_entry', 'accounting'];
+    public const STAFF_ROLES = ['super_admin', 'company_owner', 'company_staff', 'data_entry', 'accounting', 'warehouse_manager'];
+
+    /** Şirkete bağlı operasyonel roller (bildirim, nakliye personel listesi vb.) */
+    public const COMPANY_OPERATIVE_ROLES = ['company_owner', 'company_staff', 'data_entry', 'accounting', 'warehouse_manager'];
 
     /** Süper admin dışındaki roller düzenlenebilir */
-    public const EDITABLE_ROLES = ['company_owner', 'company_staff', 'data_entry', 'accounting'];
+    public const EDITABLE_ROLES = ['company_owner', 'company_staff', 'data_entry', 'accounting', 'warehouse_manager'];
 
     private static ?array $matrixCache = null;
 
@@ -20,8 +23,38 @@ class RolePermissions
             'company_staff' => 'Personel',
             'data_entry' => 'Veri Girişi',
             'accounting' => 'Muhasebe',
+            'warehouse_manager' => 'Depo Sorumlusu',
             'customer' => 'Müşteri',
         ];
+    }
+
+    /** Kullanıcı ekleme/düzenleme formlarında gösterilecek roller (sıralı) */
+    public static function formRoleOptions(bool $allowSuperAdmin = false): array
+    {
+        $order = ['company_owner', 'warehouse_manager', 'company_staff', 'data_entry', 'accounting'];
+        if ($allowSuperAdmin) {
+            $order[] = 'super_admin';
+        }
+        $labels = self::roleLabels();
+        $out = [];
+        foreach ($order as $key) {
+            if (isset($labels[$key])) {
+                $out[$key] = $labels[$key];
+            }
+        }
+        return $out;
+    }
+
+    /** SQL IN (...) için şirket operasyonel rolleri */
+    public static function sqlCompanyOperativeRoles(): string
+    {
+        return "'" . implode("','", self::COMPANY_OPERATIVE_ROLES) . "'";
+    }
+
+    /** SQL IN (...) için tüm personel rolleri */
+    public static function sqlStaffRoles(): string
+    {
+        return "'" . implode("','", self::STAFF_ROLES) . "'";
     }
 
     public static function roleDescriptions(): array
@@ -30,6 +63,7 @@ class RolePermissions
             'super_admin' => 'Tüm şirketler; kullanıcı/rol yönetimi, ayarlar, raporlar ve operasyonel tüm modüller.',
             'company_owner' => 'Kendi şirketinde tam yönetim; personel, depo, müşteri, ödeme, masraf ve raporlar.',
             'company_staff' => 'Günlük operasyon: girişler, müşteri, tahsilat, nakliye, depo/oda; masraf ve ayarlar menüde yok.',
+            'warehouse_manager' => 'Depo ve oda yönetimi, girişler, müşteri ve tahsilat; araç/hizmet/teklif menüde yok.',
             'data_entry' => 'Müşteri ve depo kayıtları; raporlar, masraflar, kullanıcılar ve ayarlar menüde yok.',
             'accounting' => 'Ödemeler, masraflar, raporlar; kullanıcı/ayar yönetimi yok.',
         ];
@@ -213,6 +247,11 @@ class RolePermissions
             'accounting' => $build([
                 'masraflar' => $fullCrud,
                 'raporlar' => $reports,
+            ]),
+            'warehouse_manager' => $build([
+                'araclar' => $none,
+                'hizmetler' => $none,
+                'teklifler' => $none,
             ]),
         ];
 

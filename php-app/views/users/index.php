@@ -1,6 +1,7 @@
 <?php
 $currentPage = 'kullanicilar';
 $roleLabels = $roleLabels ?? [];
+$formRoleOptions = $formRoleOptions ?? RolePermissions::formRoleOptions(false);
 $staff = $staff ?? [];
 $companies = $companies ?? [];
 $canManageUsers = $canManageUsers ?? false;
@@ -17,7 +18,7 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
 <?php endif; ?>
 <?php if ($flashError): ?>
-    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
+    <div data-flash-error class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
 <?php
@@ -46,7 +47,7 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
 
 <?php if ($canManageUsers): ?>
 <div class="mb-4">
-    <button type="button" onclick="document.getElementById('addUserModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+    <button type="button" onclick="openAddUserModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Kullanıcı Ekle
     </button>
 </div>
@@ -102,13 +103,13 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
 <!-- Modal: Kullanıcı Ekle -->
 <div id="addUserModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('addUserModal').classList.add('hidden')"></div>
+        <div class="fixed inset-0 bg-black/50" onclick="closeAddUserModal()"></div>
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Kullanıcı Ekle</h3>
-                <button type="button" onclick="document.getElementById('addUserModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+                <button type="button" onclick="closeAddUserModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
             </div>
-            <form method="post" action="/kullanicilar/ekle" class="space-y-3">
+            <form method="post" action="/kullanicilar/ekle" id="addUserForm" class="space-y-3">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad <span class="text-red-500">*</span></label>
@@ -137,16 +138,15 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rol</label>
                     <select name="role" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                        <option value="company_staff">Personel</option>
-                        <option value="company_owner">Şirket Sahibi</option>
-                        <option value="data_entry">Veri Girişi</option>
-                        <option value="accounting">Muhasebe</option>
+                        <?php foreach ($formRoleOptions as $roleKey => $roleLabel): ?>
+                            <option value="<?= htmlspecialchars($roleKey) ?>" <?= $roleKey === 'company_staff' ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <?php if (!empty($companies)): ?>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şirket (Süper admin)</label>
-                    <select name="company_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şirket (Süper admin) <span class="text-red-500">*</span></label>
+                    <select name="company_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         <option value="">Seçin</option>
                         <?php foreach ($companies as $c): ?>
                             <option value="<?= htmlspecialchars($c['id']) ?>"><?= htmlspecialchars($c['name']) ?></option>
@@ -159,7 +159,7 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                     <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
                 </label>
                 <div class="form-submit-bar flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="document.getElementById('addUserModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
                     <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
                 </div>
             </form>
@@ -167,6 +167,27 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
     </div>
 </div>
 <script>
+function openAddUserModal() {
+    var modal = document.getElementById('addUserModal');
+    if (!modal) return;
+    var form = document.getElementById('addUserForm');
+    if (form) {
+        if (window.resetSubmitForm) window.resetSubmitForm(form);
+        form.reset();
+        var active = form.querySelector('input[name="is_active"]');
+        if (active) active.checked = true;
+        var role = form.querySelector('select[name="role"]');
+        if (role) role.value = 'company_staff';
+    }
+    modal.classList.remove('hidden');
+}
+function closeAddUserModal() {
+    var modal = document.getElementById('addUserModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    var form = document.getElementById('addUserForm');
+    if (form && window.resetSubmitForm) window.resetSubmitForm(form);
+}
 function generatePassword() {
     var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
     var pwd = '';
