@@ -657,6 +657,7 @@ if (newJobCustomerId && document.getElementById('newJob_customer_id')) {
             if (this.value && deliveryIl.options[deliveryIl.selectedIndex]) deliveryAddr.value = deliveryIl.options[deliveryIl.selectedIndex].text + ', ' + this.value;
         });
     }
+    loadIller();
 })();
 </script>
 <?php

@@ -167,6 +167,7 @@ $router->post('/ayarlar/kredi-karti-sil', fn() => (new SettingsController($pdo))
 $router->get('/manifest.webmanifest', fn() => (new PwaController())->manifest());
 $router->get('/pwa-icon/{size}', fn(array $p) => (new PwaController())->icon($p));
 $router->get('/api/musteriler', fn() => (new CustomersController($pdo))->apiSearch());
+$router->get('/api/iller', fn() => IlIlceController::getProvinces());
 $router->get('/api/ilceler', fn() => IlIlceController::getDistricts());
 $router->get('/bildirimler', fn() => (new NotificationsController($pdo))->index());
 $router->get('/api/bildirimler', fn() => (new NotificationsController($pdo))->apiList());
