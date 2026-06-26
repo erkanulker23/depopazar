@@ -19,7 +19,6 @@ if (($q = strpos($currentPath, '?')) !== false) $currentPath = substr($currentPa
 $navIcons = ['Genel Bakış'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Girişler'=>'file-text','Nakliye İşler'=>'truck','Araçlar'=>'car-front','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Raporlar'=>'bar-chart','Bildirimler'=>'bell','Ayarlar'=>'gear'];
 $navItems = [
     ['name' => 'Genel Bakış', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
-    ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
     ['name' => 'Ödeme Al', 'href' => '/odemeler?collect=1', 'active' => false],
     ['name' => 'Tüm Girişler', 'href' => '/girisler', 'active' => $currentPath === '/girisler'],
     ['name' => 'Nakliye İşler', 'href' => '/nakliye-isler', 'active' => $currentPath === '/nakliye-isler'],
@@ -28,9 +27,10 @@ $navItems = [
     ['name' => 'Teklifler', 'href' => '/teklifler', 'active' => $currentPath === '/teklifler'],
     ['name' => 'Kullanıcılar', 'href' => '/kullanicilar', 'active' => $currentPath === '/kullanicilar'],
     ['name' => 'Kullanıcı Yetkileri', 'href' => '/yetkiler', 'active' => $currentPath === '/yetkiler'],
+    ['name' => 'Müşteriler', 'href' => '/musteriler', 'active' => $currentPath === '/musteriler'],
+    ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
     ['name' => 'Depolar', 'href' => '/depolar', 'active' => $currentPath === '/depolar'],
     ['name' => 'Odalar', 'href' => '/odalar', 'active' => $currentPath === '/odalar'],
-    ['name' => 'Müşteriler', 'href' => '/musteriler', 'active' => $currentPath === '/musteriler'],
     ['name' => 'Ödemeler', 'href' => '/odemeler', 'active' => $currentPath === '/odemeler'],
     ['name' => 'Masraflar', 'href' => '/masraflar', 'active' => $currentPath === '/masraflar'],
     ['name' => 'Raporlar', 'href' => '/raporlar', 'active' => $currentPath === '/raporlar'],
@@ -420,7 +420,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
             <div id="pushBanner" class="hidden mx-4 md:mx-6 lg:mx-8 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-900 dark:text-blue-100">
                 <div class="push-banner-text flex items-center gap-2 min-w-0">
                     <i class="bi bi-bell text-lg flex-shrink-0"></i>
-                    <span>Bildirimleri açın; ödeme ve işlem uyarıları telefonunuza gelsin. (iPhone: önce uygulamayı ana ekrana ekleyin)</span>
+                    <span>Her işlemde anlık bildirim almak için açın (telefon + e-posta). iPhone: önce uygulamayı ana ekrana ekleyin.</span>
                 </div>
                 <div class="push-banner-btns flex gap-2 flex-shrink-0">
                     <button type="button" id="pushBannerAllow" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 text-sm">Bildirimleri Aç</button>
@@ -563,7 +563,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         });
 
         if (deleteAllBtn) deleteAllBtn.addEventListener('click', function(){
-            if (!confirm('Tüm bildirimleri silmek istediğinize emin misiniz?')) return;
+            if (!confirm(<?= json_encode(deleteAllConfirmMessage('bildirimler')) ?>)) return;
             var csrf = document.querySelector('input[name="_token"]');
             fetch('/bildirimler/tumunu-sil', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' }, body: '_token=' + (csrf ? encodeURIComponent(csrf.value) : '') }).then(function(){
                 setBadge(0);
@@ -589,6 +589,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
     })();
     </script>
     <script src="/phone-mask.js" defer></script>
+    <script src="/delete-confirm.js"></script>
     <script src="/form-guard.js" defer></script>
     <?php if ($user && !empty($user['id'])): ?><script src="/pwa.js" defer></script><?php endif; ?>
 </body>

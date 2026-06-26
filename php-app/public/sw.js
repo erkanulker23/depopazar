@@ -73,8 +73,9 @@ self.addEventListener('push', function (event) {
   var options = {
     body: data.body || '',
     icon: data.icon || '/icons/icon-192.png',
-    badge: data.icon || '/icons/icon-192.png',
+    badge: data.badge || '/icons/icon-192.png',
     tag: data.tag || ('depopazar-' + Date.now()),
+    renotify: true,
     requireInteraction: false,
     data: { url: data.url || '/bildirimler' },
   };

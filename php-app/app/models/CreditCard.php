@@ -21,6 +21,38 @@ class CreditCard
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    /** Son 4 haneyi normalize eder; boşsa null, geçersizse null döner */
+    public static function parseLastFourDigits(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        $digits = preg_replace('/\D/', '', $value);
+        return strlen($digits) === 4 ? $digits : null;
+    }
+
+    public static function isValidLastFourInput(?string $value): bool
+    {
+        if ($value === null || trim($value) === '') {
+            return true;
+        }
+        return self::parseLastFourDigits($value) !== null;
+    }
+
+    public static function existsByLastFourDigits(PDO $pdo, string $companyId, string $lastFour, ?string $excludeId = null): bool
+    {
+        $sql = 'SELECT 1 FROM credit_cards WHERE company_id = ? AND deleted_at IS NULL AND last_four_digits = ?';
+        $params = [$companyId, $lastFour];
+        if ($excludeId !== null && $excludeId !== '') {
+            $sql .= ' AND id != ?';
+            $params[] = $excludeId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
@@ -66,7 +98,7 @@ class CreditCard
 
     public static function remove(PDO $pdo, string $id, ?string $companyId = null): void
     {
-        $sql = 'UPDATE credit_cards SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL';
+        $sql = 'DELETE FROM credit_cards WHERE id = ?';
         $params = [$id];
         if ($companyId !== null) {
             $sql .= ' AND company_id = ?';

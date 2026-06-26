@@ -136,7 +136,7 @@ class TransportationJob
 
     public static function remove(PDO $pdo, string $id): void
     {
-        $pdo->prepare('UPDATE transportation_jobs SET deleted_at = NOW() WHERE id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM transportation_jobs WHERE id = ?')->execute([$id]);
     }
 
     private static function uuid(): string

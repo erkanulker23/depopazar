@@ -404,7 +404,7 @@ ob_start();
                 <?php foreach ($documents as $doc): ?>
                 <li class="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                     <a href="<?= htmlspecialchars(strpos($doc['file_path'] ?? '', '/') === 0 ? $doc['file_path'] : '/' . $doc['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= htmlspecialchars($doc['name'] ?? 'Belge') ?></a>
-                    <form method="post" action="/musteriler/belge-sil" class="inline" onsubmit="return confirm('Bu belgeyi silmek istediğinize emin misiniz?');">
+                    <form method="post" action="/musteriler/belge-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('belge')) ?>);">
                         <input type="hidden" name="id" value="<?= htmlspecialchars($doc['id']) ?>">
                         <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
                         <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-sm">Sil</button>

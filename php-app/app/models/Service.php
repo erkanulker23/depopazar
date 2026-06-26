@@ -59,7 +59,7 @@ class Service
 
     public static function softDelete(PDO $pdo, string $id): void
     {
-        $stmt = $pdo->prepare('UPDATE services SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL');
+        $stmt = $pdo->prepare('DELETE FROM services WHERE id = ?');
         $stmt->execute([$id]);
     }
 

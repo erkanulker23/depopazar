@@ -152,7 +152,7 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
                                         <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100">Sonlandır</button>
                                     </form>
                                 <?php endif; ?>
-                                <form method="post" action="/girisler/sil" class="inline ml-1" onsubmit="return confirm('Bu sözleşmeyi silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/girisler/sil" class="inline ml-1" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('sözleşme')) ?>);">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
                                     <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
                                 </form>
@@ -711,7 +711,7 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
     function submitBulkDelete() {
         var cbs = document.querySelectorAll('.contract-cb:checked');
         if (cbs.length === 0) return false;
-        if (!confirm('Seçili ' + cbs.length + ' sözleşmeyi silmek istediğinize emin misiniz?')) return false;
+        if (!confirm(deleteConfirmMsg('sözleşme', cbs.length))) return false;
         if (container) {
             container.innerHTML = '';
             cbs.forEach(function(cb) {

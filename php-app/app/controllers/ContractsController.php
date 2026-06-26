@@ -594,7 +594,7 @@ class ContractsController
             if ($companyId && ($contract['company_id'] ?? '') !== $companyId) continue;
             $roomId = $contract['room_id'] ?? null;
             $contractNumber = $contract['contract_number'] ?? $id;
-            Contract::softDelete($this->pdo, $id);
+            Contract::hardDelete($this->pdo, $id);
             if ($roomId) Room::update($this->pdo, $roomId, ['status' => 'empty']);
             Notification::createForCompany($this->pdo, $contract['company_id'] ?? null, 'contract', 'Sözleşme silindi', 'Sözleşme ' . $contractNumber . ' silindi.');
             $deleted++;
@@ -647,23 +647,46 @@ class ContractsController
             '{aylik_ucret}' => $aylikUcret,
         ];
 
+        $user = Auth::user();
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        $emailContext = [
+            'actor_name' => $actorName,
+            'acted_at' => $createdAt ?? date('Y-m-d H:i:s'),
+            'action_title' => 'Sözleşme oluşturuldu',
+        ];
+
         if (!empty($mail['notify_customer_on_contract'])) {
             $customerEmail = trim($contract['customer_email'] ?? '');
             if ($customerEmail !== '' && filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
                 $bodyPlain = str_replace(array_keys($replace), array_values($replace), $tplCustomer);
-                $bodyHtml = MailService::wrapInHtmlTemplate($appName, 'Sözleşme Oluşturuldu', $bodyPlain, 'Sözleşme No: ' . $sozlesmeNo);
-                MailService::sendSmtp($mail, $customerEmail, $appName . ' – Sözleşme Oluşturuldu', $bodyPlain, $bodyHtml);
+                MailService::sendTemplated(
+                    $mail,
+                    $customerEmail,
+                    $appName . ' – Sözleşme Oluşturuldu',
+                    'Sözleşme Oluşturuldu',
+                    $bodyPlain,
+                    'Sözleşme No: ' . $sozlesmeNo,
+                    $emailContext
+                );
             }
         }
 
         if (!empty($mail['notify_admin_on_contract'])) {
             $staff = User::findStaff($this->pdo, $companyId);
             $adminBodyPlain = str_replace(array_keys($replace), array_values($replace), $tplAdmin);
-            $adminBodyHtml = MailService::wrapInHtmlTemplate($appName, 'Yeni Sözleşme Bildirimi', $adminBodyPlain, $sozlesmeNo . ' – ' . $musteriAdi);
+            $adminContext = array_merge($emailContext, ['action_title' => 'Yeni sözleşme bildirimi']);
             foreach ($staff as $u) {
                 $email = trim($u['email'] ?? '');
                 if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    MailService::sendSmtp($mail, $email, $appName . ' – Yeni sözleşme: ' . $sozlesmeNo, $adminBodyPlain, $adminBodyHtml);
+                    MailService::sendTemplated(
+                        $mail,
+                        $email,
+                        $appName . ' – Yeni sözleşme: ' . $sozlesmeNo,
+                        'Yeni Sözleşme Bildirimi',
+                        $adminBodyPlain,
+                        $sozlesmeNo . ' – ' . $musteriAdi,
+                        $adminContext
+                    );
                 }
             }
         }

@@ -261,10 +261,21 @@ class Contract
         }
     }
 
+    public static function hardDelete(PDO $pdo, string $id): bool
+    {
+        $contract = self::findOne($pdo, $id);
+        if ($contract && !empty($contract['contract_pdf_url'])) {
+            unlinkPublicFile($contract['contract_pdf_url']);
+        }
+        Item::deleteByContractId($pdo, $id);
+        $stmt = $pdo->prepare('DELETE FROM contracts WHERE id = ?');
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
+    }
+
     public static function softDelete(PDO $pdo, string $id): void
     {
-        $stmt = $pdo->prepare('UPDATE contracts SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL');
-        $stmt->execute([$id]);
+        self::hardDelete($pdo, $id);
     }
 
     public static function countActiveGlobal(PDO $pdo): int

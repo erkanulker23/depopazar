@@ -105,8 +105,7 @@ class Warehouse
 
     public static function remove(PDO $pdo, string $id): void
     {
-        $pdo->prepare('UPDATE rooms SET deleted_at = NOW() WHERE warehouse_id = ?')->execute([$id]);
-        $pdo->prepare('UPDATE warehouses SET deleted_at = NOW() WHERE id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM warehouses WHERE id = ?')->execute([$id]);
     }
 
     private static function uuid(): string

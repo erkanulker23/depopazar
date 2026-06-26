@@ -108,7 +108,7 @@ class Room
 
     public static function remove(PDO $pdo, string $id): void
     {
-        $pdo->prepare('UPDATE rooms SET deleted_at = NOW() WHERE id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM rooms WHERE id = ?')->execute([$id]);
     }
 
     private static function uuid(): string

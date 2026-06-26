@@ -41,10 +41,19 @@ class CustomerDocument
         return $id;
     }
 
+    public static function hardDelete(PDO $pdo, string $id): void
+    {
+        $doc = self::findOne($pdo, $id);
+        if ($doc) {
+            unlinkPublicFile($doc['file_path'] ?? null);
+        }
+        $stmt = $pdo->prepare('DELETE FROM customer_documents WHERE id = ?');
+        $stmt->execute([$id]);
+    }
+
     public static function softDelete(PDO $pdo, string $id): void
     {
-        $stmt = $pdo->prepare('UPDATE customer_documents SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL');
-        $stmt->execute([$id]);
+        self::hardDelete($pdo, $id);
     }
 
     private static function uuid(): string

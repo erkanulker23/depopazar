@@ -85,7 +85,7 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                             <td class="px-4 py-3 text-right">
                                 <a href="/kullanicilar/<?= htmlspecialchars($s['id']) ?>/duzenle" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></a>
                                 <button type="button" onclick="openChangePasswordModal('<?= htmlspecialchars($s['id']) ?>', '<?= htmlspecialchars(addslashes(($s['first_name'] ?? '') . ' ' . ($s['last_name'] ?? ''))) ?>')" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 mr-1" title="Şifre Değiştir"><i class="bi bi-key"></i></button>
-                                <form method="post" action="/kullanicilar/sil" class="inline" onsubmit="return confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/kullanicilar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('kullanıcı')) ?>);">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($s['id']) ?>">
                                     <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>

@@ -1,7 +1,7 @@
 <?php
 class Notification
 {
-    public static function create(PDO $pdo, string $userId, string $type, string $title, string $message, ?array $metadata = null, bool $sendPush = true): void
+    public static function create(PDO $pdo, string $userId, string $type, string $title, string $message, ?array $metadata = null, bool $sendPush = true, bool $sendEmail = true): void
     {
         $id = self::uuid();
         $stmt = $pdo->prepare('INSERT INTO notifications (id, user_id, type, title, message, metadata) VALUES (?, ?, ?, ?, ?, ?)');
@@ -13,21 +13,23 @@ class Notification
             $message,
             $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : null,
         ]);
-        if ($sendPush) {
-            self::deferPush($pdo, [$userId], $title, $message);
+        if ($sendPush || $sendEmail) {
+            $url = self::resolveNotificationUrl($type, $metadata);
+            $emailContext = self::emailContextForNotification($title, $metadata);
+            self::deferDelivery($pdo, null, [$userId], $title, $message, $type, $url, $sendPush, $sendEmail, $emailContext);
         }
     }
 
     /**
      * Şirketteki staff + süper admin kullanıcılarına uygulama içi bildirim.
-     * Varsayılan: push arka planda; e-posta gönderilmez (SMTP gecikmesini önler).
+     * Varsayılan: push + e-posta arka planda (yanıt gönderildikten sonra).
      *
      * @param array{push?: bool, email?: bool} $options
      */
     public static function createForCompany(PDO $pdo, ?string $companyId, string $type, string $title, string $message, ?array $metadata = null, array $options = []): void
     {
         $sendPush = $options['push'] ?? true;
-        $sendEmail = $options['email'] ?? false;
+        $sendEmail = $options['email'] ?? true;
 
         $userIds = self::companyStaffUserIds($pdo, $companyId);
         if ($userIds === []) {
@@ -45,17 +47,10 @@ class Notification
             . implode(', ', $placeholders);
         $pdo->prepare($sql)->execute($params);
 
-        if ($sendPush) {
-            self::deferPush($pdo, $userIds, $title, $message);
-        }
-        if ($sendEmail) {
-            register_shutdown_function(static function () use ($pdo, $companyId, $title, $message): void {
-                try {
-                    MailService::sendToSuperAdmins($pdo, $companyId, $title, $message);
-                } catch (Throwable $e) {
-                    error_log('Notification email shutdown: ' . $e->getMessage());
-                }
-            });
+        if ($sendPush || $sendEmail) {
+            $url = self::resolveNotificationUrl($type, $metadata);
+            $emailContext = self::emailContextForNotification($title, $metadata);
+            self::deferDelivery($pdo, $companyId, $userIds, $title, $message, $type, $url, $sendPush, $sendEmail, $emailContext);
         }
     }
 
@@ -75,21 +70,78 @@ class Notification
         return array_values(array_unique($userIds));
     }
 
-    /** Push gönderimini istek yanıtından sonra çalıştırır (sayfa daha hızlı açılır). */
-    private static function deferPush(PDO $pdo, array $userIds, string $title, string $message): void
+    /** @return array{actor_name?: string, acted_at: string, action_title: string} */
+    private static function emailContextForNotification(string $title, ?array $metadata): array
     {
+        $metadata = $metadata ?? [];
+        if (empty($metadata['acted_at'])) {
+            $metadata['acted_at'] = date('Y-m-d H:i:s');
+        }
+        if (empty($metadata['action_title'])) {
+            $metadata['action_title'] = $title;
+        }
+        return $metadata;
+    }
+
+    /** Push + e-posta gönderimini istek yanıtından sonra çalıştırır. */
+    private static function deferDelivery(
+        PDO $pdo,
+        ?string $companyId,
+        array $userIds,
+        string $title,
+        string $message,
+        string $type,
+        string $url,
+        bool $sendPush,
+        bool $sendEmail,
+        ?array $emailContext = null
+    ): void {
         $userIds = array_values(array_unique(array_filter($userIds)));
         if ($userIds === []) {
             return;
         }
-        register_shutdown_function(static function () use ($pdo, $userIds, $title, $message): void {
+        register_shutdown_function(static function () use ($pdo, $companyId, $userIds, $title, $message, $type, $url, $sendPush, $sendEmail, $emailContext): void {
             releaseHttpResponse();
-            try {
-                PushService::sendToUsers($pdo, $userIds, $title, $message);
-            } catch (Throwable $e) {
-                error_log('Notification push shutdown: ' . $e->getMessage());
+            if ($sendPush) {
+                try {
+                    PushService::sendToUsers($pdo, $userIds, $title, $message, $url, $type);
+                } catch (Throwable $e) {
+                    error_log('Notification push shutdown: ' . $e->getMessage());
+                }
+            }
+            if ($sendEmail) {
+                try {
+                    MailService::sendToUsers($pdo, $companyId, $userIds, $title, $message, $emailContext);
+                } catch (Throwable $e) {
+                    error_log('Notification email shutdown: ' . $e->getMessage());
+                }
             }
         });
+    }
+
+    private static function resolveNotificationUrl(string $type, ?array $metadata): string
+    {
+        if (!empty($metadata['url']) && is_string($metadata['url'])) {
+            return $metadata['url'];
+        }
+        if ($type === 'contract' && !empty($metadata['contract_id'])) {
+            return '/girisler/' . $metadata['contract_id'];
+        }
+        if ($type === 'customer' && !empty($metadata['customer_id'])) {
+            return '/musteriler/' . $metadata['customer_id'];
+        }
+        return match ($type) {
+            'contract', 'payment' => '/girisler',
+            'customer' => '/musteriler',
+            'transport' => '/nakliye-isler',
+            'warehouse' => '/depolar',
+            'expense' => '/masraflar',
+            'proposal' => '/teklifler',
+            'vehicle' => '/araclar',
+            'user' => '/kullanicilar',
+            'settings', 'bank' => '/ayarlar',
+            default => '/bildirimler',
+        };
     }
 
     /** Giriş yapan kullanıcıya ait bildirimleri getirir */
@@ -126,7 +178,7 @@ class Notification
 
     public static function deleteAll(PDO $pdo, string $userId): void
     {
-        $stmt = $pdo->prepare('UPDATE notifications SET deleted_at = NOW() WHERE user_id = ? AND deleted_at IS NULL');
+        $stmt = $pdo->prepare('DELETE FROM notifications WHERE user_id = ?');
         $stmt->execute([$userId]);
     }
 

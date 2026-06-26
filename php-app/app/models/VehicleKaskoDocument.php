@@ -34,7 +34,11 @@ class VehicleKaskoDocument
 
     public static function softDelete(PDO $pdo, string $id): bool
     {
-        $stmt = $pdo->prepare('UPDATE vehicle_kasko_documents SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL');
+        $doc = self::findOne($pdo, $id);
+        if ($doc) {
+            unlinkPublicFile($doc['file_path'] ?? null);
+        }
+        $stmt = $pdo->prepare('DELETE FROM vehicle_kasko_documents WHERE id = ?');
         $stmt->execute([$id]);
         return $stmt->rowCount() > 0;
     }

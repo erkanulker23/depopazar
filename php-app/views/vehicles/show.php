@@ -113,7 +113,7 @@ ob_start();
                                 <td class="px-4 py-2 text-sm">
                                     <?php foreach ($tiDocs as $d): ?>
                                         <a href="<?= htmlspecialchars($d['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline block"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
-                                        <form method="post" action="/araclar/trafik-sigortasi/belge-sil" class="inline" onsubmit="return confirm('Bu belgeyi silmek istediğinize emin misiniz?');">
+                                        <form method="post" action="/araclar/trafik-sigortasi/belge-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('belge')) ?>);">
                                             <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                             <input type="hidden" name="id" value="<?= htmlspecialchars($d['id']) ?>">
                                             <button type="submit" class="text-red-500 hover:underline text-xs">sil</button>
@@ -123,7 +123,7 @@ ob_start();
                                 </td>
                                 <td class="px-4 py-2 text-right">
                                     <button type="button" onclick='openEditTrafficInsurance(<?= json_encode($ti) ?>)' class="text-emerald-600 dark:text-emerald-400 hover:underline text-sm mr-2">Düzenle</button>
-                                    <form method="post" action="/araclar/trafik-sigortasi/sil" class="inline" onsubmit="return confirm('Bu trafik sigortasını silmek istediğinize emin misiniz?');">
+                                    <form method="post" action="/araclar/trafik-sigortasi/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('trafik sigortası kaydı')) ?>);">
                                         <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                         <input type="hidden" name="id" value="<?= htmlspecialchars($ti['id']) ?>">
                                         <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-sm">Sil</button>
@@ -173,7 +173,7 @@ ob_start();
                                 <td class="px-4 py-2 text-sm">
                                     <?php foreach ($kDocs as $d): ?>
                                         <a href="<?= htmlspecialchars($d['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline block"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
-                                        <form method="post" action="/araclar/kasko/belge-sil" class="inline" onsubmit="return confirm('Bu belgeyi silmek istediğinize emin misiniz?');">
+                                        <form method="post" action="/araclar/kasko/belge-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('belge')) ?>);">
                                             <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                             <input type="hidden" name="id" value="<?= htmlspecialchars($d['id']) ?>">
                                             <button type="submit" class="text-red-500 hover:underline text-xs">sil</button>
@@ -183,7 +183,7 @@ ob_start();
                                 </td>
                                 <td class="px-4 py-2 text-right">
                                     <button type="button" onclick='openEditKasko(<?= json_encode($k) ?>)' class="text-emerald-600 dark:text-emerald-400 hover:underline text-sm mr-2">Düzenle</button>
-                                    <form method="post" action="/araclar/kasko/sil" class="inline" onsubmit="return confirm('Bu kaskoyu silmek istediğinize emin misiniz?');">
+                                    <form method="post" action="/araclar/kasko/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('kasko kaydı')) ?>);">
                                         <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                         <input type="hidden" name="id" value="<?= htmlspecialchars($k['id']) ?>">
                                         <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-sm">Sil</button>
@@ -234,7 +234,7 @@ ob_start();
                                     <?php foreach ($aDocs as $d): ?>
                                         <span class="text-gray-500 dark:text-gray-400 text-xs"><?= htmlspecialchars(VehicleAccidentDocument::kindLabel($d['document_kind'] ?? 'diger')) ?>:</span>
                                         <a href="<?= htmlspecialchars($d['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
-                                        <form method="post" action="/araclar/kaza/belge-sil" class="inline" onsubmit="return confirm('Bu belgeyi silmek istediğinize emin misiniz?');">
+                                        <form method="post" action="/araclar/kaza/belge-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('belge')) ?>);">
                                             <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                             <input type="hidden" name="id" value="<?= htmlspecialchars($d['id']) ?>">
                                             <button type="submit" class="text-red-500 hover:underline text-xs">sil</button>
@@ -244,7 +244,7 @@ ob_start();
                                 </td>
                                 <td class="px-4 py-2 text-right">
                                     <button type="button" onclick='openEditAccident(<?= json_encode($a) ?>)' class="text-emerald-600 dark:text-emerald-400 hover:underline text-sm mr-2">Düzenle</button>
-                                    <form method="post" action="/araclar/kaza/sil" class="inline" onsubmit="return confirm('Bu kaza kaydını silmek istediğinize emin misiniz?');">
+                                    <form method="post" action="/araclar/kaza/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('kaza kaydı')) ?>);">
                                         <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                         <input type="hidden" name="id" value="<?= htmlspecialchars($a['id']) ?>">
                                         <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-sm">Sil</button>

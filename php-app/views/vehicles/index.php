@@ -126,7 +126,7 @@ $alertGet = isset($_GET['alert']) ? $_GET['alert'] : '';
                                 <?php if (!empty($row['id'])): ?>
                                     <a href="/araclar/<?= htmlspecialchars($row['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1">Detay</a>
                                     <button type="button" onclick='openEditVehicle(<?= json_encode($row) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1">Düzenle</button>
-                                    <form method="post" action="/araclar/sil" class="inline" onsubmit="return confirm('Bu aracı silmek istediğinize emin misiniz?');">
+                                    <form method="post" action="/araclar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('araç')) ?>);">
                                         <input type="hidden" name="id" value="<?= htmlspecialchars($row['id']) ?>">
                                         <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
                                     </form>

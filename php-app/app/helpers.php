@@ -533,6 +533,41 @@ if (!function_exists('renderPagination')) {
     }
 }
 
+/** Tümünü sil onay metni */
+if (!function_exists('deleteAllConfirmMessage')) {
+    function deleteAllConfirmMessage(string $pluralLabel): string
+    {
+        return 'Tüm ' . $pluralLabel . ' kalıcı olarak tamamen silinecektir; ilişkili kayıtlar da sistemden kaldırılacaktır. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?';
+    }
+}
+
+/** Kalıcı silme onay metni */
+if (!function_exists('deleteConfirmMessage')) {
+    function deleteConfirmMessage(string $entityLabel): string
+    {
+        return 'Bu ' . $entityLabel . ' kalıcı olarak tamamen silinecektir; ilişkili kayıtlar da sistemden kaldırılacaktır. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?';
+    }
+}
+
+/** public/uploads altındaki dosyayı diskten kaldırır */
+if (!function_exists('unlinkPublicFile')) {
+    function unlinkPublicFile(?string $relativePath): void
+    {
+        if ($relativePath === null || $relativePath === '') {
+            return;
+        }
+        $relativePath = '/' . ltrim($relativePath, '/');
+        if (strpos($relativePath, '/uploads/') !== 0) {
+            return;
+        }
+        $root = defined('APP_ROOT') ? APP_ROOT . '/public' : dirname(__DIR__) . '/public';
+        $full = $root . $relativePath;
+        if (is_file($full)) {
+            @unlink($full);
+        }
+    }
+}
+
 /** Flash mesajlarını okur ve oturumdan siler */
 if (!function_exists('flash_consume')) {
     /** @return array{success: ?string, error: ?string} */

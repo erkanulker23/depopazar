@@ -10,7 +10,7 @@ class PushService
      * Belirtilen kullanıcılara push bildirimi gönderir (cihazlara/telefonlara).
      * Composer veya VAPID yoksa sessizce atlanır.
      */
-    public static function sendToUsers(PDO $pdo, array $userIds, string $title, string $message): void
+    public static function sendToUsers(PDO $pdo, array $userIds, string $title, string $message, ?string $url = null, ?string $tag = null): void
     {
         $userIds = array_unique(array_filter($userIds));
         if (empty($userIds)) {
@@ -39,7 +39,9 @@ class PushService
             'title' => $title,
             'body'  => $message,
             'icon'  => '/icons/icon-192.png',
-            'url'   => '/bildirimler',
+            'badge' => '/icons/icon-192.png',
+            'url'   => $url ?: '/bildirimler',
+            'tag'   => $tag ? ('depopazar-' . $tag) : ('depopazar-' . md5($title)),
         ], JSON_UNESCAPED_UNICODE);
 
         try {

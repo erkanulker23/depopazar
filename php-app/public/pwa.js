@@ -85,12 +85,14 @@
     var laterBtn = document.getElementById('pushBannerLater');
     if (!banner || !('Notification' in window)) return;
 
-    if (localStorage.getItem('pushBannerDismissed') === '1') return;
     if (Notification.permission === 'granted') {
       ensurePushSubscription(registration);
       return;
     }
     if (Notification.permission === 'denied') return;
+
+    var dismissedKey = isStandalone() ? 'pushBannerDismissedPwa' : 'pushBannerDismissed';
+    if (localStorage.getItem(dismissedKey) === '1' && !isStandalone()) return;
 
     banner.classList.remove('hidden');
 
@@ -100,11 +102,11 @@
           if (perm === 'granted') {
             subscribePush(registration).then(function (ok) {
               hide(banner);
-              if (ok) localStorage.setItem('pushBannerDismissed', '1');
+              localStorage.setItem(isStandalone() ? 'pushBannerDismissedPwa' : 'pushBannerDismissed', '1');
             });
           } else {
             hide(banner);
-            localStorage.setItem('pushBannerDismissed', '1');
+            localStorage.setItem(isStandalone() ? 'pushBannerDismissedPwa' : 'pushBannerDismissed', '1');
           }
         });
       });
@@ -112,7 +114,7 @@
     if (laterBtn) {
       laterBtn.addEventListener('click', function () {
         hide(banner);
-        localStorage.setItem('pushBannerDismissed', '1');
+        localStorage.setItem(isStandalone() ? 'pushBannerDismissedPwa' : 'pushBannerDismissed', '1');
       });
     }
   }
@@ -166,6 +168,8 @@
   registerServiceWorker().then(function (registration) {
     setupInstallBanner();
     setupPushBanner(registration);
-    if (registration) ensurePushSubscription(registration);
+    if (registration) {
+      ensurePushSubscription(registration);
+    }
   });
 })();

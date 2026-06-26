@@ -64,7 +64,7 @@ class Proposal
 
     public static function softDelete(PDO $pdo, string $id): void
     {
-        $stmt = $pdo->prepare('UPDATE proposals SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL');
+        $stmt = $pdo->prepare('DELETE FROM proposals WHERE id = ?');
         $stmt->execute([$id]);
     }
 

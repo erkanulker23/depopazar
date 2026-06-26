@@ -30,7 +30,7 @@ class Item
 
     public static function deleteByContractId(PDO $pdo, string $contractId): void
     {
-        $stmt = $pdo->prepare('UPDATE items SET deleted_at = NOW() WHERE contract_id = ? AND deleted_at IS NULL');
+        $stmt = $pdo->prepare('DELETE FROM items WHERE contract_id = ?');
         $stmt->execute([$contractId]);
     }
 

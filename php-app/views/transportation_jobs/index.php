@@ -125,7 +125,7 @@ ob_start();
                                 <a href="/nakliye-isler/<?= htmlspecialchars($j['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1" title="Detay"><i class="bi bi-eye"></i></a>
                                 <button type="button" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 mr-1 open-masraf-modal" data-job-id="<?= htmlspecialchars($j['id']) ?>" title="Masraf gir"><i class="bi bi-cash-stack mr-0.5"></i> Masraf gir</button>
                                 <a href="/nakliye-isler/<?= htmlspecialchars($j['id']) ?>/duzenle" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></a>
-                                <form method="post" action="/nakliye-isler/sil" class="inline" onsubmit="return confirm('Bu nakliye işini silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/nakliye-isler/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('nakliye işi')) ?>);">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($j['id']) ?>">
                                     <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
@@ -533,7 +533,7 @@ function closeNewJobCustomer() {
     if (form) form.addEventListener('submit', function(e) {
         var cbs = document.querySelectorAll('.job-cb:checked');
         if (cbs.length === 0) { e.preventDefault(); return; }
-        if (!confirm('Seçili ' + cbs.length + ' nakliye işini silmek istediğinize emin misiniz?')) { e.preventDefault(); return; }
+        if (!confirm(deleteConfirmMsg('nakliye işi', cbs.length))) { e.preventDefault(); return; }
         if (container) {
             container.innerHTML = '';
             cbs.forEach(function(cb) {

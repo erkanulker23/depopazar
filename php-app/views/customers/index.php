@@ -74,7 +74,7 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
-<form id="bulkDeleteForm" method="post" action="/musteriler/toplu-sil<?= $filterQuery !== '' ? '?' . $filterQuery : '' ?>" onsubmit="return confirm('Seçilen müşterileri silmek istediğinize emin misiniz?');">
+<form id="bulkDeleteForm" method="post" action="/musteriler/toplu-sil<?= $filterQuery !== '' ? '?' . $filterQuery : '' ?>" onsubmit="var n=document.querySelectorAll('.customer-cb:checked').length;if(!n)return false;return confirm(deleteConfirmMsg('müşteri',n));">
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible">
     <?php if (empty($customers)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz müşteri kaydı yok<?= $filterQuery !== '' ? ' veya filtreye uygun müşteri bulunamadı.' : '.' ?></div>

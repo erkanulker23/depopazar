@@ -128,7 +128,7 @@ class Expense
 
     public static function remove(PDO $pdo, string $id, ?string $companyId = null): void
     {
-        $sql = 'UPDATE expenses SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL';
+        $sql = 'DELETE FROM expenses WHERE id = ?';
         $params = [$id];
         if ($companyId !== null) {
             $sql .= ' AND company_id = ?';

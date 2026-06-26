@@ -21,6 +21,43 @@ class BankAccount
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    /** Karşılaştırma için alanları normalize eder */
+    public static function normalizeFields(array $data): array
+    {
+        $branch = trim($data['branch_name'] ?? '');
+        return [
+            'bank_name' => mb_strtolower(trim($data['bank_name'] ?? '')),
+            'account_holder_name' => mb_strtolower(trim($data['account_holder_name'] ?? '')),
+            'account_number' => preg_replace('/\s+/', '', trim($data['account_number'] ?? '')),
+            'iban' => self::normalizeIban($data['iban'] ?? null),
+            'branch_name' => $branch !== '' ? mb_strtolower($branch) : null,
+        ];
+    }
+
+    public static function normalizeIban(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        $iban = strtoupper(preg_replace('/\s+/', '', $value));
+        return $iban !== '' ? $iban : null;
+    }
+
+    /** Aynı şirkette birebir aynı banka hesabı var mı */
+    public static function existsDuplicate(PDO $pdo, string $companyId, array $data, ?string $excludeId = null): bool
+    {
+        $fingerprint = self::normalizeFields($data);
+        foreach (self::findAll($pdo, $companyId) as $account) {
+            if ($excludeId !== null && ($account['id'] ?? '') === $excludeId) {
+                continue;
+            }
+            if (self::normalizeFields($account) === $fingerprint) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
@@ -69,7 +106,7 @@ class BankAccount
 
     public static function remove(PDO $pdo, string $id, ?string $companyId = null): void
     {
-        $sql = 'UPDATE bank_accounts SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL';
+        $sql = 'DELETE FROM bank_accounts WHERE id = ?';
         $params = [$id];
         if ($companyId !== null) {
             $sql .= ' AND company_id = ?';

@@ -192,7 +192,7 @@ class SettingsController
             header('Location: /ayarlar?tab=banka');
             exit;
         }
-        BankAccount::create($this->pdo, [
+        $payload = [
             'company_id' => $companyId,
             'bank_name' => $bankName,
             'account_holder_name' => $accountHolder,
@@ -201,7 +201,13 @@ class SettingsController
             'branch_name' => trim($_POST['branch_name'] ?? '') ?: null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
             'opening_balance' => isset($_POST['opening_balance']) ? (float) $_POST['opening_balance'] : 0,
-        ]);
+        ];
+        if (BankAccount::existsDuplicate($this->pdo, $companyId, $payload)) {
+            Auth::setSession('flash_error', 'Bu banka hesabı zaten kayıtlı. Aynı bilgilerle tekrar eklenemez.');
+            header('Location: /ayarlar?tab=banka');
+            exit;
+        }
+        BankAccount::create($this->pdo, $payload);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı eklendi', $bankName . ' banka hesabı ' . ($actorName ?: 'sistem') . ' tarafından eklendi.', ['actor_name' => $actorName]);
         Auth::setSession('flash_success', 'Banka hesabı eklendi.');
@@ -228,15 +234,34 @@ class SettingsController
             header('Location: /ayarlar?tab=banka');
             exit;
         }
+        $existing = BankAccount::findOne($this->pdo, $id, $companyId);
+        if (!$existing) {
+            Auth::setSession('flash_error', 'Banka hesabı bulunamadı.');
+            header('Location: /ayarlar?tab=banka');
+            exit;
+        }
+        $bankName = trim($_POST['bank_name'] ?? '');
+        $accountHolder = trim($_POST['account_holder_name'] ?? '');
+        $accountNumber = trim($_POST['account_number'] ?? '');
+        if ($bankName === '' || $accountHolder === '' || $accountNumber === '') {
+            Auth::setSession('flash_error', 'Banka adı, hesap sahibi ve hesap numarası zorunludur.');
+            header('Location: /ayarlar?tab=banka');
+            exit;
+        }
         $data = [
-            'bank_name' => trim($_POST['bank_name'] ?? ''),
-            'account_holder_name' => trim($_POST['account_holder_name'] ?? ''),
-            'account_number' => trim($_POST['account_number'] ?? ''),
+            'bank_name' => $bankName,
+            'account_holder_name' => $accountHolder,
+            'account_number' => $accountNumber,
             'iban' => trim($_POST['iban'] ?? '') ?: null,
             'branch_name' => trim($_POST['branch_name'] ?? '') ?: null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
             'opening_balance' => isset($_POST['opening_balance']) ? (float) $_POST['opening_balance'] : 0,
         ];
+        if (BankAccount::existsDuplicate($this->pdo, $companyId, $data, $id)) {
+            Auth::setSession('flash_error', 'Bu banka hesabı zaten kayıtlı. Aynı bilgilerle tekrar eklenemez.');
+            header('Location: /ayarlar?tab=banka');
+            exit;
+        }
         BankAccount::update($this->pdo, $id, $data, $companyId);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'bank', 'Banka hesabı güncellendi', ($data['bank_name'] ?? '') . ' banka hesabı güncellendi.', ['actor_name' => $actorName]);
@@ -296,11 +321,23 @@ class SettingsController
             header('Location: /ayarlar?tab=kredi-karti');
             exit;
         }
+        $lastFourRaw = trim($_POST['last_four_digits'] ?? '');
+        if (!CreditCard::isValidLastFourInput($lastFourRaw)) {
+            Auth::setSession('flash_error', 'Son 4 hane tam olarak 4 rakam olmalıdır.');
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        $lastFour = CreditCard::parseLastFourDigits($lastFourRaw);
+        if ($lastFour !== null && CreditCard::existsByLastFourDigits($this->pdo, $companyId, $lastFour)) {
+            Auth::setSession('flash_error', 'Bu son 4 haneye sahip bir kredi kartı zaten kayıtlı.');
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
         CreditCard::create($this->pdo, [
             'company_id' => $companyId,
             'bank_name' => $bankName,
             'card_holder_name' => $cardHolder,
-            'last_four_digits' => trim($_POST['last_four_digits'] ?? '') ?: null,
+            'last_four_digits' => $lastFour,
             'nickname' => trim($_POST['nickname'] ?? '') ?: null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ]);
@@ -330,10 +367,35 @@ class SettingsController
             header('Location: /ayarlar?tab=kredi-karti');
             exit;
         }
+        $existing = CreditCard::findOne($this->pdo, $id, $companyId);
+        if (!$existing) {
+            Auth::setSession('flash_error', 'Kredi kartı bulunamadı.');
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        $bankName = trim($_POST['bank_name'] ?? '');
+        $cardHolder = trim($_POST['card_holder_name'] ?? '');
+        if ($bankName === '' || $cardHolder === '') {
+            Auth::setSession('flash_error', 'Banka adı ve kart sahibi zorunludur.');
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        $lastFourRaw = trim($_POST['last_four_digits'] ?? '');
+        if (!CreditCard::isValidLastFourInput($lastFourRaw)) {
+            Auth::setSession('flash_error', 'Son 4 hane tam olarak 4 rakam olmalıdır.');
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
+        $lastFour = CreditCard::parseLastFourDigits($lastFourRaw);
+        if ($lastFour !== null && CreditCard::existsByLastFourDigits($this->pdo, $companyId, $lastFour, $id)) {
+            Auth::setSession('flash_error', 'Bu son 4 haneye sahip bir kredi kartı zaten kayıtlı.');
+            header('Location: /ayarlar?tab=kredi-karti');
+            exit;
+        }
         $data = [
-            'bank_name' => trim($_POST['bank_name'] ?? ''),
-            'card_holder_name' => trim($_POST['card_holder_name'] ?? ''),
-            'last_four_digits' => trim($_POST['last_four_digits'] ?? '') ?: null,
+            'bank_name' => $bankName,
+            'card_holder_name' => $cardHolder,
+            'last_four_digits' => $lastFour,
             'nickname' => trim($_POST['nickname'] ?? '') ?: null,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ];
@@ -611,13 +673,22 @@ class SettingsController
         $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
         $subject = $appName . ' – E-posta Testi';
         $bodyPlain = "Bu bir test e-postasıdır.\n\nE-posta ayarlarınız çalışıyor.";
-        $bodyHtml = MailService::wrapInHtmlTemplate(
-            $appName,
+        $user = Auth::user();
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        $emailContext = [
+            'actor_name' => $actorName,
+            'acted_at' => date('Y-m-d H:i:s'),
+            'action_title' => 'E-posta testi',
+        ];
+        $result = MailService::sendTemplated(
+            $mail,
+            $to,
+            $subject,
             'E-posta Testi',
             "Bu bir test e-postasıdır.\n\nE-posta ayarlarınız doğru yapılandırıldı ve SMTP bağlantınız çalışıyor. Müşterilerinize göndereceğiniz bildirimler bu ayarlar üzerinden iletilecektir.",
-            ''
+            '',
+            $emailContext
         );
-        $result = MailService::sendSmtp($mail, $to, $subject, $bodyPlain, $bodyHtml);
         if ($result['success']) {
             Auth::setSession('flash_success', 'Test e-postası sunucuya gönderildi: ' . $to . '. Gelen kutusu ve spam klasörünü kontrol edin; gelmiyorsa aşağıdaki «Son e-posta gönderimleri» tablosunda durumu inceleyin.');
         } else {

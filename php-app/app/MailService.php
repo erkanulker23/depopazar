@@ -83,16 +83,169 @@ class MailService
     }
 
     /**
-     * Tüm süper admin kullanıcılara aksiyon bildirimi e-postası gönderir.
-     * Ayarlar > E-posta ayarları (company_mail_settings) kullanılır; companyId yoksa e-postası tanımlı ilk şirket kullanılır.
+     * Bildirim alan kullanıcılara (personel + süper admin) e-posta gönderir.
+     *
+     * @param array{actor_name?: string, acted_at?: string|int, action_title?: string}|null $context
      */
-    public static function sendToSuperAdmins(PDO $pdo, ?string $companyId, string $subject, string $message): void
+    public static function sendToUsers(PDO $pdo, ?string $companyId, array $userIds, string $subject, string $message, ?array $context = null): void
     {
-        $stmt = $pdo->query("SELECT email FROM users WHERE role = 'super_admin' AND deleted_at IS NULL AND email != ''");
-        $emails = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        if (empty($emails)) {
+        $userIds = array_values(array_unique(array_filter($userIds)));
+        if ($userIds === []) {
             return;
         }
+        $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+        $stmt = $pdo->prepare(
+            "SELECT DISTINCT email FROM users WHERE id IN ($placeholders) AND deleted_at IS NULL AND email != ''"
+        );
+        $stmt->execute($userIds);
+        $emails = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $email) {
+            $email = trim((string) $email);
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $emails[] = $email;
+            }
+        }
+        $emails = array_values(array_unique($emails));
+        if ($emails === []) {
+            return;
+        }
+
+        $mailSettings = self::resolveMailSettings($pdo, $companyId);
+        if ($mailSettings === null) {
+            return;
+        }
+
+        $appName = self::appName();
+        $prepared = self::prepareEmailBodies($appName, 'Panel Bildirimi', $message, $subject, $context);
+        foreach ($emails as $to) {
+            try {
+                self::sendSmtp($mailSettings, $to, $subject, $prepared['plain'], $prepared['html']);
+            } catch (Throwable $e) {
+                error_log('sendToUsers email error: ' . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Şablonlu e-posta gönderir (işlem yapan + tarih/saat meta bloğu ile).
+     *
+     * @param array{actor_name?: string, acted_at?: string|int, action_title?: string}|null $context
+     * @return array{success: bool, error: string|null}
+     */
+    public static function sendTemplated(
+        array $mailSettings,
+        string $to,
+        string $subject,
+        string $headerTitle,
+        string $body,
+        string $subtitle = '',
+        ?array $context = null,
+        bool $bodyIsHtml = false
+    ): array {
+        $prepared = self::prepareEmailBodies(self::appName(), $headerTitle, $body, $subtitle, $context, $bodyIsHtml);
+        return self::sendSmtp($mailSettings, $to, $subject, $prepared['plain'], $prepared['html']);
+    }
+
+    /**
+     * @param array{actor_name?: string, acted_at?: string|int, action_title?: string}|null $context
+     * @return array{plain: string, html: string}
+     */
+    public static function prepareEmailBodies(
+        string $appName,
+        string $headerTitle,
+        string $body,
+        string $subtitle = '',
+        ?array $context = null,
+        bool $bodyIsHtml = false
+    ): array {
+        $meta = self::normalizeActionContext($context, $subtitle !== '' ? $subtitle : $headerTitle);
+        $plain = self::appendActionMetaPlain($body, $meta);
+        $html = self::wrapInHtmlTemplate($appName, $headerTitle, $body, $subtitle, $bodyIsHtml, $meta);
+        return ['plain' => $plain, 'html' => $html];
+    }
+
+    /**
+     * @param array{actor_name?: string, acted_at?: string|int, action_title?: string}|null $context
+     * @return array{actor_name: string, action_title: string, date: string, time: string, datetime: string}
+     */
+    public static function normalizeActionContext(?array $context, string $fallbackTitle = ''): array
+    {
+        $context = $context ?? [];
+        $actor = trim((string) ($context['actor_name'] ?? ''));
+        if ($actor === '' && class_exists('Auth', false)) {
+            try {
+                if (Auth::isAuthenticated()) {
+                    $u = Auth::user();
+                    $actor = trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? ''));
+                }
+            } catch (Throwable $e) {
+                // oturum yoksa sessizce devam
+            }
+        }
+        if ($actor === '') {
+            $actor = 'Sistem';
+        }
+
+        $actedAt = $context['acted_at'] ?? null;
+        $ts = ($actedAt !== null && $actedAt !== '') ? strtotime((string) $actedAt) : time();
+        if ($ts === false) {
+            $ts = time();
+        }
+
+        $actionTitle = trim((string) ($context['action_title'] ?? $fallbackTitle));
+        if ($actionTitle === '') {
+            $actionTitle = 'Bildirim';
+        }
+
+        return [
+            'actor_name' => $actor,
+            'action_title' => $actionTitle,
+            'date' => date('d.m.Y', $ts),
+            'time' => date('H:i', $ts),
+            'datetime' => date('d.m.Y H:i', $ts),
+        ];
+    }
+
+  /** @param array{actor_name: string, action_title: string, date: string, time: string, datetime: string} $meta */
+    public static function appendActionMetaPlain(string $body, array $meta): string
+    {
+        return rtrim($body) . "\n\n"
+            . "—\n"
+            . 'İşlem: ' . $meta['action_title'] . "\n"
+            . 'İşlemi yapan: ' . $meta['actor_name'] . "\n"
+            . 'Tarih: ' . $meta['date'] . "\n"
+            . 'Saat: ' . $meta['time'];
+    }
+
+    /** @param array{actor_name: string, action_title: string, date: string, time: string, datetime: string} $meta */
+    public static function renderActionMetaHtml(array $meta): string
+    {
+        $actor = htmlspecialchars($meta['actor_name'], ENT_QUOTES, 'UTF-8');
+        $action = htmlspecialchars($meta['action_title'], ENT_QUOTES, 'UTF-8');
+        $date = htmlspecialchars($meta['date'], ENT_QUOTES, 'UTF-8');
+        $time = htmlspecialchars($meta['time'], ENT_QUOTES, 'UTF-8');
+
+        return '<div style="margin-top:24px;padding:16px 18px;background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;font-size:14px;line-height:1.6;color:#374151;">'
+            . '<p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;">İşlem detayı</p>'
+            . '<p style="margin:0 0 6px;"><strong style="color:#111827;">İşlem:</strong> ' . $action . '</p>'
+            . '<p style="margin:0 0 6px;"><strong style="color:#111827;">İşlemi yapan:</strong> ' . $actor . '</p>'
+            . '<p style="margin:0 0 6px;"><strong style="color:#111827;">Tarih:</strong> ' . $date . '</p>'
+            . '<p style="margin:0;"><strong style="color:#111827;">Saat:</strong> ' . $time . '</p>'
+            . '</div>';
+    }
+
+    private static function appName(): string
+    {
+        $appName = 'DepoPazar';
+        if (defined('APP_ROOT') && is_file(APP_ROOT . '/config/config.php')) {
+            $config = require APP_ROOT . '/config/config.php';
+            $appName = $config['app_name'] ?? $appName;
+        }
+        return $appName;
+    }
+
+    private static function resolveMailSettings(PDO $pdo, ?string $companyId): ?array
+    {
         $mailSettings = null;
         if ($companyId !== null && $companyId !== '') {
             $mailSettings = Company::getMailSettings($pdo, $companyId);
@@ -104,25 +257,23 @@ class MailService
             }
         }
         if ($mailSettings === null || empty($mailSettings['smtp_host']) || empty($mailSettings['smtp_password'])) {
+            return null;
+        }
+        return $mailSettings;
+    }
+
+    /**
+     * Tüm süper admin kullanıcılara aksiyon bildirimi e-postası gönderir.
+     * Ayarlar > E-posta ayarları (company_mail_settings) kullanılır; companyId yoksa e-postası tanımlı ilk şirket kullanılır.
+     */
+    public static function sendToSuperAdmins(PDO $pdo, ?string $companyId, string $subject, string $message, ?array $context = null): void
+    {
+        $stmt = $pdo->query("SELECT id FROM users WHERE role = 'super_admin' AND deleted_at IS NULL AND email != ''");
+        $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if ($userIds === []) {
             return;
         }
-        $appName = 'DepoPazar';
-        if (defined('APP_ROOT') && is_file(APP_ROOT . '/config/config.php')) {
-            $config = require APP_ROOT . '/config/config.php';
-            $appName = $config['app_name'] ?? $appName;
-        }
-        $bodyHtml = self::wrapInHtmlTemplate($appName, 'Panel Bildirimi', $message, $subject);
-        foreach ($emails as $to) {
-            $to = trim($to);
-            if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
-                continue;
-            }
-            try {
-                self::sendSmtp($mailSettings, $to, $subject, $message, $bodyHtml);
-            } catch (Throwable $e) {
-                // Süper admin e-postası hatası ana işlemi bozmasın
-            }
-        }
+        self::sendToUsers($pdo, $companyId, $userIds, $subject, $message, $context);
     }
 
     /**
@@ -164,14 +315,22 @@ class MailService
      * @param string $bodyContent Gövde metni (yeni satırlar <br> olur) veya zaten güvenli HTML
      * @param string $subtitle Opsiyonel alt başlık (üst bantta, başlığın altında)
      * @param bool $bodyIsHtml true ise bodyContent olduğu gibi kullanılır; false ise escape + nl2br
+     * @param array{actor_name?: string, action_title?: string, date?: string, time?: string}|null $actionMeta
      * @return string Tam HTML e-posta gövdesi
      */
-    public static function wrapInHtmlTemplate(string $appName, string $title, string $bodyContent, string $subtitle = '', bool $bodyIsHtml = false): string
-    {
+    public static function wrapInHtmlTemplate(
+        string $appName,
+        string $title,
+        string $bodyContent,
+        string $subtitle = '',
+        bool $bodyIsHtml = false,
+        ?array $actionMeta = null
+    ): string {
         $appEsc = htmlspecialchars($appName, ENT_QUOTES, 'UTF-8');
         $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
         $subtitleEsc = $subtitle !== '' ? htmlspecialchars($subtitle, ENT_QUOTES, 'UTF-8') : '';
         $bodyHtml = $bodyIsHtml ? $bodyContent : nl2br(htmlspecialchars($bodyContent, ENT_QUOTES, 'UTF-8'));
+        $metaHtml = ($actionMeta !== null && $actionMeta !== []) ? self::renderActionMetaHtml($actionMeta) : '';
 
         return '<!DOCTYPE html>
 <html lang="tr">
@@ -198,6 +357,7 @@ class MailService
           <tr>
             <td style="padding: 32px;">
               <div style="font-size: 15px; line-height: 1.6; color: #374151;">' . $bodyHtml . '</div>
+              ' . $metaHtml . '
             </td>
           </tr>
           <tr>

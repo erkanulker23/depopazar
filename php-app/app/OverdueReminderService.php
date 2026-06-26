@@ -55,8 +55,20 @@ class OverdueReminderService
                     '{sozlesme_no}' => $p['contract_number'] ?? '',
                 ];
                 $bodyPlain = str_replace(array_keys($replace), array_values($replace), $tpl);
-                $bodyHtml = MailService::wrapInHtmlTemplate($appName, 'Ödeme Hatırlatması', $bodyPlain, $vade);
-                $result = MailService::sendSmtp($mail, $row['email'], $appName . ' – Ödeme Hatırlatması', $bodyPlain, $bodyHtml);
+                $emailContext = [
+                    'actor_name' => 'Otomatik hatırlatma',
+                    'acted_at' => date('Y-m-d H:i:s'),
+                    'action_title' => 'Ödeme hatırlatması',
+                ];
+                $result = MailService::sendTemplated(
+                    $mail,
+                    $row['email'],
+                    $appName . ' – Ödeme Hatırlatması',
+                    'Ödeme Hatırlatması',
+                    $bodyPlain,
+                    $vade,
+                    $emailContext
+                );
                 if ($result['success'] ?? false) {
                     $sent++;
                 } else {

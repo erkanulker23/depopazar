@@ -32,7 +32,7 @@ ob_start();
                 <i class="bi bi-check-all mr-2"></i> Tümü Okundu
             </button>
         </form>
-        <form method="post" action="/bildirimler/tumunu-sil" class="inline flex-1 sm:flex-none" onsubmit="return confirm('Tüm bildirimleri silmek istediğinize emin misiniz?');">
+        <form method="post" action="/bildirimler/tumunu-sil" class="inline flex-1 sm:flex-none" onsubmit="return confirm(<?= json_encode(deleteAllConfirmMessage('bildirimler')) ?>);">
             <button type="submit" class="btn-touch w-full inline-flex items-center justify-center px-4 py-2 rounded-xl border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20">
                 <i class="bi bi-trash mr-2"></i> Tümünü Sil
             </button>

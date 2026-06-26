@@ -55,7 +55,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
                 <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm">
                     <?= htmlspecialchars($c['name']) ?>
                     <button type="button" onclick='openEditCategory(<?= json_encode($c) ?>)' class="text-gray-500 hover:text-emerald-600" title="Düzenle"><i class="bi bi-pencil"></i></button>
-                    <form method="post" action="/masraflar/kategori-sil" class="inline" onsubmit="return confirm('Bu kategoriyi silmek istediğinize emin misiniz?');">
+                    <form method="post" action="/masraflar/kategori-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('masraf kategorisi')) ?>);">
                         <input type="hidden" name="id" value="<?= htmlspecialchars($c['id']) ?>">
                         <button type="submit" class="text-gray-500 hover:text-red-600" title="Sil"><i class="bi bi-trash"></i></button>
                     </form>
@@ -153,7 +153,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
                             <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white"><?= fmtMoney($e['amount'] ?? 0) ?> ₺</td>
                             <td class="px-4 py-3 text-center">
                                 <button type="button" onclick='openEditExpense(<?= json_encode($e) ?>)' class="text-emerald-600 dark:text-emerald-400 hover:underline text-sm">Düzenle</button>
-                                <form method="post" action="/masraflar/sil" class="inline ml-2" onsubmit="return confirm('Bu masrafı silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/masraflar/sil" class="inline ml-2" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('masraf')) ?>);">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($e['id']) ?>">
                                     <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-sm">Sil</button>
                                 </form>

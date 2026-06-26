@@ -120,7 +120,7 @@ class User
 
     public static function remove(PDO $pdo, string $id): void
     {
-        $pdo->prepare('UPDATE users SET deleted_at = NOW() WHERE id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
     }
 
     private static function uuid(): string

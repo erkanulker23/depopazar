@@ -14,7 +14,7 @@ class ProposalItem
 
     public static function deleteByProposalId(PDO $pdo, string $proposalId): void
     {
-        $stmt = $pdo->prepare('UPDATE proposal_items SET deleted_at = NOW() WHERE proposal_id = ?');
+        $stmt = $pdo->prepare('DELETE FROM proposal_items WHERE proposal_id = ?');
         $stmt->execute([$proposalId]);
     }
 

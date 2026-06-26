@@ -58,7 +58,7 @@ ob_start();
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($cat['description'] ?? '') ?></td>
                             <td class="px-4 py-3 text-right">
                                 <button type="button" onclick='openEditCat(<?= json_encode($cat) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1">Düzenle</button>
-                                <form method="post" action="/hizmetler/kategori/sil" class="inline" onsubmit="return confirm('Bu kategoriyi silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/hizmetler/kategori/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('hizmet kategorisi')) ?>);">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($cat['id']) ?>">
                                     <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
                                 </form>
@@ -97,7 +97,7 @@ ob_start();
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($s['unit'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-right">
                                 <button type="button" onclick='openEditSvc(<?= json_encode($s) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1">Düzenle</button>
-                                <form method="post" action="/hizmetler/hizmet/sil" class="inline" onsubmit="return confirm('Bu hizmeti silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/hizmetler/hizmet/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('hizmet')) ?>);">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($s['id']) ?>">
                                     <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
                                 </form>

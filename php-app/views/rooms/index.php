@@ -139,7 +139,7 @@ ob_start();
                                     'description' => $r['description'] ?? '',
                                     'notes' => $r['notes'] ?? '',
                                 ]) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
-                                <form method="post" action="/odalar/sil" class="inline" onsubmit="return confirm('Bu odayı silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/odalar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('oda')) ?>);">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($r['id']) ?>">
                                     <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
@@ -341,7 +341,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
     if (form) form.addEventListener('submit', function(e) {
         var cbs = document.querySelectorAll('.room-cb:checked');
         if (cbs.length === 0) { e.preventDefault(); return; }
-        if (!confirm('Seçili ' + cbs.length + ' odayı silmek istediğinize emin misiniz?')) { e.preventDefault(); return; }
+        if (!confirm(deleteConfirmMsg('oda', cbs.length))) { e.preventDefault(); return; }
         if (container) { container.innerHTML = ''; cbs.forEach(function(cb) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'ids[]'; i.value = cb.value; container.appendChild(i); }); }
     });
     document.querySelectorAll('.room-cb').forEach(function(cb) { cb.addEventListener('change', update); });

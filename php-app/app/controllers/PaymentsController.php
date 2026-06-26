@@ -346,23 +346,46 @@ class PaymentsController
             '{hesap_adi}' => $hesapAdi,
         ];
 
+        $user = Auth::user();
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        $emailContext = [
+            'actor_name' => $actorName,
+            'acted_at' => $paidAt ?? date('Y-m-d H:i:s'),
+            'action_title' => 'Ödeme alındı',
+        ];
+
         if (!empty($mail['notify_customer_on_payment'])) {
             $customerEmail = trim($payment['customer_email'] ?? '');
             if ($customerEmail !== '' && filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
                 $bodyPlain = str_replace(array_keys($replace), array_values($replace), $tplCustomer);
-                $bodyHtml = MailService::wrapInHtmlTemplate($appName, 'Ödeme Alındı', $bodyPlain, $tutar);
-                MailService::sendSmtp($mail, $customerEmail, $appName . ' – Ödeme Alındı', $bodyPlain, $bodyHtml);
+                MailService::sendTemplated(
+                    $mail,
+                    $customerEmail,
+                    $appName . ' – Ödeme Alındı',
+                    'Ödeme Alındı',
+                    $bodyPlain,
+                    $tutar,
+                    $emailContext
+                );
             }
         }
 
         if (!empty($mail['notify_admin_on_payment'])) {
             $staff = User::findStaff($this->pdo, $companyId);
             $adminBodyPlain = str_replace(array_keys($replace), array_values($replace), $tplAdmin);
-            $adminBodyHtml = MailService::wrapInHtmlTemplate($appName, 'Ödeme Bildirimi', $adminBodyPlain, $musteriAdi . ' – ' . $tutar);
+            $adminContext = array_merge($emailContext, ['action_title' => 'Ödeme bildirimi']);
             foreach ($staff as $u) {
                 $email = trim($u['email'] ?? '');
                 if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    MailService::sendSmtp($mail, $email, $appName . ' – Ödeme alındı: ' . $musteriAdi, $adminBodyPlain, $adminBodyHtml);
+                    MailService::sendTemplated(
+                        $mail,
+                        $email,
+                        $appName . ' – Ödeme alındı: ' . $musteriAdi,
+                        'Ödeme Bildirimi',
+                        $adminBodyPlain,
+                        $musteriAdi . ' – ' . $tutar,
+                        $adminContext
+                    );
                 }
             }
         }

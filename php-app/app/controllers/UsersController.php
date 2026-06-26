@@ -203,8 +203,7 @@ class UsersController
                 'user',
                 'Personel eklendi',
                 $fullName . ' kullanıcı olarak eklendi.',
-                ['actor_name' => $actorName],
-                ['push' => false]
+                ['actor_name' => $actorName]
             );
         } catch (Throwable $e) {
             // Bildirim hatası kullanıcı eklemeyi bozmasın
@@ -294,7 +293,7 @@ class UsersController
         }
         $fullName = trim(($data['first_name'] ?? $profile['first_name'] ?? '') . ' ' . ($data['last_name'] ?? $profile['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName], ['push' => false]);
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName]);
         Auth::setSession('flash_success', 'Kullanıcı güncellendi.');
         header('Location: /kullanicilar/' . $id);
         exit;
@@ -378,7 +377,7 @@ class UsersController
         $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
         User::remove($this->pdo, $id);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName], ['push' => false]);
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName]);
         Auth::setSession('flash_success', 'Kullanıcı silindi.');
         header('Location: /kullanicilar');
         exit;

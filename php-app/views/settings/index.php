@@ -53,7 +53,7 @@ ob_start();
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Mevcut Firma Logosu</label>
                     <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-16 object-contain">
                 </div>
-                <form method="post" action="/ayarlar/logo-sil" class="inline" onsubmit="return confirm('Firma logosunu kaldırmak istediğinize emin misiniz?');">
+                <form method="post" action="/ayarlar/logo-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('firma logosu')) ?>);">
                     <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Logoyu kaldır</button>
                 </form>
             </div>
@@ -167,7 +167,7 @@ ob_start();
                             </div>
                             <div class="flex items-center gap-2">
                                 <button type="button" onclick='openEditBank(<?= json_encode($ba) ?>)' class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500">Düzenle</button>
-                                <form method="post" action="/ayarlar/banka-sil" class="inline" onsubmit="return confirm('Bu banka hesabını silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/ayarlar/banka-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('banka hesabı')) ?>);">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($ba['id']) ?>">
                                     <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
                                 </form>
@@ -308,7 +308,7 @@ ob_start();
                             </div>
                             <div class="flex items-center gap-2">
                                 <button type="button" onclick='openEditCreditCard(<?= json_encode($cc) ?>)' class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500">Düzenle</button>
-                                <form method="post" action="/ayarlar/kredi-karti-sil" class="inline" onsubmit="return confirm('Bu kredi kartını silmek istediğinize emin misiniz?');">
+                                <form method="post" action="/ayarlar/kredi-karti-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('kredi kartı')) ?>);">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($cc['id']) ?>">
                                     <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
                                 </form>
@@ -338,7 +338,7 @@ ob_start();
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Son 4 Hane</label>
-                            <input type="text" name="last_four_digits" maxlength="4" pattern="[0-9]{4}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="1234">
+                            <input type="text" name="last_four_digits" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="1234" title="4 rakam">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Takma Ad (isteğe bağlı)</label>
@@ -377,7 +377,7 @@ ob_start();
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Son 4 Hane</label>
-                            <input type="text" name="last_four_digits" id="edit_cc_last_four_digits" maxlength="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            <input type="text" name="last_four_digits" id="edit_cc_last_four_digits" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="4 rakam">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Takma Ad</label>

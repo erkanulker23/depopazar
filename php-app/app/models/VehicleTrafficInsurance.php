@@ -61,7 +61,7 @@ class VehicleTrafficInsurance
 
     public static function delete(PDO $pdo, string $id, ?string $vehicleId = null): bool
     {
-        $sql = 'UPDATE vehicle_traffic_insurances SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL';
+        $sql = 'DELETE FROM vehicle_traffic_insurances WHERE id = ?';
         $params = [$id];
         if ($vehicleId !== null) {
             $sql .= ' AND vehicle_id = ?';
