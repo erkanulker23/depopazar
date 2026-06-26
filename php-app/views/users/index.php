@@ -124,9 +124,9 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                     <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şifre <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şifre</label>
                     <div class="flex gap-2">
-                        <input type="password" name="password" id="addUser_password" required class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <input type="password" name="password" id="addUser_password" class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="Boş bırakılırsa otomatik üretilir">
                         <button type="button" onclick="generatePassword()" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-500">Otomatik Üret</button>
                     </div>
                 </div>

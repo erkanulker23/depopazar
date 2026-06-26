@@ -57,6 +57,7 @@ class Auth
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
+        releaseHttpResponse();
     }
 
     public static function getSession(string $key, $default = null)

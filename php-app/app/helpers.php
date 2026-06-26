@@ -544,3 +544,22 @@ if (!function_exists('request_dedupe_store')) {
         Auth::setSession('dedupe_' . $action, array_merge(['key' => $key, 'at' => time()], $extra));
     }
 }
+
+/** Yanıtı istemciye gönder; shutdown (push, SMTP vb.) arka planda devam eder. */
+if (!function_exists('releaseHttpResponse')) {
+    function releaseHttpResponse(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        while (ob_get_level() > 0) {
+            ob_end_flush();
+        }
+        flush();
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+    }
+}

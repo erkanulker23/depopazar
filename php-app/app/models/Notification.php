@@ -35,10 +35,15 @@ class Notification
         }
 
         $metaJson = $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : null;
-        $stmt = $pdo->prepare('INSERT INTO notifications (id, user_id, type, title, message, metadata) VALUES (?, ?, ?, ?, ?, ?)');
+        $placeholders = [];
+        $params = [];
         foreach ($userIds as $uid) {
-            $stmt->execute([self::uuid(), $uid, $type, $title, $message, $metaJson]);
+            $placeholders[] = '(?, ?, ?, ?, ?, ?)';
+            array_push($params, self::uuid(), $uid, $type, $title, $message, $metaJson);
         }
+        $sql = 'INSERT INTO notifications (id, user_id, type, title, message, metadata) VALUES '
+            . implode(', ', $placeholders);
+        $pdo->prepare($sql)->execute($params);
 
         if ($sendPush) {
             self::deferPush($pdo, $userIds, $title, $message);
@@ -78,6 +83,7 @@ class Notification
             return;
         }
         register_shutdown_function(static function () use ($pdo, $userIds, $title, $message): void {
+            releaseHttpResponse();
             try {
                 PushService::sendToUsers($pdo, $userIds, $title, $message);
             } catch (Throwable $e) {

@@ -152,11 +152,15 @@ class UsersController
             header('Location: /kullanicilar');
             exit;
         }
-        $password = $_POST['password'] ?? '';
+        $password = trim($_POST['password'] ?? '');
+        $autoPassword = false;
         if ($password === '') {
-            Auth::setSession('flash_error', 'Şifre girin.');
-            header('Location: /kullanicilar');
-            exit;
+            $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+            $password = '';
+            for ($i = 0; $i < 12; $i++) {
+                $password .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+            $autoPassword = true;
         }
         $role = $_POST['role'] ?? 'company_staff';
         $newCompanyId = null;
@@ -179,11 +183,22 @@ class UsersController
         $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         try {
-            Notification::createForCompany($this->pdo, $newCompanyId, 'user', 'Personel eklendi', $fullName . ' kullanıcı olarak eklendi.', ['actor_name' => $actorName]);
+            Notification::createForCompany(
+                $this->pdo,
+                $newCompanyId,
+                'user',
+                'Personel eklendi',
+                $fullName . ' kullanıcı olarak eklendi.',
+                ['actor_name' => $actorName],
+                ['push' => false]
+            );
         } catch (Throwable $e) {
             // Bildirim hatası kullanıcı eklemeyi bozmasın
         }
-        Auth::setSession('flash_success', 'Kullanıcı eklendi.');
+        $successMsg = $autoPassword
+            ? 'Kullanıcı eklendi. Otomatik şifre: ' . $password
+            : 'Kullanıcı eklendi.';
+        Auth::setSession('flash_success', $successMsg);
         header('Location: /kullanicilar');
         exit;
     }
@@ -258,7 +273,7 @@ class UsersController
         }
         $fullName = trim(($data['first_name'] ?? $profile['first_name'] ?? '') . ' ' . ($data['last_name'] ?? $profile['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName]);
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName], ['push' => false]);
         Auth::setSession('flash_success', 'Kullanıcı güncellendi.');
         header('Location: /kullanicilar/' . $id);
         exit;
@@ -342,7 +357,7 @@ class UsersController
         $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
         User::remove($this->pdo, $id);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName]);
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName], ['push' => false]);
         Auth::setSession('flash_success', 'Kullanıcı silindi.');
         header('Location: /kullanicilar');
         exit;

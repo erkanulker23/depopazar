@@ -41,22 +41,6 @@
         }
     }, true);
 
-    document.addEventListener('pointerdown', function (e) {
-        var btn = e.target.closest && e.target.closest('button[type="submit"], input[type="submit"]');
-        if (!btn || btn.disabled) {
-            return;
-        }
-        var form = btn.form;
-        if (!form) {
-            return;
-        }
-        var method = (form.getAttribute('method') || 'get').toLowerCase();
-        if (method === 'get' || lockedForms.has(form)) {
-            return;
-        }
-        lockForm(form);
-    }, true);
-
     document.addEventListener('submit', function (e) {
         var form = e.target;
         if (!form || form.tagName !== 'FORM') {
@@ -66,7 +50,12 @@
         if (method === 'get') {
             return;
         }
+        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+            return;
+        }
         if (form.dataset.submitting === '1' && lockedForms.has(form)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
             return;
         }
         if (!lockForm(form)) {
