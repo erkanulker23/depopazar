@@ -116,10 +116,12 @@ class MailService
         }
 
         $appName = self::appName();
-        $prepared = self::prepareEmailBodies($appName, 'Panel Bildirimi', $message, $subject, $context);
+        $meta = self::normalizeActionContext($context, $subject);
+        $emailSubject = self::formatActorSubject($meta);
+        $prepared = self::prepareEmailBodies($appName, 'Panel Bildirimi', $message, $emailSubject, $context);
         foreach ($emails as $to) {
             try {
-                self::sendSmtp($mailSettings, $to, $subject, $prepared['plain'], $prepared['html']);
+                self::sendSmtp($mailSettings, $to, $emailSubject, $prepared['plain'], $prepared['html']);
             } catch (Throwable $e) {
                 error_log('sendToUsers email error: ' . $e->getMessage());
             }
@@ -142,8 +144,17 @@ class MailService
         ?array $context = null,
         bool $bodyIsHtml = false
     ): array {
-        $prepared = self::prepareEmailBodies(self::appName(), $headerTitle, $body, $subtitle, $context, $bodyIsHtml);
-        return self::sendSmtp($mailSettings, $to, $subject, $prepared['plain'], $prepared['html']);
+        $meta = self::normalizeActionContext($context, $headerTitle);
+        if ($context !== null) {
+            $actorSubject = self::formatActorSubject($meta);
+            $emailSubject = str_contains($subject, ' – ')
+                ? explode(' – ', $subject, 2)[0] . ' – ' . $actorSubject
+                : $actorSubject;
+        } else {
+            $emailSubject = $subject;
+        }
+        $prepared = self::prepareEmailBodies(self::appName(), $headerTitle, $body, $subtitle !== '' ? $subtitle : $emailSubject, $context, $bodyIsHtml);
+        return self::sendSmtp($mailSettings, $to, $emailSubject, $prepared['plain'], $prepared['html']);
     }
 
     /**
@@ -159,8 +170,9 @@ class MailService
         bool $bodyIsHtml = false
     ): array {
         $meta = self::normalizeActionContext($context, $subtitle !== '' ? $subtitle : $headerTitle);
+        $headerSubtitle = $subtitle !== '' ? $subtitle : self::formatActorSubject($meta);
         $plain = self::appendActionMetaPlain($body, $meta);
-        $html = self::wrapInHtmlTemplate($appName, $headerTitle, $body, $subtitle, $bodyIsHtml, $meta);
+        $html = self::wrapInHtmlTemplate($appName, $headerTitle, $body, $headerSubtitle, $bodyIsHtml, $meta);
         return ['plain' => $plain, 'html' => $html];
     }
 
@@ -206,6 +218,112 @@ class MailService
         ];
     }
 
+    /**
+     * E-posta konusu: "Erkan Ülker Kredi Kartını Güncelledi"
+     *
+     * @param array{actor_name: string, action_title: string} $meta
+     */
+    public static function formatActorSubject(array $meta): string
+    {
+        $actor = trim($meta['actor_name'] ?? '');
+        $action = trim($meta['action_title'] ?? '');
+        if ($action === '') {
+            return $actor !== '' ? $actor : 'Bildirim';
+        }
+        if ($actor === '' || $actor === 'Sistem') {
+            return self::titleCasePhrase($action);
+        }
+        if ($actor === 'Otomatik hatırlatma') {
+            return 'Otomatik Hatırlatma: ' . self::titleCasePhrase($action);
+        }
+        return $actor . ' ' . self::actionTitleToActivePhrase($action);
+    }
+
+    private static function actionTitleToActivePhrase(string $title): string
+    {
+        $title = trim($title);
+        $rules = [
+            '/^(.+?)\s+güncellendi$/iu' => ['Güncelledi', true],
+            '/^(.+?)\s+silindi$/iu' => ['Sildi', true],
+            '/^(.+?)\s+eklendi$/iu' => ['Ekledi', false],
+            '/^(.+?)\s+oluşturuldu$/iu' => ['Oluşturdu', false],
+            '/^(.+?)\s+kaydedildi$/iu' => ['Kaydetti', false],
+            '/^(.+?)\s+alındı$/iu' => ['Aldı', true],
+        ];
+        foreach ($rules as $pattern => [$verb, $accusative]) {
+            if (preg_match($pattern, $title, $m)) {
+                $object = trim($m[1]);
+                $phrase = $accusative ? self::accusativePhrase($object) : self::titleCasePhrase($object);
+                return $phrase . ' ' . $verb;
+            }
+        }
+        return self::titleCasePhrase($title);
+    }
+
+    private static function titleCasePhrase(string $phrase): string
+    {
+        $words = preg_split('/\s+/u', trim($phrase), -1, PREG_SPLIT_NO_EMPTY);
+        if ($words === false || $words === []) {
+            return trim($phrase);
+        }
+        return implode(' ', array_map(
+            static fn(string $w): string => mb_convert_case($w, MB_CASE_TITLE, 'UTF-8'),
+            $words
+        ));
+    }
+
+    private static function accusativePhrase(string $phrase): string
+    {
+        $words = preg_split('/\s+/u', trim($phrase), -1, PREG_SPLIT_NO_EMPTY);
+        if ($words === false || $words === []) {
+            return self::titleCasePhrase($phrase);
+        }
+        $last = array_pop($words);
+        $last = self::toAccusativeWord($last);
+        if ($words !== []) {
+            $words = array_map(
+                static fn(string $w): string => mb_convert_case($w, MB_CASE_TITLE, 'UTF-8'),
+                $words
+            );
+            return implode(' ', $words) . ' ' . $last;
+        }
+        return $last;
+    }
+
+    private static function toAccusativeWord(string $word): string
+    {
+        $lower = mb_strtolower($word, 'UTF-8');
+        $rules = [
+            '/^(.*)leri$/u' => '$1lerini',
+            '/^(.*)ları$/u' => '$1larını',
+            '/^(.*)si$/u' => '$1sini',
+            '/^(.*)ı$/u' => '$1ını',
+            '/^(.*)i$/u' => '$1ini',
+            '/^(.*)u$/u' => '$1unu',
+            '/^(.*)ü$/u' => '$1ünü',
+            '/^(.*)a$/u' => '$1yı',
+            '/^(.*)e$/u' => '$1yi',
+        ];
+        foreach ($rules as $pattern => $replacement) {
+            if (preg_match($pattern, $lower)) {
+                $acc = preg_replace($pattern, $replacement, $lower);
+                return mb_convert_case($acc, MB_CASE_TITLE, 'UTF-8');
+            }
+        }
+        return mb_convert_case($word, MB_CASE_TITLE, 'UTF-8');
+    }
+
+    private static function actorInitials(string $name): string
+    {
+        $parts = preg_split('/\s+/u', trim($name), -1, PREG_SPLIT_NO_EMPTY);
+        if ($parts === false || $parts === []) {
+            return '?';
+        }
+        $first = mb_substr($parts[0], 0, 1, 'UTF-8');
+        $second = count($parts) > 1 ? mb_substr($parts[count($parts) - 1], 0, 1, 'UTF-8') : '';
+        return mb_strtoupper($first . $second, 'UTF-8');
+    }
+
   /** @param array{actor_name: string, action_title: string, date: string, time: string, datetime: string} $meta */
     public static function appendActionMetaPlain(string $body, array $meta): string
     {
@@ -224,13 +342,39 @@ class MailService
         $action = htmlspecialchars($meta['action_title'], ENT_QUOTES, 'UTF-8');
         $date = htmlspecialchars($meta['date'], ENT_QUOTES, 'UTF-8');
         $time = htmlspecialchars($meta['time'], ENT_QUOTES, 'UTF-8');
+        $initials = htmlspecialchars(self::actorInitials($meta['actor_name']), ENT_QUOTES, 'UTF-8');
+        $subjectLine = htmlspecialchars(self::formatActorSubject($meta), ENT_QUOTES, 'UTF-8');
 
-        return '<div style="margin-top:24px;padding:16px 18px;background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;font-size:14px;line-height:1.6;color:#374151;">'
-            . '<p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;">İşlem detayı</p>'
-            . '<p style="margin:0 0 6px;"><strong style="color:#111827;">İşlem:</strong> ' . $action . '</p>'
-            . '<p style="margin:0 0 6px;"><strong style="color:#111827;">İşlemi yapan:</strong> ' . $actor . '</p>'
-            . '<p style="margin:0 0 6px;"><strong style="color:#111827;">Tarih:</strong> ' . $date . '</p>'
-            . '<p style="margin:0;"><strong style="color:#111827;">Saat:</strong> ' . $time . '</p>'
+        return '<div style="margin-top:28px;border-radius:16px;overflow:hidden;border:1px solid #d1fae5;box-shadow:0 1px 3px rgba(0,0,0,0.06);">'
+            . '<div style="padding:18px 20px;background:linear-gradient(135deg,#ecfdf5 0%,#f0fdf4 100%);border-bottom:1px solid #d1fae5;">'
+            . '<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>'
+            . '<td style="width:52px;vertical-align:middle;">'
+            . '<div style="width:44px;height:44px;line-height:44px;border-radius:50%;background-color:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;">' . $initials . '</div>'
+            . '</td>'
+            . '<td style="vertical-align:middle;padding-left:12px;">'
+            . '<p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#047857;">İşlemi yapan</p>'
+            . '<p style="margin:4px 0 0;font-size:17px;font-weight:700;color:#064e3b;line-height:1.3;">' . $actor . '</p>'
+            . '</td></tr></table>'
+            . '</div>'
+            . '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#ffffff;">'
+            . '<tr>'
+            . '<td style="width:50%;padding:16px 20px;border-right:1px solid #f3f4f6;vertical-align:top;">'
+            . '<p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">Tarih</p>'
+            . '<p style="margin:0;font-size:16px;font-weight:700;color:#111827;">' . $date . '</p>'
+            . '</td>'
+            . '<td style="width:50%;padding:16px 20px;vertical-align:top;">'
+            . '<p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">Saat</p>'
+            . '<p style="margin:0;font-size:16px;font-weight:700;color:#111827;">' . $time . '</p>'
+            . '</td>'
+            . '</tr>'
+            . '<tr>'
+            . '<td colspan="2" style="padding:16px 20px;border-top:1px solid #f3f4f6;background-color:#fafafa;vertical-align:top;">'
+            . '<p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">İşlem</p>'
+            . '<p style="margin:0;font-size:15px;font-weight:600;color:#374151;line-height:1.5;">' . $action . '</p>'
+            . '<p style="margin:10px 0 0;padding:10px 12px;background-color:#ecfdf5;border-radius:10px;font-size:14px;font-weight:600;color:#047857;line-height:1.4;">' . $subjectLine . '</p>'
+            . '</td>'
+            . '</tr>'
+            . '</table>'
             . '</div>';
     }
 
