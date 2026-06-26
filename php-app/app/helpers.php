@@ -600,6 +600,78 @@ if (!function_exists('request_dedupe_store')) {
     }
 }
 
+/** Depo kaydından tam adres metni */
+if (!function_exists('formatWarehouseAddress')) {
+    function formatWarehouseAddress(array $wh): string
+    {
+        return trim(implode(', ', array_filter([
+            $wh['name'] ?? '',
+            $wh['address'] ?? '',
+            $wh['district'] ?? '',
+            $wh['city'] ?? '',
+        ])));
+    }
+}
+
+/**
+ * Kayıtlı nakliye adresinden form alanlarını çıkarır.
+ *
+ * @param list<array<string, mixed>> $warehouses
+ * @return array{source_type: string, warehouse_id: string, address_detail: string, preview: string}
+ */
+if (!function_exists('parseJobLocationAddress')) {
+    function parseJobLocationAddress(?string $address, array $warehouses = []): array
+    {
+        $address = trim((string) $address);
+        if ($address === '') {
+            return ['source_type' => 'evden', 'warehouse_id' => '', 'address_detail' => '', 'preview' => ''];
+        }
+        if (preg_match('/^Depo:\s*(.+)$/us', $address, $m)) {
+            $depoText = trim($m[1]);
+            $warehouseId = '';
+            foreach ($warehouses as $wh) {
+                $formatted = formatWarehouseAddress($wh);
+                if ($formatted === $depoText || ($wh['name'] ?? '') === $depoText) {
+                    $warehouseId = (string) ($wh['id'] ?? '');
+                    break;
+                }
+                if (($wh['name'] ?? '') !== '' && str_contains($depoText, (string) $wh['name'])) {
+                    $warehouseId = (string) ($wh['id'] ?? '');
+                    break;
+                }
+            }
+            return [
+                'source_type' => 'depo',
+                'warehouse_id' => $warehouseId,
+                'address_detail' => '',
+                'preview' => $depoText,
+            ];
+        }
+        if (preg_match('/^Ofisten:\s*(.+)$/us', $address, $m)) {
+            return [
+                'source_type' => 'ofisten',
+                'warehouse_id' => '',
+                'address_detail' => trim($m[1]),
+                'preview' => trim($m[1]),
+            ];
+        }
+        if (preg_match('/^Evden:\s*(.+)$/us', $address, $m)) {
+            return [
+                'source_type' => 'evden',
+                'warehouse_id' => '',
+                'address_detail' => trim($m[1]),
+                'preview' => trim($m[1]),
+            ];
+        }
+        return [
+            'source_type' => 'evden',
+            'warehouse_id' => '',
+            'address_detail' => $address,
+            'preview' => $address,
+        ];
+    }
+}
+
 /** Yanıtı istemciye gönder; shutdown (push, SMTP vb.) arka planda devam eder. */
 if (!function_exists('releaseHttpResponse')) {
     function releaseHttpResponse(): void

@@ -322,17 +322,29 @@ class TransportationJobsController
             header('Location: /nakliye-isler');
             exit;
         }
+        $pickupAddress = $this->resolveJobLocation($_POST, 'pickup', $companyId);
+        if ($pickupAddress === null) {
+            Auth::setSession('flash_error', 'Eşyanın alınacağı yer bilgisini eksiksiz girin. Depo seçtiseniz listeden depo seçmelisiniz.');
+            header('Location: /nakliye-isler');
+            exit;
+        }
+        $deliveryAddress = $this->resolveJobLocation($_POST, 'delivery', $companyId);
+        if ($deliveryAddress === null) {
+            Auth::setSession('flash_error', 'Eşyanın gideceği yer bilgisini eksiksiz girin. Depo seçtiseniz listeden depo seçmelisiniz.');
+            header('Location: /nakliye-isler');
+            exit;
+        }
         $jobType = trim($_POST['job_type'] ?? '') ?: null;
         try {
             TransportationJob::create($this->pdo, [
                 'company_id' => $companyId,
                 'customer_id' => $customerId,
                 'job_type' => $jobType,
-                'pickup_address' => trim($_POST['pickup_address'] ?? '') ?: null,
+                'pickup_address' => $pickupAddress,
                 'pickup_floor_status' => trim($_POST['pickup_floor_status'] ?? '') ?: null,
                 'pickup_elevator_status' => trim($_POST['pickup_elevator_status'] ?? '') ?: null,
                 'pickup_room_count' => trim($_POST['pickup_room_count'] ?? '') !== '' ? (int) $_POST['pickup_room_count'] : null,
-                'delivery_address' => trim($_POST['delivery_address'] ?? '') ?: null,
+                'delivery_address' => $deliveryAddress,
                 'delivery_floor_status' => trim($_POST['delivery_floor_status'] ?? '') ?: null,
                 'delivery_elevator_status' => trim($_POST['delivery_elevator_status'] ?? '') ?: null,
                 'delivery_room_count' => trim($_POST['delivery_room_count'] ?? '') !== '' ? (int) $_POST['delivery_room_count'] : null,
@@ -381,14 +393,26 @@ class TransportationJobsController
             header('Location: /nakliye-isler');
             exit;
         }
+        $pickupAddress = $this->resolveJobLocation($_POST, 'pickup', $companyId ?: ($job['company_id'] ?? null));
+        if ($pickupAddress === null) {
+            Auth::setSession('flash_error', 'Eşyanın alınacağı yer bilgisini eksiksiz girin. Depo seçtiseniz listeden depo seçmelisiniz.');
+            header('Location: /nakliye-isler/' . $id . '/duzenle');
+            exit;
+        }
+        $deliveryAddress = $this->resolveJobLocation($_POST, 'delivery', $companyId ?: ($job['company_id'] ?? null));
+        if ($deliveryAddress === null) {
+            Auth::setSession('flash_error', 'Eşyanın gideceği yer bilgisini eksiksiz girin. Depo seçtiseniz listeden depo seçmelisiniz.');
+            header('Location: /nakliye-isler/' . $id . '/duzenle');
+            exit;
+        }
         try {
             TransportationJob::update($this->pdo, $id, [
                 'job_type' => trim($_POST['job_type'] ?? '') ?: null,
-                'pickup_address' => trim($_POST['pickup_address'] ?? '') ?: null,
+                'pickup_address' => $pickupAddress,
                 'pickup_floor_status' => trim($_POST['pickup_floor_status'] ?? '') ?: null,
                 'pickup_elevator_status' => trim($_POST['pickup_elevator_status'] ?? '') ?: null,
                 'pickup_room_count' => trim($_POST['pickup_room_count'] ?? '') !== '' ? (int) $_POST['pickup_room_count'] : null,
-                'delivery_address' => trim($_POST['delivery_address'] ?? '') ?: null,
+                'delivery_address' => $deliveryAddress,
                 'delivery_floor_status' => trim($_POST['delivery_floor_status'] ?? '') ?: null,
                 'delivery_elevator_status' => trim($_POST['delivery_elevator_status'] ?? '') ?: null,
                 'delivery_room_count' => trim($_POST['delivery_room_count'] ?? '') !== '' ? (int) $_POST['delivery_room_count'] : null,
@@ -448,5 +472,34 @@ class TransportationJobsController
         }
         header('Location: /nakliye-isler');
         exit;
+    }
+
+    private function resolveJobLocation(array $post, string $prefix, ?string $companyId): ?string
+    {
+        $type = trim($post[$prefix . '_source_type'] ?? 'evden');
+        if ($type === 'depo') {
+            $whId = trim($post[$prefix . '_warehouse_id'] ?? '');
+            if ($whId === '') {
+                return null;
+            }
+            $wh = Warehouse::findOne($this->pdo, $whId);
+            if (!$wh) {
+                return null;
+            }
+            if ($companyId && ($wh['company_id'] ?? '') !== $companyId) {
+                return null;
+            }
+            return 'Depo: ' . formatWarehouseAddress($wh);
+        }
+        $parts = array_values(array_filter([
+            trim($post[$prefix . '_il_name'] ?? ''),
+            trim($post[$prefix . '_ilce'] ?? ''),
+            trim($post[$prefix . '_address_detail'] ?? ''),
+        ], static fn(string $v): bool => $v !== ''));
+        if ($parts === []) {
+            return null;
+        }
+        $label = $type === 'ofisten' ? 'Ofisten' : 'Evden';
+        return $label . ': ' . implode(', ', $parts);
     }
 }
