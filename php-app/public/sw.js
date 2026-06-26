@@ -1,10 +1,10 @@
 /* DepoPazar Service Worker – PWA + Web Push */
-var CACHE_NAME = 'depopazar-v1';
+var CACHE_NAME = 'depopazar-v2';
 var SHELL_URLS = [
   '/genel-bakis',
   '/manifest.webmanifest',
-  '/pwa-icon/192',
-  '/pwa-icon/512',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
 ];
 
 self.addEventListener('install', function (event) {
@@ -63,8 +63,8 @@ self.addEventListener('push', function (event) {
   var title = data.title || 'DepoPazar';
   var options = {
     body: data.body || '',
-    icon: data.icon || '/pwa-icon/192',
-    badge: data.icon || '/pwa-icon/192',
+    icon: data.icon || '/icons/icon-192.png',
+    badge: data.icon || '/icons/icon-192.png',
     tag: data.tag || ('depopazar-' + Date.now()),
     requireInteraction: false,
     data: { url: data.url || '/bildirimler' },

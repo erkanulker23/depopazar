@@ -118,6 +118,24 @@ class Payment
         return (float) $stmt->fetchColumn();
     }
 
+    /** Tahsil edilebilir ödeme adedi (Ödeme Al menüsü rozeti) */
+    public static function countCollectible(PDO $pdo, ?string $companyId): int
+    {
+        $sql = 'SELECT COUNT(*) FROM payments p
+             INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+             INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+             INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+             WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ?';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
     /** Şirket: vadesi geçmiş borç (vade tarihi bugünden önce, ödenmemiş) */
     public static function sumOverdueByCompany(PDO $pdo, string $companyId): float
     {

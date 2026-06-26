@@ -16,6 +16,15 @@ class CustomersController
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
         $inDepo = isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null;
         $warehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
+        if (!array_key_exists('borc', $_GET)) {
+            $debtFilter = 'overdue';
+        } elseif (trim((string) $_GET['borc']) === '') {
+            $debtFilter = null;
+        } elseif (in_array($_GET['borc'], ['overdue', 'unpaid'], true)) {
+            $debtFilter = $_GET['borc'];
+        } else {
+            $debtFilter = null;
+        }
         $perPage = 50;
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $offset = ($page - 1) * $perPage;
@@ -23,12 +32,12 @@ class CustomersController
         $warehouses = [];
         if ($companyId) {
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
-            $customersTotal = Customer::count($this->pdo, $companyId, $search, $inDepo, $warehouseId);
-            $customers = Customer::findAll($this->pdo, $companyId, $search, $perPage, $offset, $inDepo, $warehouseId);
+            $customersTotal = Customer::count($this->pdo, $companyId, $search, $inDepo, $warehouseId, $debtFilter);
+            $customers = Customer::findAll($this->pdo, $companyId, $search, $perPage, $offset, $inDepo, $warehouseId, $debtFilter);
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehouses = Warehouse::findAll($this->pdo, null);
-            $customersTotal = Customer::count($this->pdo, null, $search, $inDepo, $warehouseId);
-            $customers = Customer::findAll($this->pdo, null, $search, $perPage, $offset, $inDepo, $warehouseId);
+            $customersTotal = Customer::count($this->pdo, null, $search, $inDepo, $warehouseId, $debtFilter);
+            $customers = Customer::findAll($this->pdo, null, $search, $perPage, $offset, $inDepo, $warehouseId, $debtFilter);
         } else {
             $customersTotal = 0;
             $customers = [];
@@ -80,6 +89,7 @@ class CustomersController
             'q' => isset($_GET['q']) ? trim($_GET['q']) : null,
             'in_depo' => isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null,
             'warehouse_id' => isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null,
+            'borc' => isset($_GET['borc']) && in_array($_GET['borc'], ['overdue', 'unpaid'], true) ? $_GET['borc'] : null,
         ]);
         header('Location: /musteriler' . ($redirectParams !== [] ? '?' . http_build_query($redirectParams) : ''));
         exit;
@@ -109,6 +119,7 @@ class CustomersController
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
         $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
+        $debtOverdue = Payment::sumUnpaidOverdueByCustomerId($this->pdo, $id, $companyId);
         $debtDueThisMonth = Payment::sumUnpaidDueThisMonthByCustomerId($this->pdo, $id, $companyId);
         try {
             $debt += CustomerCharge::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
@@ -782,10 +793,19 @@ class CustomersController
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
         $inDepo = isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null;
         $warehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
+        if (!array_key_exists('borc', $_GET)) {
+            $debtFilter = 'overdue';
+        } elseif (trim((string) $_GET['borc']) === '') {
+            $debtFilter = null;
+        } elseif (in_array($_GET['borc'], ['overdue', 'unpaid'], true)) {
+            $debtFilter = $_GET['borc'];
+        } else {
+            $debtFilter = null;
+        }
         if ($companyId) {
-            $customers = Customer::findAll($this->pdo, $companyId, $search, null, 0, $inDepo, $warehouseId);
+            $customers = Customer::findAll($this->pdo, $companyId, $search, null, 0, $inDepo, $warehouseId, $debtFilter);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $customers = Customer::findAll($this->pdo, null, $search, null, 0, $inDepo, $warehouseId);
+            $customers = Customer::findAll($this->pdo, null, $search, null, 0, $inDepo, $warehouseId, $debtFilter);
         } else {
             $customers = [];
         }
@@ -800,10 +820,17 @@ class CustomersController
         $out = fopen('php://output', 'wb');
         fprintf($out, "\xEF\xBB\xBF"); // UTF-8 BOM (Excel için)
         $headers = ['Ad', 'Soyad', 'E-posta', 'Telefon', 'TC Kimlik No', 'Adres', 'Notlar', 'Aktif'];
+        if ($debtFilter === 'overdue') {
+            $headers[] = 'Gecikmiş ödeme sayısı';
+            $headers[] = 'Gecikmiş borç (₺)';
+        } elseif ($debtFilter === 'unpaid') {
+            $headers[] = 'Ödenmemiş ödeme sayısı';
+            $headers[] = 'Ödenmemiş borç (₺)';
+        }
         fputcsv($out, $headers, ';');
 
         foreach ($customers as $c) {
-            fputcsv($out, [
+            $row = [
                 $c['first_name'] ?? '',
                 $c['last_name'] ?? '',
                 $c['email'] ?? '',
@@ -812,7 +839,15 @@ class CustomersController
                 $c['address'] ?? '',
                 $c['notes'] ?? '',
                 !empty($c['is_active']) ? 'Evet' : 'Hayır',
-            ], ';');
+            ];
+            if ($debtFilter === 'overdue') {
+                $row[] = (int) ($c['overdue_payment_count'] ?? 0);
+                $row[] = number_format((float) ($c['overdue_debt_total'] ?? 0), 2, ',', '.');
+            } elseif ($debtFilter === 'unpaid') {
+                $row[] = (int) ($c['unpaid_payment_count'] ?? 0);
+                $row[] = number_format((float) ($c['unpaid_debt_total'] ?? 0), 2, ',', '.');
+            }
+            fputcsv($out, $row, ';');
         }
         fclose($out);
         exit;

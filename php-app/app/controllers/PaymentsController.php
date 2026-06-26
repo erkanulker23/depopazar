@@ -189,7 +189,9 @@ class PaymentsController
             if (!empty($chargeIds)) {
                 CustomerCharge::markManyAsPaid($this->pdo, $chargeIds, $notes, $paidAt);
             }
-            $_SESSION['flash_success'] = 'Ödeme kaydedildi.';
+            $_SESSION['flash_success'] = count($paymentIds) > 1
+                ? count($paymentIds) . ' ödeme kaydedildi.'
+                : 'Ödeme kaydedildi.';
         } catch (Exception $e) {
             $_SESSION['flash_error'] = 'Kayıt yapılamadı: ' . $e->getMessage();
         }

@@ -12,8 +12,8 @@ $error = $error ?? null;
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="<?= htmlspecialchars($projectName ?? 'DepoPazar') ?>">
     <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="icon" href="/pwa-icon/192" type="image/png">
-    <link rel="apple-touch-icon" href="/pwa-icon/180">
+    <link rel="icon" href="/icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="/icons/icon-180.png">
     <title>Giriş - <?= htmlspecialchars($projectName ?? 'Depo ve Nakliye Takip') ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

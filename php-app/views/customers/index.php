@@ -3,10 +3,22 @@ $currentPage = 'musteriler';
 $q = isset($_GET['q']) ? trim($_GET['q']) : '';
 $inDepo = isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : '';
 $warehouseId = isset($_GET['warehouse_id']) ? trim($_GET['warehouse_id']) : '';
+$debtFilter = $debtFilter ?? null;
+$borc = $debtFilter ?? '';
 $warehouses = $warehouses ?? [];
 $customers = $customers ?? [];
 $duplicateFullNames = $duplicateFullNames ?? [];
-$filterQuery = http_build_query(array_filter(['q' => $q !== '' ? $q : null, 'in_depo' => $inDepo !== '' ? $inDepo : null, 'warehouse_id' => $warehouseId !== '' ? $warehouseId : null]));
+$borcQuery = array_key_exists('borc', $_GET)
+    ? ($borc !== '' ? $borc : '')
+    : ($borc !== '' ? $borc : null);
+$filterQuery = http_build_query(array_filter([
+    'q' => $q !== '' ? $q : null,
+    'in_depo' => $inDepo !== '' ? $inDepo : null,
+    'warehouse_id' => $warehouseId !== '' ? $warehouseId : null,
+    'borc' => $borcQuery,
+], fn($v) => $v !== null && $v !== ''));
+$hasActiveFilters = $q !== '' || $inDepo !== '' || $warehouseId !== '' || array_key_exists('borc', $_GET);
+$tableColspan = $debtFilter !== null ? 9 : 8;
 ob_start();
 ?>
 <div class="mb-6">
@@ -28,8 +40,13 @@ ob_start();
                 <option value="<?= htmlspecialchars($wh['id']) ?>" <?= $warehouseId === ($wh['id'] ?? '') ? 'selected' : '' ?>><?= htmlspecialchars($wh['name'] ?? '') ?></option>
             <?php endforeach; ?>
         </select>
+        <select name="borc" class="customer-filter-select px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-0 sm:w-auto" title="Borç durumu">
+            <option value="">Tüm müşteriler</option>
+            <option value="overdue" <?= $borc === 'overdue' ? 'selected' : '' ?>>Vadesi geçmiş borcu olan</option>
+            <option value="unpaid" <?= $borc === 'unpaid' ? 'selected' : '' ?>>Ödenmemiş borcu olan</option>
+        </select>
         <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
-        <?php if ($q !== '' || $inDepo !== '' || $warehouseId !== ''): ?><a href="/musteriler" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
+        <?php if ($hasActiveFilters): ?><a href="/musteriler?borc=" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
     </form>
     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <button type="submit" id="bulkDeleteBtn" form="bulkDeleteForm" class="btn-touch hidden inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40">
@@ -77,6 +94,11 @@ ob_start();
                             <?php if (!empty(trim($c['notes'] ?? ''))): ?>
                                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2"><?= nl2br(htmlspecialchars(mb_substr(trim($c['notes']), 0, 100) . (mb_strlen(trim($c['notes'])) > 100 ? '…' : ''))) ?></p>
                             <?php endif; ?>
+                            <?php if ($debtFilter === 'overdue'): ?>
+                                <p class="text-sm font-semibold text-red-600 dark:text-red-400 mt-1"><?= (int) ($c['overdue_payment_count'] ?? 0) ?> gecikmiş ödeme · <?= number_format((float) ($c['overdue_debt_total'] ?? 0), 2, ',', '.') ?> ₺</p>
+                            <?php elseif ($debtFilter === 'unpaid'): ?>
+                                <p class="text-sm font-semibold text-amber-600 dark:text-amber-400 mt-1"><?= (int) ($c['unpaid_payment_count'] ?? 0) ?> ödenmemiş · <?= number_format((float) ($c['unpaid_debt_total'] ?? 0), 2, ',', '.') ?> ₺</p>
+                            <?php endif; ?>
                             <div class="flex flex-wrap items-center gap-2 mt-2">
                                 <?php
                                 $fullName = trim(($c['first_name'] ?? '') . ' ' . ($c['last_name'] ?? ''));
@@ -90,6 +112,9 @@ ob_start();
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">Pasif</span>
                                 <?php endif; ?>
                                 <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="text-sm font-medium text-emerald-600 dark:text-emerald-400">Detay →</a>
+                                <?php if ($debtFilter !== null): ?>
+                                    <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($c['id']) ?>" class="text-sm font-medium text-white bg-emerald-600 px-2 py-0.5 rounded-lg hover:bg-emerald-700">Ödeme Al</a>
+                                <?php endif; ?>
                                 <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>/barkod" target="_blank" class="text-sm font-medium text-gray-600 dark:text-gray-400">Barkod</a>
                             </div>
                         </div>
@@ -111,6 +136,11 @@ ob_start();
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ad Soyad</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">E-posta</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Telefon</th>
+                        <?php if ($debtFilter === 'overdue'): ?>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Gecikmiş borç</th>
+                        <?php elseif ($debtFilter === 'unpaid'): ?>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödenmemiş borç</th>
+                        <?php endif; ?>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Bilgi notu</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
@@ -144,6 +174,17 @@ ob_start();
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['email'] ?? '') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['phone'] ?? '-') ?></td>
+                            <?php if ($debtFilter === 'overdue'): ?>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="font-semibold text-red-600 dark:text-red-400 tabular-nums"><?= number_format((float) ($c['overdue_debt_total'] ?? 0), 2, ',', '.') ?> ₺</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400"><?= (int) ($c['overdue_payment_count'] ?? 0) ?> ödeme</span>
+                            </td>
+                            <?php elseif ($debtFilter === 'unpaid'): ?>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="font-semibold text-amber-600 dark:text-amber-400 tabular-nums"><?= number_format((float) ($c['unpaid_debt_total'] ?? 0), 2, ',', '.') ?> ₺</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400"><?= (int) ($c['unpaid_payment_count'] ?? 0) ?> ödeme</span>
+                            </td>
+                            <?php endif; ?>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-[200px]">
                                 <?php if (!empty(trim($c['notes'] ?? ''))): ?>
                                     <span class="line-clamp-2" title="<?= htmlspecialchars($c['notes']) ?>"><?= nl2br(htmlspecialchars(mb_substr(trim($c['notes']), 0, 120) . (mb_strlen(trim($c['notes'])) > 120 ? '…' : ''))) ?></span>
@@ -160,9 +201,12 @@ ob_start();
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-sm text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 mr-1">Detay</a>
+                                <?php if ($debtFilter !== null): ?>
+                                <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($c['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-sm text-white bg-emerald-600 hover:bg-emerald-700">Ödeme Al</a>
+                                <?php endif; ?>
                             </td>
                         </tr>
-                        <tr class="expandable-row hidden" id="expand-<?= htmlspecialchars($c['id']) ?>"><td colspan="8" class="p-0 fragment-cell"></td></tr>
+                        <tr class="expandable-row hidden" id="expand-<?= htmlspecialchars($c['id']) ?>"><td colspan="<?= (int) $tableColspan ?>" class="p-0 fragment-cell"></td></tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
@@ -171,7 +215,12 @@ ob_start();
         $customersTotal = $customersTotal ?? 0;
         $perPage = $perPage ?? 50;
         $page = $page ?? max(1, (int) ($_GET['page'] ?? 1));
-        echo renderPagination($customersTotal, $perPage, $page, '/musteriler', array_filter(['q' => $q ?? '', 'in_depo' => $inDepo !== '' ? $inDepo : null, 'warehouse_id' => $warehouseId !== '' ? $warehouseId : null]));
+        echo renderPagination($customersTotal, $perPage, $page, '/musteriler', array_filter([
+            'q' => $q ?? '',
+            'in_depo' => $inDepo !== '' ? $inDepo : null,
+            'warehouse_id' => $warehouseId !== '' ? $warehouseId : null,
+            'borc' => array_key_exists('borc', $_GET) ? ($borc !== '' ? $borc : null) : ($borc !== '' ? $borc : null),
+        ], fn($v) => $v !== null && $v !== ''));
         ?>
     <?php endif; ?>
 </div>

@@ -20,7 +20,7 @@ $navIcons = ['Genel Bakış'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme
 $navItems = [
     ['name' => 'Genel Bakış', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
     ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
-    ['name' => 'Ödeme Al', 'href' => '/odemeler?collect=1', 'highlight' => true, 'active' => false],
+    ['name' => 'Ödeme Al', 'href' => '/odemeler?collect=1', 'active' => false],
     ['name' => 'Tüm Girişler', 'href' => '/girisler', 'active' => $currentPath === '/girisler'],
     ['name' => 'Nakliye İşler', 'href' => '/nakliye-isler', 'active' => $currentPath === '/nakliye-isler'],
     ['name' => 'Araçlar', 'href' => '/araclar', 'active' => $currentPath === '/araclar' || (strpos($currentPath, '/araclar/') === 0)],
@@ -38,6 +38,20 @@ $navItems = [
     ['name' => 'Ayarlar', 'href' => '/ayarlar', 'active' => $currentPath === '/ayarlar'],
 ];
 $navItems = array_values(array_filter($navItems, fn($item) => Auth::canAccessNav($item['href'])));
+$collectiblePaymentCount = 0;
+if ($user && Auth::canAccessNav('/odemeler?collect=1') && defined('APP_ROOT')) {
+    try {
+        $pdoNav = require APP_ROOT . '/config/db.php';
+        $companyIdNav = Company::getCompanyIdForUser($pdoNav, $user);
+        if ($companyIdNav) {
+            $collectiblePaymentCount = Payment::countCollectible($pdoNav, $companyIdNav);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $collectiblePaymentCount = Payment::countCollectible($pdoNav, null);
+        }
+    } catch (Throwable $e) {
+        $collectiblePaymentCount = 0;
+    }
+}
 $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($user['last_name'] ?? '', 0, 1));
 $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
 ?>
@@ -56,8 +70,8 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
     <meta property="og:description" content="<?= htmlspecialchars($seoDescription) ?>">
     <meta property="og:type" content="website">
     <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="icon" href="/pwa-icon/192" type="image/png">
-    <link rel="apple-touch-icon" href="/pwa-icon/180">
+    <link rel="icon" href="/icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="/icons/icon-180.png">
     <title><?= $fullTitle ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -192,7 +206,9 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                         <?php if (!empty($item['active'])): ?><div class="nav-bar"></div><?php endif; ?>
                         <i class="bi bi-<?= $icon ?> mr-3 flex-shrink-0 h-5 w-5"></i>
                         <span class="flex-1 truncate"><?= htmlspecialchars($item['name']) ?></span>
-                        <?php if (!empty($item['highlight'])): ?><span class="ml-2 px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full">Yeni</span><?php endif; ?>
+                        <?php if (($item['href'] ?? '') === '/odemeler?collect=1' && $collectiblePaymentCount > 0): ?>
+                            <span class="ml-2 min-w-[1.25rem] px-1.5 py-0.5 text-[10px] font-bold leading-none bg-red-500 text-white rounded-full text-center" title="<?= (int) $collectiblePaymentCount ?> tahsil edilecek ödeme"><?= $collectiblePaymentCount > 99 ? '99+' : (int) $collectiblePaymentCount ?></span>
+                        <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
             </nav>

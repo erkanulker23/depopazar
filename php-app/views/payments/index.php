@@ -75,7 +75,7 @@ $page = $page ?? 1;
                     <p class="font-semibold text-gray-900 dark:text-white"><?= htmlspecialchars($name) ?></p>
                     <p class="text-sm text-gray-500 dark:text-gray-400"><?= count($c['payments']) ?> adet bekleyen ödeme · Toplam <?= fmtMoney($total) ?> ₺</p>
                 </div>
-                <button type="button" onclick="selectCustomer('<?= htmlspecialchars($c['id']) ?>', <?= htmlspecialchars($paymentsJson) ?>)" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 text-sm">
+                <button type="button" onclick="selectCustomer('<?= htmlspecialchars($c['id']) ?>', <?= htmlspecialchars($paymentsJson) ?>, <?= json_encode($name, JSON_UNESCAPED_UNICODE) ?>)" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 text-sm">
                     Ödeme Al
                 </button>
             </div>
@@ -159,7 +159,7 @@ $page = $page ?? 1;
                                     <td class="py-2 pr-4"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span></td>
                                     <td class="py-2">
                                         <?php if ($canCollect): ?>
-                                            <button type="button" onclick="event.stopPropagation(); openCollectForPayment(<?= htmlspecialchars($pJson) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Ödeme Al</button>
+                                            <button type="button" onclick="event.stopPropagation(); openCollectForPayment(<?= htmlspecialchars($pJson) ?>, <?= json_encode($customerName, JSON_UNESCAPED_UNICODE) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Ödeme Al</button>
                                         <?php else: ?>
                                             <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:underline">Detay</a>
                                         <?php endif; ?>
@@ -190,6 +190,16 @@ $page = $page ?? 1;
             </div>
             <div id="collectError" class="hidden mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"></div>
 
+            <div id="collectCustomerBanner" class="hidden mb-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/25 border-2 border-emerald-200 dark:border-emerald-700">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 mb-1">Müşteri</p>
+                        <p id="collectCustomerBannerName" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight truncate"></p>
+                    </div>
+                    <div class="w-11 h-11 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg shrink-0" id="collectCustomerBannerInitials" aria-hidden="true"></div>
+                </div>
+            </div>
+
             <!-- Adım 1: Müşteri seç -->
             <div id="stepCustomer" class="step-content">
                 <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme almak istediğiniz müşteriyi seçin.</p>
@@ -213,12 +223,21 @@ $page = $page ?? 1;
 
             <!-- Adım 2: Ödeme seç -->
             <div id="stepPayment" class="step-content hidden">
-                <div class="mb-4 flex flex-wrap items-center gap-2">
+                <div class="mb-4">
                     <button type="button" onclick="collectStep(1)" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline">← Müşteri değiştir</button>
-                    <span id="step2CustomerName" class="text-sm font-medium text-gray-700 dark:text-gray-200"></span>
                 </div>
-                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödemeyi seçin.</p>
-                <div id="paymentList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">Ödeme alınacak kalemleri işaretleyin. Birden fazla seçebilirsiniz.</p>
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="checkbox" id="selectAllPayments" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
+                        Tümünü seç
+                    </label>
+                    <span id="selectedPaymentsTotal" class="text-sm font-semibold text-emerald-700 dark:text-emerald-300 tabular-nums"></span>
+                </div>
+                <div id="paymentList" class="space-y-2 max-h-56 overflow-y-auto"></div>
+                <button type="button" id="proceedToMethodBtn" onclick="proceedToMethod()" disabled class="mt-4 w-full px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity">
+                    Devam et
+                </button>
             </div>
 
             <!-- Adım 3: Ödeme yöntemi -->
@@ -279,7 +298,7 @@ $page = $page ?? 1;
                         </div>
                         <div class="flex gap-2 pt-2">
                             <button type="button" onclick="collectStep(3)" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-600">İptal</button>
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
+                            <button type="submit" id="collectSubmitBtn" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
                         </div>
                     </div>
                 </form>
@@ -296,7 +315,36 @@ $page = $page ?? 1;
 
 <script>
 var collectCurrentStep = 1;
+var collectCustomerPayments = [];
+var collectSelectedPaymentIds = [];
 var collectSelectedPayments = [];
+var collectSelectedCustomerName = '';
+
+function customerInitials(name) {
+    name = (name || '').trim();
+    if (!name) return '?';
+    var parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    return name.charAt(0).toUpperCase();
+}
+function updateCollectCustomerBanner(name) {
+    collectSelectedCustomerName = (name || '').trim();
+    var banner = document.getElementById('collectCustomerBanner');
+    var nameEl = document.getElementById('collectCustomerBannerName');
+    var initialsEl = document.getElementById('collectCustomerBannerInitials');
+    if (!banner || !nameEl) return;
+    if (collectSelectedCustomerName) {
+        nameEl.textContent = collectSelectedCustomerName;
+        if (initialsEl) initialsEl.textContent = customerInitials(collectSelectedCustomerName);
+        banner.classList.remove('hidden');
+    } else {
+        nameEl.textContent = '';
+        if (initialsEl) initialsEl.textContent = '';
+        banner.classList.add('hidden');
+    }
+}
 
 function toggleCustomerPayments(expandId, rowEl) {
     var panel = document.getElementById(expandId);
@@ -320,8 +368,94 @@ var customersWithDebt = <?= json_encode(array_map(function($c) {
 function openCollectModal() {
     document.getElementById('collectModal').classList.remove('hidden');
     collectCurrentStep = 1;
+    collectCustomerPayments = [];
+    collectSelectedPaymentIds = [];
     collectSelectedPayments = [];
+    collectSelectedCustomerName = '';
+    updateCollectCustomerBanner('');
     collectStep(1);
+}
+function sortPaymentsByDueDate(payments) {
+    return (payments || []).slice().sort(function(a, b) {
+        var da = (a.due_date || '').split(' ')[0] || '';
+        var db = (b.due_date || '').split(' ')[0] || '';
+        if (!da) return 1;
+        if (!db) return -1;
+        return da.localeCompare(db);
+    });
+}
+function getCheckedPaymentIds() {
+    return Array.from(document.querySelectorAll('#paymentList .collect-payment-cb:checked')).map(function(cb) { return cb.value; });
+}
+function getPaymentsByIds(ids) {
+    var idSet = {};
+    (ids || []).forEach(function(id) { idSet[String(id)] = true; });
+    return collectCustomerPayments.filter(function(p) { return idSet[String(p.id)]; });
+}
+function updatePaymentSelectionUi() {
+    var checkedIds = getCheckedPaymentIds();
+    collectSelectedPaymentIds = checkedIds;
+    var selected = getPaymentsByIds(checkedIds);
+    var total = selected.reduce(function(s, p) { return s + parseFloat(p.amount || 0); }, 0);
+    var totalEl = document.getElementById('selectedPaymentsTotal');
+    var btn = document.getElementById('proceedToMethodBtn');
+    var selectAll = document.getElementById('selectAllPayments');
+    var allCbs = document.querySelectorAll('#paymentList .collect-payment-cb');
+    if (totalEl) {
+        totalEl.textContent = selected.length > 0
+            ? selected.length + ' ödeme · ' + total.toFixed(2).replace('.', ',') + ' ₺'
+            : '';
+    }
+    if (btn) {
+        btn.disabled = selected.length === 0;
+        btn.textContent = selected.length > 0
+            ? 'Devam et (' + selected.length + ' ödeme)'
+            : 'Devam et';
+    }
+    if (selectAll && allCbs.length > 0) {
+        selectAll.checked = checkedIds.length === allCbs.length;
+        selectAll.indeterminate = checkedIds.length > 0 && checkedIds.length < allCbs.length;
+    }
+}
+function renderPaymentChecklist(payments) {
+    var list = document.getElementById('paymentList');
+    if (!list) return;
+    list.innerHTML = '';
+    sortPaymentsByDueDate(payments).forEach(function(p) {
+        var st = getPaymentStatusForDueDate(p.due_date);
+        var label = document.createElement('label');
+        label.className = 'flex items-center justify-between gap-3 p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer';
+        label.innerHTML =
+            '<span class="flex items-start gap-3 min-w-0 flex-1">' +
+                '<input type="checkbox" class="collect-payment-cb mt-1 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0" value="' + (p.id || '') + '">' +
+                '<span class="min-w-0">' +
+                    '<span class="block font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span>' +
+                    '<span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '-') + '</span>' +
+                '</span>' +
+            '</span>' +
+            '<span class="flex flex-col items-end gap-1 shrink-0">' +
+                '<span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold ' + st.className + '">' + st.label + '</span>' +
+                '<span class="font-semibold text-gray-900 dark:text-white tabular-nums">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>' +
+            '</span>';
+        var cb = label.querySelector('.collect-payment-cb');
+        if (cb) cb.addEventListener('change', updatePaymentSelectionUi);
+        list.appendChild(label);
+    });
+    updatePaymentSelectionUi();
+}
+function proceedToMethod() {
+    var selected = getPaymentsByIds(getCheckedPaymentIds());
+    if (!selected.length) return;
+    collectSelectedPayments = selected;
+    document.getElementById('selectedAmountSummary').innerHTML = buildAmountSummaryHtml(collectSelectedPayments);
+    updateCollectSubmitLabel();
+    collectStep(3);
+    document.getElementById('stepMethod').classList.remove('hidden');
+}
+function updateCollectSubmitLabel() {
+    var btn = document.getElementById('collectSubmitBtn');
+    if (!btn) return;
+    btn.textContent = collectSelectedPayments.length > 1 ? 'Ödemeleri Kaydet' : 'Ödemeyi Kaydet';
 }
 function formatDueMonth(dueDateStr) {
     if (!dueDateStr) return '';
@@ -354,10 +488,16 @@ function buildAmountSummaryHtml(payments) {
     lines.push('Toplam: ' + total.toFixed(2).replace('.', ',') + ' ₺');
     return lines.join('<br>');
 }
-function openCollectForPayment(payment) {
+function openCollectForPayment(payment, customerName) {
+    collectCustomerPayments = [payment];
+    collectSelectedPaymentIds = [payment.id];
     collectSelectedPayments = [payment];
+    if (customerName) {
+        updateCollectCustomerBanner(customerName);
+    }
     document.getElementById('collectModal').classList.remove('hidden');
     document.getElementById('selectedAmountSummary').innerHTML = buildAmountSummaryHtml(collectSelectedPayments);
+    updateCollectSubmitLabel();
     collectStep(3);
     document.getElementById('stepMethod').classList.remove('hidden');
 }
@@ -367,43 +507,43 @@ function closeCollectModal() {
 function collectStep(n) {
     collectCurrentStep = n;
     document.querySelectorAll('.step-content').forEach(function(el) { el.classList.add('hidden'); });
-    if (n === 1) document.getElementById('stepCustomer').classList.remove('hidden');
-    if (n === 2) document.getElementById('stepPayment').classList.remove('hidden');
+    if (n === 1) {
+        document.getElementById('stepCustomer').classList.remove('hidden');
+        updateCollectCustomerBanner('');
+    } else {
+        updateCollectCustomerBanner(collectSelectedCustomerName);
+    }
+    if (n === 2) {
+        document.getElementById('stepPayment').classList.remove('hidden');
+        if (collectCustomerPayments.length > 0 && document.getElementById('paymentList').children.length === 0) {
+            renderPaymentChecklist(collectCustomerPayments);
+        }
+        if (collectSelectedPaymentIds.length > 0) {
+            var idSet = {};
+            collectSelectedPaymentIds.forEach(function(id) { idSet[String(id)] = true; });
+            document.querySelectorAll('#paymentList .collect-payment-cb').forEach(function(cb) {
+                cb.checked = !!idSet[String(cb.value)];
+            });
+            updatePaymentSelectionUi();
+        }
+    }
     if (n === 3) document.getElementById('stepMethod').classList.remove('hidden');
     document.getElementById('stepBankTransfer').classList.add('hidden');
     document.getElementById('stepCreditCardNote').classList.add('hidden');
 }
 function selectCustomer(customerId, payments, customerName) {
-    collectSelectedPayments = Array.isArray(payments) ? payments : [];
-    collectSelectedPayments.sort(function(a, b) {
-        var da = (a.due_date || '').split(' ')[0] || '';
-        var db = (b.due_date || '').split(' ')[0] || '';
-        if (!da) return 1;
-        if (!db) return -1;
-        return da.localeCompare(db);
-    });
-    var nameEl = document.getElementById('step2CustomerName');
-    if (nameEl) nameEl.textContent = customerName ? 'Müşteri: ' + customerName : '';
-    var list = document.getElementById('paymentList');
-    list.innerHTML = '';
-    var total = 0;
-    collectSelectedPayments.forEach(function(p) {
-        total += parseFloat(p.amount || 0);
-        var st = getPaymentStatusForDueDate(p.due_date);
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center gap-3';
-        btn.innerHTML = '<div class="min-w-0 flex-1"><span class="font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500 dark:text-gray-400">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold shrink-0 ' + st.className + '">' + st.label + '</span><span class="font-semibold text-gray-900 dark:text-white tabular-nums shrink-0">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
-        btn.onclick = function() { selectOnePayment(p); };
-        list.appendChild(btn);
-    });
+    document.getElementById('collectModal').classList.remove('hidden');
+    collectCustomerPayments = Array.isArray(payments) ? payments.slice() : [];
+    collectSelectedPaymentIds = [];
+    collectSelectedPayments = [];
+    updateCollectCustomerBanner(customerName || '');
+    renderPaymentChecklist(collectCustomerPayments);
+    var selectAll = document.getElementById('selectAllPayments');
+    if (selectAll) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+    }
     collectStep(2);
-}
-function selectOnePayment(p) {
-    collectSelectedPayments = [p];
-    document.getElementById('selectedAmountSummary').innerHTML = buildAmountSummaryHtml(collectSelectedPayments);
-    collectStep(3);
-    document.getElementById('stepMethod').classList.remove('hidden');
 }
 function setPaymentMethod(method) {
     document.querySelectorAll('.collect-method').forEach(function(b) { b.classList.remove('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-900/20'); b.classList.add('border-gray-200', 'dark:border-gray-600'); });
@@ -429,31 +569,11 @@ function setPaymentMethod(method) {
         document.getElementById('stepCreditCardNote').classList.remove('hidden');
     }
 }
-// Müşteri seçildiğinde ödeme listesinde tek tıklamada seç (ilk ödemeyi seç veya tümünü listele - kullanıcı birini seçsin)
-function buildPaymentListForSelect() {
-    var list = document.getElementById('paymentList');
-    if (!list) return;
-    list.innerHTML = '';
-    if (collectSelectedPayments.length === 0) return;
-    collectSelectedPayments.sort(function(a, b) {
-        var da = (a.due_date || '').split(' ')[0] || '';
-        var db = (b.due_date || '').split(' ')[0] || '';
-        if (!da) return 1;
-        if (!db) return -1;
-        return da.localeCompare(db);
-    });
-    var total = 0;
-    collectSelectedPayments.forEach(function(p) {
-        total += parseFloat(p.amount || 0);
-        var st = getPaymentStatusForDueDate(p.due_date);
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center gap-3';
-        btn.innerHTML = '<div class="min-w-0 flex-1"><span class="font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span><br><span class="text-xs text-gray-500 dark:text-gray-400">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '') + '</span></div><span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold shrink-0 ' + st.className + '">' + st.label + '</span><span class="font-semibold text-gray-900 dark:text-white tabular-nums shrink-0">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
-        btn.onclick = function() { selectOnePayment(p); };
-        if (list) list.appendChild(btn);
-    });
-}
+document.getElementById('selectAllPayments').addEventListener('change', function() {
+    var checked = this.checked;
+    document.querySelectorAll('#paymentList .collect-payment-cb').forEach(function(cb) { cb.checked = checked; });
+    updatePaymentSelectionUi();
+});
 document.getElementById('customerSearch').addEventListener('input', function() {
     var q = this.value.trim().toLowerCase();
     document.querySelectorAll('#customerList button').forEach(function(btn) {

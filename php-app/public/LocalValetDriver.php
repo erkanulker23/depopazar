@@ -1,7 +1,7 @@
 <?php
 /**
  * Valet driver: Tüm istekleri index.php'ye yönlendirir (front controller).
- * Link: cd php-app/public && valet link depotakip-v1
+ * Link: cd php-app/public && valet link depo-v1
  */
 class LocalValetDriver extends \Valet\Drivers\BasicValetDriver
 {

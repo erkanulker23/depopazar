@@ -1,10 +1,22 @@
 <?php
 class Customer
 {
-    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $search = null, ?int $limit = null, int $offset = 0, ?string $inDepo = null, ?string $warehouseId = null): array
+    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $search = null, ?int $limit = null, int $offset = 0, ?string $inDepo = null, ?string $warehouseId = null, ?string $debtFilter = null): array
     {
-        $sql = 'SELECT c.* FROM customers c WHERE c.deleted_at IS NULL ';
         $params = [];
+        $debtFilter = self::normalizeDebtFilter($debtFilter);
+        $withDebtStats = $debtFilter !== null;
+        $sql = 'SELECT c.*';
+        if ($withDebtStats) {
+            if ($debtFilter === 'overdue') {
+                $sql .= ', ' . self::overduePaymentCountSubquery() . ' AS overdue_payment_count';
+                $sql .= ', ' . self::overduePaymentSumSubquery() . ' AS overdue_debt_total';
+            } else {
+                $sql .= ', ' . self::unpaidPaymentCountSubquery() . ' AS unpaid_payment_count';
+                $sql .= ', ' . self::unpaidPaymentSumSubquery() . ' AS unpaid_debt_total';
+            }
+        }
+        $sql .= ' FROM customers c WHERE c.deleted_at IS NULL ';
         if ($companyId) {
             $sql .= ' AND c.company_id = ? ';
             $params[] = $companyId;
@@ -23,7 +35,17 @@ class Customer
         if ($depoClause !== '') {
             $sql .= ' AND ' . $depoClause;
         }
-        $sql .= ' ORDER BY c.first_name, c.last_name ';
+        $debtClause = self::debtFilterSql($debtFilter, $params);
+        if ($debtClause !== '') {
+            $sql .= ' AND ' . $debtClause;
+        }
+        if ($debtFilter === 'overdue') {
+            $sql .= ' ORDER BY overdue_debt_total DESC, c.first_name, c.last_name ';
+        } elseif ($debtFilter === 'unpaid') {
+            $sql .= ' ORDER BY unpaid_debt_total DESC, c.first_name, c.last_name ';
+        } else {
+            $sql .= ' ORDER BY c.first_name, c.last_name ';
+        }
         if ($limit !== null) {
             $sql .= ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
         }
@@ -36,7 +58,7 @@ class Customer
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function count(PDO $pdo, ?string $companyId = null, ?string $search = null, ?string $inDepo = null, ?string $warehouseId = null): int
+    public static function count(PDO $pdo, ?string $companyId = null, ?string $search = null, ?string $inDepo = null, ?string $warehouseId = null, ?string $debtFilter = null): int
     {
         $sql = 'SELECT COUNT(*) FROM customers c WHERE c.deleted_at IS NULL ';
         $params = [];
@@ -58,11 +80,72 @@ class Customer
         if ($depoClause !== '') {
             $sql .= ' AND ' . $depoClause;
         }
+        $debtClause = self::debtFilterSql(self::normalizeDebtFilter($debtFilter), $params);
+        if ($debtClause !== '') {
+            $sql .= ' AND ' . $debtClause;
+        }
         $stmt = count($params) > 0 ? $pdo->prepare($sql) : $pdo->query($sql);
         if (count($params) > 0) {
             $stmt->execute($params);
         }
         return (int) $stmt->fetchColumn();
+    }
+
+    /** borc GET: overdue = vadesi geçmiş, unpaid = ödenmemiş (tüm bekleyen) */
+    private static function normalizeDebtFilter(?string $debtFilter): ?string
+    {
+        if ($debtFilter === null || $debtFilter === '') {
+            return null;
+        }
+        return in_array($debtFilter, ['overdue', 'unpaid'], true) ? $debtFilter : null;
+    }
+
+    private static function paymentDebtFromSql(): string
+    {
+        return 'FROM payments p
+            INNER JOIN contracts co ON co.id = p.contract_id AND co.deleted_at IS NULL
+            INNER JOIN rooms r ON r.id = co.room_id AND r.deleted_at IS NULL
+            INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+            WHERE co.customer_id = c.id
+            AND p.deleted_at IS NULL
+            AND p.status IN (\'pending\', \'overdue\')';
+    }
+
+    private static function overduePaymentCountSubquery(): string
+    {
+        return '(SELECT COUNT(*) ' . self::paymentDebtFromSql() . '
+            AND p.due_date IS NOT NULL AND DATE(p.due_date) < CURDATE())';
+    }
+
+    private static function overduePaymentSumSubquery(): string
+    {
+        return '(SELECT COALESCE(SUM(p.amount), 0) ' . self::paymentDebtFromSql() . '
+            AND p.due_date IS NOT NULL AND DATE(p.due_date) < CURDATE())';
+    }
+
+    private static function unpaidPaymentCountSubquery(): string
+    {
+        return '(SELECT COUNT(*) ' . self::paymentDebtFromSql() . ')';
+    }
+
+    private static function unpaidPaymentSumSubquery(): string
+    {
+        return '(SELECT COALESCE(SUM(p.amount), 0) ' . self::paymentDebtFromSql() . ')';
+    }
+
+    private static function debtFilterSql(?string $debtFilter, array &$params): string
+    {
+        if ($debtFilter === null) {
+            return '';
+        }
+        if ($debtFilter === 'overdue') {
+            return 'EXISTS (SELECT 1 ' . self::paymentDebtFromSql() . '
+                AND p.due_date IS NOT NULL AND DATE(p.due_date) < CURDATE())';
+        }
+        if ($debtFilter === 'unpaid') {
+            return 'EXISTS (SELECT 1 ' . self::paymentDebtFromSql() . ')';
+        }
+        return '';
     }
 
     /** Depoda olan / olmayan veya belirli depo filtresi için SQL koşulu (EXISTS / NOT EXISTS). $params by ref. */

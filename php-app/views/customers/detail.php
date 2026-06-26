@@ -12,6 +12,11 @@ ob_start();
         </div>
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Müşteri Detayı</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($customerName) ?></p>
+        <?php $debtOverdue = $debtOverdue ?? 0; if ($debtOverdue > 0): ?>
+        <p class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
+            <i class="bi bi-exclamation-triangle-fill"></i> Gecikmede olan borçları var
+        </p>
+        <?php endif; ?>
     </div>
     <div class="flex gap-2">
         <button type="button" onclick="openEditCustomerModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
@@ -49,8 +54,17 @@ ob_start();
         <div>
             <p class="text-sm text-gray-600 dark:text-gray-300">
                 <span class="font-semibold text-gray-900 dark:text-white"><?= number_format((float)$debt, 2, ',', '.') ?> ₺</span>
-                <?php if ($debt > 0): ?><span class="text-red-600 dark:text-red-400">(Müşteri Borçlu)</span><?php endif; ?>
+                <?php if ($debtOverdue > 0): ?>
+                    <span class="text-red-600 dark:text-red-400 font-medium">(Gecikmede olan borçları var)</span>
+                <?php elseif ($debt > 0): ?>
+                    <span class="text-red-600 dark:text-red-400">(Müşteri Borçlu)</span>
+                <?php endif; ?>
             </p>
+            <?php if ($debtOverdue > 0): ?>
+            <p class="text-xs mt-1 text-red-700 dark:text-red-400 font-semibold flex items-center gap-1">
+                <i class="bi bi-exclamation-circle"></i> Vadesi geçmiş borç: <?= number_format((float)$debtOverdue, 2, ',', '.') ?> ₺
+            </p>
+            <?php endif; ?>
             <?php $debtDueThisMonth = $debtDueThisMonth ?? 0; if ($debtDueThisMonth > 0): ?>
             <p class="text-xs mt-1 text-amber-700 dark:text-amber-400 font-medium">Vadesi gelmiş borç (bu ay): <?= number_format((float)$debtDueThisMonth, 2, ',', '.') ?> ₺</p>
             <?php endif; ?>
@@ -368,6 +382,14 @@ ob_start();
                 <p class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest">Toplam Borç</p>
                 <p class="text-2xl font-bold text-amber-800 dark:text-amber-300"><?= number_format($debt, 2, ',', '.') ?> ₺</p>
             </div>
+            <?php if ($debtOverdue > 0): ?>
+            <div class="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 mb-4">
+                <p class="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-widest flex items-center gap-1">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Gecikmede olan borç
+                </p>
+                <p class="text-lg font-bold text-red-800 dark:text-red-300"><?= number_format((float)$debtOverdue, 2, ',', '.') ?> ₺</p>
+            </div>
+            <?php endif; ?>
             <p class="text-sm text-gray-600 dark:text-gray-400">Sözleşme sayısı: <strong><?= count($contracts) ?></strong></p>
             <?php if ($debt > 0): ?>
             <button type="button" onclick="document.getElementById('paymentModal').classList.remove('hidden')" class="mt-4 w-full text-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
