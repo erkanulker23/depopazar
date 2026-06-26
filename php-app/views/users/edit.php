@@ -74,9 +74,9 @@ ob_start();
             <input type="checkbox" name="is_active" value="1" <?= !empty($profile['is_active']) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
             <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
         </label>
-        <div class="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-600">
-            <a href="/kullanicilar/<?= htmlspecialchars($profile['id'] ?? '') ?>" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</a>
-            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
+        <div class="form-submit-bar flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <a href="/kullanicilar/<?= htmlspecialchars($profile['id'] ?? '') ?>" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</a>
+            <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
         </div>
     </form>
 </div>

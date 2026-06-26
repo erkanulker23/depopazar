@@ -24,7 +24,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     <strong class="ml-1">Peşin sözleşme:</strong> Aktif sözleşmenin tüm taksitleri ödenmiş ve en az bir taksit vadesinden önce tahsil edilmiş.
 </div>
 
-<form method="get" action="/raporlar/erken-odemeler" class="mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
+<form method="get" action="/raporlar/erken-odemeler" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat başlangıç</label>
         <input type="date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
@@ -33,8 +33,8 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat bitiş</label>
         <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
-    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
-    <a href="/odemeler?status=early" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Ödemeler listesinde filtrele</a>
+    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
+    <a href="/odemeler?status=early" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Ödemeler listesinde filtrele</a>
 </form>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -51,7 +51,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 </div>
 
 <?php if (!empty($prepaidContracts)): ?>
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-8">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-8">
     <div class="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <i class="bi bi-lightning-charge text-indigo-600 dark:text-indigo-400"></i>
@@ -103,7 +103,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center flex-wrap gap-2">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Erken tahsil edilen ödemeler</h2>
         <span class="text-sm text-gray-500 dark:text-gray-400"><?= count($rows) ?> kayıt gösteriliyor</span>

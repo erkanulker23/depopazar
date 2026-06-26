@@ -13,7 +13,7 @@ ob_start();
     <p class="page-subtitle">Doluluk ve gelir raporları</p>
 </div>
 
-<form method="get" action="/raporlar" class="mb-6 flex flex-wrap items-center gap-4">
+<form method="get" action="/raporlar" class="page-toolbar mb-6 flex flex-wrap items-end gap-4">
     <div>
         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Yıl</label>
         <select name="year" onchange="this.form.submit()" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">

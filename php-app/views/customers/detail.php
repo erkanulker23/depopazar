@@ -3,7 +3,7 @@ $currentPage = 'musteriler';
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
 ob_start();
 ?>
-<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+<div class="page-header mb-6 flex flex-wrap items-start justify-between gap-4">
     <div>
         <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <a href="/musteriler" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium">Müşteriler</a>
@@ -40,7 +40,7 @@ ob_start();
 <?php endif; ?>
 
 <!-- BAKİYE DURUM kartı -->
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-6">
     <div class="bg-rose-500/10 dark:bg-rose-500/20 border-b border-rose-200/50 dark:border-rose-800/50 px-4 py-3">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <i class="bi bi-bar-chart-fill text-rose-600 dark:text-rose-400"></i> BAKİYE DURUM
@@ -169,7 +169,7 @@ ob_start();
         </div>
 
         <!-- Sözleşmeler -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-file-text text-emerald-600"></i> Sözleşmeler
             </h2>
@@ -245,7 +245,7 @@ ob_start();
             if (!empty($c['end_date'])) { $y = (int) date('Y', strtotime($c['end_date'])); if ($y > $maxYear) $maxYear = $y; }
         }
         ?>
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-calendar-month text-emerald-600"></i> Aylar Takvimi – Ödendi / Ödenmedi
             </h2>
@@ -286,11 +286,9 @@ ob_start();
             </div>
         </div>
 
-        </div>
-
         <!-- Manuel borçlar (Borçlandır) -->
         <?php $charges = $charges ?? []; ?>
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <i class="bi bi-receipt text-emerald-600"></i> Ek Borçlar
@@ -326,7 +324,7 @@ ob_start();
         </div>
 
         <!-- Ödeme takvimi (son ödemeler) -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-credit-card text-emerald-600"></i> Ödeme Takvimi / Ödenenler
             </h2>
@@ -438,9 +436,9 @@ ob_start();
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not</label>
                     <textarea name="notes" rows="5" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="Müşteri hakkında not..."><?= htmlspecialchars($customer['notes'] ?? '') ?></textarea>
                 </div>
-                <div class="flex justify-end gap-2">
+                <div class="form-submit-bar flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('noteModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -500,9 +498,9 @@ ob_start();
                     <input type="checkbox" name="is_active" id="edit_is_active" value="1" <?= !empty($customer['is_active']) ? 'checked' : '' ?> class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
                     <label for="edit_is_active" class="text-sm font-medium text-gray-700 dark:text-gray-300">Aktif müşteri</label>
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('editCustomerModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -592,7 +590,7 @@ $bankAccounts = $bankAccounts ?? [];
                     </div>
                     <div class="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
                         <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
+                        <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
                     </div>
                 </form>
                 <script>
@@ -642,9 +640,9 @@ $bankAccounts = $bankAccounts ?? [];
                     <textarea name="message" required rows="4" maxlength="160" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="SMS metnini yazın (tek mesaj 160 karakter)"></textarea>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Tek SMS en fazla 160 karakter. Uzun metinler birden fazla SMS olarak gönderilir.</p>
                 </div>
-                <div class="flex justify-end gap-2">
+                <div class="form-submit-bar flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('smsModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Gönder</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Gönder</button>
                 </div>
             </form>
         </div>

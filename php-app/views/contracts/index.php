@@ -21,7 +21,7 @@ $durumGet = isset($_GET['durum']) ? $_GET['durum'] : '';
 $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
 $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
 ?>
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+<div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <form method="get" action="/girisler" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Sözleşme no, müşteri, oda, depo, plaka..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
         <input type="hidden" name="newSale" value="">
@@ -56,7 +56,7 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
     </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($contracts)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz sözleşme yok. "Yeni Satış Gir" ile ekleyebilirsiniz.</div>
     <?php else: ?>
@@ -387,9 +387,9 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
                         <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end gap-2">
+                <div class="form-submit-bar mt-6 flex justify-end gap-2">
                     <button type="button" onclick="closeNewSaleModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -443,9 +443,9 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
                         <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end gap-2">
+                <div class="form-submit-bar mt-6 flex justify-end gap-2">
                     <button type="button" onclick="closeQuickAddCustomer()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle ve satışa dön</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle ve satışa dön</button>
                 </div>
             </form>
         </div>

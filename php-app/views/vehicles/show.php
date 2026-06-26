@@ -20,7 +20,7 @@ if (!function_exists('fmtMoney')) {
 }
 ob_start();
 ?>
-<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+<div class="page-header mb-6 flex flex-wrap items-start justify-between gap-4">
     <div>
         <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <a href="/araclar" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Araçlar</a>
@@ -43,7 +43,7 @@ ob_start();
 <?php endif; ?>
 
 <!-- Sekmeli alan: Araç Bilgileri / Trafik Sigortaları / Kaskolar -->
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-6">
     <div class="flex border-b border-gray-200 dark:border-gray-600" role="tablist">
         <button type="button" role="tab" id="tab-bilgi" aria-selected="true" aria-controls="panel-bilgi" class="vehicle-tab active flex items-center gap-2 px-5 py-4 text-sm font-medium border-b-2 border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-gray-800">
             <i class="bi bi-car-front"></i> Araç Bilgileri
@@ -89,6 +89,7 @@ ob_start();
                 <?php if (empty($trafficInsurances)): ?>
                     <div class="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">Henüz trafik sigortası kaydı yok.</div>
                 <?php else: ?>
+                    <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
@@ -132,6 +133,7 @@ ob_start();
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
@@ -147,6 +149,7 @@ ob_start();
                 <?php if (empty($kaskos)): ?>
                     <div class="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">Henüz kasko kaydı yok.</div>
                 <?php else: ?>
+                    <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
@@ -190,6 +193,7 @@ ob_start();
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
@@ -205,6 +209,7 @@ ob_start();
                 <?php if (empty($accidents)): ?>
                     <div class="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">Henüz kaza kaydı yok.</div>
                 <?php else: ?>
+                    <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
@@ -249,6 +254,7 @@ ob_start();
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
@@ -299,7 +305,7 @@ ob_start();
                 </div>
                 <div class="flex-shrink-0 flex gap-3 justify-end px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-2xl">
                     <button type="button" onclick="document.getElementById('editVehicleModal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700">İptal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium">Güncelle</button>
+                    <button type="submit" class="btn-touch px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium">Güncelle</button>
                 </div>
             </form>
         </div>
@@ -344,7 +350,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('addTrafficInsuranceModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ekle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ekle</button>
                 </div>
             </form>
         </div>
@@ -368,7 +374,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('addTrafficInsuranceDocModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Yükle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Yükle</button>
                 </div>
             </form>
         </div>
@@ -410,7 +416,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('editTrafficInsuranceModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Güncelle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Güncelle</button>
                 </div>
             </form>
         </div>
@@ -459,7 +465,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('addKaskoModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ekle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ekle</button>
                 </div>
             </form>
         </div>
@@ -483,7 +489,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('addKaskoDocModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Yükle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Yükle</button>
                 </div>
             </form>
         </div>
@@ -529,7 +535,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('editKaskoModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Güncelle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Güncelle</button>
                 </div>
             </form>
         </div>
@@ -562,7 +568,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('addAccidentDocModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Yükle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Yükle</button>
                 </div>
             </form>
         </div>
@@ -601,7 +607,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('addAccidentModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ekle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Ekle</button>
                 </div>
             </form>
         </div>
@@ -641,7 +647,7 @@ ob_start();
                 </div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button type="button" onclick="document.getElementById('editAccidentModal').classList.add('hidden')" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Güncelle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Güncelle</button>
                 </div>
             </form>
         </div>

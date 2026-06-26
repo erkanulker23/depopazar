@@ -13,7 +13,7 @@ ob_start();
     .print-fatura { position: absolute; left: 0; top: 0; width: 100%; }
 }
 </style>
-<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
+<div class="page-header mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
     <div>
         <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <a href="/girisler" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium">Tüm Girişler</a>
@@ -86,6 +86,7 @@ ob_start();
         </div>
     </div>
     <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Sözleşme Bilgileri</h2>
+    <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
     <table class="min-w-full border border-gray-300 text-sm mb-6">
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-48">Sözleşme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['contract_number'] ?? '-') ?></td></tr>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
@@ -95,9 +96,11 @@ ob_start();
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ürün Durumu</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><span class="text-xs text-gray-600 mt-1 block">Hasar notu: <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?></span><?php endif; ?></td></tr>
         <?php endif; ?>
     </table>
+    </div>
     <?php $items = $items ?? []; ?>
     <?php if (!empty($items)): ?>
     <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Depo Eşya Listesi</h2>
+    <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
     <table class="min-w-full border border-gray-300 text-sm mb-6">
         <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">#</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Eşya Adı</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Adet</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Birim</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Açıklama</th></tr></thead>
         <tbody>
@@ -106,8 +109,10 @@ ob_start();
             <?php endforeach; ?>
         </tbody>
     </table>
+    </div>
     <?php endif; ?>
     <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Takvimi</h2>
+    <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
     <table class="min-w-full border border-gray-300 text-sm">
         <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th></tr></thead>
         <tbody>
@@ -116,6 +121,7 @@ ob_start();
             <?php endforeach; ?>
         </tbody>
     </table>
+    </div>
     <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= fmtDateTime($contract['created_at'] ?? null) ?></p>
 </div>
 
@@ -226,7 +232,7 @@ ob_start();
         </div>
 
         <!-- Ödemeler -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-credit-card text-emerald-600"></i> Ödeme Takvimi
             </h2>
@@ -272,7 +278,7 @@ ob_start();
 
     <!-- Sağ sütun: Aylık fiyatlar -->
     <div class="space-y-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar
             </h2>
@@ -310,9 +316,9 @@ ob_start();
                 require __DIR__ . '/_stored_items_form.php';
                 unset($storedItemsFormCompact);
                 ?>
-                <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-gray-100 dark:border-gray-600">
+                <div class="form-submit-bar mt-6 flex justify-end gap-2 pt-4 border-t border-gray-100 dark:border-gray-600">
                     <button type="button" onclick="closeContractItemsModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -390,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function() { openContractItemsModa
                     </div>
                     <div class="flex gap-2">
                         <button type="button" onclick="backCollectMethod()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700">← Geri</button>
-                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Ödemeyi Kaydet</button>
+                        <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Ödemeyi Kaydet</button>
                     </div>
                 </form>
             </div>

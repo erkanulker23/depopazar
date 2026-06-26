@@ -22,7 +22,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Tarih aralığına ve banka hesabına göre tahsilat listesi</p>
 </div>
 
-<form method="get" action="/raporlar/banka-hesaplari" class="mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
+<form method="get" action="/raporlar/banka-hesaplari" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka Hesabı</label>
         <select name="bank_account_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[200px]">
@@ -52,7 +52,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arama</label>
         <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Ödeme no, sözleşme, müşteri, işlem no..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
-    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
+    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
     <?php if ($qGet !== '' || $paymentMethodGet !== '' || $bankAccountId !== ''): ?>
         <a href="/raporlar/banka-hesaplari?start_date=<?= urlencode($startDate) ?>&end_date=<?= urlencode($endDate) ?>" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
     <?php endif; ?>
@@ -77,7 +77,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($rows)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Seçilen kriterlere uygun ödeme kaydı yok.</div>
     <?php else: ?>
@@ -116,7 +116,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
                             <td class="px-4 py-3 text-right">
                                 <form method="post" action="/odemeler/<?= htmlspecialchars($r['id']) ?>/iptal" class="inline" onsubmit="return confirm('Bu ödemeyi iptal etmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="redirect" value="<?= htmlspecialchars($reportUrl) ?>">
-                                    <button type="submit" class="text-red-600 dark:text-red-400 hover:underline text-sm font-medium">Ödemeyi iptal et</button>
+                                    <button type="submit" class="btn-touch text-red-600 dark:text-red-400 hover:underline text-sm font-medium">Ödemeyi iptal et</button>
                                 </form>
                             </td>
                         </tr>
@@ -128,7 +128,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 </div>
 
 <?php if (!empty($expenseRows)): ?>
-<div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php $expTotal = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $expenseRows)); ?>
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Banka hesabından yapılan masraflar (<?= count($expenseRows) ?> adet)</span>

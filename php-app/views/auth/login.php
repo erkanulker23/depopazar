@@ -101,7 +101,7 @@ $error = $error ?? null;
                         </button>
                     </div>
                 </div>
-                <button type="submit" class="btn-submit w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Giriş Yap</button>
+                <button type="submit" class="btn-touch btn-submit w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Giriş Yap</button>
             </form>
         </div>
         <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">© <?= date('Y') ?> <?= htmlspecialchars($projectName ?? 'Depo ve Nakliye Takip') ?></p>

@@ -27,14 +27,14 @@ ob_start();
             <input type="file" name="csv_file" accept=".csv" required class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 dark:file:bg-emerald-900/30 dark:file:text-emerald-300">
             <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">CSV dosyası yükleyin (Excel’de “CSV (Ayırıcı: noktalı virgül)” olarak kaydedebilirsiniz). Sütunlar: Ad; Soyad; E-posta; Telefon; TC Kimlik No; Adres; Notlar; Aktif (Evet/Hayır). UTF-8 önerilir.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
+        <div class="form-submit-bar flex flex-wrap items-center gap-3">
+            <button type="submit" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
                 <i class="bi bi-upload"></i> Yükle ve İçe Aktar
             </button>
-            <a href="/musteriler/excel-sablon" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <a href="/musteriler/excel-sablon" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <i class="bi bi-download"></i> Örnek şablon indir
             </a>
-            <a href="/musteriler" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">İptal</a>
+            <a href="/musteriler" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">İptal</a>
         </div>
     </form>
 </div>

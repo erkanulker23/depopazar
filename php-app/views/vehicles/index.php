@@ -75,28 +75,27 @@ if (!empty($upcomingKasko) || !empty($upcomingInspection)) {
 $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
 $alertGet = isset($_GET['alert']) ? $_GET['alert'] : '';
 ?>
-<form method="get" action="/araclar" class="flex flex-wrap items-center gap-2 mb-4">
-    <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Plaka, model yılı, not..." class="flex-1 min-w-0 sm:w-56 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-    <select name="alert" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <option value="">Tüm Araçlar</option>
-        <option value="kasko" <?= $alertGet === 'kasko' ? 'selected' : '' ?>>Kasko kayıtlı</option>
-        <option value="inspection" <?= $alertGet === 'inspection' ? 'selected' : '' ?>>Muayene kayıtlı</option>
-    </select>
-    <button type="submit" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Ara</button>
-    <?php if ($qGet !== '' || $alertGet !== ''): ?>
-        <a href="/araclar" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
-    <?php endif; ?>
-</form>
-
-<?php if ($tableExists): ?>
-<div class="flex flex-wrap items-center gap-3 mb-4">
-    <button type="button" onclick="document.getElementById('addVehicleModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
+<div class="page-toolbar flex flex-wrap items-center gap-2 mb-4">
+    <form method="get" action="/araclar" class="page-toolbar-form flex flex-wrap items-center gap-2 flex-1 min-w-0">
+        <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Plaka, model yılı, not..." class="flex-1 min-w-0 sm:w-56 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <select name="alert" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white flex-1 min-w-[140px]">
+            <option value="">Tüm Araçlar</option>
+            <option value="kasko" <?= $alertGet === 'kasko' ? 'selected' : '' ?>>Kasko kayıtlı</option>
+            <option value="inspection" <?= $alertGet === 'inspection' ? 'selected' : '' ?>>Muayene kayıtlı</option>
+        </select>
+        <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Ara</button>
+        <?php if ($qGet !== '' || $alertGet !== ''): ?>
+            <a href="/araclar" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
+        <?php endif; ?>
+    </form>
+    <?php if ($tableExists): ?>
+    <button type="button" onclick="document.getElementById('addVehicleModal').classList.remove('hidden')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Araç Ekle
     </button>
+    <?php endif; ?>
 </div>
-<?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <div class="overflow-x-auto table-responsive">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
@@ -186,7 +185,7 @@ $alertGet = isset($_GET['alert']) ? $_GET['alert'] : '';
                 </div>
                 <div class="flex-shrink-0 flex gap-3 justify-end px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-2xl">
                     <button type="button" onclick="document.getElementById('addVehicleModal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">İptal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors shadow-sm">Ekle</button>
+                    <button type="submit" class="btn-touch px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors shadow-sm">Ekle</button>
                 </div>
             </form>
         </div>
@@ -236,7 +235,7 @@ $alertGet = isset($_GET['alert']) ? $_GET['alert'] : '';
                 </div>
                 <div class="flex-shrink-0 flex gap-3 justify-end px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-2xl">
                     <button type="button" onclick="document.getElementById('editVehicleModal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">İptal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors shadow-sm">Güncelle</button>
+                    <button type="submit" class="btn-touch px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors shadow-sm">Güncelle</button>
                 </div>
             </form>
         </div>

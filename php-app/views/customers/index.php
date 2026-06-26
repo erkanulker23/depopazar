@@ -26,7 +26,7 @@ ob_start();
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Müşteri yönetimi</p>
 </div>
 
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+<div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <form method="get" action="/musteriler" id="customerFilterForm" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <input type="search" name="q" value="<?= htmlspecialchars($q) ?>" placeholder="Ad, e-posta, telefon veya bilgi notu ara..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
         <select name="in_depo" class="customer-filter-select px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-0 sm:w-auto" title="Depoda olan müşteriler">
@@ -72,7 +72,7 @@ ob_start();
 <?php endif; ?>
 
 <form id="bulkDeleteForm" method="post" action="/musteriler/toplu-sil<?= $filterQuery !== '' ? '?' . $filterQuery : '' ?>" onsubmit="return confirm('Seçilen müşterileri silmek istediğinize emin misiniz?');">
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($customers)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz müşteri kaydı yok<?= $filterQuery !== '' ? ' veya filtreye uygun müşteri bulunamadı.' : '.' ?></div>
     <?php else: ?>
@@ -274,9 +274,9 @@ ob_start();
                         <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end gap-2">
+                <div class="form-submit-bar mt-6 flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('addCustomerModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
                 </div>
             </form>
         </div>

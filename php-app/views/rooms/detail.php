@@ -9,7 +9,7 @@ ob_start();
         <i class="bi bi-arrow-left mr-1"></i> Odalara dön
     </a>
 </div>
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">Oda: <?= htmlspecialchars($room['room_number']) ?></h2>
     </div>

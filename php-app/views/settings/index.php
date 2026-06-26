@@ -42,7 +42,7 @@ ob_start();
     </nav>
 </div>
 
-<div class="card-modern overflow-hidden">
+<div class="card-modern">
     <?php if ($activeTab === 'firma'): ?>
         <div class="p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-building text-emerald-600"></i> Firma Bilgileri</h2>
@@ -104,8 +104,8 @@ ob_start();
                         <input type="file" name="contract_pdf" accept=".pdf,application/pdf" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">
                     </div>
                 </div>
-                <div class="pt-2">
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                <div class="form-submit-bar pt-2">
+                    <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -138,8 +138,8 @@ ob_start();
                         <span class="text-sm text-gray-700 dark:text-gray-300">Test Modu</span>
                     </label>
                 </div>
-                <div class="pt-2">
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                <div class="form-submit-bar pt-2">
+                    <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -215,9 +215,9 @@ ob_start();
                             <input type="checkbox" name="is_active" value="1" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
                         </label>
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" onclick="document.getElementById('addBankAccountModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
+                        <div class="form-submit-bar flex justify-end gap-2 pt-2">
+                            <button type="button" onclick="document.getElementById('addBankAccountModal').classList.add('hidden')" class="btn-touch px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                            <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
                         </div>
                     </form>
                 </div>
@@ -262,9 +262,9 @@ ob_start();
                             <input type="checkbox" name="is_active" value="1" id="edit_bank_is_active" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
                         </label>
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" onclick="document.getElementById('editBankAccountModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
+                        <div class="form-submit-bar flex justify-end gap-2 pt-2">
+                            <button type="button" onclick="document.getElementById('editBankAccountModal').classList.add('hidden')" class="btn-touch px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                            <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
                         </div>
                     </form>
                 </div>
@@ -348,9 +348,9 @@ ob_start();
                             <input type="checkbox" name="is_active" value="1" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
                         </label>
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" onclick="document.getElementById('addCreditCardModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
+                        <div class="form-submit-bar flex justify-end gap-2 pt-2">
+                            <button type="button" onclick="document.getElementById('addCreditCardModal').classList.add('hidden')" class="btn-touch px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                            <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
                         </div>
                     </form>
                 </div>
@@ -387,9 +387,9 @@ ob_start();
                             <input type="checkbox" name="is_active" value="1" id="edit_cc_is_active" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
                         </label>
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" onclick="document.getElementById('editCreditCardModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
+                        <div class="form-submit-bar flex justify-end gap-2 pt-2">
+                            <button type="button" onclick="document.getElementById('editCreditCardModal').classList.add('hidden')" class="btn-touch px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                            <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
                         </div>
                     </form>
                 </div>
@@ -478,8 +478,8 @@ ob_start();
                         <span class="text-sm text-gray-700 dark:text-gray-300">E-posta bildirimleri aktif</span>
                     </label>
                 </div>
-                <div class="pt-4 flex flex-wrap gap-3">
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                <div class="form-submit-bar pt-4 flex flex-wrap gap-3">
+                    <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
             <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
@@ -489,7 +489,7 @@ ob_start();
                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Test e-postası gönderilecek adres</label>
                         <input type="email" name="test_email" required placeholder="test@example.com" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
                     </div>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Test Et</button>
+                    <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Test Et</button>
                 </form>
             </div>
             <?php
@@ -566,8 +566,8 @@ ob_start();
                         <span class="text-sm text-gray-700 dark:text-gray-300">Test modu (gerçek gönderim yapılmaz)</span>
                     </label>
                 </div>
-                <div class="pt-2">
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                <div class="form-submit-bar pt-2">
+                    <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
             <?php if (!empty($smsSettings['username']) && !empty($smsSettings['sender_id'])): ?>
@@ -578,7 +578,7 @@ ob_start();
                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Test SMS gönderilecek numara (5xxxxxxxxx)</label>
                         <input type="text" name="test_phone" required placeholder="5xxxxxxxxx" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white" maxlength="15">
                     </div>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Test SMS Gönder</button>
+                    <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Test SMS Gönder</button>
                 </form>
             </div>
             <?php endif; ?>
@@ -651,7 +651,9 @@ ob_start();
                         </div>
                     </div>
                 </div>
-                <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Şablonları Kaydet</button>
+                <div class="form-submit-bar pt-2">
+                    <button type="submit" class="btn-touch btn-submit px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Şablonları Kaydet</button>
+                </div>
             </form>
         </div>
 

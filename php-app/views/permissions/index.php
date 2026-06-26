@@ -64,13 +64,13 @@ ob_start();
 </div>
 
 <!-- Seçili rol detay tablosu -->
-<div id="rol-matrisi" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-8">
+<div id="rol-matrisi" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-8">
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">
             <?= htmlspecialchars($roleLabels[$selectedRole] ?? $selectedRole) ?> — Sayfa ve işlem yetkileri
         </h2>
     </div>
-    <div class="overflow-x-auto">
+    <div class="table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
@@ -112,12 +112,12 @@ ob_start();
 </div>
 
 <!-- Tüm roller karşılaştırma -->
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-8">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-8">
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Rol karşılaştırması — Görüntüleme yetkisi</h2>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Yeşil: sayfayı görüntüleyebilir · Gri: erişemez</p>
     </div>
-    <div class="overflow-x-auto">
+    <div class="table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
@@ -146,7 +146,7 @@ ob_start();
 </div>
 
 <!-- Kullanıcı listesi -->
-<div id="kullanicilar" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div id="kullanicilar" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
             <h2 class="text-lg font-bold text-gray-900 dark:text-white">Personel ve etkin yetkileri</h2>
@@ -232,11 +232,11 @@ ob_start();
 </div>
 
 <!-- Rol açıklamaları -->
-<div class="mt-8 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="mt-8 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Rol tanımları</h2>
     </div>
-    <div class="overflow-x-auto">
+    <div class="table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>

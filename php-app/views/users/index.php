@@ -52,7 +52,7 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
 </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($staff)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz kullanıcı kaydı yok.</div>
     <?php else: ?>
@@ -158,9 +158,9 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                     <input type="checkbox" name="is_active" value="1" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
                 </label>
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('addUserModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
                 </div>
             </form>
         </div>
@@ -197,9 +197,9 @@ function generatePassword() {
                         <button type="button" onclick="generateChPwd()" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm">Üret</button>
                     </div>
                 </div>
-                <div class="flex justify-end gap-2">
+                <div class="form-submit-bar flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('changePasswordModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>

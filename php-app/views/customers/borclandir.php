@@ -35,11 +35,11 @@ ob_start();
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not</label>
             <textarea name="notes" rows="2" class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
         </div>
-        <div class="flex flex-wrap gap-2 pt-2">
-            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors">
+        <div class="form-submit-bar flex flex-wrap gap-2 pt-2">
+            <button type="submit" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors">
                 <i class="bi bi-currency-dollar"></i> Borç Ekle
             </button>
-            <a href="/musteriler/<?= htmlspecialchars($customerId) ?>" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">İptal</a>
+            <a href="/musteriler/<?= htmlspecialchars($customerId) ?>" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">İptal</a>
         </div>
     </form>
 </div>

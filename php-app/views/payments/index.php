@@ -25,7 +25,7 @@ $totalPages = $totalPages ?? 1;
 $page = $page ?? 1;
 ?>
 <?php $preselectedCustomerId = $preselectedCustomerId ?? ''; ?>
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+<div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <form method="get" action="/odemeler" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <?php if ($collectMode): ?><input type="hidden" name="collect" value="1"><?php endif; ?>
         <?php if ($collectMode && $preselectedCustomerId !== ''): ?><input type="hidden" name="customer" value="<?= htmlspecialchars($preselectedCustomerId) ?>"><?php endif; ?>
@@ -56,7 +56,7 @@ $page = $page ?? 1;
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if ($collectMode && !empty($customersWithDebt)): ?>
         <!-- Ödeme Tahsil modu: Sadece borçlu müşteriler listesi -->
         <div class="p-4 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between flex-wrap gap-2">
@@ -298,7 +298,7 @@ $page = $page ?? 1;
                         </div>
                         <div class="flex gap-2 pt-2">
                             <button type="button" onclick="collectStep(3)" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-600">İptal</button>
-                            <button type="submit" id="collectSubmitBtn" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
+                            <button type="submit" id="collectSubmitBtn" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Ödemeyi Kaydet</button>
                         </div>
                     </div>
                 </form>

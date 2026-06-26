@@ -8,7 +8,7 @@ $warehouseCustomers = $warehouseCustomers ?? [];
 $statusLabels = ['empty' => 'Boş', 'occupied' => 'Dolu', 'reserved' => 'Rezerve', 'locked' => 'Kilitli'];
 ob_start();
 ?>
-<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+<div class="page-header mb-6 flex flex-wrap items-start justify-between gap-4">
     <div>
         <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <a href="/depolar" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Depolar</a>
@@ -44,7 +44,7 @@ ob_start();
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Müşteri Sayısı</dt><dd class="mt-1 text-gray-900 dark:text-white"><?= count($warehouseCustomers) ?></dd></div>
             </dl>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-people text-emerald-600"></i> Depodaki Müşteriler
             </h2>
@@ -88,7 +88,7 @@ ob_start();
                 </div>
             <?php endif; ?>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-grid-3x3 text-emerald-600"></i> Odalar
             </h2>

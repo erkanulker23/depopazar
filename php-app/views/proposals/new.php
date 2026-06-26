@@ -22,7 +22,7 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <form method="post" action="/teklifler/ekle" id="proposalForm" class="p-6">
         <div class="space-y-6">
             <!-- Teklif türü -->
@@ -161,9 +161,9 @@ ob_start();
                 </div>
             </div>
         </div>
-        <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="form-submit-bar mt-6 flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
             <a href="/teklifler" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">İptal</a>
-            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Teklif Oluştur</button>
+            <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Teklif Oluştur</button>
         </div>
     </form>
 </div>

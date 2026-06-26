@@ -18,26 +18,26 @@ ob_start();
 <?php endif; ?>
 
 <!-- Filtre + Kategori ekle -->
-<div class="flex flex-wrap items-center gap-3 mb-4">
-    <form method="get" action="/hizmetler" class="flex flex-wrap items-center gap-2">
-        <select name="kategori" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+<div class="page-toolbar flex flex-wrap items-center gap-3 mb-4">
+    <form method="get" action="/hizmetler" class="page-toolbar-form flex flex-wrap items-center gap-2 flex-1 min-w-0">
+        <select name="kategori" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white flex-1 min-w-[140px]">
             <option value="">Tüm kategoriler</option>
             <?php foreach ($categories as $cat): ?>
                 <option value="<?= htmlspecialchars($cat['id']) ?>" <?= $kategoriGet === $cat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['name']) ?></option>
             <?php endforeach; ?>
         </select>
-        <button type="submit" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium">Filtrele</button>
+        <button type="submit" class="btn-touch px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium">Filtrele</button>
     </form>
-    <button type="button" onclick="document.getElementById('addCategoryModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
+    <button type="button" onclick="document.getElementById('addCategoryModal').classList.remove('hidden')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Kategori Ekle
     </button>
-    <button type="button" onclick="document.getElementById('addServiceModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl border border-emerald-600 text-emerald-600 dark:text-emerald-400 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+    <button type="button" onclick="document.getElementById('addServiceModal').classList.remove('hidden')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl border border-emerald-600 text-emerald-600 dark:text-emerald-400 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
         <i class="bi bi-plus-lg mr-2"></i> Hizmet Ekle
     </button>
 </div>
 
 <!-- Kategoriler -->
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-6">
     <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-200 dark:border-gray-700">Hizmet Kategorileri</h2>
     <?php if (empty($categories)): ?>
         <div class="p-6 text-center text-gray-500 dark:text-gray-400">Henüz kategori yok. "Kategori Ekle" ile ekleyin.</div>
@@ -72,7 +72,7 @@ ob_start();
 </div>
 
 <!-- Hizmetler -->
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-200 dark:border-gray-700">Hizmetler</h2>
     <?php if (empty($services)): ?>
         <div class="p-6 text-center text-gray-500 dark:text-gray-400">Henüz hizmet yok veya filtreye uygun hizmet bulunamadı. "Hizmet Ekle" ile ekleyin.</div>
@@ -127,9 +127,9 @@ ob_start();
                         <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="mt-4 flex justify-end gap-2">
+                <div class="form-submit-bar mt-4 flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('addCategoryModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -154,9 +154,9 @@ ob_start();
                         <textarea name="description" id="editCat_description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="mt-4 flex justify-end gap-2">
+                <div class="form-submit-bar mt-4 flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('editCategoryModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Güncelle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Güncelle</button>
                 </div>
             </form>
         </div>
@@ -197,9 +197,9 @@ ob_start();
                         <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="mt-4 flex justify-end gap-2">
+                <div class="form-submit-bar mt-4 flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('addServiceModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -240,9 +240,9 @@ ob_start();
                         <textarea name="description" id="editSvc_description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="mt-4 flex justify-end gap-2">
+                <div class="form-submit-bar mt-4 flex justify-end gap-2">
                     <button type="button" onclick="document.getElementById('editServiceModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Güncelle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Güncelle</button>
                 </div>
             </form>
         </div>

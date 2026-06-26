@@ -46,6 +46,7 @@ $contracts = $contracts ?? [];
             <?php if (empty($items)): ?>
                 <p class="text-sm text-gray-500">Henüz eşya listesi girilmemiştir.</p>
             <?php else: ?>
+                <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
                 <table class="min-w-full border border-gray-300 text-sm">
                     <thead class="bg-gray-100">
                         <tr>
@@ -70,6 +71,7 @@ $contracts = $contracts ?? [];
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
             <?php endif; ?>
         </div>
 
@@ -78,6 +80,7 @@ $contracts = $contracts ?? [];
             <?php if (empty($contracts)): ?>
                 <p class="text-sm text-gray-500">Bu müşteriye ait depo girişi / oda kaydı yok.</p>
             <?php else: ?>
+                <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
                 <table class="min-w-full border border-gray-300 text-sm">
                     <thead class="bg-gray-100">
                         <tr>
@@ -100,6 +103,7 @@ $contracts = $contracts ?? [];
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
             <?php endif; ?>
         </div>
 

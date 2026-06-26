@@ -199,9 +199,9 @@ ob_start();
                 </div>
             </div>
         </div>
-        <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="form-submit-bar mt-6 flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
             <a href="/nakliye-isler" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">İptal</a>
-            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Güncelle</button>
+            <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Güncelle</button>
         </div>
     </form>
 </div>

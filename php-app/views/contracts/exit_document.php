@@ -55,6 +55,7 @@ if (!function_exists('fmtPrice')) {
             </div>
         </div>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Sözleşme / Depo Bilgisi</h2>
+        <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
         <table class="min-w-full border border-gray-300 text-sm mb-4">
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-48">Sözleşme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['contract_number'] ?? '-') ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
@@ -62,9 +63,11 @@ if (!function_exists('fmtPrice')) {
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Sözleşme Dönemi</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Çıkış Tarihi</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y') ?></td></tr>
         </table>
+        </div>
 
         <?php $contractPayments = $contractPayments ?? []; if (!empty($contractPayments)): ?>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2 mt-6">Ödeme Geçmişi (Ne Zaman Girmiş / Ne Zaman Ödemiş)</h2>
+        <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
         <table class="min-w-full border border-gray-300 text-sm mb-4">
             <thead><tr class="bg-gray-100"><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Ödenme Tarihi</th></tr></thead>
             <tbody>
@@ -78,6 +81,7 @@ if (!function_exists('fmtPrice')) {
             <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
         <?php endif; ?>
 
         <p class="text-sm text-gray-600 mb-4">Yukarıda bilgileri yer alan depo sözleşmesi sona ermiş olup, müşteri eşyalarını teslim almıştır. Bu belge çıkış işleminin yapıldığını teyit eder.</p>

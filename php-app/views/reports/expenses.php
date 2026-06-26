@@ -38,7 +38,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Tarih aralığına ve kategoriye göre masraf listesi</p>
 </div>
 
-<form method="get" action="/raporlar/masraflar" class="mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
+<form method="get" action="/raporlar/masraflar" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
         <select name="category_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[160px]">
@@ -64,7 +64,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş</label>
         <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
-    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
+    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
 </form>
 
 <!-- Kategoriye göre özet -->
@@ -83,7 +83,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
 </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($rows)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Seçilen kriterlere uygun masraf kaydı yok.</div>
     <?php else: ?>

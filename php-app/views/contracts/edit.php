@@ -81,9 +81,9 @@ ob_start();
             <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($contract['notes'] ?? '') ?></textarea>
         </div>
     </div>
-    <div class="mt-6 flex gap-2">
-        <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">İptal</a>
-        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+    <div class="form-submit-bar mt-6 flex flex-wrap gap-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>" class="btn-touch px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">İptal</a>
+        <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
     </div>
 </form>
 

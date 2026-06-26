@@ -18,22 +18,22 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
-<div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-    <form method="get" action="/teklifler" class="flex flex-wrap items-center gap-2">
-        <select name="durum" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+<div class="page-toolbar flex flex-wrap items-center justify-between gap-2 mb-4">
+    <form method="get" action="/teklifler" class="page-toolbar-form flex flex-wrap items-center gap-2">
+        <select name="durum" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white flex-1 min-w-[140px]">
             <option value="">Tüm durumlar</option>
             <?php foreach ($statusLabels as $val => $l): ?>
                 <option value="<?= htmlspecialchars($val) ?>" <?= $durumGet === $val ? 'selected' : '' ?>><?= htmlspecialchars($l) ?></option>
             <?php endforeach; ?>
         </select>
-        <button type="submit" class="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium">Filtrele</button>
+        <button type="submit" class="btn-touch px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium">Filtrele</button>
     </form>
-    <a href="/teklifler/yeni" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+    <a href="/teklifler/yeni" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Yeni Teklif
     </a>
 </div>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($proposals)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz teklif yok<?= $durumGet !== '' ? ' veya filtreye uygun kayıt yok.' : '.' ?></div>
     <?php else: ?>

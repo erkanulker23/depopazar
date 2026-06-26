@@ -124,12 +124,164 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         .sidebar-mobile.open { transform: translateX(0); box-shadow: 20px 0 40px rgba(0,0,0,.2); }
         @media (min-width: 768px) { .sidebar-mobile { transform: none; box-shadow: none; } }
         * { -webkit-tap-highlight-color: transparent; }
-        html { overflow-x: hidden; }
+        html { overflow-x: hidden; scroll-padding-bottom: calc(6.5rem + var(--safe-bottom)); }
         .main-content-wrap { padding-bottom: env(safe-area-inset-bottom, 0); }
         @media (max-width: 767px) {
             #sidebar { padding-top: max(1rem, var(--safe-top)); width: min(300px, 88vw); }
-            .main-content-wrap { padding-bottom: calc(5rem + var(--safe-bottom)); }
-            .table-responsive { -webkit-overflow-scrolling: touch; overflow-x: auto; margin: 0 calc(var(--safe-left) * -1); padding: 0 var(--safe-left); }
+            .main-content-wrap {
+                padding-bottom: calc(6.5rem + var(--safe-bottom)) !important;
+            }
+            .table-responsive,
+            .table-scroll,
+            .overflow-x-auto {
+                -webkit-overflow-scrolling: touch;
+                overflow-x: auto;
+                max-width: 100%;
+            }
+            /* Sayfa üstü: filtre + aksiyon çubukları */
+            .page-toolbar {
+                gap: 0.75rem;
+            }
+            .page-toolbar > form,
+            .page-toolbar > .page-toolbar-form {
+                width: 100%;
+            }
+            .page-toolbar form > div,
+            form.page-toolbar > div {
+                flex: 1 1 calc(50% - 0.5rem);
+                min-width: 140px;
+            }
+            form.page-toolbar > div:has(input[type="search"]),
+            form.page-toolbar > div.w-full {
+                flex: 1 1 100%;
+            }
+            form.page-toolbar button[type="submit"],
+            form.page-toolbar .btn-touch,
+            form.page-toolbar a.btn-touch {
+                flex: 1 1 auto;
+                min-width: 44%;
+                justify-content: center;
+            }
+            .page-toolbar .btn-touch,
+            .page-toolbar button[type="submit"],
+            .page-toolbar a.btn-touch {
+                flex: 1 1 auto;
+                min-width: 0;
+                justify-content: center;
+            }
+            .page-header {
+                gap: 0.75rem;
+            }
+            .page-header > div:last-child:not(:only-child) {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .page-header > div:last-child:not(:only-child) > a,
+            .page-header > div:last-child:not(:only-child) > button {
+                flex: 1 1 calc(50% - 0.25rem);
+                min-width: 0;
+                justify-content: center;
+                min-height: 44px;
+            }
+            .page-header-actions > a,
+            .page-header-actions > button {
+                flex: 1 1 calc(50% - 0.25rem);
+                min-width: 0;
+                justify-content: center;
+                min-height: 44px;
+            }
+            /* Form kaydet / gönder — alt menünün üstünde yapışkan */
+            .form-submit-bar {
+                position: sticky;
+                bottom: calc(5.25rem + var(--safe-bottom));
+                z-index: 35;
+                margin-top: 1rem;
+                margin-left: -0.25rem;
+                margin-right: -0.25rem;
+                padding: 0.75rem 0.25rem;
+                background: linear-gradient(to top, rgba(249,250,251,0.98) 70%, rgba(249,250,251,0));
+                backdrop-filter: blur(6px);
+            }
+            .dark .form-submit-bar {
+                background: linear-gradient(to top, rgba(17,24,39,0.98) 70%, rgba(17,24,39,0));
+            }
+            .form-submit-bar button[type="submit"],
+            .form-submit-bar .btn-submit,
+            .form-submit-bar .btn-touch {
+                min-height: 48px;
+            }
+            .form-submit-bar:not(.flex) button[type="submit"],
+            .form-submit-bar:not(.flex) .btn-submit {
+                width: 100%;
+            }
+            .form-submit-bar.flex button[type="submit"],
+            .form-submit-bar.flex .btn-submit {
+                flex: 1 1 auto;
+                min-width: 44%;
+            }
+            /* Uzun formlarda otomatik yapışkan alt çubuk (sınıf eklenmemiş sayfalar) */
+            main form:not(.modal-overlay form) > div:last-child:has(> button[type="submit"]:only-child),
+            main form:not(.modal-overlay form) > div:last-child:has(> button[type="submit"]:last-child:not(:first-child)) {
+                position: sticky;
+                bottom: calc(5.25rem + var(--safe-bottom));
+                z-index: 35;
+                padding-top: 0.75rem;
+                padding-bottom: 0.25rem;
+                background: linear-gradient(to top, rgba(249,250,251,0.98) 75%, rgba(249,250,251,0));
+            }
+            .dark main form:not(.modal-overlay form) > div:last-child:has(button[type="submit"]) {
+                background: linear-gradient(to top, rgba(17,24,39,0.98) 75%, rgba(17,24,39,0));
+            }
+            main form:not(.modal-overlay form) > div:last-child:has(button[type="submit"]) button[type="submit"] {
+                min-height: 48px;
+            }
+            /* Modallar — tam ekran, alt butonlar güvenli alanda */
+            .modal-overlay {
+                padding: 0;
+            }
+            .modal-overlay > div.flex {
+                min-height: 100%;
+                align-items: stretch;
+                padding: 0;
+            }
+            .modal-overlay .relative.bg-white,
+            .modal-overlay .relative.dark\:bg-gray-800,
+            .modal-overlay .relative[class*="bg-white"],
+            .modal-overlay .relative[class*="bg-gray-800"] {
+                max-height: none;
+                min-height: 100dvh;
+                width: 100%;
+                max-width: none;
+                border-radius: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            .modal-overlay form {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                min-height: 0;
+            }
+            .modal-overlay .form-submit-bar {
+                position: sticky;
+                bottom: 0;
+                margin-top: auto;
+                padding-bottom: max(0.75rem, var(--safe-bottom));
+                background: rgba(255,255,255,0.98);
+                border-top: 1px solid rgb(229 231 235);
+                z-index: 10;
+            }
+            .dark .modal-overlay .form-submit-bar {
+                background: rgba(42,35,32,0.98);
+                border-top-color: rgb(74 63 54);
+            }
+            /* Dokunma hedefleri */
+            main button[type="submit"]:not(.inline-flex):not([class*="text-xs"]),
+            main .btn-primary-mobile {
+                min-height: 44px;
+            }
         }
         #mobileBottomNav {
             padding-bottom: max(0.5rem, var(--safe-bottom));
@@ -168,7 +320,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         .dark .page-subtitle { color: rgb(154 138 126); }
         .gradient-title { background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .dark .gradient-title { background: linear-gradient(135deg, #d4a574 0%, #c4956a 50%, #a67c52 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .card-modern { border-radius: 1rem; border: 1px solid rgb(229 231 235); background: white; box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: all .2s; }
+        .card-modern { border-radius: 1rem; border: 1px solid rgb(229 231 235); background: white; box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: all .2s; overflow: visible; }
         .dark .card-modern { border-color: rgb(74 63 54); background: rgb(42 35 32); }
         .card-modern:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
         .dark .card-modern:hover { box-shadow: 0 4px 12px rgba(0,0,0,.25); }
@@ -285,7 +437,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 </div>
             </div>
             <?php endif; ?>
-            <div class="flex-1 p-4 md:p-6 lg:p-8 pb-8 md:pb-6 min-h-0 main-content-wrap">
+            <div class="flex-1 p-4 md:p-6 lg:p-8 md:pb-6 min-h-0 main-content-wrap">
                 <?= $content ?? '' ?>
             </div>
         </main>

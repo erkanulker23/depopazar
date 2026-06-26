@@ -91,6 +91,7 @@ $seoDescription = ($seoCn !== '' && $seoAppName !== '') ? ($seoCn . ' - ' . $seo
             </div>
         </div>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Nakliye Bilgileri</h2>
+        <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
         <table class="min-w-full border border-gray-300 text-sm">
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-40">Tarih</td><td class="border border-gray-300 px-3 py-2"><?= !empty($job['job_date']) ? date('d.m.Y', strtotime($job['job_date'])) : '–' ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Alış Adresi</td><td class="border border-gray-300 px-3 py-2"><?= nl2br(htmlspecialchars($job['pickup_address'] ?? '–')) ?></td></tr>
@@ -105,6 +106,7 @@ $seoDescription = ($seoCn !== '' && $seoAppName !== '') ? ($seoCn . ' - ' . $seo
             </td></tr>
             <?php if (!empty($job['notes'])): ?><tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Not</td><td class="border border-gray-300 px-3 py-2"><?= nl2br(htmlspecialchars($job['notes'])) ?></td></tr><?php endif; ?>
         </table>
+        </div>
         <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= date('d.m.Y H:i') ?></p>
     </div>
 
@@ -232,9 +234,9 @@ $seoDescription = ($seoCn !== '' && $seoAppName !== '') ? ($seoCn . ' - ' . $seo
                         <label class="block text-sm font-medium text-gray-700 mb-1">Not (isteğe bağlı)</label>
                         <input type="text" name="notes" class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500" placeholder="Bu işe ait not">
                     </div>
-                    <div class="flex justify-end gap-2 pt-2">
+                    <div class="form-submit-bar flex justify-end gap-2 pt-2">
                         <button type="button" class="btnMasrafModalKapat px-4 py-2 rounded-xl border border-gray-300 text-gray-700">İptal</button>
-                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
+                        <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
                     </div>
                 </form>
                 <?php else: ?>

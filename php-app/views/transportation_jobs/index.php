@@ -21,7 +21,7 @@ ob_start();
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Nakliye işleri yönetimi ve takibi</p>
 </div>
 
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+<div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
     <div class="flex flex-wrap items-center gap-2">
         <form method="get" action="/nakliye-isler" class="flex flex-wrap items-center gap-2">
             <input type="search" name="q" value="<?= htmlspecialchars($currentQ) ?>" placeholder="Müşteri ara..." class="px-3 py-2 border border-gray-300 rounded-xl text-sm w-48 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
@@ -40,7 +40,7 @@ ob_start();
                     <option value="<?= $m ?>" <?= $currentMonth === $m ? 'selected' : '' ?>><?= str_pad((string)$m, 2, '0', STR_PAD_LEFT) ?></option>
                 <?php endfor; ?>
             </select>
-            <button type="submit" class="px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">Filtrele</button>
+            <button type="submit" class="btn-touch px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">Filtrele</button>
         </form>
         <a href="/nakliye-isler" class="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50">Filtreleri Temizle</a>
     </div>
@@ -56,7 +56,7 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($jobs)): ?>
         <div class="p-12 text-center text-gray-500 dark:text-gray-400">
             <i class="bi bi-truck text-5xl text-gray-300 dark:text-gray-600 block mb-3"></i>
@@ -203,9 +203,9 @@ ob_start();
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not (isteğe bağlı)</label>
                     <input type="text" name="notes" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="Bu işe ait not">
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" class="listMasrafModalKapat px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -434,9 +434,9 @@ ob_start();
                         </div>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="form-submit-bar mt-6 flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <button type="button" onclick="closeNewJobModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -486,9 +486,9 @@ ob_start();
                         <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end gap-2">
+                <div class="form-submit-bar mt-6 flex justify-end gap-2">
                     <button type="button" onclick="closeNewJobCustomer()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle ve nakliye formuna dön</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle ve nakliye formuna dön</button>
                 </div>
             </form>
         </div>

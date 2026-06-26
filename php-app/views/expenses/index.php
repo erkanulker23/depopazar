@@ -123,7 +123,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
 </form>
 
 <!-- Masraf listesi -->
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($expenses)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Seçilen kriterlere uygun masraf kaydı yok.</div>
     <?php else: ?>
@@ -181,9 +181,9 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama</label>
                     <input type="text" name="description" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('addCategoryModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
                 </div>
             </form>
         </div>
@@ -206,9 +206,9 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama</label>
                     <input type="text" name="description" id="edit_cat_description" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('editCategoryModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
                 </div>
             </form>
         </div>
@@ -223,7 +223,7 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Masraf Ekle</h3>
             <?php if (empty($bankAccounts) && empty($creditCards)): ?>
                 <p class="text-gray-600 dark:text-gray-400 mb-4">Masraf ekleyebilmek için önce <strong>Ayarlar</strong> sayfasından en az bir banka hesabı veya kredi kartı eklemeniz gerekir.</p>
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('addExpenseModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Kapat</button>
                     <a href="/ayarlar" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 inline-block">Ayarlar'a Git</a>
                 </div>
@@ -295,9 +295,9 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notlar</label>
                     <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('addExpenseModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
             <?php endif; ?>
@@ -351,9 +351,9 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notlar</label>
                     <textarea name="notes" id="edit_exp_notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
+                <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('editExpenseModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
+                    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
                 </div>
             </form>
         </div>
