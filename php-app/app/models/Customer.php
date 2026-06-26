@@ -335,10 +335,33 @@ class Customer
         return self::findOne($pdo, $id);
     }
 
-    /** Soft delete: deleted_at set eder */
+    /** Soft delete: deleted_at set eder (eski kayıtlar; yeni silmeler hardDelete kullanır) */
     public static function softDelete(PDO $pdo, string $id): bool
     {
         $stmt = $pdo->prepare('UPDATE customers SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /** Aktif depo sözleşmesi var mı */
+    public static function hasActiveContract(PDO $pdo, string $customerId): bool
+    {
+        $stmt = $pdo->prepare(
+            'SELECT 1 FROM contracts c
+             INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+             WHERE c.customer_id = ? AND c.deleted_at IS NULL AND c.is_active = 1 LIMIT 1'
+        );
+        $stmt->execute([$customerId]);
+        return (bool) $stmt->fetch();
+    }
+
+    /** Müşteriyi veritabanından tamamen siler (aktif sözleşme yoksa). İlişkili kayıtlar CASCADE ile silinir. */
+    public static function hardDelete(PDO $pdo, string $id): bool
+    {
+        if (self::hasActiveContract($pdo, $id)) {
+            return false;
+        }
+        $stmt = $pdo->prepare('DELETE FROM customers WHERE id = ?');
         $stmt->execute([$id]);
         return $stmt->rowCount() > 0;
     }

@@ -1,7 +1,7 @@
 <?php
 class Notification
 {
-    public static function create(PDO $pdo, string $userId, string $type, string $title, string $message, ?array $metadata = null): void
+    public static function create(PDO $pdo, string $userId, string $type, string $title, string $message, ?array $metadata = null, bool $sendPush = true): void
     {
         $id = self::uuid();
         $stmt = $pdo->prepare('INSERT INTO notifications (id, user_id, type, title, message, metadata) VALUES (?, ?, ?, ?, ?, ?)');
@@ -13,11 +13,49 @@ class Notification
             $message,
             $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : null,
         ]);
-        PushService::sendToUsers($pdo, [$userId], $title, $message);
+        if ($sendPush) {
+            self::deferPush($pdo, [$userId], $title, $message);
+        }
     }
 
-    /** Şirketteki tüm staff kullanıcılarına + super_admin kullanıcılarına bildirim ekler */
-    public static function createForCompany(PDO $pdo, ?string $companyId, string $type, string $title, string $message, ?array $metadata = null): void
+    /**
+     * Şirketteki staff + süper admin kullanıcılarına uygulama içi bildirim.
+     * Varsayılan: push arka planda; e-posta gönderilmez (SMTP gecikmesini önler).
+     *
+     * @param array{push?: bool, email?: bool} $options
+     */
+    public static function createForCompany(PDO $pdo, ?string $companyId, string $type, string $title, string $message, ?array $metadata = null, array $options = []): void
+    {
+        $sendPush = $options['push'] ?? true;
+        $sendEmail = $options['email'] ?? false;
+
+        $userIds = self::companyStaffUserIds($pdo, $companyId);
+        if ($userIds === []) {
+            return;
+        }
+
+        $metaJson = $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : null;
+        $stmt = $pdo->prepare('INSERT INTO notifications (id, user_id, type, title, message, metadata) VALUES (?, ?, ?, ?, ?, ?)');
+        foreach ($userIds as $uid) {
+            $stmt->execute([self::uuid(), $uid, $type, $title, $message, $metaJson]);
+        }
+
+        if ($sendPush) {
+            self::deferPush($pdo, $userIds, $title, $message);
+        }
+        if ($sendEmail) {
+            register_shutdown_function(static function () use ($pdo, $companyId, $title, $message): void {
+                try {
+                    MailService::sendToSuperAdmins($pdo, $companyId, $title, $message);
+                } catch (Throwable $e) {
+                    error_log('Notification email shutdown: ' . $e->getMessage());
+                }
+            });
+        }
+    }
+
+    /** @return list<string> */
+    private static function companyStaffUserIds(PDO $pdo, ?string $companyId): array
     {
         $userIds = [];
         if ($companyId) {
@@ -29,12 +67,23 @@ class Notification
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $userIds[] = $row['id'];
         }
-        $userIds = array_unique($userIds);
-        foreach ($userIds as $uid) {
-            self::create($pdo, $uid, $type, $title, $message, $metadata);
+        return array_values(array_unique($userIds));
+    }
+
+    /** Push gönderimini istek yanıtından sonra çalıştırır (sayfa daha hızlı açılır). */
+    private static function deferPush(PDO $pdo, array $userIds, string $title, string $message): void
+    {
+        $userIds = array_values(array_unique(array_filter($userIds)));
+        if ($userIds === []) {
+            return;
         }
-        PushService::sendToUsers($pdo, $userIds, $title, $message);
-        MailService::sendToSuperAdmins($pdo, $companyId, $title, $message);
+        register_shutdown_function(static function () use ($pdo, $userIds, $title, $message): void {
+            try {
+                PushService::sendToUsers($pdo, $userIds, $title, $message);
+            } catch (Throwable $e) {
+                error_log('Notification push shutdown: ' . $e->getMessage());
+            }
+        });
     }
 
     /** Giriş yapan kullanıcıya ait bildirimleri getirir */

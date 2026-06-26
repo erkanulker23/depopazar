@@ -17,7 +17,7 @@ class CustomersController
         $inDepo = isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null;
         $warehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
         if (!array_key_exists('borc', $_GET)) {
-            $debtFilter = 'overdue';
+            $debtFilter = null;
         } elseif (trim((string) $_GET['borc']) === '') {
             $debtFilter = null;
         } elseif (in_array($_GET['borc'], ['overdue', 'unpaid'], true)) {
@@ -72,7 +72,7 @@ class CustomersController
             if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
                 continue;
             }
-            if (Customer::softDelete($this->pdo, $id)) {
+            if (Customer::hardDelete($this->pdo, $id)) {
                 $deleted++;
             }
         }
@@ -81,7 +81,7 @@ class CustomersController
             Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri silindi', $deleted . ' müşteri silindi.', ['actor_name' => $actorName]);
             Auth::setSession('flash_success', $deleted . ' müşteri silindi.');
         } else {
-            Auth::setSession('flash_error', 'Seçilen müşteriler silinemedi veya yetkiniz yok.');
+            Auth::setSession('flash_error', 'Seçilen müşteriler silinemedi. Aktif depo sözleşmesi olan müşteriler önce sonlandırılmalıdır.');
         }
         $redirectParams = array_filter([
             'q' => isset($_GET['q']) ? trim($_GET['q']) : null,
@@ -804,14 +804,19 @@ class CustomersController
         header('Content-Type: application/json; charset=utf-8');
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
-        if (!$companyId) {
+        $searchCompanyId = $companyId;
+        if ($searchCompanyId === null && ($user['role'] ?? '') !== 'super_admin') {
             echo json_encode(['data' => []]);
             return;
         }
         $id = trim($_GET['id'] ?? '');
         if ($id !== '') {
             $row = Customer::findOne($this->pdo, $id);
-            if (!$row || ($row['company_id'] ?? '') !== $companyId) {
+            if (!$row) {
+                echo json_encode(['data' => null]);
+                return;
+            }
+            if ($searchCompanyId !== null && ($row['company_id'] ?? '') !== $searchCompanyId) {
                 echo json_encode(['data' => null]);
                 return;
             }
@@ -825,7 +830,7 @@ class CustomersController
         }
         $q = trim($_GET['q'] ?? '');
         $limit = min(100, max(1, (int) ($_GET['limit'] ?? 50)));
-        $rows = Customer::findAll($this->pdo, $companyId, $q !== '' ? $q : null, $limit);
+        $rows = Customer::findAll($this->pdo, $searchCompanyId, $q !== '' ? $q : null, $limit);
         $data = array_map(static function (array $row): array {
             return [
                 'id' => $row['id'],
@@ -834,7 +839,7 @@ class CustomersController
                 'email' => $row['email'] ?? null,
             ];
         }, $rows);
-        echo json_encode(['data' => $data]);
+        echo json_encode(['data' => $data, 'total' => Customer::count($this->pdo, $searchCompanyId)]);
     }
 
     /** Excel (CSV) dışa aktar – mevcut filtreye göre müşteri listesini indirir */
@@ -847,7 +852,7 @@ class CustomersController
         $inDepo = isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null;
         $warehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
         if (!array_key_exists('borc', $_GET)) {
-            $debtFilter = 'overdue';
+            $debtFilter = null;
         } elseif (trim((string) $_GET['borc']) === '') {
             $debtFilter = null;
         } elseif (in_array($_GET['borc'], ['overdue', 'unpaid'], true)) {

@@ -38,20 +38,6 @@ $navItems = [
     ['name' => 'Ayarlar', 'href' => '/ayarlar', 'active' => $currentPath === '/ayarlar'],
 ];
 $navItems = array_values(array_filter($navItems, fn($item) => Auth::canAccessNav($item['href'])));
-$collectiblePaymentCount = 0;
-if ($user && Auth::canAccessNav('/odemeler?collect=1') && defined('APP_ROOT')) {
-    try {
-        $pdoNav = require APP_ROOT . '/config/db.php';
-        $companyIdNav = Company::getCompanyIdForUser($pdoNav, $user);
-        if ($companyIdNav) {
-            $collectiblePaymentCount = Payment::countCollectible($pdoNav, $companyIdNav);
-        } elseif (($user['role'] ?? '') === 'super_admin') {
-            $collectiblePaymentCount = Payment::countCollectible($pdoNav, null);
-        }
-    } catch (Throwable $e) {
-        $collectiblePaymentCount = 0;
-    }
-}
 $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($user['last_name'] ?? '', 0, 1));
 $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
 ?>
@@ -363,8 +349,8 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                         <?php if (!empty($item['active'])): ?><div class="nav-bar"></div><?php endif; ?>
                         <i class="bi bi-<?= $icon ?> mr-3 flex-shrink-0 h-5 w-5"></i>
                         <span class="flex-1 truncate"><?= htmlspecialchars($item['name']) ?></span>
-                        <?php if (($item['href'] ?? '') === '/odemeler?collect=1' && $collectiblePaymentCount > 0): ?>
-                            <span class="ml-2 min-w-[1.25rem] px-1.5 py-0.5 text-[10px] font-bold leading-none bg-red-500 text-white rounded-full text-center" title="<?= (int) $collectiblePaymentCount ?> tahsil edilecek ödeme"><?= $collectiblePaymentCount > 99 ? '99+' : (int) $collectiblePaymentCount ?></span>
+                        <?php if (($item['href'] ?? '') === '/odemeler?collect=1'): ?>
+                            <span id="collectPaymentBadge" class="ml-2 min-w-[1.25rem] px-1.5 py-0.5 text-[10px] font-bold leading-none bg-red-500 text-white rounded-full text-center hidden" title="Tahsil edilecek ödeme"></span>
                         <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
@@ -586,6 +572,20 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         });
 
         fetchNotifications();
+    })();
+    (function(){
+        var badge = document.getElementById('collectPaymentBadge');
+        if (!badge) return;
+        fetch('/api/tahsil-edilebilir-sayisi', { credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                var n = parseInt(data.count, 10) || 0;
+                if (n <= 0) return;
+                badge.textContent = n > 99 ? '99+' : String(n);
+                badge.title = n + ' tahsil edilecek ödeme';
+                badge.classList.remove('hidden');
+            })
+            .catch(function(){});
     })();
     </script>
     <script src="/phone-mask.js" defer></script>

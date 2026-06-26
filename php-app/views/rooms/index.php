@@ -98,10 +98,7 @@ ob_start();
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                     <?php $activeContractCountByRoom = $activeContractCountByRoom ?? []; foreach ($rooms as $r): ?>
-                        <?php
-                        $status = $r['status'] ?? 'empty';
-                        $badgeClass = $status === 'empty' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : ($status === 'occupied' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : ($status === 'reserved' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' : 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'));
-                        ?>
+                        <?php $status = $r['status'] ?? 'empty'; ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="room-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($r['id']) ?>"></label></td>
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($r['room_number']) ?></td>
@@ -109,7 +106,16 @@ ob_start();
                             <td class="px-4 py-3 text-sm text-gray-600"><?= number_format((float)$r['area_m2'], 2, ',', '.') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($r['monthly_price'] ?? 0) ?></td>
                             <td class="px-4 py-3">
-                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $badgeClass ?>"><?= $statusLabels[$status] ?? $status ?></span>
+                                <?php
+                                $statusSelectClass = $status === 'empty' ? 'border-green-300 text-green-800 dark:border-green-700 dark:text-green-300' : ($status === 'occupied' ? 'border-red-300 text-red-800 dark:border-red-700 dark:text-red-300' : ($status === 'reserved' ? 'border-yellow-300 text-yellow-800 dark:border-yellow-700 dark:text-yellow-300' : 'border-gray-300 text-gray-800 dark:border-gray-600 dark:text-gray-200'));
+                                ?>
+                                <select class="room-status-select text-xs font-semibold rounded-full px-2 py-1 border bg-white dark:bg-gray-800 <?= $statusSelectClass ?>"
+                                        data-room-id="<?= htmlspecialchars($r['id']) ?>"
+                                        aria-label="Oda durumu">
+                                    <?php foreach ($statusLabels as $val => $label): ?>
+                                        <option value="<?= htmlspecialchars($val) ?>" <?= $status === $val ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                                 <?php $activeCount = (int)($activeContractCountByRoom[$r['id']] ?? 0); if ($activeCount > 0): ?>
@@ -231,6 +237,10 @@ ob_start();
             </div>
             <form method="post" action="/odalar/guncelle">
                 <input type="hidden" name="id" id="edit_id">
+                <input type="hidden" name="_return_warehouse_id" value="<?= htmlspecialchars($_GET['warehouse_id'] ?? '') ?>">
+                <input type="hidden" name="_return_q" value="<?= htmlspecialchars($qGet) ?>">
+                <input type="hidden" name="_return_status" value="<?= htmlspecialchars($statusGet) ?>">
+                <input type="hidden" name="_return_has_contract" value="<?= htmlspecialchars($hasContractGet) ?>">
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Depo <span class="text-red-500">*</span></label>
@@ -336,6 +346,48 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
     });
     document.querySelectorAll('.room-cb').forEach(function(cb) { cb.addEventListener('change', update); });
     if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.room-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); update(); });
+})();
+(function() {
+    var statusClasses = {
+        empty: 'border-green-300 text-green-800 dark:border-green-700 dark:text-green-300',
+        occupied: 'border-red-300 text-red-800 dark:border-red-700 dark:text-red-300',
+        reserved: 'border-yellow-300 text-yellow-800 dark:border-yellow-700 dark:text-yellow-300',
+        locked: 'border-gray-300 text-gray-800 dark:border-gray-600 dark:text-gray-200'
+    };
+    function applyStatusClass(sel, status) {
+        sel.className = 'room-status-select text-xs font-semibold rounded-full px-2 py-1 border bg-white dark:bg-gray-800 ' + (statusClasses[status] || statusClasses.locked);
+    }
+    document.querySelectorAll('.room-status-select').forEach(function(sel) {
+        sel.addEventListener('change', function() {
+            var roomId = sel.getAttribute('data-room-id');
+            var status = sel.value;
+            var prev = sel.dataset.prevStatus || sel.value;
+            sel.dataset.prevStatus = prev;
+            sel.disabled = true;
+            var body = new URLSearchParams();
+            body.set('id', roomId);
+            body.set('status', status);
+            fetch('/odalar/durum', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: body.toString()
+            }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, data: j }; }); })
+              .then(function(res) {
+                if (!res.ok || !res.data.ok) {
+                    throw new Error((res.data && res.data.error) || 'Güncellenemedi');
+                }
+                sel.dataset.prevStatus = status;
+                applyStatusClass(sel, status);
+              })
+              .catch(function(err) {
+                alert(err.message || 'Durum güncellenemedi');
+                sel.value = prev;
+              })
+              .finally(function() { sel.disabled = false; });
+        });
+        sel.dataset.prevStatus = sel.value;
+    });
 })();
 (function() {
     var url = new URL(window.location.href);

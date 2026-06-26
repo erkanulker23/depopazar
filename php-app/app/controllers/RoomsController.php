@@ -123,8 +123,6 @@ class RoomsController
         ];
         try {
             Room::create($this->pdo, $data);
-            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-            Notification::createForCompany($this->pdo, $companyId, 'room', 'Oda eklendi', $roomNumber . ' numaralı oda ' . ($warehouse['name'] ?? '') . ' deposuna eklendi.', ['actor_name' => $actorName]);
             Auth::setSession('flash_success', 'Oda eklendi.');
         } catch (Exception $e) {
             Auth::setSession('flash_error', 'Oda eklenemedi: ' . $e->getMessage());
@@ -179,11 +177,60 @@ class RoomsController
             'notes'         => trim($_POST['notes'] ?? '') ?: null,
         ];
         Room::update($this->pdo, $id, $data);
-        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda güncellendi', ($data['room_number'] ?? $room['room_number']) . ' oda bilgileri güncellendi.', ['actor_name' => $actorName]);
         Auth::setSession('flash_success', 'Oda güncellendi.');
-        header('Location: /odalar');
+        header('Location: /odalar' . $this->roomsIndexQuery());
         exit;
+    }
+
+    /** Hızlı durum değişimi (AJAX) — bildirim/e-posta yok, tam sayfa yenileme yok */
+    public function updateStatus(): void
+    {
+        Auth::requireStaff();
+        header('Content-Type: application/json; charset=utf-8');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'error' => 'Geçersiz istek']);
+            return;
+        }
+        $id = trim($_POST['id'] ?? '');
+        $status = trim($_POST['status'] ?? '');
+        $allowed = ['empty', 'occupied', 'reserved', 'locked'];
+        if ($id === '' || !in_array($status, $allowed, true)) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'error' => 'Geçersiz oda veya durum']);
+            return;
+        }
+        $room = Room::findOne($this->pdo, $id);
+        if (!$room) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'error' => 'Oda bulunamadı']);
+            return;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if (($user['role'] ?? '') !== 'super_admin' && ($room['company_id'] ?? '') !== $companyId) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Yetkisiz']);
+            return;
+        }
+        if (!Room::patchStatus($this->pdo, $id, $status)) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'Güncellenemedi']);
+            return;
+        }
+        $labels = ['empty' => 'Boş', 'occupied' => 'Dolu', 'reserved' => 'Rezerve', 'locked' => 'Kilitli'];
+        echo json_encode(['ok' => true, 'status' => $status, 'label' => $labels[$status] ?? $status]);
+    }
+
+    private function roomsIndexQuery(): string
+    {
+        $keep = array_filter([
+            'warehouse_id' => $_POST['_return_warehouse_id'] ?? '',
+            'q' => $_POST['_return_q'] ?? '',
+            'status' => $_POST['_return_status'] ?? '',
+            'has_contract' => $_POST['_return_has_contract'] ?? '',
+        ], static fn($v) => $v !== '');
+        return $keep ? ('?' . http_build_query($keep)) : '';
     }
 
     public function delete(): void
@@ -216,8 +263,6 @@ class RoomsController
                 continue;
             }
             Room::remove($this->pdo, $id);
-            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-            Notification::createForCompany($this->pdo, $room['company_id'] ?? null, 'room', 'Oda silindi', ($room['room_number'] ?? '') . ' numaralı oda silindi.', ['actor_name' => $actorName]);
             $deleted++;
         }
         if (!empty($errors)) {

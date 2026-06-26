@@ -7,6 +7,7 @@ $config = require APP_ROOT . '/config/config.php';
 date_default_timezone_set($config['timezone'] ?? 'Europe/Istanbul');
 
 $pdo = require APP_ROOT . '/config/db.php';
+$GLOBALS['app_pdo'] = $pdo;
 
 require APP_ROOT . '/app/helpers.php';
 require APP_ROOT . '/vendor/autoload.php';
@@ -40,6 +41,7 @@ $router->post('/odalar/excel-ice-aktar', fn() => (new RoomsController($pdo))->im
 $router->get('/odalar/{id}', fn(array $p) => (new RoomsController($pdo))->detail($p));
 $router->post('/odalar/ekle', fn() => (new RoomsController($pdo))->create());
 $router->post('/odalar/guncelle', fn() => (new RoomsController($pdo))->update());
+$router->post('/odalar/durum', fn() => (new RoomsController($pdo))->updateStatus());
 $router->post('/odalar/sil', fn() => (new RoomsController($pdo))->delete());
 
 $router->get('/musteri/genel-bakis', fn() => PlaceholderController::page('Müşteri Paneli', 'Hoş geldiniz.'));
@@ -168,6 +170,7 @@ $router->get('/api/musteriler', fn() => (new CustomersController($pdo))->apiSear
 $router->get('/api/ilceler', fn() => IlIlceController::getDistricts());
 $router->get('/bildirimler', fn() => (new NotificationsController($pdo))->index());
 $router->get('/api/bildirimler', fn() => (new NotificationsController($pdo))->apiList());
+$router->get('/api/tahsil-edilebilir-sayisi', fn() => (new PaymentsController($pdo))->apiCollectibleCount());
 $router->get('/api/push-vapid-public', fn() => (new NotificationsController($pdo))->apiVapidPublic());
 $router->post('/api/push-subscribe', fn() => (new NotificationsController($pdo))->apiPushSubscribe());
 $router->post('/bildirimler/okundu', fn() => (new NotificationsController($pdo))->markAllRead());

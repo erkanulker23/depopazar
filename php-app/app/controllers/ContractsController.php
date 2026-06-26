@@ -26,14 +26,17 @@ class ContractsController
             $contracts = Contract::findAll($this->pdo, $companyId, $statusFilter, $debtFilter, $perPage, $offset, $search);
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
             $customers = Customer::findAll($this->pdo, $companyId, null, 500);
+            $customersTotal = Customer::count($this->pdo, $companyId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $contractsTotal = Contract::count($this->pdo, null, $statusFilter, $debtFilter, $search);
             $contracts = Contract::findAll($this->pdo, null, $statusFilter, $debtFilter, $perPage, $offset, $search);
             $warehouses = Warehouse::findAll($this->pdo, null);
             $customers = Customer::findAll($this->pdo, null, null, 500);
+            $customersTotal = Customer::count($this->pdo, null);
         } else {
             $contractsTotal = 0;
             $contracts = $warehouses = $customers = [];
+            $customersTotal = 0;
         }
         $rooms = Room::findAll($this->pdo, null);
         if ($companyId) {

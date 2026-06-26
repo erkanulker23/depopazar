@@ -367,4 +367,21 @@ class PaymentsController
             }
         }
     }
+
+    /** Menü rozeti: tahsil edilebilir ödeme sayısı (async yükleme) */
+    public function apiCollectibleCount(): void
+    {
+        Auth::requireStaff();
+        header('Content-Type: application/json; charset=utf-8');
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId) {
+            $count = Payment::countCollectible($this->pdo, $companyId);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $count = Payment::countCollectible($this->pdo, null);
+        } else {
+            $count = 0;
+        }
+        echo json_encode(['count' => $count]);
+    }
 }

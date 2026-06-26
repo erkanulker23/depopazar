@@ -87,6 +87,13 @@ class Room
         return self::findOne($pdo, $id);
     }
 
+    public static function patchStatus(PDO $pdo, string $id, string $status): bool
+    {
+        $stmt = $pdo->prepare('UPDATE rooms SET status = ? WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$status, $id]);
+        return $stmt->rowCount() > 0;
+    }
+
     /** Aktif sözleşme var mı – sadece silinmemiş müşteriye ait sözleşmeler sayılır (detay sayfasıyla tutarlı) */
     public static function hasActiveContract(PDO $pdo, string $roomId): bool
     {

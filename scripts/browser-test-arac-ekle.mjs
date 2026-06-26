@@ -5,7 +5,7 @@
  */
 import { chromium } from 'playwright';
 
-const BASE = 'https://depotakip-v1.test';
+const BASE = 'https://depo-v1.test';
 const EMAIL = 'erkanulker0@gmail.com';
 const PASSWORD = 'password';
 const PLATE = '34 TEST OTO 2026';
