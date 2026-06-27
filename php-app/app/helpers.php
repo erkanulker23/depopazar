@@ -22,6 +22,19 @@ if (!function_exists('normalizeRoomNumberKey')) {
     }
 }
 
+/** Aynı depoda mevcut oda için kullanıcı mesajı */
+if (!function_exists('roomDuplicateMessage')) {
+    function roomDuplicateMessage(string $entered, array $existing): string
+    {
+        $existingNo = fmtRoomNumber($existing['room_number'] ?? '');
+        $enteredNo = trim($entered);
+        if ($existingNo !== '–' && $existingNo !== $enteredNo) {
+            return 'Bu depoda "' . $existingNo . '" numaralı oda zaten kayıtlı (girdiğiniz: "' . $enteredNo . '").';
+        }
+        return 'Bu depoda "' . $enteredNo . '" numaralı oda zaten kayıtlı.';
+    }
+}
+
 /** Oda numarası ekranda (ham değer; 1 ve 01 karıştırılmasın diye pad yok) */
 if (!function_exists('fmtRoomNumber')) {
     function fmtRoomNumber(?string $roomNumber): string
@@ -728,20 +741,67 @@ if (!function_exists('deleteConfirmMessage')) {
     }
 }
 
-/** public/uploads altındaki dosyayı diskten kaldırır */
+/** /uploads/... yolunu normalize eder */
+if (!function_exists('normalizePublicUploadPath')) {
+    function normalizePublicUploadPath(?string $relativePath): ?string
+    {
+        if ($relativePath === null || trim($relativePath) === '') {
+            return null;
+        }
+        $relativePath = '/' . ltrim(trim($relativePath), '/');
+        return strpos($relativePath, '/uploads/') === 0 ? $relativePath : null;
+    }
+}
+
+/** public/uploads altındaki dosyanın disk yolu (yoksa null) */
 if (!function_exists('publicFilePath')) {
     function publicFilePath(?string $relativePath): ?string
     {
-        if ($relativePath === null || $relativePath === '') {
-            return null;
-        }
-        $relativePath = '/' . ltrim($relativePath, '/');
-        if (strpos($relativePath, '/uploads/') !== 0) {
+        $relativePath = normalizePublicUploadPath($relativePath);
+        if ($relativePath === null) {
             return null;
         }
         $root = defined('APP_ROOT') ? APP_ROOT . '/public' : dirname(__DIR__) . '/public';
         $full = $root . $relativePath;
         return is_file($full) ? $full : null;
+    }
+}
+
+/** Dosya diskte varsa tarayıcı URL'si, yoksa null */
+if (!function_exists('publicUploadHref')) {
+    function publicUploadHref(?string $relativePath): ?string
+    {
+        $relativePath = normalizePublicUploadPath($relativePath);
+        if ($relativePath === null) {
+            return null;
+        }
+        return publicFilePath($relativePath) !== null ? $relativePath : null;
+    }
+}
+
+/** Eksik /uploads/ isteği için anlaşılır 404 (Apache/Nginx dosyayı bulamayınca index.php'ye düşer) */
+if (!function_exists('respondMissingPublicUpload')) {
+    function respondMissingPublicUpload(): bool
+    {
+        $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+        if (!is_string($uri) || strpos($uri, '/uploads/') !== 0) {
+            return false;
+        }
+        if (publicFilePath($uri) !== null) {
+            return false;
+        }
+        http_response_code(404);
+        header('Content-Type: text/html; charset=utf-8');
+        $back = htmlspecialchars($_SERVER['HTTP_REFERER'] ?? '/genel-bakis', ENT_QUOTES, 'UTF-8');
+        echo '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<title>Dosya bulunamadı</title>'
+            . '<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;color:#1f2937}'
+            . 'a{color:#059669}</style></head><body>'
+            . '<h1>Dosya bulunamadı</h1>'
+            . '<p>Bu belge veritabanında kayıtlı ancak sunucuda dosya yok. Deploy öncesi yüklenmiş dosyalar release değişince kaybolmuş olabilir; belgeyi yeniden yükleyin veya gereksiz kaydı silin.</p>'
+            . '<p><a href="' . $back . '">← Geri dön</a></p>'
+            . '</body></html>';
+        return true;
     }
 }
 

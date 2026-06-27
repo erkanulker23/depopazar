@@ -132,7 +132,7 @@ class SettingsController
         $company = Company::findOne($this->pdo, $companyId);
         Auth::setSession('company_project_name', trim($company['project_name'] ?? '') !== '' ? $company['project_name'] : null);
         Auth::setSession('company_name', trim($company['name'] ?? '') !== '' ? $company['name'] : null);
-        Auth::setSession('company_logo_url', $company['logo_url'] ?? null);
+        Auth::setSession('company_logo_url', publicUploadHref($company['logo_url'] ?? null));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'Firma bilgileri güncellendi', 'Firma bilgileri ' . ($actorName ?: 'sistem') . ' tarafından güncellendi.', ['actor_name' => $actorName]);
         Auth::setSession('flash_success', 'Firma bilgileri güncellendi.');
@@ -163,7 +163,7 @@ class SettingsController
             }
             Company::update($this->pdo, $companyId, ['logo_url' => null]);
             $company = Company::findOne($this->pdo, $companyId);
-            Auth::setSession('company_logo_url', $company['logo_url'] ?? null);
+            Auth::setSession('company_logo_url', publicUploadHref($company['logo_url'] ?? null));
             Auth::setSession('flash_success', 'Firma logosu kaldırıldı.');
         }
         header('Location: /ayarlar?tab=firma');

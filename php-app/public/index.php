@@ -12,6 +12,10 @@ $GLOBALS['app_pdo'] = $pdo;
 require APP_ROOT . '/app/helpers.php';
 require APP_ROOT . '/vendor/autoload.php';
 
+if (respondMissingPublicUpload()) {
+    exit;
+}
+
 Auth::init();
 $router = new Router();
 

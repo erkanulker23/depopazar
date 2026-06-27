@@ -403,8 +403,13 @@ ob_start();
             <?php $documents = $documents ?? []; if (!empty($documents)): ?>
             <ul class="space-y-2">
                 <?php foreach ($documents as $doc): ?>
+                <?php $docHref = publicUploadHref($doc['file_path'] ?? null); ?>
                 <li class="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                    <a href="<?= htmlspecialchars(strpos($doc['file_path'] ?? '', '/') === 0 ? $doc['file_path'] : '/' . $doc['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= htmlspecialchars($doc['name'] ?? 'Belge') ?></a>
+                    <?php if ($docHref): ?>
+                    <a href="<?= htmlspecialchars($docHref) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= htmlspecialchars($doc['name'] ?? 'Belge') ?></a>
+                    <?php else: ?>
+                    <span class="text-amber-700 dark:text-amber-300 text-sm"><?= htmlspecialchars($doc['name'] ?? 'Belge') ?> — dosya sunucuda bulunamadı</span>
+                    <?php endif; ?>
                     <form method="post" action="/musteriler/belge-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('belge')) ?>);">
                         <input type="hidden" name="id" value="<?= htmlspecialchars($doc['id']) ?>">
                         <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">

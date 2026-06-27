@@ -111,8 +111,14 @@ ob_start();
                                 <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400"><?= !empty($ti['start_date']) ? date('d.m.Y', strtotime($ti['start_date'])) : '–' ?></td>
                                 <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400"><?= !empty($ti['end_date']) ? date('d.m.Y', strtotime($ti['end_date'])) : '–' ?></td>
                                 <td class="px-4 py-2 text-sm">
-                                    <?php foreach ($tiDocs as $d): ?>
-                                        <a href="<?= htmlspecialchars($d['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline block"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
+                                    <?php foreach ($tiDocs as $d):
+                                        $docHref = publicUploadHref($d['file_path'] ?? null);
+                                    ?>
+                                        <?php if ($docHref): ?>
+                                        <a href="<?= htmlspecialchars($docHref) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline block"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
+                                        <?php else: ?>
+                                        <span class="text-amber-700 dark:text-amber-300 block text-xs"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?> — dosya yok</span>
+                                        <?php endif; ?>
                                         <form method="post" action="/araclar/trafik-sigortasi/belge-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('belge')) ?>);">
                                             <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                             <input type="hidden" name="id" value="<?= htmlspecialchars($d['id']) ?>">
@@ -171,8 +177,14 @@ ob_start();
                                 <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400"><?= !empty($k['start_date']) ? date('d.m.Y', strtotime($k['start_date'])) : '–' ?> – <?= !empty($k['end_date']) ? date('d.m.Y', strtotime($k['end_date'])) : '–' ?></td>
                                 <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400"><?= fmtMoney($k['premium_amount'] ?? null) ?></td>
                                 <td class="px-4 py-2 text-sm">
-                                    <?php foreach ($kDocs as $d): ?>
-                                        <a href="<?= htmlspecialchars($d['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline block"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
+                                    <?php foreach ($kDocs as $d):
+                                        $docHref = publicUploadHref($d['file_path'] ?? null);
+                                    ?>
+                                        <?php if ($docHref): ?>
+                                        <a href="<?= htmlspecialchars($docHref) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline block"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
+                                        <?php else: ?>
+                                        <span class="text-amber-700 dark:text-amber-300 block text-xs"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?> — dosya yok</span>
+                                        <?php endif; ?>
                                         <form method="post" action="/araclar/kasko/belge-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('belge')) ?>);">
                                             <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                             <input type="hidden" name="id" value="<?= htmlspecialchars($d['id']) ?>">
@@ -231,9 +243,15 @@ ob_start();
                                 <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400"><?= htmlspecialchars(mb_substr($a['damage_info'] ?? '–', 0, 50)) ?><?= mb_strlen($a['damage_info'] ?? '') > 50 ? '…' : '' ?></td>
                                 <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400"><?= fmtMoney($a['repair_cost'] ?? null) ?></td>
                                 <td class="px-4 py-2 text-sm">
-                                    <?php foreach ($aDocs as $d): ?>
+                                    <?php foreach ($aDocs as $d):
+                                        $docHref = publicUploadHref($d['file_path'] ?? null);
+                                    ?>
                                         <span class="text-gray-500 dark:text-gray-400 text-xs"><?= htmlspecialchars(VehicleAccidentDocument::kindLabel($d['document_kind'] ?? 'diger')) ?>:</span>
-                                        <a href="<?= htmlspecialchars($d['file_path']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
+                                        <?php if ($docHref): ?>
+                                        <a href="<?= htmlspecialchars($docHref) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?></a>
+                                        <?php else: ?>
+                                        <span class="text-amber-700 dark:text-amber-300 text-xs"><?= htmlspecialchars($d['file_name'] ?? 'Belge') ?> — dosya yok</span>
+                                        <?php endif; ?>
                                         <form method="post" action="/araclar/kaza/belge-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('belge')) ?>);">
                                             <input type="hidden" name="vehicle_id" value="<?= htmlspecialchars($vid) ?>">
                                             <input type="hidden" name="id" value="<?= htmlspecialchars($d['id']) ?>">

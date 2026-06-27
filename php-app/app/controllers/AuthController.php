@@ -54,12 +54,12 @@ class AuthController
             $company = Company::findOne($this->pdo, $user['company_id']);
             Auth::setSession('company_project_name', trim($company['project_name'] ?? '') !== '' ? $company['project_name'] : ($company['name'] ?? null));
             Auth::setSession('company_name', trim($company['name'] ?? '') !== '' ? $company['name'] : null);
-            Auth::setSession('company_logo_url', $company['logo_url'] ?? null);
+            Auth::setSession('company_logo_url', publicUploadHref($company['logo_url'] ?? null));
         } else {
             $brand = Company::getPublicBrand($this->pdo);
             Auth::setSession('company_project_name', $brand['project_name'] ?? null);
             Auth::setSession('company_name', (isset($brand['name']) && trim($brand['name']) !== '') ? $brand['name'] : null);
-            Auth::setSession('company_logo_url', $brand['logo_url'] ?? null);
+            Auth::setSession('company_logo_url', publicUploadHref($brand['logo_url'] ?? null));
         }
         $this->redirectByRole();
     }

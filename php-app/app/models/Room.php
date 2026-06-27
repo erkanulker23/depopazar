@@ -111,8 +111,18 @@ class Room
         return null;
     }
 
+    /** Aynı depoda çift oda numarası yoksa devam; varsa InvalidArgumentException */
+    public static function ensureUniqueInWarehouse(PDO $pdo, string $warehouseId, string $roomNumber, ?string $excludeId = null): void
+    {
+        $existing = self::findByWarehouseAndNumber($pdo, $warehouseId, $roomNumber, $excludeId);
+        if ($existing) {
+            throw new InvalidArgumentException(roomDuplicateMessage($roomNumber, $existing));
+        }
+    }
+
     public static function create(PDO $pdo, array $data): array
     {
+        self::ensureUniqueInWarehouse($pdo, (string) $data['warehouse_id'], (string) $data['room_number']);
         $id = self::uuid();
         $stmt = $pdo->prepare(
             'INSERT INTO rooms (id, room_number, warehouse_id, area_m2, monthly_price, status, floor, block, corridor, description, notes) 
@@ -184,6 +194,15 @@ class Room
 
     public static function update(PDO $pdo, string $id, array $data): array
     {
+        $current = self::findOne($pdo, $id);
+        if (!$current) {
+            throw new InvalidArgumentException('Oda bulunamadı.');
+        }
+        $warehouseId = (string) ($data['warehouse_id'] ?? $current['warehouse_id'] ?? '');
+        $roomNumber = (string) ($data['room_number'] ?? $current['room_number'] ?? '');
+        if ($warehouseId !== '' && $roomNumber !== '') {
+            self::ensureUniqueInWarehouse($pdo, $warehouseId, $roomNumber, $id);
+        }
         $allowed = ['room_number', 'warehouse_id', 'area_m2', 'monthly_price', 'status', 'floor', 'block', 'corridor', 'description', 'notes'];
         $set = [];
         $params = [];

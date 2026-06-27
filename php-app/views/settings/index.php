@@ -47,11 +47,18 @@ ob_start();
         <div class="p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-building text-emerald-600"></i> Firma Bilgileri</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Proje adı uygulama başlığında ve SEO’da kullanılır.</p>
-            <?php if (!empty($company['logo_url'])): ?>
+            <?php
+            $companyLogoHref = publicUploadHref($company['logo_url'] ?? null);
+            if (!empty($company['logo_url'])):
+            ?>
             <div class="mb-4 flex flex-wrap items-center gap-3">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Mevcut Firma Logosu</label>
-                    <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-16 object-contain">
+                    <?php if ($companyLogoHref): ?>
+                    <img src="<?= htmlspecialchars($companyLogoHref) ?>" alt="Logo" class="h-16 object-contain">
+                    <?php else: ?>
+                    <p class="text-sm text-amber-700 dark:text-amber-300">Logo kayıtlı ancak dosya sunucuda bulunamadı. Lütfen yeniden yükleyin.</p>
+                    <?php endif; ?>
                 </div>
                 <form method="post" action="/ayarlar/logo-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('firma logosu')) ?>);">
                     <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Logoyu kaldır</button>
@@ -98,8 +105,15 @@ ob_start();
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Şirketin Sözleşmesi (PDF)</label>
-                        <?php if (!empty($company['contract_template_url'])): ?>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Mevcut: <a href="<?= htmlspecialchars($company['contract_template_url']) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline">Sözleşmeyi görüntüle</a></p>
+                        <?php
+                        $contractTemplateHref = publicUploadHref($company['contract_template_url'] ?? null);
+                        if (!empty($company['contract_template_url'])):
+                        ?>
+                        <?php if ($contractTemplateHref): ?>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Mevcut: <a href="<?= htmlspecialchars($contractTemplateHref) ?>" target="_blank" class="text-emerald-600 dark:text-emerald-400 hover:underline">Sözleşmeyi görüntüle</a></p>
+                        <?php else: ?>
+                        <p class="text-sm text-amber-700 dark:text-amber-300 mb-1">Sözleşme PDF kayıtlı ancak dosya sunucuda bulunamadı. Lütfen yeniden yükleyin.</p>
+                        <?php endif; ?>
                         <?php endif; ?>
                         <input type="file" name="contract_pdf" accept=".pdf,application/pdf" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">
                     </div>

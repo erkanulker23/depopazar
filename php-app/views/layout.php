@@ -40,7 +40,7 @@ $navItems = [
 ];
 $navItems = array_values(array_filter($navItems, fn($item) => Auth::canAccessNav($item['href'])));
 $initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($user['last_name'] ?? '', 0, 1));
-$companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
+$companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
 ?>
 <!DOCTYPE html>
 <html lang="tr" class="scroll-smooth">

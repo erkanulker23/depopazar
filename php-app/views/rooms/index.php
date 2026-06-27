@@ -236,6 +236,7 @@ ob_start();
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Oda Numarası <span class="text-red-500">*</span></label>
                         <input type="text" name="room_number" required placeholder="A-101" class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Aynı depoda aynı oda numarası (1 = 01) tekrar eklenemez.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>

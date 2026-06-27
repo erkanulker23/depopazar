@@ -136,8 +136,7 @@ class RoomsController
         $monthlyPrice = isset($_POST['monthly_price']) ? (float) str_replace(',', '.', $_POST['monthly_price']) : 0;
         if ($roomNumber === '' || $areaM2 <= 0 || $monthlyPrice < 0) {
             Auth::setSession('flash_error', 'Oda numarası, alan (m²) ve aylık fiyat gerekli.');
-            header('Location: /odalar');
-            exit;
+            $this->redirectToRoomsIndex($warehouseId, true);
         }
         $data = [
             'room_number'   => $roomNumber,
@@ -152,19 +151,16 @@ class RoomsController
             'notes'         => trim($_POST['notes'] ?? '') ?: null,
         ];
         try {
-            $existing = Room::findByWarehouseAndNumber($this->pdo, $warehouseId, $roomNumber);
-            if ($existing) {
-                Auth::setSession('flash_error', 'Bu depoda "' . $roomNumber . '" numaralı oda zaten kayıtlı.');
-                header('Location: /odalar' . ($warehouseId !== '' ? '?warehouse_id=' . urlencode($warehouseId) : ''));
-                exit;
-            }
             Room::create($this->pdo, $data);
             Auth::setSession('flash_success', 'Oda eklendi.');
+            $this->redirectToRoomsIndex($warehouseId);
+        } catch (InvalidArgumentException $e) {
+            Auth::setSession('flash_error', $e->getMessage());
+            $this->redirectToRoomsIndex($warehouseId, true);
         } catch (Exception $e) {
             Auth::setSession('flash_error', 'Oda eklenemedi: ' . $e->getMessage());
+            $this->redirectToRoomsIndex($warehouseId, true);
         }
-        header('Location: /odalar');
-        exit;
     }
 
     public function update(): void
@@ -212,13 +208,13 @@ class RoomsController
             'description'   => trim($_POST['description'] ?? '') ?: null,
             'notes'         => trim($_POST['notes'] ?? '') ?: null,
         ];
-        $duplicate = Room::findByWarehouseAndNumber($this->pdo, $warehouseId, $data['room_number'], $id);
-        if ($duplicate) {
-            Auth::setSession('flash_error', 'Bu depoda "' . $data['room_number'] . '" numaralı başka bir oda zaten var.');
+        try {
+            Room::update($this->pdo, $id, $data);
+        } catch (InvalidArgumentException $e) {
+            Auth::setSession('flash_error', $e->getMessage());
             header('Location: /odalar' . $this->roomsIndexQuery());
             exit;
         }
-        Room::update($this->pdo, $id, $data);
         Auth::setSession('flash_success', 'Oda güncellendi.');
         header('Location: /odalar' . $this->roomsIndexQuery());
         exit;
@@ -273,6 +269,20 @@ class RoomsController
             'has_contract' => $_POST['_return_has_contract'] ?? '',
         ], static fn($v) => $v !== '');
         return $keep ? ('?' . http_build_query($keep)) : '';
+    }
+
+    private function redirectToRoomsIndex(?string $warehouseId = null, bool $openAddModal = false): never
+    {
+        $params = [];
+        if ($warehouseId !== null && $warehouseId !== '') {
+            $params['warehouse_id'] = $warehouseId;
+        }
+        if ($openAddModal) {
+            $params['add'] = '1';
+        }
+        $qs = $params ? ('?' . http_build_query($params)) : '';
+        header('Location: /odalar' . $qs);
+        exit;
     }
 
     public function delete(): void
@@ -438,7 +448,7 @@ class RoomsController
             $warehouseByName[mb_strtoupper(trim($w['name'] ?? ''))] = $w;
         }
         $added = 0;
-        $updated = 0;
+        $skipped = 0;
         $errors = [];
         $batchSeen = [];
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
@@ -474,12 +484,16 @@ class RoomsController
             if ($monthlyPrice < 0) $monthlyPrice = 0;
             $roomKey = $warehouseId . ':' . normalizeRoomNumberKey($roomNumber);
             try {
-                $existing = null;
                 if ($roomKey !== ':' && isset($batchSeen[$roomKey])) {
-                    $existing = Room::findOne($this->pdo, $batchSeen[$roomKey]);
+                    $errors[] = $warehouseName . ' / ' . $roomNumber . ': CSV dosyasında tekrar eden oda numarası.';
+                    $skipped++;
+                    continue;
                 }
-                if (!$existing) {
-                    $existing = Room::findByWarehouseAndNumber($this->pdo, $warehouseId, $roomNumber);
+                $existing = Room::findByWarehouseAndNumber($this->pdo, $warehouseId, $roomNumber);
+                if ($existing) {
+                    $errors[] = $warehouseName . ' / ' . $roomNumber . ': ' . roomDuplicateMessage($roomNumber, $existing);
+                    $skipped++;
+                    continue;
                 }
                 $payload = [
                     'room_number'   => $roomNumber,
@@ -493,36 +507,35 @@ class RoomsController
                     'description'   => $row[8] ?? null,
                     'notes'         => $row[9] ?? null,
                 ];
-                if ($existing) {
-                    Room::update($this->pdo, $existing['id'], $payload);
-                    $updated++;
-                    if ($roomKey !== ':') {
-                        $batchSeen[$roomKey] = $existing['id'];
-                    }
-                } else {
-                    $created = Room::create($this->pdo, $payload);
-                    $added++;
-                    if ($roomKey !== ':' && !empty($created['id'])) {
-                        $batchSeen[$roomKey] = $created['id'];
-                    }
+                $created = Room::create($this->pdo, $payload);
+                $added++;
+                if ($roomKey !== ':' && !empty($created['id'])) {
+                    $batchSeen[$roomKey] = $created['id'];
                 }
+            } catch (InvalidArgumentException $e) {
+                $errors[] = $warehouseName . ' / ' . $roomNumber . ': ' . $e->getMessage();
+                $skipped++;
             } catch (Throwable $e) {
                 $errors[] = $roomNumber . ': ' . $e->getMessage();
             }
         }
         fclose($handle);
-        $processed = $added + $updated;
-        if ($processed > 0) {
-            $parts = [];
-            if ($added > 0) {
-                $parts[] = $added . ' yeni eklendi';
-            }
-            if ($updated > 0) {
-                $parts[] = $updated . ' güncellendi';
-            }
-            Auth::setSession('flash_success', implode(', ', $parts) . '.');
+        if ($added > 0) {
+            Auth::setSession('flash_success', $added . ' oda eklendi.');
         }
-        if (!empty($errors)) Auth::setSession('flash_error', implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : ''));
+        if ($skipped > 0 && empty($errors)) {
+            Auth::setSession('flash_error', $skipped . ' satır atlandı (aynı oda numarası).');
+        }
+        if (!empty($errors)) {
+            $msg = implode(' ', array_slice($errors, 0, 3));
+            if (count($errors) > 3) {
+                $msg .= ' …';
+            }
+            if ($skipped > 3) {
+                $msg .= ' (toplam ' . $skipped . ' tekrar)';
+            }
+            Auth::setSession('flash_error', $msg);
+        }
         header('Location: /odalar/excel-ice-aktar');
         exit;
     }
