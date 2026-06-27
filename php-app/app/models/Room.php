@@ -1,6 +1,13 @@
 <?php
 class Room
 {
+    /** Oda numarasına göre SQL sıralama (01, 02, … 10 sayısal sıra) */
+    public static function sqlOrderByRoomNumber(string $alias = 'r'): string
+    {
+        $col = ($alias !== '' ? $alias . '.' : '') . 'room_number';
+        return 'CAST(' . $col . ' AS UNSIGNED) ASC, ' . $col . ' ASC';
+    }
+
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
@@ -54,7 +61,7 @@ class Room
         } elseif ($hasContract === 'no') {
             $sql .= ' AND NOT EXISTS (SELECT 1 FROM contracts c INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL WHERE c.room_id = r.id AND c.deleted_at IS NULL AND c.is_active = 1) ';
         }
-        $sql .= ' ORDER BY w.name, r.room_number ';
+        $sql .= ' ORDER BY w.name, ' . self::sqlOrderByRoomNumber('r') . ' ';
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

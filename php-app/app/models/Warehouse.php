@@ -64,7 +64,7 @@ class Warehouse
         if (!$row) {
             return null;
         }
-        $stmt2 = $pdo->prepare('SELECT * FROM rooms WHERE warehouse_id = ? AND deleted_at IS NULL ORDER BY room_number');
+        $stmt2 = $pdo->prepare('SELECT * FROM rooms WHERE warehouse_id = ? AND deleted_at IS NULL ORDER BY ' . Room::sqlOrderByRoomNumber(''));
         $stmt2->execute([$id]);
         $row['rooms'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
         return $row;
