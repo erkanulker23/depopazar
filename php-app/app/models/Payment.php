@@ -977,4 +977,58 @@ class Payment
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /** Seçilen dönemde vadesi gelen (ödenmemiş) ödemeler */
+    public static function findDuePaymentRowsInPeriod(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 1000): array
+    {
+        $sql = 'SELECT p.id, p.payment_number, p.amount, p.due_date, p.status,
+                       c.contract_number, c.id AS contract_id, c.customer_id,
+                       cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.phone AS customer_phone,
+                       w.name AS warehouse_name, r.room_number
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                AND p.due_date IS NOT NULL
+                AND DATE(p.due_date) >= ? AND DATE(p.due_date) <= ? ';
+        $params = [$startDate, $endDate];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.due_date ASC, cu.last_name, cu.first_name LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Seçilen dönemde tahsil edilmiş ödemeler */
+    public static function findPaidPaymentRowsInPeriod(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 1000): array
+    {
+        $sql = 'SELECT p.id, p.payment_number, p.amount, p.paid_at, p.due_date, p.payment_method, p.status,
+                       c.contract_number, c.id AS contract_id, c.customer_id,
+                       cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.phone AS customer_phone,
+                       w.name AS warehouse_name, r.room_number,
+                       ba.bank_name
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                LEFT JOIN bank_accounts ba ON ba.id = p.bank_account_id AND ba.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\'
+                AND p.paid_at IS NOT NULL
+                AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
+        $params = [$startDate, $endDate];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.paid_at DESC, cu.last_name, cu.first_name LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

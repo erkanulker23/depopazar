@@ -24,6 +24,22 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 
 <form method="get" action="/raporlar/banka-hesaplari" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
     <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yıl / Ay (hızlı)</label>
+        <div class="flex flex-wrap gap-2">
+            <select id="bank_year" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+                <?php for ($y = (int) date('Y'); $y >= (int) date('Y') - 5; $y--): ?>
+                    <option value="<?= $y ?>" <?= (int) date('Y', strtotime($startDate)) === $y ? 'selected' : '' ?>><?= $y ?></option>
+                <?php endfor; ?>
+            </select>
+            <select id="bank_month" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+                <?php $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']; foreach ($monthNames as $i => $mn): ?>
+                    <option value="<?= $i + 1 ?>"><?= $mn ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" onclick="applyBankMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm">Ay uygula</button>
+        </div>
+    </div>
+    <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka Hesabı</label>
         <select name="bank_account_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[200px]">
             <option value="">Tümü</option>
@@ -34,11 +50,11 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     </div>
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlangıç</label>
-        <input type="date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="date" name="start_date" id="bank_start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş</label>
-        <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="date" name="end_date" id="bank_end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Yöntemi</label>
@@ -58,7 +74,17 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     <?php endif; ?>
 </form>
 
-<!-- Banka hesabı bakiyeleri (bitiş tarihine kadar) -->
+<?php
+$csvUrl = reportExportUrl('/raporlar/banka-hesaplari', array_filter([
+    'bank_account_id' => $bankAccountId ?: null,
+    'start_date' => $startDate,
+    'end_date' => $endDate,
+    'payment_method' => $paymentMethodGet ?: null,
+    'q' => $qGet ?: null,
+]));
+?>
+<div id="report-content">
+<?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
 <?php if (!empty($bankAccounts)): ?>
 <div class="mb-6 card-modern p-6">
     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Hesap Bakiyeleri (<?= date('d.m.Y', strtotime($endDate)) ?> itibarıyla)</h3>
@@ -159,6 +185,17 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 </div>
 <?php endif; ?>
 
+</div>
+<script>
+function applyBankMonthPreset() {
+    var y = parseInt(document.getElementById('bank_year').value, 10);
+    var m = parseInt(document.getElementById('bank_month').value, 10);
+    var start = new Date(y, m - 1, 1);
+    var end = new Date(y, m, 0);
+    document.getElementById('bank_start_date').value = start.toISOString().slice(0, 10);
+    document.getElementById('bank_end_date').value = end.toISOString().slice(0, 10);
+}
+</script>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layout.php';

@@ -40,6 +40,22 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
 
 <form method="get" action="/raporlar/masraflar" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
     <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yıl / Ay (hızlı)</label>
+        <div class="flex flex-wrap gap-2">
+            <select id="expense_year" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+                <?php for ($y = (int) date('Y'); $y >= (int) date('Y') - 5; $y--): ?>
+                    <option value="<?= $y ?>" <?= (int) date('Y', strtotime($startDate)) === $y ? 'selected' : '' ?>><?= $y ?></option>
+                <?php endfor; ?>
+            </select>
+            <select id="expense_month" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+                <?php $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']; foreach ($monthNames as $i => $mn): ?>
+                    <option value="<?= $i + 1 ?>"><?= $mn ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" onclick="applyExpenseMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm">Ay uygula</button>
+        </div>
+    </div>
+    <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
         <select name="category_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[160px]">
             <option value="">Tümü</option>
@@ -58,16 +74,26 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
     </div>
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlangıç</label>
-        <input type="date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="date" name="start_date" id="expense_start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş</label>
-        <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="date" name="end_date" id="expense_end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
     <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
 </form>
 
-<!-- Kategoriye göre özet -->
+<?php
+$csvUrl = reportExportUrl('/raporlar/masraflar', array_filter([
+    'category_id' => $categoryId ?: null,
+    'start_date' => $startDate,
+    'end_date' => $endDate,
+    'payment_source_type' => $paymentSourceType ?: null,
+    'payment_source_id' => $paymentSourceId ?: null,
+]));
+?>
+<div id="report-content">
+<?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
 <?php if (!empty($byCategory)): ?>
 <div class="mb-6 card-modern p-6">
     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Kategoriye Göre Özet</h3>
@@ -117,7 +143,17 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
         </div>
     <?php endif; ?>
 </div>
-
+</div>
+<script>
+function applyExpenseMonthPreset() {
+    var y = parseInt(document.getElementById('expense_year').value, 10);
+    var m = parseInt(document.getElementById('expense_month').value, 10);
+    var start = new Date(y, m - 1, 1);
+    var end = new Date(y, m, 0);
+    document.getElementById('expense_start_date').value = start.toISOString().slice(0, 10);
+    document.getElementById('expense_end_date').value = end.toISOString().slice(0, 10);
+}
+</script>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layout.php';

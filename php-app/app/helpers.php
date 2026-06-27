@@ -966,3 +966,78 @@ if (!function_exists('releaseHttpResponse')) {
         }
     }
 }
+
+/** Rapor sayfaları: ay veya özel tarih aralığı */
+if (!function_exists('reportPeriodFromRequest')) {
+    function reportPeriodFromRequest(array $query): array
+    {
+        $mode = (($query['period_mode'] ?? '') === 'custom') ? 'custom' : 'month';
+        if ($mode === 'custom') {
+            $start = trim((string) ($query['start_date'] ?? ''));
+            $end = trim((string) ($query['end_date'] ?? ''));
+            if ($start === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) {
+                $start = date('Y-m-01');
+            }
+            if ($end === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) {
+                $end = date('Y-m-t');
+            }
+            if ($start > $end) {
+                [$start, $end] = [$end, $start];
+            }
+            return [
+                'mode' => 'custom',
+                'start_date' => $start,
+                'end_date' => $end,
+                'year' => (int) substr($start, 0, 4),
+                'month' => (int) substr($start, 5, 2),
+                'all_months' => false,
+            ];
+        }
+        $year = isset($query['year']) && $query['year'] !== '' ? (int) $query['year'] : (int) date('Y');
+        $monthRaw = isset($query['month']) && $query['month'] !== '' ? (int) $query['month'] : (int) date('n');
+        $allMonths = ($monthRaw === 0);
+        if ($allMonths) {
+            $start = sprintf('%04d-01-01', $year);
+            $end = sprintf('%04d-12-31', $year);
+        } else {
+            $start = sprintf('%04d-%02d-01', $year, $monthRaw);
+            $end = date('Y-m-t', strtotime($start));
+        }
+        return [
+            'mode' => 'month',
+            'start_date' => $start,
+            'end_date' => $end,
+            'year' => $year,
+            'month' => $monthRaw,
+            'all_months' => $allMonths,
+        ];
+    }
+}
+
+if (!function_exists('reportExportUrl')) {
+    function reportExportUrl(string $path, array $query = []): string
+    {
+        $query['export'] = 'csv';
+        $qs = http_build_query(array_filter($query, static fn($v) => $v !== null && $v !== ''));
+        return $path . ($qs !== '' ? '?' . $qs : '');
+    }
+}
+
+if (!function_exists('streamCsvDownload')) {
+    function streamCsvDownload(string $filename, array $headers, array $rows): never
+    {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . preg_replace('/[^a-zA-Z0-9._-]+/', '_', $filename) . '"');
+        $out = fopen('php://output', 'w');
+        if ($out === false) {
+            exit;
+        }
+        fprintf($out, "\xEF\xBB\xBF");
+        fputcsv($out, $headers, ';');
+        foreach ($rows as $row) {
+            fputcsv($out, $row, ';');
+        }
+        fclose($out);
+        exit;
+    }
+}

@@ -26,16 +26,48 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 
 <form method="get" action="/raporlar/erken-odemeler" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
     <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yıl / Ay (hızlı)</label>
+        <div class="flex flex-wrap gap-2">
+            <select id="early_year" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+                <?php for ($y = (int) date('Y'); $y >= (int) date('Y') - 5; $y--): ?>
+                    <option value="<?= $y ?>" <?= (int) date('Y', strtotime($startDate)) === $y ? 'selected' : '' ?>><?= $y ?></option>
+                <?php endfor; ?>
+            </select>
+            <select id="early_month" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+                <?php $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']; foreach ($monthNames as $i => $mn): ?>
+                    <option value="<?= $i + 1 ?>" <?= (int) date('n', strtotime($startDate)) === $i + 1 && date('Y-m', strtotime($startDate)) === date('Y-m', strtotime($endDate)) ? 'selected' : '' ?>><?= $mn ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" onclick="applyEarlyMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Ay uygula</button>
+        </div>
+    </div>
+    <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat başlangıç</label>
-        <input type="date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="date" name="start_date" id="early_start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
     <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat bitiş</label>
-        <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="date" name="end_date" id="early_end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
     <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
     <a href="/odemeler?status=early" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Ödemeler listesinde filtrele</a>
 </form>
+<script>
+function applyEarlyMonthPreset() {
+    var y = parseInt(document.getElementById('early_year').value, 10);
+    var m = parseInt(document.getElementById('early_month').value, 10);
+    var start = new Date(y, m - 1, 1);
+    var end = new Date(y, m, 0);
+    document.getElementById('early_start_date').value = start.toISOString().slice(0, 10);
+    document.getElementById('early_end_date').value = end.toISOString().slice(0, 10);
+}
+</script>
+
+<?php
+$csvUrl = reportExportUrl('/raporlar/erken-odemeler', ['start_date' => $startDate, 'end_date' => $endDate]);
+?>
+<div id="report-content">
+<?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
     <div class="stat-card">
@@ -149,6 +181,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
             </table>
         </div>
     <?php endif; ?>
+</div>
 </div>
 <?php
 $content = ob_get_clean();

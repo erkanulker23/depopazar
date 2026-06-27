@@ -148,35 +148,62 @@ class ContractsController
             header('Location: /girisler');
             exit;
         }
-        $needsSecondRoom = isset($_POST['needs_second_room']) && $_POST['needs_second_room'] === '1';
-        $roomId2 = trim($_POST['room_id_2'] ?? '');
-        $room2 = null;
-        if ($needsSecondRoom) {
-            if ($roomId2 === '') {
-                Auth::setSession('flash_error', '2. oda seçilmelidir.');
+        $needsAdditionalRooms = isset($_POST['needs_additional_rooms']) && $_POST['needs_additional_rooms'] === '1';
+        $additionalRoomIds = isset($_POST['additional_room_ids']) && is_array($_POST['additional_room_ids'])
+            ? array_values(array_filter(array_map('trim', $_POST['additional_room_ids'])))
+            : [];
+        $additionalMonthlyPrices = isset($_POST['additional_monthly_prices']) && is_array($_POST['additional_monthly_prices'])
+            ? array_values($_POST['additional_monthly_prices'])
+            : [];
+        $additionalRooms = [];
+        if ($needsAdditionalRooms) {
+            if ($additionalRoomIds === []) {
+                Auth::setSession('flash_error', 'En az bir ek oda seçilmelidir.');
                 header('Location: /girisler?newSale=1');
                 exit;
             }
-            if ($roomId2 === $roomId) {
-                Auth::setSession('flash_error', '1. ve 2. oda aynı olamaz.');
+            if (count($additionalRoomIds) !== count($additionalMonthlyPrices)) {
+                Auth::setSession('flash_error', 'Ek odalar için aylık ücret bilgisi eksik.');
                 header('Location: /girisler?newSale=1');
                 exit;
             }
-            $room2 = Room::findOne($this->pdo, $roomId2);
-            if (!$room2) {
-                Auth::setSession('flash_error', 'Geçersiz 2. oda.');
+            $allRoomIds = array_merge([$roomId], $additionalRoomIds);
+            if (count($allRoomIds) !== count(array_unique($allRoomIds))) {
+                Auth::setSession('flash_error', 'Aynı oda birden fazla kez seçilemez.');
                 header('Location: /girisler?newSale=1');
                 exit;
             }
-            if (($room2['warehouse_id'] ?? '') !== ($room['warehouse_id'] ?? '')) {
-                Auth::setSession('flash_error', '2. oda, seçilen depodaki odalardan biri olmalıdır.');
-                header('Location: /girisler?newSale=1');
-                exit;
-            }
-            if ($user['role'] !== 'super_admin' && $companyId && ($room2['company_id'] ?? '') !== $companyId) {
-                Auth::setSession('flash_error', '2. odaya erişim yetkiniz yok.');
-                header('Location: /girisler');
-                exit;
+            foreach ($additionalRoomIds as $i => $extraRoomId) {
+                $extraRoom = Room::findOne($this->pdo, $extraRoomId);
+                if (!$extraRoom) {
+                    Auth::setSession('flash_error', 'Geçersiz ek oda seçimi.');
+                    header('Location: /girisler?newSale=1');
+                    exit;
+                }
+                if (($extraRoom['warehouse_id'] ?? '') !== ($room['warehouse_id'] ?? '')) {
+                    Auth::setSession('flash_error', 'Ek odalar, seçilen depodaki odalardan olmalıdır.');
+                    header('Location: /girisler?newSale=1');
+                    exit;
+                }
+                if ($user['role'] !== 'super_admin' && $companyId && ($extraRoom['company_id'] ?? '') !== $companyId) {
+                    Auth::setSession('flash_error', 'Seçilen ek odaya erişim yetkiniz yok.');
+                    header('Location: /girisler');
+                    exit;
+                }
+                $extraPriceRaw = $additionalMonthlyPrices[$i] ?? '';
+                $extraMonthlyPrice = $extraPriceRaw !== ''
+                    ? (float) str_replace(',', '.', (string) $extraPriceRaw)
+                    : (float) ($extraRoom['monthly_price'] ?? 0);
+                if ($extraMonthlyPrice <= 0) {
+                    Auth::setSession('flash_error', 'Ek oda aylık ücreti geçerli olmalıdır.');
+                    header('Location: /girisler?newSale=1');
+                    exit;
+                }
+                $additionalRooms[] = [
+                    'room' => $extraRoom,
+                    'room_id' => $extraRoomId,
+                    'monthly_price' => $extraMonthlyPrice,
+                ];
             }
         }
         [$storedCondition, $storedConditionNote, $storedConditionError] = parseStoredItemsConditionFromRequest($_POST, true);
@@ -186,17 +213,6 @@ class ContractsController
             exit;
         }
         $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== '' ? (float) str_replace(',', '.', $_POST['monthly_price']) : (float) $room['monthly_price'];
-        $monthlyPrice2 = null;
-        if ($needsSecondRoom && $room2) {
-            $monthlyPrice2 = isset($_POST['monthly_price_2']) && $_POST['monthly_price_2'] !== ''
-                ? (float) str_replace(',', '.', $_POST['monthly_price_2'])
-                : (float) ($room2['monthly_price'] ?? 0);
-            if ($monthlyPrice2 <= 0) {
-                Auth::setSession('flash_error', '2. oda aylık ücreti geçerli olmalıdır.');
-                header('Location: /girisler?newSale=1');
-                exit;
-            }
-        }
         $transportationFee = isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? (float) str_replace(',', '.', $_POST['transportation_fee']) : 0;
         $discount = isset($_POST['discount']) && $_POST['discount'] !== '' ? (float) str_replace(',', '.', $_POST['discount']) : 0;
         $soldBy = trim($_POST['sold_by_user_id'] ?? '') ?: null;
@@ -255,14 +271,14 @@ class ContractsController
                 true,
                 $_POST
             );
-            $createdSecond = null;
-            if ($needsSecondRoom && $room2 && $monthlyPrice2 !== null) {
-                $createdSecond = $this->createSingleSaleContract(
+            $createdAdditional = [];
+            foreach ($additionalRooms as $extra) {
+                $createdAdditional[] = $this->createSingleSaleContract(
                     $user,
                     $companyId,
-                    $room2,
-                    $roomId2,
-                    $monthlyPrice2,
+                    $extra['room'],
+                    $extra['room_id'],
+                    $extra['monthly_price'],
                     [],
                     $sharedContractFields,
                     0,
@@ -276,13 +292,13 @@ class ContractsController
             $contractNumber = $created['contract_number'] ?? $contractId ?? '';
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName]);
-            if ($createdSecond) {
-                $num2 = $createdSecond['contract_number'] ?? $createdSecond['id'] ?? '';
-                Notification::createForCompany($this->pdo, $room2['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $num2 . ' oluşturuldu.', ['contract_id' => $createdSecond['id'] ?? null, 'actor_name' => $actorName]);
+            foreach ($createdAdditional as $extraCreated) {
+                $numExtra = $extraCreated['contract_number'] ?? $extraCreated['id'] ?? '';
+                Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $numExtra . ' oluşturuldu.', ['contract_id' => $extraCreated['id'] ?? null, 'actor_name' => $actorName]);
             }
             $this->sendContractCreatedEmails($created);
-            if ($createdSecond) {
-                $this->sendContractCreatedEmails($createdSecond);
+            foreach ($createdAdditional as $extraCreated) {
+                $this->sendContractCreatedEmails($extraCreated);
             }
 
             // Nakliye bilgisi işaretlendiyse nakliye işi oluştur (nakliye-isler listesine düşer)
@@ -305,8 +321,8 @@ class ContractsController
                     'depo' => 'Depodan depo nakliyesi',
                 ];
                 $transportNotes = 'Sözleşme: ' . $contractNumber;
-                if ($createdSecond) {
-                    $transportNotes .= ', ' . ($createdSecond['contract_number'] ?? $createdSecond['id'] ?? '');
+                foreach ($createdAdditional as $extraCreated) {
+                    $transportNotes .= ', ' . ($extraCreated['contract_number'] ?? $extraCreated['id'] ?? '');
                 }
                 try {
                     TransportationJob::create($this->pdo, [
@@ -326,8 +342,13 @@ class ContractsController
                 }
             }
 
-            if ($createdSecond) {
-                Auth::setSession('flash_success', '2 sözleşme oluşturuldu (' . $contractNumber . ', ' . ($createdSecond['contract_number'] ?? '') . ').');
+            $totalContracts = 1 + count($createdAdditional);
+            if ($totalContracts > 1) {
+                $numbers = [$contractNumber];
+                foreach ($createdAdditional as $extraCreated) {
+                    $numbers[] = $extraCreated['contract_number'] ?? $extraCreated['id'] ?? '';
+                }
+                Auth::setSession('flash_success', $totalContracts . ' sözleşme oluşturuldu (' . implode(', ', $numbers) . ').');
             } else {
                 Auth::setSession('flash_success', 'Sözleşme oluşturuldu.');
             }

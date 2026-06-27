@@ -2,36 +2,79 @@
 $currentPage = 'raporlar';
 $year = $year ?? (int) date('Y');
 $month = $month ?? (int) date('n');
+$periodMode = $periodMode ?? 'month';
+$startDate = $startDate ?? date('Y-m-01');
+$endDate = $endDate ?? date('Y-m-t');
+$duePayments = $duePayments ?? [];
+$paidPayments = $paidPayments ?? [];
+$dueTotal = $dueTotal ?? 0;
+$paidPeriodTotal = $paidPeriodTotal ?? 0;
+$csvUrl = $csvUrl ?? null;
 $occupancy = $occupancy ?? ['total_rooms' => 0, 'occupied_rooms' => 0, 'empty_rooms' => 0, 'occupancy_rate' => 0];
 $revenueByMonth = $revenueByMonth ?? ['total_revenue' => 0, 'total_payments' => 0, 'payments' => []];
 $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
+$periodLabel = ($periodMode ?? 'month') === 'custom'
+    ? (date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate)))
+    : (($monthDisplay ?? 0) === 0 ? 'Tüm Yıl ' . $year : (($monthNames[($monthDisplay ?? 1) - 1] ?? '') . ' ' . $year));
 ob_start();
 ?>
 <div class="mb-8">
     <h1 class="page-title gradient-title">Raporlar</h1>
-    <p class="page-subtitle">Doluluk ve gelir raporları</p>
+    <p class="page-subtitle">Doluluk, gelir ve müşteri ödeme raporları</p>
 </div>
 
-<form method="get" action="/raporlar" class="page-toolbar mb-6 flex flex-wrap items-end gap-4">
-    <div>
-        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Yıl</label>
-        <select name="year" onchange="this.form.submit()" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            <?php for ($y = date('Y'); $y >= date('Y') - 5; $y--): ?>
-                <option value="<?= $y ?>" <?= $year === $y ? 'selected' : '' ?>><?= $y ?></option>
-            <?php endfor; ?>
-        </select>
-    </div>
-    <div>
-        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Ay</label>
-        <select name="month" onchange="this.form.submit()" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            <option value="0" <?= ($monthDisplay ?? 0) === 0 ? 'selected' : '' ?>>Tüm Aylar</option>
-            <?php foreach ($monthNames as $i => $m): ?>
-                <option value="<?= $i + 1 ?>" <?= ($monthDisplay ?? 0) === $i + 1 ? 'selected' : '' ?>><?= $m ?></option>
-            <?php endforeach; ?>
-        </select>
+<form method="get" action="/raporlar" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-4" id="reportPeriodForm">
+    <div class="flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Dönem</label>
+            <select name="period_mode" id="report_period_mode" onchange="toggleReportPeriodMode()" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                <option value="month" <?= ($periodMode ?? 'month') === 'month' ? 'selected' : '' ?>>Ay bazlı</option>
+                <option value="custom" <?= ($periodMode ?? '') === 'custom' ? 'selected' : '' ?>>Özel tarih aralığı</option>
+            </select>
+        </div>
+        <div id="report_month_fields" class="flex flex-wrap gap-4 items-end <?= ($periodMode ?? 'month') === 'custom' ? 'hidden' : '' ?>">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Yıl</label>
+                <select name="year" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    <?php for ($y = date('Y'); $y >= date('Y') - 5; $y--): ?>
+                        <option value="<?= $y ?>" <?= $year === $y ? 'selected' : '' ?>><?= $y ?></option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Ay</label>
+                <select name="month" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    <option value="0" <?= ($monthDisplay ?? 0) === 0 ? 'selected' : '' ?>>Tüm Aylar</option>
+                    <?php foreach ($monthNames as $i => $m): ?>
+                        <option value="<?= $i + 1 ?>" <?= ($monthDisplay ?? 0) === $i + 1 ? 'selected' : '' ?>><?= $m ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+        <div id="report_custom_fields" class="flex flex-wrap gap-4 items-end <?= ($periodMode ?? 'month') === 'custom' ? '' : 'hidden' ?>">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Başlangıç</label>
+                <input type="date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Bitiş</label>
+                <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+            </div>
+        </div>
+        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
     </div>
 </form>
+<script>
+function toggleReportPeriodMode() {
+    var mode = document.getElementById('report_period_mode').value;
+    document.getElementById('report_month_fields').classList.toggle('hidden', mode !== 'month');
+    document.getElementById('report_custom_fields').classList.toggle('hidden', mode !== 'custom');
+}
+</script>
+
+<div id="report-content">
+<?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
 
 <!-- Rapor kartları -->
 <div class="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -82,7 +125,7 @@ ob_start();
                 <i class="bi bi-bank text-emerald-600 dark:text-emerald-400 text-xl"></i>
             </div>
             <div>
-                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Havale / EFT (<?= ($monthDisplay ?? 0) === 0 ? 'Yıllık ' . $year : ($monthNames[($monthDisplay ?? 1) - 1] ?? '') . ' ' . $year ?>)</p>
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Havale / EFT (<?= htmlspecialchars($periodLabel) ?>)</p>
                 <p class="text-xl font-bold text-gray-900 dark:text-white"><?= fmtMoney($paymentBreakdown['bank'] ?? 0) ?> ₺</p>
             </div>
         </div>
@@ -175,7 +218,7 @@ ob_start();
 
     <div class="card-modern p-6">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <i class="bi bi-currency-exchange text-emerald-600 dark:text-emerald-400"></i> Gelir Raporu (<?= ($monthDisplay ?? 0) === 0 ? 'Tüm Yıl ' . $year : ($monthNames[($monthDisplay ?? 1) - 1] ?? '') . ' ' . $year ?>)
+            <i class="bi bi-currency-exchange text-emerald-600 dark:text-emerald-400"></i> Gelir Raporu (<?= htmlspecialchars($periodLabel) ?>)
         </h2>
         <div class="space-y-3">
             <div class="flex justify-between items-center">
@@ -200,6 +243,92 @@ ob_start();
                 </div>
             <?php endif; ?>
         </div>
+    </div>
+</div>
+
+<!-- Vadesi gelen + Tahsil edilen müşteriler -->
+<div class="grid grid-cols-1 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
+        <div class="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 flex flex-wrap justify-between items-center gap-2">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i class="bi bi-calendar-event text-amber-600"></i> Vadesi gelen ödemeler
+            </h2>
+            <span class="text-sm font-semibold text-amber-800 dark:text-amber-300"><?= count($duePayments) ?> kayıt · <?= fmtMoney($dueTotal) ?> ₺</span>
+        </div>
+        <?php if (empty($duePayments)): ?>
+            <div class="p-6 text-center text-gray-500 dark:text-gray-400">Seçilen dönemde vadesi gelen ödenmemiş kayıt yok.</div>
+        <?php else: ?>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Müşteri</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Sözleşme</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Depo / Oda</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Vade</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Durum</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Tutar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                    <?php foreach ($duePayments as $dp):
+                        $dName = trim(($dp['customer_first_name'] ?? '') . ' ' . ($dp['customer_last_name'] ?? ''));
+                        $dStatus = paymentStatusDisplay($dp);
+                    ?>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td class="px-4 py-3"><a href="/musteriler/<?= htmlspecialchars($dp['customer_id'] ?? '') ?>" class="font-medium text-emerald-600 hover:underline"><?= htmlspecialchars($dName) ?></a></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($dp['contract_number'] ?? '-') ?></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(($dp['warehouse_name'] ?? '') . ' / ' . ($dp['room_number'] ?? '')) ?></td>
+                        <td class="px-4 py-3"><?= !empty($dp['due_date']) ? date('d.m.Y', strtotime($dp['due_date'])) : '–' ?></td>
+                        <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $dStatus['badge'] ?? 'bg-gray-100 text-gray-800' ?>"><?= htmlspecialchars($dStatus['label'] ?? '') ?></span></td>
+                        <td class="px-4 py-3 text-right font-semibold"><?= fmtMoney($dp['amount'] ?? 0) ?> ₺</td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
+        <div class="px-4 py-3 bg-green-50 dark:bg-green-900/20 border-b border-green-100 dark:border-green-800 flex flex-wrap justify-between items-center gap-2">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i class="bi bi-check-circle text-green-600"></i> Ödemesi yapılan müşteriler
+            </h2>
+            <span class="text-sm font-semibold text-green-800 dark:text-green-300"><?= count($paidPayments) ?> kayıt · <?= fmtMoney($paidPeriodTotal) ?> ₺</span>
+        </div>
+        <?php if (empty($paidPayments)): ?>
+            <div class="p-6 text-center text-gray-500 dark:text-gray-400">Seçilen dönemde tahsilat kaydı yok.</div>
+        <?php else: ?>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Müşteri</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Sözleşme</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Depo / Oda</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Tahsilat</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Yöntem</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Tutar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                    <?php foreach ($paidPayments as $pp):
+                        $pName = trim(($pp['customer_first_name'] ?? '') . ' ' . ($pp['customer_last_name'] ?? ''));
+                    ?>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td class="px-4 py-3"><a href="/musteriler/<?= htmlspecialchars($pp['customer_id'] ?? '') ?>" class="font-medium text-emerald-600 hover:underline"><?= htmlspecialchars($pName) ?></a></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($pp['contract_number'] ?? '-') ?></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(($pp['warehouse_name'] ?? '') . ' / ' . ($pp['room_number'] ?? '')) ?></td>
+                        <td class="px-4 py-3"><?= fmtDateTime($pp['paid_at'] ?? null) ?></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($pp['payment_method'] ?? '–') ?></td>
+                        <td class="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400"><?= fmtMoney($pp['amount'] ?? 0) ?> ₺</td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -258,6 +387,7 @@ ob_start();
             </a>
         </div>
     </div>
+</div>
 </div>
 
 <?php

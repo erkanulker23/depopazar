@@ -13,10 +13,20 @@ class ReportsController
         Auth::requireStaff();
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
-        $year = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : (int) date('Y');
-        $monthRaw = isset($_GET['month']) && $_GET['month'] !== '' ? (int) $_GET['month'] : (int) date('n');
+        $period = reportPeriodFromRequest($_GET);
+        $periodMode = $period['mode'];
+        $startDate = $period['start_date'];
+        $endDate = $period['end_date'];
+        $year = $period['year'];
+        $monthRaw = $period['month'];
         $month = ($monthRaw === 0) ? (int) date('n') : $monthRaw;
-        $allMonths = ($monthRaw === 0);
+        $allMonths = $period['all_months'];
+        $monthDisplay = $monthRaw;
+
+        if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+            $this->exportIndexCsv($companyId, $startDate, $endDate);
+        }
+
         if ($companyId) {
             $totalUnpaid = Payment::sumUnpaidByCompany($this->pdo, $companyId);
             try {
@@ -41,11 +51,22 @@ class ReportsController
         }
         $paidInYear = $this->sumPaidInYear($companyId, $year);
         $occupancy = $this->getOccupancy($companyId);
-        $revenueByMonth = $this->getRevenueByMonth($companyId, $year, $allMonths ? 0 : $month);
-        $paymentBreakdown = $this->getPaymentBreakdownByMethod($companyId, $year, $allMonths ? 0 : $month);
-        $monthDisplay = $monthRaw;
+        $revenueByMonth = $this->getRevenueInPeriod($companyId, $startDate, $endDate);
+        $paymentBreakdown = $this->getPaymentBreakdownByMethodInPeriod($companyId, $startDate, $endDate);
+        $duePayments = Payment::findDuePaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate);
+        $paidPayments = Payment::findPaidPaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate);
+        $dueTotal = array_sum(array_map(static fn($r) => (float) ($r['amount'] ?? 0), $duePayments));
+        $paidPeriodTotal = array_sum(array_map(static fn($r) => (float) ($r['amount'] ?? 0), $paidPayments));
         $pendingCustomers = Payment::findCustomersWithPendingNotOverdue($this->pdo, $companyId);
         $overdueCustomers = Payment::findCustomersWithOverduePayments($this->pdo, $companyId);
+        $exportQuery = array_filter([
+            'period_mode' => $periodMode,
+            'year' => $periodMode === 'month' ? $year : null,
+            'month' => $periodMode === 'month' ? $monthRaw : null,
+            'start_date' => $periodMode === 'custom' ? $startDate : null,
+            'end_date' => $periodMode === 'custom' ? $endDate : null,
+        ], static fn($v) => $v !== null && $v !== '');
+        $csvUrl = reportExportUrl('/raporlar', $exportQuery);
         $pageTitle = 'Raporlar';
         require __DIR__ . '/../../views/reports/index.php';
     }
@@ -79,11 +100,9 @@ class ReportsController
         ];
     }
 
-    /** Seçilen yıl/ay için gelir raporu: toplam tutar, ödeme sayısı, ödeme listesi (month=0: tüm yıl) */
-    private function getRevenueByMonth(?string $companyId, int $year, int $month): array
+    /** Seçilen tarih aralığı için gelir raporu */
+    private function getRevenueInPeriod(?string $companyId, string $startDate, string $endDate): array
     {
-        $start = $month === 0 ? sprintf('%04d-01-01', $year) : sprintf('%04d-%02d-01', $year, $month);
-        $end = $month === 0 ? sprintf('%04d-12-31', $year) : date('Y-m-t', strtotime($start));
         $sql = 'SELECT p.id, p.amount, p.paid_at, p.payment_number, c.contract_number
                 FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
@@ -91,7 +110,7 @@ class ReportsController
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status = \'paid\'
                 AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
-        $params = [$start, $end];
+        $params = [$startDate, $endDate];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -106,6 +125,14 @@ class ReportsController
             'total_payments' => count($payments),
             'payments' => $payments,
         ];
+    }
+
+    /** @deprecated use getRevenueInPeriod */
+    private function getRevenueByMonth(?string $companyId, int $year, int $month): array
+    {
+        $start = $month === 0 ? sprintf('%04d-01-01', $year) : sprintf('%04d-%02d-01', $year, $month);
+        $end = $month === 0 ? sprintf('%04d-12-31', $year) : date('Y-m-t', strtotime($start));
+        return $this->getRevenueInPeriod($companyId, $start, $end);
     }
 
     private function sumPaidInYear(?string $companyId, int $year): float
@@ -147,6 +174,9 @@ class ReportsController
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
         $search = $search !== '' ? $search : null;
         $paymentMethod = isset($_GET['payment_method']) && in_array($_GET['payment_method'], ['havale', 'kredi_karti'], true) ? $_GET['payment_method'] : null;
+        if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+            $this->exportBankAccountPaymentsCsv($companyId, $bankAccountId ?: null, $startDate, $endDate, $search, $paymentMethod);
+        }
         $rows = $this->fetchBankAccountPaymentRows($companyId, $bankAccountId ?: null, $startDate, $endDate, $search, $paymentMethod);
         $expenseRows = $this->safeFetchBankAccountExpenseRows($companyId, $bankAccountId ?: null, $startDate, $endDate, $search);
         $bankBalances = $this->safeComputeBankBalances($companyId, $bankAccounts, $endDate);
@@ -162,6 +192,9 @@ class ReportsController
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-01', strtotime('-11 months'));
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
+        if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+            $this->exportEarlyPaymentsCsv($companyId, $startDate, $endDate);
+        }
         $rows = Payment::findEarlyPayments($this->pdo, $companyId, 500, $startDate, $endDate);
         $prepaidContracts = Payment::findFullyPrepaidContracts($this->pdo, $companyId, 100);
         $totalCount = Payment::countEarlyPayments($this->pdo, $companyId, $startDate, $endDate);
@@ -189,6 +222,9 @@ class ReportsController
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
         $paymentSourceType = isset($_GET['payment_source_type']) ? trim($_GET['payment_source_type']) : '';
         $paymentSourceId = isset($_GET['payment_source_id']) ? trim($_GET['payment_source_id']) : '';
+        if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+            $this->exportExpensesCsv($companyId, $categoryId ?: null, $startDate, $endDate, $paymentSourceType ?: null, $paymentSourceId ?: null, $bankAccounts, $creditCards);
+        }
         $rows = $this->safeFetchExpenseReportRows($companyId, $categoryId ?: null, $startDate, $endDate, $paymentSourceType ?: null, $paymentSourceId ?: null);
         $totalAmount = array_sum(array_map(fn($r) => (float) ($r['amount'] ?? 0), $rows));
         $byCategory = $this->groupExpensesByCategory($rows);
@@ -346,17 +382,15 @@ class ReportsController
     }
 
     /** Ödeme yöntemine göre: Havale (eski nakit dahil), Kredi kartı */
-    private function getPaymentBreakdownByMethod(?string $companyId, int $year, int $month): array
+    private function getPaymentBreakdownByMethodInPeriod(?string $companyId, string $startDate, string $endDate): array
     {
-        $start = $month === 0 ? sprintf('%04d-01-01', $year) : sprintf('%04d-%02d-01', $year, $month);
-        $end = $month === 0 ? sprintf('%04d-12-31', $year) : date('Y-m-t', strtotime($start));
         $base = 'FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status = \'paid\'
                 AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
-        $params = [$start, $end];
+        $params = [$startDate, $endDate];
         if ($companyId) {
             $base .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -371,6 +405,14 @@ class ReportsController
             'bank' => $bankTotal,
             'credit_card' => $creditTotal,
         ];
+    }
+
+    /** @deprecated use getPaymentBreakdownByMethodInPeriod */
+    private function getPaymentBreakdownByMethod(?string $companyId, int $year, int $month): array
+    {
+        $start = $month === 0 ? sprintf('%04d-01-01', $year) : sprintf('%04d-%02d-01', $year, $month);
+        $end = $month === 0 ? sprintf('%04d-12-31', $year) : date('Y-m-t', strtotime($start));
+        return $this->getPaymentBreakdownByMethodInPeriod($companyId, $start, $end);
     }
 
     /** Bekleyen veya gecikmiş ödemesi olan müşteriler (isim + borç) */
@@ -430,5 +472,147 @@ class ReportsController
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function exportIndexCsv(?string $companyId, string $startDate, string $endDate): never
+    {
+        $duePayments = Payment::findDuePaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate, 5000);
+        $paidPayments = Payment::findPaidPaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate, 5000);
+        $rows = [];
+        foreach ($duePayments as $r) {
+            $name = trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? ''));
+            $status = paymentStatusDisplay($r);
+            $rows[] = [
+                'Vadesi gelen',
+                $r['payment_number'] ?? '',
+                $name,
+                $r['customer_phone'] ?? '',
+                $r['contract_number'] ?? '',
+                ($r['warehouse_name'] ?? '') . ' / ' . ($r['room_number'] ?? ''),
+                number_format((float) ($r['amount'] ?? 0), 2, ',', '.'),
+                !empty($r['due_date']) ? date('d.m.Y', strtotime($r['due_date'])) : '',
+                $status['label'] ?? '',
+            ];
+        }
+        foreach ($paidPayments as $r) {
+            $name = trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? ''));
+            $rows[] = [
+                'Tahsil edilen',
+                $r['payment_number'] ?? '',
+                $name,
+                $r['customer_phone'] ?? '',
+                $r['contract_number'] ?? '',
+                ($r['warehouse_name'] ?? '') . ' / ' . ($r['room_number'] ?? ''),
+                number_format((float) ($r['amount'] ?? 0), 2, ',', '.'),
+                !empty($r['paid_at']) ? date('d.m.Y H:i', strtotime($r['paid_at'])) : '',
+                $r['payment_method'] ?? '',
+            ];
+        }
+        streamCsvDownload(
+            'raporlar-' . $startDate . '-' . $endDate . '.csv',
+            ['Tür', 'Ödeme No', 'Müşteri', 'Telefon', 'Sözleşme', 'Depo/Oda', 'Tutar (₺)', 'Tarih', 'Durum/Yöntem'],
+            $rows
+        );
+    }
+
+    private function exportEarlyPaymentsCsv(?string $companyId, string $startDate, string $endDate): never
+    {
+        $rows = Payment::findEarlyPayments($this->pdo, $companyId, 5000, $startDate, $endDate);
+        $prepaid = Payment::findFullyPrepaidContracts($this->pdo, $companyId, 500);
+        $csvRows = [];
+        foreach ($prepaid as $c) {
+            $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));
+            $csvRows[] = [
+                'Peşin sözleşme',
+                '',
+                $name,
+                $c['contract_number'] ?? '',
+                ($c['warehouse_name'] ?? '') . ' / ' . ($c['room_number'] ?? ''),
+                number_format((float) ($c['total_paid'] ?? 0), 2, ',', '.'),
+                !empty($c['first_paid_at']) ? date('d.m.Y H:i', strtotime($c['first_paid_at'])) : '',
+                !empty($c['last_due_date']) ? date('d.m.Y', strtotime($c['last_due_date'])) : '',
+                (int) ($c['early_payment_count'] ?? 0) . ' erken taksit',
+            ];
+        }
+        foreach ($rows as $r) {
+            $name = trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? ''));
+            $csvRows[] = [
+                'Erken ödeme',
+                $r['payment_number'] ?? '',
+                $name,
+                $r['contract_number'] ?? '',
+                '',
+                number_format((float) ($r['amount'] ?? 0), 2, ',', '.'),
+                !empty($r['paid_at']) ? date('d.m.Y H:i', strtotime($r['paid_at'])) : '',
+                !empty($r['due_date']) ? date('d.m.Y', strtotime($r['due_date'])) : '',
+                (int) ($r['days_early'] ?? paymentDaysEarly($r)) . ' gün erken',
+            ];
+        }
+        streamCsvDownload(
+            'erken-odemeler-' . $startDate . '-' . $endDate . '.csv',
+            ['Tür', 'Ödeme No', 'Müşteri', 'Sözleşme', 'Depo/Oda', 'Tutar (₺)', 'Tahsilat', 'Vade', 'Not'],
+            $csvRows
+        );
+    }
+
+    private function exportBankAccountPaymentsCsv(?string $companyId, ?string $bankAccountId, string $startDate, string $endDate, ?string $search, ?string $paymentMethod): never
+    {
+        $rows = $this->fetchBankAccountPaymentRows($companyId, $bankAccountId, $startDate, $endDate, $search, $paymentMethod);
+        $csvRows = [];
+        foreach ($rows as $r) {
+            $csvRows[] = [
+                $r['payment_number'] ?? '',
+                !empty($r['paid_at']) ? date('d.m.Y H:i', strtotime($r['paid_at'])) : '',
+                $r['bank_name'] ?? '',
+                $r['contract_number'] ?? '',
+                trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? '')),
+                number_format((float) ($r['amount'] ?? 0), 2, ',', '.'),
+                $r['payment_method'] ?? '',
+                $r['transaction_id'] ?? '',
+            ];
+        }
+        streamCsvDownload(
+            'banka-odemeleri-' . $startDate . '-' . $endDate . '.csv',
+            ['Ödeme No', 'Tarih', 'Banka', 'Sözleşme', 'Müşteri', 'Tutar (₺)', 'Yöntem', 'İşlem No'],
+            $csvRows
+        );
+    }
+
+    private function exportExpensesCsv(?string $companyId, ?string $categoryId, string $startDate, string $endDate, ?string $paymentSourceType, ?string $paymentSourceId, array $bankAccounts, array $creditCards): never
+    {
+        $rows = $this->safeFetchExpenseReportRows($companyId, $categoryId, $startDate, $endDate, $paymentSourceType, $paymentSourceId);
+        $csvRows = [];
+        foreach ($rows as $r) {
+            $source = '—';
+            $type = $r['payment_source_type'] ?? 'bank_account';
+            $id = $r['payment_source_id'] ?? '';
+            if ($type === 'bank_account') {
+                foreach ($bankAccounts as $ba) {
+                    if (($ba['id'] ?? '') === $id) {
+                        $source = ($ba['bank_name'] ?? '') . ' - ' . ($ba['account_holder_name'] ?? '');
+                        break;
+                    }
+                }
+            } else {
+                foreach ($creditCards as $cc) {
+                    if (($cc['id'] ?? '') === $id) {
+                        $source = CreditCard::getDisplayName($cc);
+                        break;
+                    }
+                }
+            }
+            $csvRows[] = [
+                !empty($r['expense_date']) ? date('d.m.Y', strtotime($r['expense_date'])) : '',
+                $r['category_name'] ?? '',
+                $r['description'] ?? '',
+                $source,
+                number_format((float) ($r['amount'] ?? 0), 2, ',', '.'),
+            ];
+        }
+        streamCsvDownload(
+            'masraflar-' . $startDate . '-' . $endDate . '.csv',
+            ['Tarih', 'Kategori', 'Açıklama', 'Ödeme Kaynağı', 'Tutar (₺)'],
+            $csvRows
+        );
     }
 }
