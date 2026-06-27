@@ -478,6 +478,21 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Bu ayın ilk–son gün aralığı (Y-m-d) ve etiket */
+    public static function currentMonthRange(): array
+    {
+        $start = new DateTime('first day of this month');
+        $end = new DateTime('last day of this month');
+        $months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+        $monthName = $months[(int) $start->format('n') - 1];
+        $label = $monthName . ' ' . $start->format('Y');
+        return [
+            'start' => $start->format('Y-m-d'),
+            'end' => $end->format('Y-m-d'),
+            'label' => $label,
+        ];
+    }
+
     /** Bu haftanın Pazartesi–Pazar aralığı (Y-m-d) ve etiket */
     public static function currentWeekRange(): array
     {
@@ -517,10 +532,10 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** Bu hafta vadesi dolmuş (Pazartesi–bugün arası, ödenmemiş) */
-    public static function findOverdueDueThisWeek(PDO $pdo, ?string $companyId, int $limit = 15): array
+    /** Bu ay vadesi dolmuş (ay başı–bugün arası, ödenmemiş) */
+    public static function findOverdueDueThisMonth(PDO $pdo, ?string $companyId, int $limit = 15): array
     {
-        $week = self::currentWeekRange();
+        $month = self::currentMonthRange();
         $sql = 'SELECT p.*, c.contract_number, c.customer_id, c.id AS contract_id,
                        cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
                 FROM payments p
@@ -530,7 +545,7 @@ class Payment
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
                 AND DATE(p.due_date) >= ? AND DATE(p.due_date) < CURDATE() ';
-        $params = [$week['start']];
+        $params = [$month['start']];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -541,10 +556,10 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** Bu hafta vadesi gelecek (bugün–Pazar, ödenmemiş) */
-    public static function findDueThisWeek(PDO $pdo, ?string $companyId, int $limit = 15): array
+    /** Bu ay vadesi gelecek (bugün–ay sonu, ödenmemiş) */
+    public static function findDueThisMonth(PDO $pdo, ?string $companyId, int $limit = 15): array
     {
-        $week = self::currentWeekRange();
+        $month = self::currentMonthRange();
         $sql = 'SELECT p.*, c.contract_number, c.customer_id, c.id AS contract_id,
                        cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
                 FROM payments p
@@ -554,7 +569,7 @@ class Payment
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
                 AND DATE(p.due_date) >= CURDATE() AND DATE(p.due_date) <= ? ';
-        $params = [$week['end']];
+        $params = [$month['end']];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -565,10 +580,10 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** Bu hafta tahsil edilen ödemeler */
-    public static function findPaidThisWeek(PDO $pdo, ?string $companyId, int $limit = 10): array
+    /** Bu ay tahsil edilen ödemeler */
+    public static function findPaidThisMonth(PDO $pdo, ?string $companyId, int $limit = 10): array
     {
-        $week = self::currentWeekRange();
+        $month = self::currentMonthRange();
         $sql = 'SELECT p.*, c.contract_number, c.customer_id,
                        cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
                 FROM payments p
@@ -578,7 +593,7 @@ class Payment
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status = \'paid\'
                 AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
-        $params = [$week['start'], $week['end']];
+        $params = [$month['start'], $month['end']];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -589,16 +604,16 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function sumPaidThisWeek(PDO $pdo, ?string $companyId): float
+    public static function sumPaidThisMonth(PDO $pdo, ?string $companyId): float
     {
-        $week = self::currentWeekRange();
+        $month = self::currentMonthRange();
         $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status = \'paid\'
                 AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
-        $params = [$week['start'], $week['end']];
+        $params = [$month['start'], $month['end']];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -608,16 +623,16 @@ class Payment
         return (float) $stmt->fetchColumn();
     }
 
-    public static function countDueThisWeek(PDO $pdo, ?string $companyId): int
+    public static function countDueThisMonth(PDO $pdo, ?string $companyId): int
     {
-        $week = self::currentWeekRange();
+        $month = self::currentMonthRange();
         $sql = 'SELECT COUNT(*) FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
                 AND DATE(p.due_date) >= CURDATE() AND DATE(p.due_date) <= ? ';
-        $params = [$week['end']];
+        $params = [$month['end']];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -627,16 +642,16 @@ class Payment
         return (int) $stmt->fetchColumn();
     }
 
-    public static function sumDueThisWeek(PDO $pdo, ?string $companyId): float
+    public static function sumDueThisMonth(PDO $pdo, ?string $companyId): float
     {
-        $week = self::currentWeekRange();
+        $month = self::currentMonthRange();
         $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
                 AND DATE(p.due_date) >= CURDATE() AND DATE(p.due_date) <= ? ';
-        $params = [$week['end']];
+        $params = [$month['end']];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -646,16 +661,16 @@ class Payment
         return (float) $stmt->fetchColumn();
     }
 
-    public static function countOverdueDueThisWeek(PDO $pdo, ?string $companyId): int
+    public static function countOverdueDueThisMonth(PDO $pdo, ?string $companyId): int
     {
-        $week = self::currentWeekRange();
+        $month = self::currentMonthRange();
         $sql = 'SELECT COUNT(*) FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
                 AND DATE(p.due_date) >= ? AND DATE(p.due_date) < CURDATE() ';
-        $params = [$week['start']];
+        $params = [$month['start']];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
@@ -665,16 +680,16 @@ class Payment
         return (int) $stmt->fetchColumn();
     }
 
-    public static function sumOverdueDueThisWeek(PDO $pdo, ?string $companyId): float
+    public static function sumOverdueDueThisMonth(PDO $pdo, ?string $companyId): float
     {
-        $week = self::currentWeekRange();
+        $month = self::currentMonthRange();
         $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
                 AND DATE(p.due_date) >= ? AND DATE(p.due_date) < CURDATE() ';
-        $params = [$week['start']];
+        $params = [$month['start']];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;

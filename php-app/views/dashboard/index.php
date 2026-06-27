@@ -174,22 +174,22 @@ $userDisplayName = trim(($authUser['first_name'] ?? '') . ' ' . ($authUser['last
 </div>
 
 <?php
-$weekRange = $weekRange ?? Payment::currentWeekRange();
-$weekOverdueList = $weekOverdueList ?? [];
-$weekDueList = $weekDueList ?? [];
-$weekPaidList = $weekPaidList ?? [];
-$hasWeekData = !empty($showWeekPanel);
+$monthRange = $monthRange ?? Payment::currentMonthRange();
+$monthOverdueList = $monthOverdueList ?? [];
+$monthDueList = $monthDueList ?? [];
+$monthPaidList = $monthPaidList ?? [];
+$hasMonthData = !empty($showMonthPanel);
 ?>
-<?php if ($hasWeekData): ?>
-<section class="mb-8 rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" aria-label="Bu hafta özeti">
+<?php if ($hasMonthData): ?>
+<section class="mb-8 rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" aria-label="Bu ay özeti">
     <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-700 bg-gradient-to-r from-slate-50 to-white dark:from-gray-800 dark:to-gray-800/80 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                <i class="bi bi-calendar-week text-xl"></i>
+                <i class="bi bi-calendar-month text-xl"></i>
             </span>
             <div>
-                <h2 class="text-base font-bold text-gray-900 dark:text-white">Bu Hafta</h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($weekRange['label'] ?? '') ?> · Pazartesi–Pazar</p>
+                <h2 class="text-base font-bold text-gray-900 dark:text-white">Bu Ay</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($monthRange['label'] ?? '') ?></p>
             </div>
         </div>
         <a href="/odemeler?collect=1" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm transition-colors">
@@ -200,23 +200,23 @@ $hasWeekData = !empty($showWeekPanel);
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-100 dark:bg-gray-700">
         <div class="bg-white dark:bg-gray-800 p-4">
             <p class="text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider mb-1">Toplam geciken</p>
-            <p class="text-xl font-bold text-red-700 dark:text-red-300 tabular-nums"><?= fmtMoney($weekOverdueSum ?? 0) ?> ₺</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($weekOverdueCount ?? 0) ?> ödeme</p>
+            <p class="text-xl font-bold text-red-700 dark:text-red-300 tabular-nums"><?= fmtMoney($monthOverdueSum ?? 0) ?> ₺</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($monthOverdueCount ?? 0) ?> ödeme</p>
         </div>
         <div class="bg-white dark:bg-gray-800 p-4">
-            <p class="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider mb-1">Bu hafta geciken</p>
-            <p class="text-xl font-bold text-orange-700 dark:text-orange-300 tabular-nums"><?= fmtMoney($weekNewOverdueSum ?? 0) ?> ₺</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($weekNewOverdueCount ?? 0) ?> ödeme · vadesi bu hafta doldu</p>
+            <p class="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider mb-1">Bu ay geciken</p>
+            <p class="text-xl font-bold text-orange-700 dark:text-orange-300 tabular-nums"><?= fmtMoney($monthNewOverdueSum ?? 0) ?> ₺</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($monthNewOverdueCount ?? 0) ?> ödeme · vadesi bu ay doldu</p>
         </div>
         <div class="bg-white dark:bg-gray-800 p-4">
-            <p class="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider mb-1">Bu hafta vadesi gelen</p>
-            <p class="text-xl font-bold text-amber-700 dark:text-amber-300 tabular-nums"><?= fmtMoney($weekDueSum ?? 0) ?> ₺</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($weekDueCount ?? 0) ?> ödeme · bugünden itibaren</p>
+            <p class="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider mb-1">Bu ay vadesi gelen</p>
+            <p class="text-xl font-bold text-amber-700 dark:text-amber-300 tabular-nums"><?= fmtMoney($monthDueSum ?? 0) ?> ₺</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($monthDueCount ?? 0) ?> ödeme · bugünden itibaren</p>
         </div>
         <div class="bg-white dark:bg-gray-800 p-4">
-            <p class="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider mb-1">Bu hafta tahsil edilen</p>
-            <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300 tabular-nums"><?= fmtMoney($weekPaidSum ?? 0) ?> ₺</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= count($weekPaidList) ?> son işlem gösteriliyor</p>
+            <p class="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider mb-1">Bu ay tahsil edilen</p>
+            <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300 tabular-nums"><?= fmtMoney($monthPaidSum ?? 0) ?> ₺</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= count($monthPaidList) ?> son işlem gösteriliyor</p>
         </div>
     </div>
 
@@ -227,11 +227,11 @@ $hasWeekData = !empty($showWeekPanel);
                 <span class="w-2 h-2 rounded-full bg-red-500"></span>
                 Geciken ödemeler
             </h3>
-            <?php if (empty($weekOverdueList)): ?>
+            <?php if (empty($monthOverdueList)): ?>
                 <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Geciken ödeme yok</p>
             <?php else: ?>
                 <ul class="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    <?php foreach ($weekOverdueList as $p):
+                    <?php foreach ($monthOverdueList as $p):
                         $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
                         $late = daysOverdue($p['due_date'] ?? '');
                     ?>
@@ -251,17 +251,17 @@ $hasWeekData = !empty($showWeekPanel);
             <?php endif; ?>
         </div>
 
-        <!-- Bu hafta vadesi gelen -->
+        <!-- Bu ay vadesi gelen -->
         <div class="p-4 lg:p-5 border-t lg:border-t-0 border-slate-100 dark:border-gray-700">
             <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                Bu hafta vadesi gelen
+                Bu ay vadesi gelen
             </h3>
-            <?php if (empty($weekDueList)): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu hafta kalan vade yok</p>
+            <?php if (empty($monthDueList)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu ay kalan vade yok</p>
             <?php else: ?>
                 <ul class="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    <?php foreach ($weekDueList as $p):
+                    <?php foreach ($monthDueList as $p):
                         $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
                         $dueTs = strtotime(explode(' ', $p['due_date'] ?? '')[0] ?? '');
                         $isToday = $dueTs === strtotime(date('Y-m-d'));
@@ -284,17 +284,17 @@ $hasWeekData = !empty($showWeekPanel);
             <?php endif; ?>
         </div>
 
-        <!-- Bu hafta tahsil edilen -->
+        <!-- Bu ay tahsil edilen -->
         <div class="p-4 lg:p-5 border-t lg:border-t-0 border-slate-100 dark:border-gray-700">
             <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                Bu hafta tahsil edilen
+                Bu ay tahsil edilen
             </h3>
-            <?php if (empty($weekPaidList)): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu hafta henüz tahsilat yok</p>
+            <?php if (empty($monthPaidList)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu ay henüz tahsilat yok</p>
             <?php else: ?>
                 <ul class="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    <?php foreach ($weekPaidList as $p):
+                    <?php foreach ($monthPaidList as $p):
                         $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
                     ?>
                     <li class="flex items-start justify-between gap-2 py-2.5 px-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-900/10 border border-emerald-100/80 dark:border-emerald-900/30">
@@ -313,7 +313,7 @@ $hasWeekData = !empty($showWeekPanel);
 </section>
 <?php endif; ?>
 
-<?php if (!empty($showWeekPanel)): ?>
+<?php if (!empty($showMonthPanel)): ?>
 <section class="mb-8 rounded-2xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" aria-label="Erken ve peşin ödemeler">
     <div class="px-5 py-4 border-b border-blue-100 dark:border-blue-900/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">

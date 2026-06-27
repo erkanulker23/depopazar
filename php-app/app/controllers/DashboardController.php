@@ -71,18 +71,18 @@ class DashboardController
         $upcomingPayments = [];
         $expiringContracts = [];
         $customersWithUnpaid = [];
-        $weekRange = Payment::currentWeekRange();
-        $weekOverdueList = [];
-        $weekDueList = [];
-        $weekPaidList = [];
-        $weekOverdueCount = 0;
-        $weekOverdueSum = 0.0;
-        $weekNewOverdueCount = 0;
-        $weekNewOverdueSum = 0.0;
-        $weekDueCount = 0;
-        $weekDueSum = 0.0;
-        $weekPaidSum = 0.0;
-        $showWeekPanel = false;
+        $monthRange = Payment::currentMonthRange();
+        $monthOverdueList = [];
+        $monthDueList = [];
+        $monthPaidList = [];
+        $monthOverdueCount = 0;
+        $monthOverdueSum = 0.0;
+        $monthNewOverdueCount = 0;
+        $monthNewOverdueSum = 0.0;
+        $monthDueCount = 0;
+        $monthDueSum = 0.0;
+        $monthPaidSum = 0.0;
+        $showMonthPanel = false;
         $earlyPaymentsList = [];
         $prepaidContracts = [];
         $earlyPaymentsCount = 0;
@@ -93,21 +93,21 @@ class DashboardController
             $upcomingPayments = Payment::findUpcoming($this->pdo, $cid, 10);
             $expiringContracts = Contract::findExpiringSoon($this->pdo, $cid, 30);
             $customersWithUnpaid = Payment::findCustomersWithUnpaidPayments($this->pdo, $cid, 50);
-            $weekOverdueList = Payment::findOverdueList($this->pdo, $cid, 12);
-            $weekDueList = Payment::findDueThisWeek($this->pdo, $cid, 12);
-            $weekPaidList = Payment::findPaidThisWeek($this->pdo, $cid, 8);
-            $weekOverdueCount = $cid
+            $monthOverdueList = Payment::findOverdueList($this->pdo, $cid, 12);
+            $monthDueList = Payment::findDueThisMonth($this->pdo, $cid, 12);
+            $monthPaidList = Payment::findPaidThisMonth($this->pdo, $cid, 8);
+            $monthOverdueCount = $cid
                 ? Payment::countOverdueByDueDate($this->pdo, $cid)
                 : Payment::countOverdueByDueDateGlobal($this->pdo);
-            $weekOverdueSum = $cid
+            $monthOverdueSum = $cid
                 ? Payment::sumOverdueByCompany($this->pdo, $cid)
                 : Payment::sumOverdueGlobal($this->pdo);
-            $weekNewOverdueCount = Payment::countOverdueDueThisWeek($this->pdo, $cid);
-            $weekNewOverdueSum = Payment::sumOverdueDueThisWeek($this->pdo, $cid);
-            $weekDueCount = Payment::countDueThisWeek($this->pdo, $cid);
-            $weekDueSum = Payment::sumDueThisWeek($this->pdo, $cid);
-            $weekPaidSum = Payment::sumPaidThisWeek($this->pdo, $cid);
-            $showWeekPanel = true;
+            $monthNewOverdueCount = Payment::countOverdueDueThisMonth($this->pdo, $cid);
+            $monthNewOverdueSum = Payment::sumOverdueDueThisMonth($this->pdo, $cid);
+            $monthDueCount = Payment::countDueThisMonth($this->pdo, $cid);
+            $monthDueSum = Payment::sumDueThisMonth($this->pdo, $cid);
+            $monthPaidSum = Payment::sumPaidThisMonth($this->pdo, $cid);
+            $showMonthPanel = true;
             $earlyPaymentsList = Payment::findEarlyPayments($this->pdo, $cid, 8);
             $prepaidContracts = Payment::findFullyPrepaidContracts($this->pdo, $cid, 6);
             $earlyPaymentsCount = Payment::countEarlyPayments($this->pdo, $cid);

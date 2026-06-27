@@ -22,7 +22,7 @@ ob_start();
             <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Ödeme Detayı</h1>
             <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($payment['payment_number'] ?? '') ?></p>
         </div>
-        <div class="page-header-actions flex flex-wrap items-center gap-2">
+        <div class="page-header-actions flex flex-nowrap md:flex-wrap items-center gap-2">
             <a href="/odemeler/<?= htmlspecialchars($payment['id'] ?? '') ?>/yazdir" target="_blank" class="btn-touch inline-flex items-center justify-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
                 <i class="bi bi-printer mr-2"></i> Yazdır
             </a>

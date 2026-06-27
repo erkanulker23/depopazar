@@ -23,7 +23,7 @@ ob_start();
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Sözleşme Detayı</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($contract['contract_number'] ?? '') ?></p>
     </div>
-    <div class="page-header-actions flex flex-wrap gap-2">
+    <div class="page-header-actions flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto">
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/duzenle" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
             <i class="bi bi-pencil mr-2"></i> Düzenle
         </a>
@@ -71,7 +71,7 @@ ob_start();
 <?php endif; ?>
 
 <!-- Çıktı: barkod sayfası tasarımına uyumlu -->
-<div class="print-fatura hidden bg-white p-6 max-w-4xl mx-auto border-2 border-gray-200 rounded-xl mb-8 print:border-gray-400">
+<div class="print-fatura hidden bg-white p-6 max-w-4xl mx-auto border-2 border-gray-200 rounded-xl print:border-gray-400">
     <h1 class="text-xl font-bold text-center text-gray-900 mb-6">Sözleşme Detayı</h1>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
@@ -277,7 +277,9 @@ ob_start();
                             <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
                                 <?php if (paymentIsCollectible($p)): ?>
-                                    <button type="button" onclick="openCollectModal(<?= htmlspecialchars(json_encode([['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']])) ?>)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Ödeme al</button>
+                                    <button type="button"
+                                            class="contract-collect-pay-btn inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700"
+                                            data-payments="<?= htmlspecialchars(json_encode([['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']]), ENT_QUOTES, 'UTF-8') ?>">Ödeme al</button>
                                 <?php else: ?>
                                     <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600">Detay</a>
                                 <?php endif; ?>
@@ -308,7 +310,9 @@ ob_start();
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($p['paid_at'] ?? null) ?></td>
                                     <td class="px-4 py-3">
                                         <?php if (paymentIsCollectible($p)): ?>
-                                            <button type="button" onclick="openCollectModal(<?= htmlspecialchars(json_encode([['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']])) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</button>
+                                            <button type="button"
+                                                    class="contract-collect-pay-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium"
+                                                    data-payments="<?= htmlspecialchars(json_encode([['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']]), ENT_QUOTES, 'UTF-8') ?>">Ödeme al</button>
                                         <?php else: ?>
                                             <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm">Detay</a>
                                         <?php endif; ?>
@@ -469,6 +473,16 @@ function backCollectMethod() {
     document.getElementById('collectStepBank').classList.add('hidden');
 }
 document.getElementById('collectModal').addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCollectModal(); });
+document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var raw = btn.getAttribute('data-payments');
+        var payments = null;
+        if (raw) {
+            try { payments = JSON.parse(raw); } catch (e) { payments = null; }
+        }
+        openCollectModal(payments);
+    });
+});
 <?php if (!empty($_GET['collectPay'])): ?>document.addEventListener('DOMContentLoaded', function() { openCollectModal(); });<?php endif; ?>
 </script>
 <?php endif; ?>

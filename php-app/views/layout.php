@@ -102,7 +102,13 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); --safe-left: env(safe-area-inset-left); --safe-right: env(safe-area-inset-right); }
+        :root {
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+            --safe-left: env(safe-area-inset-left);
+            --safe-right: env(safe-area-inset-right);
+            --mobile-nav-height: calc(4.25rem + var(--safe-bottom));
+        }
         html, body, input, select, textarea, button { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
         .dark .nav-active { background: linear-gradient(135deg, #6b4c3b 0%, #5c4033 100%); box-shadow: 0 4px 14px rgba(92,64,51,.35); }
@@ -149,12 +155,67 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
             }
         }
         * { -webkit-tap-highlight-color: transparent; }
-        html { overflow-x: hidden; scroll-padding-bottom: calc(6.5rem + var(--safe-bottom)); }
+        html { overflow-x: hidden; scroll-padding-bottom: var(--mobile-nav-height); }
         .main-content-wrap { padding-bottom: env(safe-area-inset-bottom, 0); }
+        @media (max-width: 767px) {
+            html { scroll-padding-bottom: var(--mobile-nav-height); }
+            .main-shell {
+                flex: none !important;
+                min-height: 0 !important;
+                width: 100%;
+            }
+            body > .flex.min-h-screen {
+                min-height: 0;
+                align-items: flex-start;
+            }
+            .main-content-wrap {
+                flex: none !important;
+                padding-bottom: var(--mobile-nav-height) !important;
+            }
+            /* Alt menü yüksekliği kadar boşluk — fazla padding kaldırıldı */
+            .page-header-actions {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                gap: 0.5rem;
+                padding-bottom: 0.125rem;
+            }
+            .page-header-actions::-webkit-scrollbar { display: none; }
+            .page-header-actions > a,
+            .page-header-actions > button,
+            .page-header-actions > form {
+                flex-shrink: 0;
+            }
+            .mobile-card {
+                border-radius: 1rem;
+                overflow: hidden;
+            }
+            .mobile-card > .overflow-x-auto,
+            .mobile-card .table-scroll {
+                margin-left: -0.25rem;
+                margin-right: -0.25rem;
+                padding-left: 0.25rem;
+                padding-right: 0.25rem;
+            }
+            /* Gizli yazdırma / modal blokları yer kaplamasın */
+            .hidden,
+            .modal-overlay.hidden {
+                display: none !important;
+            }
+        }
+        @media (min-width: 768px) {
+            .main-content-wrap {
+                flex: 1 1 auto;
+                min-height: 0;
+            }
+        }
         @media (max-width: 767px) {
             #sidebar { padding-top: max(1rem, var(--safe-top)); width: min(300px, 88vw); }
             .main-content-wrap {
-                padding-bottom: calc(6.5rem + var(--safe-bottom)) !important;
+                padding-bottom: var(--mobile-nav-height) !important;
             }
             .table-responsive,
             .table-scroll,
@@ -211,16 +272,16 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 min-height: 44px;
             }
             .page-header-actions > a,
-            .page-header-actions > button {
-                flex: 1 1 calc(50% - 0.25rem);
-                min-width: 0;
-                justify-content: center;
-                min-height: 44px;
+            .page-header-actions > button,
+            .page-header-actions > form {
+                flex: 0 0 auto;
+                min-width: auto;
+                white-space: nowrap;
             }
             /* Form kaydet / gönder — alt menünün üstünde yapışkan */
             .form-submit-bar {
                 position: sticky;
-                bottom: calc(5.25rem + var(--safe-bottom));
+                bottom: var(--mobile-nav-height);
                 z-index: 35;
                 margin-top: 1rem;
                 margin-left: -0.25rem;
@@ -250,7 +311,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
             main form:not(.modal-overlay form) > div:last-child:has(> button[type="submit"]:only-child),
             main form:not(.modal-overlay form) > div:last-child:has(> button[type="submit"]:last-child:not(:first-child)) {
                 position: sticky;
-                bottom: calc(5.25rem + var(--safe-bottom));
+                bottom: var(--mobile-nav-height);
                 z-index: 35;
                 padding-top: 0.75rem;
                 padding-bottom: 0.25rem;
@@ -429,7 +490,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 </div>
             </div>
         </aside>
-        <main class="flex-1 min-w-0 flex flex-col min-h-screen">
+        <main class="main-shell flex-1 min-w-0 flex flex-col md:min-h-screen">
             <div class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-4 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-[#3d342e] bg-white/95 dark:bg-[#241e1b]/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
                 <div class="flex items-center gap-2 min-w-0 md:mr-auto">
                     <?php if (!empty($companyLogoUrl)): ?>
@@ -491,7 +552,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 </div>
             </div>
             <?php endif; ?>
-            <div class="flex-1 p-4 md:p-6 lg:p-8 md:pb-6 min-h-0 main-content-wrap">
+            <div class="p-4 md:p-6 lg:p-8 md:pb-6 main-content-wrap md:flex-1 md:min-h-0">
                 <?= $content ?? '' ?>
             </div>
         </main>
