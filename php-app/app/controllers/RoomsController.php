@@ -38,6 +38,16 @@ class RoomsController
         }
         $rooms = array_values($rooms);
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
+        $filterWarehouseMeta = null;
+        $warehouseRoomStats = null;
+        if ($filterWarehouseId !== null) {
+            $stmtWh = $this->pdo->prepare('SELECT id, name, total_floors FROM warehouses WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+            $stmtWh->execute([$filterWarehouseId]);
+            $filterWarehouseMeta = $stmtWh->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($filterWarehouseMeta) {
+                $warehouseRoomStats = Room::statsByWarehouseId($this->pdo, $filterWarehouseId, $companyId);
+            }
+        }
         // Oda başına aktif sözleşme sayısı (silinmemiş müşteriye ait, detay sayfasıyla aynı mantık)
         $activeContractCountByRoom = [];
         if (!empty($rooms)) {

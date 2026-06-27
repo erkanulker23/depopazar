@@ -7,6 +7,21 @@ if (!function_exists('fmtPrice')) {
     }
 }
 
+/** Oda numarası gösterimi (sayısal değerlerde 01, 02 … biçimi) */
+if (!function_exists('fmtRoomNumber')) {
+    function fmtRoomNumber(?string $roomNumber): string
+    {
+        $value = trim((string) $roomNumber);
+        if ($value === '') {
+            return '–';
+        }
+        if (ctype_digit($value)) {
+            return strlen($value) < 2 ? str_pad($value, 2, '0', STR_PAD_LEFT) : $value;
+        }
+        return $value;
+    }
+}
+
 /** Tarih gösterimi (vade, sözleşme dönemi vb.) */
 if (!function_exists('fmtDate')) {
     function fmtDate(?string $value, string $fallback = '–'): string

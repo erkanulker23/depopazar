@@ -33,13 +33,13 @@ class Warehouse
     {
         if ($companyId) {
             $sql = 'SELECT w.*, 
-                  (SELECT COUNT(*) FROM rooms r WHERE r.warehouse_id = w.id AND r.deleted_at IS NULL) AS room_count
+                  (SELECT COUNT(*) FROM rooms r INNER JOIN warehouses wr ON wr.id = r.warehouse_id AND wr.deleted_at IS NULL WHERE r.warehouse_id = w.id AND r.deleted_at IS NULL) AS room_count
                  FROM warehouses w 
                  WHERE w.company_id = ? AND w.deleted_at IS NULL ';
             $params = [$companyId];
         } else {
             $sql = 'SELECT w.*, 
-                  (SELECT COUNT(*) FROM rooms r WHERE r.warehouse_id = w.id AND r.deleted_at IS NULL) AS room_count
+                  (SELECT COUNT(*) FROM rooms r INNER JOIN warehouses wr ON wr.id = r.warehouse_id AND wr.deleted_at IS NULL WHERE r.warehouse_id = w.id AND r.deleted_at IS NULL) AS room_count
                  FROM warehouses w 
                  WHERE w.deleted_at IS NULL ';
             $params = [];

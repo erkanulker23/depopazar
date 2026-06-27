@@ -15,6 +15,11 @@ ob_start();
     $statusGet = isset($_GET['status']) ? trim((string) $_GET['status']) : '';
     $hasContractGet = isset($_GET['has_contract']) ? trim((string) $_GET['has_contract']) : '';
     $hasActiveFilters = $qGet !== '' || $warehouseIdGet !== '' || $statusGet !== '' || $hasContractGet !== '';
+    $hasSubFilters = $qGet !== '' || $statusGet !== '' || $hasContractGet !== '';
+    $warehouseRoomStats = $warehouseRoomStats ?? null;
+    $filterWarehouseMeta = $filterWarehouseMeta ?? null;
+    $warehouseRoomTotal = (int) ($warehouseRoomStats['total'] ?? 0);
+    $listedRoomCount = count($rooms);
     $exportParams = array_filter([
         'warehouse_id' => $warehouseIdGet,
         'q' => $qGet,
@@ -74,19 +79,33 @@ ob_start();
     </div>
 <?php endif; ?>
 
-<?php if ($hasActiveFilters): ?>
+<?php if ($warehouseIdGet !== '' && $filterWarehouseMeta): ?>
+    <?php
+    $whName = $filterWarehouseMeta['name'] ?? 'Seçili depo';
+    $statusBreakdown = $warehouseRoomStats['by_status'] ?? [];
+    ?>
+    <div class="mb-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-900/20 px-4 py-3">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                <?= htmlspecialchars($whName) ?>
+                — <?= number_format($warehouseRoomTotal, 0, ',', '.') ?> oda
+            </p>
+            <div class="flex flex-wrap gap-2 text-xs">
+                <span class="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Boş: <?= (int) ($statusBreakdown['empty'] ?? 0) ?></span>
+                <span class="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">Dolu: <?= (int) ($statusBreakdown['occupied'] ?? 0) ?></span>
+                <span class="px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">Rezerve: <?= (int) ($statusBreakdown['reserved'] ?? 0) ?></span>
+                <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Kilitli: <?= (int) ($statusBreakdown['locked'] ?? 0) ?></span>
+            </div>
+            <?php if ($hasSubFilters && $listedRoomCount !== $warehouseRoomTotal): ?>
+                <span class="text-sm text-gray-600 dark:text-gray-400"><?= number_format($listedRoomCount, 0, ',', '.') ?> / <?= number_format($warehouseRoomTotal, 0, ',', '.') ?> oda listeleniyor</span>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php elseif ($hasActiveFilters): ?>
     <div class="mb-4 flex flex-wrap items-center gap-2 text-sm">
-        <span class="text-gray-600 dark:text-gray-400"><?= number_format(count($rooms), 0, ',', '.') ?> oda listeleniyor</span>
+        <span class="text-gray-600 dark:text-gray-400"><?= number_format($listedRoomCount, 0, ',', '.') ?> oda listeleniyor</span>
         <?php if ($warehouseIdGet !== ''): ?>
-            <?php
-            $whName = 'Seçili depo';
-            foreach ($warehouses as $w) {
-                if (($w['id'] ?? '') === $warehouseIdGet) {
-                    $whName = $w['name'] ?? $whName;
-                    break;
-                }
-            }
-            ?>
+            <?php $whName = $filterWarehouseMeta['name'] ?? 'Seçili depo'; ?>
             <span class="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-xs font-medium"><?= htmlspecialchars($whName) ?></span>
         <?php endif; ?>
         <?php if ($statusGet !== '' && isset($statusLabels[$statusGet])): ?>
@@ -133,7 +152,7 @@ ob_start();
                         <?php $status = $r['status'] ?? 'empty'; ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="room-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($r['id']) ?>"></label></td>
-                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($r['room_number']) ?></td>
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars(fmtRoomNumber($r['room_number'] ?? '')) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600"><?= htmlspecialchars($r['warehouse_name'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600"><?= number_format((float)$r['area_m2'], 2, ',', '.') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($r['monthly_price'] ?? 0) ?></td>

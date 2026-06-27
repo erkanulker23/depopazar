@@ -5,7 +5,50 @@ class Room
     public static function sqlOrderByRoomNumber(string $alias = 'r'): string
     {
         $col = ($alias !== '' ? $alias . '.' : '') . 'room_number';
-        return 'CAST(' . $col . ' AS UNSIGNED) ASC, ' . $col . ' ASC';
+        return 'CAST(' . $col . ' AS UNSIGNED) ASC, LENGTH(' . $col . ') ASC, ' . $col . ' ASC';
+    }
+
+    /** Depodaki oda sayısı (silinmemiş depo ve oda kayıtları) */
+    public static function countByWarehouseId(PDO $pdo, string $warehouseId, ?string $companyId = null): int
+    {
+        $sql = 'SELECT COUNT(*) FROM rooms r
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE r.deleted_at IS NULL AND r.warehouse_id = ? ';
+        $params = [$warehouseId];
+        if ($companyId !== null && $companyId !== '') {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** Depo oda özeti: toplam ve durum dağılımı */
+    public static function statsByWarehouseId(PDO $pdo, string $warehouseId, ?string $companyId = null): array
+    {
+        $sql = 'SELECT r.status, COUNT(*) AS cnt FROM rooms r
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE r.deleted_at IS NULL AND r.warehouse_id = ? ';
+        $params = [$warehouseId];
+        if ($companyId !== null && $companyId !== '') {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY r.status ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $byStatus = ['empty' => 0, 'occupied' => 0, 'reserved' => 0, 'locked' => 0];
+        $total = 0;
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $st = $row['status'] ?? 'empty';
+            $cnt = (int) ($row['cnt'] ?? 0);
+            if (isset($byStatus[$st])) {
+                $byStatus[$st] = $cnt;
+            }
+            $total += $cnt;
+        }
+        return ['total' => $total, 'by_status' => $byStatus];
     }
 
     public static function create(PDO $pdo, array $data): array
