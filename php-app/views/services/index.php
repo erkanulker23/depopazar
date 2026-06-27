@@ -18,16 +18,24 @@ ob_start();
 <?php endif; ?>
 
 <!-- Filtre + Kategori ekle -->
+<?php
+$hasActiveFilters = $kategoriGet !== '';
+$activeFilterTags = [];
+if ($kategoriGet !== '') {
+    foreach ($categories as $cat) {
+        if (($cat['id'] ?? '') === $kategoriGet) {
+            $activeFilterTags[] = 'Kategori: ' . ($cat['name'] ?? '');
+            break;
+        }
+    }
+}
+?>
 <div class="page-toolbar flex flex-wrap items-center gap-3 mb-4">
-    <form method="get" action="/hizmetler" class="page-toolbar-form flex flex-wrap items-center gap-2 flex-1 min-w-0">
-        <select name="kategori" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white flex-1 min-w-[140px]">
-            <option value="">Tüm kategoriler</option>
-            <?php foreach ($categories as $cat): ?>
-                <option value="<?= htmlspecialchars($cat['id']) ?>" <?= $kategoriGet === $cat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-    </form>
+    <?php
+    $filterModalId = 'serviceFilterModal';
+    $filterClearUrl = '/hizmetler';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <button type="button" onclick="openSvcModal('addCategoryModal')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Kategori Ekle
     </button>
@@ -109,6 +117,27 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="service_filter_kategori">Kategori</label>
+        <select name="kategori" id="service_filter_kategori" class="filter-input">
+            <option value="">Tüm kategoriler</option>
+            <?php foreach ($categories as $cat): ?>
+                <option value="<?= htmlspecialchars($cat['id']) ?>" <?= $kategoriGet === $cat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['name']) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'serviceFilterForm';
+$filterFormAction = '/hizmetler';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Hizmet Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <!-- Modal: Kategori Ekle -->
 <div id="addCategoryModal" class="modal-overlay hidden fixed inset-0 z-[60] overflow-y-auto">

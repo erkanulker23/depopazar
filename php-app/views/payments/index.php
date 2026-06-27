@@ -26,47 +26,32 @@ $totalPages = $totalPages ?? 1;
 $page = $page ?? 1;
 ?>
 <?php $preselectedCustomerId = $preselectedCustomerId ?? ''; ?>
+<?php
+$paymentClearUrl = '/odemeler' . ($collectMode ? '?collect=1' . ($preselectedCustomerId !== '' ? '&customer=' . urlencode($preselectedCustomerId) : '') : '');
+$activeFilterTags = [];
+if ($payQ !== '') $activeFilterTags[] = 'Arama: ' . $payQ;
+if ($payStatus !== '') $activeFilterTags[] = 'Durum: ' . ($statusLabels[$payStatus] ?? $payStatus);
+if ($dateFrom !== '') $activeFilterTags[] = 'Başlangıç: ' . $dateFrom;
+if ($dateTo !== '') $activeFilterTags[] = 'Bitiş: ' . $dateTo;
+?>
 <div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <form method="get" action="/odemeler" id="paymentFilterForm" class="page-toolbar-form flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <?php if ($collectMode): ?><input type="hidden" name="collect" value="1"><?php endif; ?>
-        <?php if ($collectMode && $preselectedCustomerId !== ''): ?><input type="hidden" name="customer" value="<?= htmlspecialchars($preselectedCustomerId) ?>"><?php endif; ?>
-        <input type="search" name="q" id="paymentSearchInput" value="<?= htmlspecialchars($payQ) ?>" placeholder="<?= $collectMode ? 'Müşteri, ödeme no, sözleşme ara...' : 'Ödeme no, sözleşme, müşteri ara...' ?>" class="flex-1 min-w-0 sm:w-48 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <input type="date" name="date_from" value="<?= htmlspecialchars($dateFrom) ?>" class="pay-filter-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi başlangıç">
-        <input type="date" name="date_to" value="<?= htmlspecialchars($dateTo) ?>" class="pay-filter-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi bitiş">
-        <select name="status" class="pay-filter-auto btn-touch flex-1 min-w-0 sm:w-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            <option value=""><?= $collectMode ? 'Tüm borçlar' : 'Tüm Durumlar' ?></option>
-            <?php if (!$collectMode): ?>
-            <option value="unpaid" <?= $payStatus === 'unpaid' ? 'selected' : '' ?>>Bekleyen / Gecikmiş</option>
-            <?php endif; ?>
-            <option value="pending" <?= $payStatus === 'pending' ? 'selected' : '' ?>>Bekliyor<?= $collectMode ? ' / vadesi gelmemiş' : '' ?></option>
-            <option value="overdue" <?= $payStatus === 'overdue' ? 'selected' : '' ?>>Gecikmiş</option>
-            <?php if (!$collectMode): ?>
-            <option value="paid" <?= $payStatus === 'paid' ? 'selected' : '' ?>>Ödendi</option>
-            <option value="early" <?= $payStatus === 'early' ? 'selected' : '' ?>>Erken ödendi (vadesinden önce)</option>
-            <option value="cancelled" <?= $payStatus === 'cancelled' ? 'selected' : '' ?>>İptal</option>
-            <?php endif; ?>
-        </select>
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-        <?php if ($hasActiveFilters): ?><a href="/odemeler<?= $collectMode ? '?collect=1' . ($preselectedCustomerId !== '' ? '&customer=' . urlencode($preselectedCustomerId) : '') : '' ?>" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
-    </form>
+    <?php
+    $filterModalId = 'paymentFilterModal';
+    $filterClearUrl = $paymentClearUrl;
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <button type="button" onclick="openCollectModal()" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
         <i class="bi bi-bank mr-2"></i> Ödeme Al
     </button>
 </div>
 
-<?php if ($hasActiveFilters): ?>
-    <div class="mb-4 flex flex-wrap items-center gap-2 text-sm">
-        <span class="text-gray-600 dark:text-gray-400">
-            <?php if ($collectMode): ?>
-                <?= count($customersWithDebt) ?> müşteri listeleniyor
-            <?php else: ?>
-                <?= count($paymentsByCustomer) ?> müşteri · <?= (int) $totalPayments ?> ödeme listeleniyor
-            <?php endif; ?>
-        </span>
-        <?php if ($payQ !== ''): ?><span class="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300">Arama: <?= htmlspecialchars($payQ) ?></span><?php endif; ?>
-        <?php if ($payStatus !== ''): ?><span class="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Durum: <?= htmlspecialchars($statusLabels[$payStatus] ?? $payStatus) ?></span><?php endif; ?>
-        <?php if ($dateFrom !== ''): ?><span class="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Başlangıç: <?= htmlspecialchars($dateFrom) ?></span><?php endif; ?>
-        <?php if ($dateTo !== ''): ?><span class="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Bitiş: <?= htmlspecialchars($dateTo) ?></span><?php endif; ?>
+<?php if ($hasActiveFilters && ($collectMode ? count($customersWithDebt) : count($paymentsByCustomer))): ?>
+    <div class="mb-4 text-sm text-gray-600 dark:text-gray-400 screen-only">
+        <?php if ($collectMode): ?>
+            <?= count($customersWithDebt) ?> müşteri listeleniyor
+        <?php else: ?>
+            <?= count($paymentsByCustomer) ?> müşteri · <?= (int) $totalPayments ?> ödeme listeleniyor
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 
@@ -198,6 +183,48 @@ $page = $page ?? 1;
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+ob_start();
+?>
+    <?php if ($collectMode): ?><input type="hidden" name="collect" value="1"><?php endif; ?>
+    <?php if ($collectMode && $preselectedCustomerId !== ''): ?><input type="hidden" name="customer" value="<?= htmlspecialchars($preselectedCustomerId) ?>"><?php endif; ?>
+    <div class="filter-field">
+        <label class="filter-label" for="paymentSearchInput">Ara</label>
+        <input type="search" name="q" id="paymentSearchInput" value="<?= htmlspecialchars($payQ) ?>" placeholder="<?= $collectMode ? 'Müşteri, ödeme no, sözleşme ara...' : 'Ödeme no, sözleşme, müşteri ara...' ?>" class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="payment_date_from">Vade başlangıç</label>
+        <input type="date" name="date_from" id="payment_date_from" value="<?= htmlspecialchars($dateFrom) ?>" class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="payment_date_to">Vade bitiş</label>
+        <input type="date" name="date_to" id="payment_date_to" value="<?= htmlspecialchars($dateTo) ?>" class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="payment_status">Durum</label>
+        <select name="status" id="payment_status" class="filter-input">
+            <option value=""><?= $collectMode ? 'Tüm borçlar' : 'Tüm Durumlar' ?></option>
+            <?php if (!$collectMode): ?>
+            <option value="unpaid" <?= $payStatus === 'unpaid' ? 'selected' : '' ?>>Bekleyen / Gecikmiş</option>
+            <?php endif; ?>
+            <option value="pending" <?= $payStatus === 'pending' ? 'selected' : '' ?>>Bekliyor<?= $collectMode ? ' / vadesi gelmemiş' : '' ?></option>
+            <option value="overdue" <?= $payStatus === 'overdue' ? 'selected' : '' ?>>Gecikmiş</option>
+            <?php if (!$collectMode): ?>
+            <option value="paid" <?= $payStatus === 'paid' ? 'selected' : '' ?>>Ödendi</option>
+            <option value="early" <?= $payStatus === 'early' ? 'selected' : '' ?>>Erken ödendi (vadesinden önce)</option>
+            <option value="cancelled" <?= $payStatus === 'cancelled' ? 'selected' : '' ?>>İptal</option>
+            <?php endif; ?>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'paymentFilterForm';
+$filterFormAction = '/odemeler';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Ödeme Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <!-- Ödeme Al Modal -->
 <div id="collectModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
@@ -623,30 +650,9 @@ document.getElementById('customerSearch')?.addEventListener('input', function() 
     applyPaymentSearchFilter(this.value);
 });
 (function() {
-    var filterForm = document.getElementById('paymentFilterForm');
-    var submitFilters = function() {
-        if (filterForm) filterForm.submit();
-    };
-    document.querySelectorAll('.pay-filter-auto').forEach(function(el) {
-        el.addEventListener('change', submitFilters);
-    });
     var searchInput = document.getElementById('paymentSearchInput');
-    var searchTimer;
-    if (searchInput && filterForm) {
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                submitFilters();
-            }
-        });
-        searchInput.addEventListener('input', function() {
-            applyPaymentSearchFilter(this.value);
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(submitFilters, 500);
-        });
-        if (searchInput.value.trim() !== '') {
-            applyPaymentSearchFilter(searchInput.value);
-        }
+    if (searchInput && searchInput.value.trim() !== '') {
+        applyPaymentSearchFilter(searchInput.value);
     }
     var modalSearch = document.getElementById('customerSearch');
     if (modalSearch && searchInput && searchInput.value.trim() !== '') {

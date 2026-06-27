@@ -46,15 +46,20 @@ CREATE TABLE IF NOT EXISTS `users` (
   `first_name` VARCHAR(100) NOT NULL,
   `last_name` VARCHAR(100) NOT NULL,
   `phone` VARCHAR(20) DEFAULT NULL,
+  `photo_url` TEXT DEFAULT NULL,
+  `managed_warehouse_id` CHAR(36) DEFAULT NULL,
   `role` ENUM('super_admin','company_owner','company_staff','data_entry','accounting','warehouse_manager','customer') DEFAULT 'customer',
   `company_id` CHAR(36) DEFAULT NULL,
   `is_active` TINYINT(1) DEFAULT 1,
+  `receive_email_notifications` TINYINT(1) NOT NULL DEFAULT 0,
   `last_login_at` DATETIME DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_email` (`email`),
   KEY `idx_users_company_id` (`company_id`),
+  KEY `idx_users_managed_warehouse_id` (`managed_warehouse_id`),
   KEY `idx_users_deleted_at` (`deleted_at`),
-  CONSTRAINT `fk_users_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL
+  CONSTRAINT `fk_users_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_users_managed_warehouse` FOREIGN KEY (`managed_warehouse_id`) REFERENCES `warehouses` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- warehouses
@@ -407,6 +412,7 @@ CREATE TABLE IF NOT EXISTS `personnel` (
   `first_name` VARCHAR(100) NOT NULL,
   `last_name` VARCHAR(100) NOT NULL,
   `phone` VARCHAR(20) DEFAULT NULL,
+  `photo_url` TEXT DEFAULT NULL,
   `job_type` VARCHAR(50) NOT NULL DEFAULT 'diger',
   `is_active` TINYINT(1) DEFAULT 1,
   `notes` TEXT DEFAULT NULL,

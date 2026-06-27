@@ -15,6 +15,11 @@ $expensesMigrationOk = $expensesMigrationOk ?? false;
 $currentQ = isset($_GET['q']) ? trim($_GET['q']) : '';
 $currentYear = isset($_GET['year']) && $_GET['year'] !== '' ? (int) $_GET['year'] : '';
 $currentMonth = isset($_GET['month']) && $_GET['month'] !== '' ? (int) $_GET['month'] : '';
+$hasActiveFilters = $currentQ !== '' || $currentYear !== '' || $currentMonth !== '';
+$activeFilterTags = [];
+if ($currentQ !== '') $activeFilterTags[] = 'Arama: ' . $currentQ;
+if ($currentYear !== '') $activeFilterTags[] = 'Yıl: ' . $currentYear;
+if ($currentMonth !== '') $activeFilterTags[] = 'Ay: ' . str_pad((string)$currentMonth, 2, '0', STR_PAD_LEFT);
 ob_start();
 ?>
 <div class="mb-6">
@@ -23,28 +28,11 @@ ob_start();
 </div>
 
 <div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <div class="flex flex-wrap items-center gap-2">
-        <form method="get" action="/nakliye-isler" class="flex flex-wrap items-center gap-2">
-            <input type="search" name="q" value="<?= htmlspecialchars($currentQ) ?>" placeholder="Müşteri ara..." class="px-3 py-2 border border-gray-300 rounded-xl text-sm w-48 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-            <select name="year" class="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                <option value="">Tüm Yıllar</option>
-                <?php for ($y = date('Y'); $y >= date('Y') - 5; $y--): ?>
-                    <option value="<?= $y ?>" <?= $currentYear === $y ? 'selected' : '' ?>><?= $y ?></option>
-                <?php endfor; ?>
-                <?php foreach ($years as $y): if ($y && !in_array($y, range(date('Y'), date('Y') - 5), true)): ?>
-                    <option value="<?= $y ?>" <?= $currentYear === $y ? 'selected' : '' ?>><?= $y ?></option>
-                <?php endif; endforeach; ?>
-            </select>
-            <select name="month" class="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                <option value="">Tüm Aylar</option>
-                <?php for ($m = 1; $m <= 12; $m++): ?>
-                    <option value="<?= $m ?>" <?= $currentMonth === $m ? 'selected' : '' ?>><?= str_pad((string)$m, 2, '0', STR_PAD_LEFT) ?></option>
-                <?php endfor; ?>
-            </select>
-            <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-        </form>
-        <a href="/nakliye-isler" class="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50">Filtreleri Temizle</a>
-    </div>
+    <?php
+    $filterModalId = 'transportFilterModal';
+    $filterClearUrl = '/nakliye-isler';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <button type="button" onclick="openNewJobModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
         <i class="bi bi-plus-lg mr-2"></i> Yeni Nakliye İşi Ekle
     </button>
@@ -452,6 +440,43 @@ ob_start();
         </div>
     </div>
 </div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="transport_filter_q">Ara</label>
+        <input type="search" name="q" id="transport_filter_q" value="<?= htmlspecialchars($currentQ) ?>" placeholder="Müşteri ara..." class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="transport_filter_year">Yıl</label>
+        <select name="year" id="transport_filter_year" class="filter-input">
+            <option value="">Tüm Yıllar</option>
+            <?php for ($y = date('Y'); $y >= date('Y') - 5; $y--): ?>
+                <option value="<?= $y ?>" <?= $currentYear === $y ? 'selected' : '' ?>><?= $y ?></option>
+            <?php endfor; ?>
+            <?php foreach ($years as $y): if ($y && !in_array($y, range(date('Y'), date('Y') - 5), true)): ?>
+                <option value="<?= $y ?>" <?= $currentYear === $y ? 'selected' : '' ?>><?= $y ?></option>
+            <?php endif; endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="transport_filter_month">Ay</label>
+        <select name="month" id="transport_filter_month" class="filter-input">
+            <option value="">Tüm Aylar</option>
+            <?php for ($m = 1; $m <= 12; $m++): ?>
+                <option value="<?= $m ?>" <?= $currentMonth === $m ? 'selected' : '' ?>><?= str_pad((string)$m, 2, '0', STR_PAD_LEFT) ?></option>
+            <?php endfor; ?>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'transportFilterForm';
+$filterFormAction = '/nakliye-isler';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Nakliye İşi Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <script>
 function openNewJobModal() {

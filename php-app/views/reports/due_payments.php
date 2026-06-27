@@ -16,13 +16,18 @@ $paidSum = $paidSum ?? 0;
 $unpaidSum = $unpaidSum ?? 0;
 $overdueSum = $overdueSum ?? 0;
 $periodLabel = date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate));
+$defaultStart = date('Y-m-01');
+$defaultEnd = date('Y-m-t');
+$hasActiveFilters = ($status ?? '') !== '' || ($search ?? '') !== '' || $startDate !== $defaultStart || $endDate !== $defaultEnd;
+$activeFilterTags = ['Dönem: ' . $periodLabel];
+if (($status ?? '') !== '') {
+    $activeFilterTags[] = 'Durum: ' . $statusLabel;
+}
+if (($search ?? '') !== '') {
+    $activeFilterTags[] = 'Arama: ' . $search;
+}
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
-$filterBaseQuery = array_filter([
-    'start_date' => $startDate,
-    'end_date' => $endDate,
-    'q' => $search,
-], static fn($v) => $v !== null && $v !== '');
 ?>
 <div class="mb-6 screen-only">
     <nav class="text-sm text-gray-500 dark:text-gray-400 mb-2">
@@ -41,71 +46,65 @@ $filterBaseQuery = array_filter([
     <strong class="ml-1">Ödenmiş:</strong> Vadesi bu dönemde olan ve tahsil edilmiş kayıtlar.
 </div>
 
-<form method="get" action="/raporlar/vadesi-gelen" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4 screen-only">
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yıl / Ay (hızlı)</label>
+<div class="page-toolbar flex flex-wrap items-center justify-between gap-3 mb-4 screen-only">
+    <?php
+    $filterModalId = 'duePaymentsFilterModal';
+    $filterClearUrl = '/raporlar/vadesi-gelen';
+    $filterTriggerClass = 'screen-only';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
+</div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label">Yıl / Ay (hızlı)</label>
         <div class="flex flex-wrap gap-2">
-            <select id="due_year" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+            <select id="due_year" class="filter-input flex-1 min-w-[5rem]">
                 <?php for ($y = (int) date('Y'); $y >= (int) date('Y') - 5; $y--): ?>
                     <option value="<?= $y ?>" <?= (int) date('Y', strtotime($startDate)) === $y ? 'selected' : '' ?>><?= $y ?></option>
                 <?php endfor; ?>
             </select>
-            <select id="due_month" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+            <select id="due_month" class="filter-input flex-1 min-w-[5rem]">
                 <?php $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']; foreach ($monthNames as $i => $mn): ?>
                     <option value="<?= $i + 1 ?>" <?= (int) date('n', strtotime($startDate)) === $i + 1 && date('Y-m', strtotime($startDate)) === date('Y-m', strtotime($endDate)) ? 'selected' : '' ?>><?= $mn ?></option>
                 <?php endforeach; ?>
             </select>
-            <button type="button" onclick="applyDueMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Ay uygula</button>
+            <button type="button" onclick="applyDueMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap">Ay uygula</button>
         </div>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vade başlangıç</label>
-        <input type="date" name="start_date" id="due_start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="due_start_date">Vade başlangıç</label>
+        <input type="date" name="start_date" id="due_start_date" value="<?= htmlspecialchars($startDate) ?>" class="filter-input">
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vade bitiş</label>
-        <input type="date" name="end_date" id="due_end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="due_end_date">Vade bitiş</label>
+        <input type="date" name="end_date" id="due_end_date" value="<?= htmlspecialchars($endDate) ?>" class="filter-input">
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Durum</label>
-        <select name="status" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="due_status">Durum</label>
+        <select name="status" id="due_status" class="filter-input">
             <option value="" <?= ($status ?? '') === '' ? 'selected' : '' ?>>Tümü</option>
             <option value="pending" <?= ($status ?? '') === 'pending' ? 'selected' : '' ?>>Bekleyen</option>
             <option value="overdue" <?= ($status ?? '') === 'overdue' ? 'selected' : '' ?>>Vadesi geçmiş</option>
             <option value="paid" <?= ($status ?? '') === 'paid' ? 'selected' : '' ?>>Ödenmiş</option>
-            <option value="unpaid" <?= ($status ?? '') === 'unpaid' ? 'selected' : '' ?>>Ödenmemiş (tümü)</option>
+            <option value="unpaid" <?= ($status ?? '') === 'unpaid' ? 'selected' : '' ?>>Ödenmemiş</option>
         </select>
     </div>
-    <div class="flex-1 min-w-[200px]">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ara</label>
-        <input type="search" name="q" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Müşteri, sözleşme, ödeme no…" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="due_search">Ara</label>
+        <input type="search" name="q" id="due_search" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Müşteri, sözleşme, ödeme no…" class="filter-input">
     </div>
-    <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
-    <a href="/raporlar/vadesi-gelen" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
-</form>
-
-<div class="flex flex-wrap gap-2 mb-6 screen-only">
-    <?php
-    $chips = [
-        '' => 'Tümü',
-        'pending' => 'Bekleyen',
-        'overdue' => 'Vadesi geçmiş',
-        'paid' => 'Ödenmiş',
-        'unpaid' => 'Ödenmemiş',
-    ];
-    foreach ($chips as $chipStatus => $chipLabel):
-        $chipQuery = $filterBaseQuery;
-        if ($chipStatus !== '') {
-            $chipQuery['status'] = $chipStatus;
-        }
-        $chipActive = ($status ?? '') === $chipStatus;
-    ?>
-    <a href="/raporlar/vadesi-gelen?<?= htmlspecialchars(http_build_query($chipQuery)) ?>"
-       class="px-3 py-1.5 rounded-full text-sm font-medium border transition-colors <?= $chipActive ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-emerald-500' ?>">
-        <?= htmlspecialchars($chipLabel) ?>
-    </a>
-    <?php endforeach; ?>
-</div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'duePaymentsFilterForm';
+$filterFormAction = '/raporlar/vadesi-gelen';
+$filterSubmitLabel = 'Göster';
+$filterModalTitle = 'Vadesi Gelen — Filtreler';
+$filterModalClass = 'screen-only';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <script>
 function applyDueMonthPreset() {

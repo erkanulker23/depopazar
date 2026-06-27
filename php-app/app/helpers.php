@@ -844,6 +844,106 @@ if (!function_exists('unlinkPublicFile')) {
     }
 }
 
+/** Personel profil fotoğrafı URL (dosya yoksa null) */
+if (!function_exists('personnelPhotoHref')) {
+    function personnelPhotoHref(?array $personnel): ?string
+    {
+        if (!$personnel) {
+            return null;
+        }
+        return publicUploadHref($personnel['photo_url'] ?? null);
+    }
+}
+
+/** Personel ad soyad baş harfleri (avatar yedek) */
+if (!function_exists('personnelInitials')) {
+    function personnelInitials(?array $personnel): string
+    {
+        if (!$personnel) {
+            return '?';
+        }
+        $a = mb_substr(trim($personnel['first_name'] ?? ''), 0, 1);
+        $b = mb_substr(trim($personnel['last_name'] ?? ''), 0, 1);
+        $init = mb_strtoupper($a . $b);
+        return $init !== '' ? $init : '?';
+    }
+}
+
+/** Personel profil fotoğrafı yükle; başarılıysa /uploads/personnel/... yolu */
+if (!function_exists('storePersonnelPhotoUpload')) {
+    function storePersonnelPhotoUpload(?array $file, string $personnelId): ?string
+    {
+        if (!$file || empty($file['name']) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+            return null;
+        }
+        $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/personnel' : dirname(__DIR__) . '/public/uploads/personnel';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        $safeId = preg_replace('/[^a-zA-Z0-9\-]/', '', $personnelId) ?: bin2hex(random_bytes(8));
+        $filename = 'personnel_' . $safeId . '_' . time() . '.' . $ext;
+        $path = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $path)) {
+            return null;
+        }
+        return '/uploads/personnel/' . $filename;
+    }
+}
+
+/** Kullanıcı profil fotoğrafı URL (dosya yoksa null) */
+if (!function_exists('userPhotoHref')) {
+    function userPhotoHref(?array $userRow): ?string
+    {
+        if (!$userRow) {
+            return null;
+        }
+        return publicUploadHref($userRow['photo_url'] ?? null);
+    }
+}
+
+/** Kullanıcı ad soyad baş harfleri (avatar yedek) */
+if (!function_exists('userInitials')) {
+    function userInitials(?array $userRow): string
+    {
+        if (!$userRow) {
+            return '?';
+        }
+        $a = mb_substr(trim($userRow['first_name'] ?? ''), 0, 1);
+        $b = mb_substr(trim($userRow['last_name'] ?? ''), 0, 1);
+        $init = mb_strtoupper($a . $b);
+        return $init !== '' ? $init : '?';
+    }
+}
+
+/** Kullanıcı profil fotoğrafı yükle; başarılıysa /uploads/users/... yolu */
+if (!function_exists('storeUserPhotoUpload')) {
+    function storeUserPhotoUpload(?array $file, string $userId): ?string
+    {
+        if (!$file || empty($file['name']) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+            return null;
+        }
+        $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/users' : dirname(__DIR__) . '/public/uploads/users';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        $safeId = preg_replace('/[^a-zA-Z0-9\-]/', '', $userId) ?: bin2hex(random_bytes(8));
+        $filename = 'user_' . $safeId . '_' . time() . '.' . $ext;
+        $path = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $path)) {
+            return null;
+        }
+        return '/uploads/users/' . $filename;
+    }
+}
+
 /** Flash mesajlarını okur ve oturumdan siler */
 if (!function_exists('flash_consume')) {
     /** @return array{success: ?string, error: ?string} */

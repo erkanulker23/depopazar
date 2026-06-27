@@ -27,6 +27,16 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
     }
     return 'Kredi Kartı';
 }
+$periodLabel = date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate));
+$hasActiveFilters = $categoryId !== '' || $paymentSourceType !== '' || $paymentSourceId !== '' || $startDate !== date('Y-m-01') || $endDate !== date('Y-m-t');
+$activeFilterTags = ['Dönem: ' . $periodLabel];
+if ($categoryId !== '') {
+    foreach ($categories as $c) {
+        if (($c['id'] ?? '') === $categoryId) { $activeFilterTags[] = 'Kategori: ' . ($c['name'] ?? ''); break; }
+    }
+}
+if ($paymentSourceType === 'bank_account') $activeFilterTags[] = 'Kaynak: Banka';
+elseif ($paymentSourceType === 'credit_card') $activeFilterTags[] = 'Kaynak: Kredi kartı';
 ?>
 <div class="mb-6">
     <nav class="text-sm text-gray-500 dark:text-gray-400 mb-2">
@@ -38,50 +48,66 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Tarih aralığına ve kategoriye göre masraf listesi</p>
 </div>
 
-<form method="get" action="/raporlar/masraflar" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yıl / Ay (hızlı)</label>
+<div class="page-toolbar mb-6">
+    <?php
+    $filterModalId = 'expenseReportFilterModal';
+    $filterClearUrl = '/raporlar/masraflar';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
+</div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label">Yıl / Ay (hızlı)</label>
         <div class="flex flex-wrap gap-2">
-            <select id="expense_year" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+            <select id="expense_year" class="filter-input flex-1 min-w-[5rem]">
                 <?php for ($y = (int) date('Y'); $y >= (int) date('Y') - 5; $y--): ?>
                     <option value="<?= $y ?>" <?= (int) date('Y', strtotime($startDate)) === $y ? 'selected' : '' ?>><?= $y ?></option>
                 <?php endfor; ?>
             </select>
-            <select id="expense_month" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+            <select id="expense_month" class="filter-input flex-1 min-w-[5rem]">
                 <?php $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']; foreach ($monthNames as $i => $mn): ?>
                     <option value="<?= $i + 1 ?>"><?= $mn ?></option>
                 <?php endforeach; ?>
             </select>
-            <button type="button" onclick="applyExpenseMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm">Ay uygula</button>
+            <button type="button" onclick="applyExpenseMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm whitespace-nowrap">Ay uygula</button>
         </div>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
-        <select name="category_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[160px]">
+    <div class="filter-field">
+        <label class="filter-label" for="expense_report_category">Kategori</label>
+        <select name="category_id" id="expense_report_category" class="filter-input">
             <option value="">Tümü</option>
             <?php foreach ($categories as $c): ?>
                 <option value="<?= htmlspecialchars($c['id']) ?>" <?= $categoryId === $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Kaynağı</label>
-        <select name="payment_source_type" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[140px]">
+    <div class="filter-field">
+        <label class="filter-label" for="expense_report_source_type">Ödeme Kaynağı</label>
+        <select name="payment_source_type" id="expense_report_source_type" class="filter-input">
             <option value="">Tümü</option>
             <option value="bank_account" <?= $paymentSourceType === 'bank_account' ? 'selected' : '' ?>>Banka Hesabı</option>
             <option value="credit_card" <?= $paymentSourceType === 'credit_card' ? 'selected' : '' ?>>Kredi Kartı</option>
         </select>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlangıç</label>
-        <input type="date" name="start_date" id="expense_start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="expense_start_date">Başlangıç</label>
+        <input type="date" name="start_date" id="expense_start_date" value="<?= htmlspecialchars($startDate) ?>" class="filter-input">
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş</label>
-        <input type="date" name="end_date" id="expense_end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="expense_end_date">Bitiş</label>
+        <input type="date" name="end_date" id="expense_end_date" value="<?= htmlspecialchars($endDate) ?>" class="filter-input">
     </div>
-    <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
-</form>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'expenseReportFilterForm';
+$filterFormAction = '/raporlar/masraflar';
+$filterSubmitLabel = 'Göster';
+$filterModalTitle = 'Masraf Raporu — Filtreler';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <?php
 $csvUrl = reportExportUrl('/raporlar/masraflar', array_filter([

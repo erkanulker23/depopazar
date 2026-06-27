@@ -4,6 +4,8 @@ $roleLabels = $roleLabels ?? [];
 $formRoleOptions = $formRoleOptions ?? RolePermissions::formRoleOptions(false);
 $staff = $staff ?? [];
 $companies = $companies ?? [];
+$warehouses = $warehouses ?? [];
+$warehouseNamesById = $warehouseNamesById ?? [];
 $canManageUsers = $canManageUsers ?? false;
 $flashSuccess = $flashSuccess ?? null;
 $flashError = $flashError ?? null;
@@ -25,33 +27,25 @@ ob_start();
 $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
 $roleGet = isset($_GET['role']) ? $_GET['role'] : '';
 $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
+$hasActiveFilters = $qGet !== '' || $roleGet !== '' || $activeGet !== '';
+$activeFilterTags = [];
+if ($qGet !== '') $activeFilterTags[] = 'Arama: ' . $qGet;
+if ($roleGet !== '') $activeFilterTags[] = 'Rol: ' . ($roleLabels[$roleGet] ?? $roleGet);
+if ($activeGet === '1') $activeFilterTags[] = 'Durum: Aktif';
+elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
 ?>
-<form method="get" action="/kullanicilar" class="mb-4 flex flex-wrap items-center gap-2">
-    <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Ad, soyad, e-posta, telefon..." class="flex-1 min-w-0 sm:w-56 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-    <select name="role" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <option value="">Tüm Roller</option>
-        <?php foreach ($roleLabels as $roleKey => $roleLabel): if ($roleKey === 'customer') continue; ?>
-            <option value="<?= htmlspecialchars($roleKey) ?>" <?= $roleGet === $roleKey ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <select name="is_active" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <option value="">Tüm Durumlar</option>
-        <option value="1" <?= $activeGet === '1' ? 'selected' : '' ?>>Aktif</option>
-        <option value="0" <?= $activeGet === '0' ? 'selected' : '' ?>>Pasif</option>
-    </select>
-    <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-    <?php if ($qGet !== '' || $roleGet !== '' || $activeGet !== ''): ?>
-        <a href="/kullanicilar" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
-    <?php endif; ?>
-</form>
-
-<?php if ($canManageUsers): ?>
-<div class="mb-4">
+<div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+    <?php
+    $filterModalId = 'userFilterModal';
+    $filterClearUrl = '/kullanicilar';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
+    <?php if ($canManageUsers): ?>
     <button type="button" onclick="openAddUserModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
-        <i class="bi bi-plus-lg mr-2"></i> Kullanıcı Ekle
+        <i class="bi bi-plus-lg mr-2"></i> Yeni Kullanıcı
     </button>
+    <?php endif; ?>
 </div>
-<?php endif; ?>
 
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($staff)): ?>
@@ -61,6 +55,7 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-14"></th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ad Soyad</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">E-posta</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Rol</th>
@@ -71,9 +66,17 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                     <?php foreach ($staff as $s): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-3">
+                                <?php $userRow = $s; $size = 'md'; require __DIR__ . '/../partials/user_avatar.php'; ?>
+                            </td>
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/kullanicilar/<?= htmlspecialchars($s['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"><?= htmlspecialchars(($s['first_name'] ?? '') . ' ' . ($s['last_name'] ?? '')) ?></a></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($s['email'] ?? '') ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($roleLabels[$s['role'] ?? ''] ?? $s['role'] ?? '') ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                <?= htmlspecialchars($roleLabels[$s['role'] ?? ''] ?? $s['role'] ?? '') ?>
+                                <?php if (($s['role'] ?? '') === 'warehouse_manager' && !empty($s['managed_warehouse_id'])): ?>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= htmlspecialchars($warehouseNamesById[$s['managed_warehouse_id']] ?? '—') ?></span>
+                                <?php endif; ?>
+                            </td>
                             <td class="px-4 py-3">
                                 <?php if (!empty($s['is_active'])): ?>
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
@@ -99,6 +102,39 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
     <?php endif; ?>
 </div>
 
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="user_filter_q">Ara</label>
+        <input type="search" name="q" id="user_filter_q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Ad, soyad, e-posta, telefon..." class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="user_filter_role">Rol</label>
+        <select name="role" id="user_filter_role" class="filter-input">
+            <option value="">Tüm Roller</option>
+            <?php foreach ($roleLabels as $roleKey => $roleLabel): if ($roleKey === 'customer') continue; ?>
+                <option value="<?= htmlspecialchars($roleKey) ?>" <?= $roleGet === $roleKey ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="user_filter_active">Durum</label>
+        <select name="is_active" id="user_filter_active" class="filter-input">
+            <option value="">Tüm Durumlar</option>
+            <option value="1" <?= $activeGet === '1' ? 'selected' : '' ?>>Aktif</option>
+            <option value="0" <?= $activeGet === '0' ? 'selected' : '' ?>>Pasif</option>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'userFilterForm';
+$filterFormAction = '/kullanicilar';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Kullanıcı Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
+
 <?php if ($canManageUsers): ?>
 <!-- Modal: Kullanıcı Ekle -->
 <div id="addUserModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
@@ -109,7 +145,19 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Kullanıcı Ekle</h3>
                 <button type="button" onclick="closeAddUserModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
             </div>
-            <form method="post" action="/kullanicilar/ekle" id="addUserForm" class="space-y-3">
+            <form method="post" action="/kullanicilar/ekle" id="addUserForm" enctype="multipart/form-data" class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Profil fotoğrafı</label>
+                    <div class="flex items-center gap-4">
+                        <div id="addUserPhotoPreview" class="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold text-lg overflow-hidden shrink-0">
+                            <i class="bi bi-person text-2xl opacity-60"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="file" name="photo" id="addUserPhoto" accept="image/jpeg,image/png,image/gif,image/webp" class="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 dark:file:bg-emerald-900/30 dark:file:text-emerald-300 hover:file:bg-emerald-100">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">JPG, PNG, GIF veya WebP</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad <span class="text-red-500">*</span></label>
@@ -137,16 +185,22 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rol</label>
-                    <select name="role" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    <select name="role" id="addUser_role" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         <?php foreach ($formRoleOptions as $roleKey => $roleLabel): ?>
                             <option value="<?= htmlspecialchars($roleKey) ?>" <?= $roleKey === 'company_staff' ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <?php
+                $fieldPrefix = 'addUser';
+                $selectedWarehouseId = null;
+                $isSuperAdminCompanySelect = !empty($companies);
+                require __DIR__ . '/../partials/user_managed_warehouse_field.php';
+                ?>
                 <?php if (!empty($companies)): ?>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şirket (Süper admin) <span class="text-red-500">*</span></label>
-                    <select name="company_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    <select name="company_id" id="addUser_company_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         <option value="">Seçin</option>
                         <?php foreach ($companies as $c): ?>
                             <option value="<?= htmlspecialchars($c['id']) ?>"><?= htmlspecialchars($c['name']) ?></option>
@@ -158,6 +212,13 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
                     <input type="checkbox" name="is_active" value="1" checked class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                     <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
                 </label>
+                <label class="inline-flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" name="receive_email_notifications" value="1" class="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                        Bildirim e-postası alsın
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Panel bildirimleri bu kullanıcının e-posta adresine gönderilir.</span>
+                    </span>
+                </label>
                 <div class="form-submit-bar flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
                     <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Ekle</button>
@@ -167,6 +228,28 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
     </div>
 </div>
 <script>
+function userPhotoPreviewFromFile(input, previewEl) {
+    if (!previewEl) return;
+    previewEl.innerHTML = '';
+    var file = input && input.files && input.files[0];
+    if (!file) {
+        previewEl.innerHTML = '<i class="bi bi-person text-2xl opacity-60"></i>';
+        return;
+    }
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.alt = '';
+    img.className = 'w-full h-full object-cover';
+    img.onload = function() { URL.revokeObjectURL(img.src); };
+    previewEl.appendChild(img);
+}
+(function() {
+    var input = document.getElementById('addUserPhoto');
+    var preview = document.getElementById('addUserPhotoPreview');
+    if (input && preview) {
+        input.addEventListener('change', function() { userPhotoPreviewFromFile(input, preview); });
+    }
+})();
 function openAddUserModal() {
     var modal = document.getElementById('addUserModal');
     if (!modal) return;
@@ -179,7 +262,60 @@ function openAddUserModal() {
         var role = form.querySelector('select[name="role"]');
         if (role) role.value = 'company_staff';
     }
+    var preview = document.getElementById('addUserPhotoPreview');
+    if (preview) preview.innerHTML = '<i class="bi bi-person text-2xl opacity-60"></i>';
+    if (window.syncUserManagedWarehouseField) window.syncUserManagedWarehouseField('addUser');
     modal.classList.remove('hidden');
+}
+function initUserManagedWarehouseFields() {
+    function sync(prefix) {
+        var roleEl = document.getElementById(prefix + '_role') || (prefix === 'editUser' ? document.querySelector('form[action="/kullanicilar/guncelle"] select[name="role"]') : null);
+        var wrap = document.getElementById(prefix + '_managed_warehouse_wrap');
+        var select = document.getElementById(prefix + '_managed_warehouse_id');
+        if (!wrap || !select) return;
+        var isWhManager = roleEl && roleEl.value === 'warehouse_manager';
+        wrap.classList.toggle('hidden', !isWhManager);
+        select.required = isWhManager;
+        if (!isWhManager) select.value = '';
+        var emailCb = null;
+        if (prefix === 'addUser') {
+            var form = document.getElementById('addUserForm');
+            emailCb = form ? form.querySelector('input[name="receive_email_notifications"]') : null;
+        } else if (prefix === 'editUser') {
+            emailCb = document.querySelector('form[action="/kullanicilar/guncelle"] input[name="receive_email_notifications"]');
+        }
+        if (isWhManager && emailCb && !emailCb.checked) emailCb.checked = true;
+    }
+    function filterByCompany(prefix) {
+        var companyEl = document.getElementById(prefix + '_company_id') || document.querySelector('form[action="/kullanicilar/guncelle"] select[name="company_id"]');
+        var select = document.getElementById(prefix + '_managed_warehouse_id');
+        if (!select) return;
+        var companyId = companyEl ? companyEl.value : '';
+        Array.prototype.forEach.call(select.options, function(opt) {
+            if (!opt.value) return;
+            var optCompany = opt.getAttribute('data-company-id') || '';
+            opt.hidden = companyId !== '' && optCompany !== companyId;
+        });
+        if (select.selectedOptions[0] && select.selectedOptions[0].hidden) select.value = '';
+    }
+    window.syncUserManagedWarehouseField = sync;
+    var addRole = document.getElementById('addUser_role');
+    if (addRole) addRole.addEventListener('change', function() { sync('addUser'); });
+    var addCompany = document.getElementById('addUser_company_id');
+    if (addCompany) addCompany.addEventListener('change', function() { filterByCompany('addUser'); sync('addUser'); });
+    var editRole = document.querySelector('form[action="/kullanicilar/guncelle"] select[name="role"]');
+    if (editRole) editRole.addEventListener('change', function() { sync('editUser'); });
+    var editCompany = document.querySelector('form[action="/kullanicilar/guncelle"] select[name="company_id"]');
+    if (editCompany) editCompany.addEventListener('change', function() { filterByCompany('editUser'); sync('editUser'); });
+    sync('addUser');
+    sync('editUser');
+    filterByCompany('addUser');
+    filterByCompany('editUser');
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUserManagedWarehouseFields);
+} else {
+    initUserManagedWarehouseFields();
 }
 function closeAddUserModal() {
     var modal = document.getElementById('addUserModal');

@@ -43,7 +43,7 @@ class User
     public static function findStaff(PDO $pdo, ?string $companyId = null, ?string $search = null, ?string $roleFilter = null, ?string $activeFilter = null): array
     {
         $staffRoles = RolePermissions::sqlStaffRoles();
-        $sql = 'SELECT id, first_name, last_name, email, phone, role, is_active, created_at FROM users WHERE deleted_at IS NULL AND role IN (' . $staffRoles . ') ';
+        $sql = 'SELECT id, first_name, last_name, email, phone, photo_url, role, managed_warehouse_id, is_active, receive_email_notifications, created_at FROM users WHERE deleted_at IS NULL AND role IN (' . $staffRoles . ') ';
         $params = [];
         if ($companyId) {
             $sql .= ' AND company_id = ? ';
@@ -80,8 +80,8 @@ class User
     {
         $id = self::uuid();
         $stmt = $pdo->prepare(
-            'INSERT INTO users (id, email, password, first_name, last_name, phone, role, company_id, is_active) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO users (id, email, password, first_name, last_name, phone, role, company_id, managed_warehouse_id, is_active, receive_email_notifications) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
@@ -92,7 +92,9 @@ class User
             trim($data['phone'] ?? '') ?: null,
             $data['role'] ?? 'company_staff',
             trim($data['company_id'] ?? '') ?: null,
+            trim($data['managed_warehouse_id'] ?? '') ?: null,
             isset($data['is_active']) ? (int) $data['is_active'] : 1,
+            isset($data['receive_email_notifications']) ? (int) $data['receive_email_notifications'] : 0,
         ]);
         $u = self::findOne($pdo, $id);
         return $u ?: [];
@@ -102,11 +104,11 @@ class User
     {
         $updates = [];
         $params = [];
-        $allowed = ['first_name', 'last_name', 'email', 'phone', 'role', 'company_id', 'is_active'];
+        $allowed = ['first_name', 'last_name', 'email', 'phone', 'role', 'company_id', 'managed_warehouse_id', 'is_active', 'receive_email_notifications'];
         foreach ($allowed as $k) {
             if (array_key_exists($k, $data)) {
                 $updates[] = "`$k` = ?";
-                $params[] = $k === 'is_active' ? (int) $data[$k] : ($data[$k] !== null ? $data[$k] : null);
+                $params[] = in_array($k, ['is_active', 'receive_email_notifications'], true) ? (int) $data[$k] : ($data[$k] !== null ? $data[$k] : null);
             }
         }
         if (isset($data['password']) && $data['password'] !== '') {
@@ -116,6 +118,11 @@ class User
         if (empty($updates)) return;
         $params[] = $id;
         $pdo->prepare('UPDATE users SET ' . implode(', ', $updates) . ' WHERE id = ? AND deleted_at IS NULL')->execute($params);
+    }
+
+    public static function updatePhotoUrl(PDO $pdo, string $id, ?string $photoUrl): void
+    {
+        $pdo->prepare('UPDATE users SET photo_url = ? WHERE id = ? AND deleted_at IS NULL')->execute([$photoUrl, $id]);
     }
 
     public static function remove(PDO $pdo, string $id): void

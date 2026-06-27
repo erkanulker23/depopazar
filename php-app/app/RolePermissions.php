@@ -10,6 +10,9 @@ class RolePermissions
     /** Şirkete bağlı operasyonel roller (bildirim, nakliye personel listesi vb.) */
     public const COMPANY_OPERATIVE_ROLES = ['company_owner', 'company_staff', 'data_entry', 'accounting', 'warehouse_manager'];
 
+    /** Şirket geneli bildirim alan operasyonel roller (depo sorumlusu hariç) */
+    public const COMPANY_BROADCAST_NOTIFICATION_ROLES = ['company_owner', 'company_staff', 'data_entry', 'accounting'];
+
     /** Süper admin dışındaki roller düzenlenebilir */
     public const EDITABLE_ROLES = ['company_owner', 'company_staff', 'data_entry', 'accounting', 'warehouse_manager'];
 
@@ -49,6 +52,11 @@ class RolePermissions
     public static function sqlCompanyOperativeRoles(): string
     {
         return "'" . implode("','", self::COMPANY_OPERATIVE_ROLES) . "'";
+    }
+
+    public static function sqlCompanyBroadcastNotificationRoles(): string
+    {
+        return "'" . implode("','", self::COMPANY_BROADCAST_NOTIFICATION_ROLES) . "'";
     }
 
     /** SQL IN (...) için tüm personel rolleri */

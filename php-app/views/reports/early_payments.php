@@ -6,6 +6,9 @@ $startDate = $startDate ?? date('Y-m-01');
 $endDate = $endDate ?? date('Y-m-t');
 $totalCount = $totalCount ?? 0;
 $totalSum = $totalSum ?? 0;
+$periodLabel = date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate));
+$hasActiveFilters = $startDate !== date('Y-m-01') || $endDate !== date('Y-m-t');
+$activeFilterTags = ['Dönem: ' . $periodLabel];
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 ?>
@@ -24,34 +27,51 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     <strong class="ml-1">Peşin sözleşme:</strong> Aktif sözleşmenin tüm taksitleri ödenmiş ve en az bir taksit vadesinden önce tahsil edilmiş.
 </div>
 
-<form method="get" action="/raporlar/erken-odemeler" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yıl / Ay (hızlı)</label>
+<div class="page-toolbar flex flex-wrap items-center gap-3 mb-6">
+    <?php
+    $filterModalId = 'earlyPaymentsFilterModal';
+    $filterClearUrl = '/raporlar/erken-odemeler';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
+    <a href="/odemeler?status=early" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">Ödemeler listesinde filtrele</a>
+</div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label">Yıl / Ay (hızlı)</label>
         <div class="flex flex-wrap gap-2">
-            <select id="early_year" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+            <select id="early_year" class="filter-input flex-1 min-w-[5rem]">
                 <?php for ($y = (int) date('Y'); $y >= (int) date('Y') - 5; $y--): ?>
                     <option value="<?= $y ?>" <?= (int) date('Y', strtotime($startDate)) === $y ? 'selected' : '' ?>><?= $y ?></option>
                 <?php endfor; ?>
             </select>
-            <select id="early_month" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+            <select id="early_month" class="filter-input flex-1 min-w-[5rem]">
                 <?php $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']; foreach ($monthNames as $i => $mn): ?>
                     <option value="<?= $i + 1 ?>" <?= (int) date('n', strtotime($startDate)) === $i + 1 && date('Y-m', strtotime($startDate)) === date('Y-m', strtotime($endDate)) ? 'selected' : '' ?>><?= $mn ?></option>
                 <?php endforeach; ?>
             </select>
-            <button type="button" onclick="applyEarlyMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Ay uygula</button>
+            <button type="button" onclick="applyEarlyMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap">Ay uygula</button>
         </div>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat başlangıç</label>
-        <input type="date" name="start_date" id="early_start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="early_start_date">Tahsilat başlangıç</label>
+        <input type="date" name="start_date" id="early_start_date" value="<?= htmlspecialchars($startDate) ?>" class="filter-input">
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsilat bitiş</label>
-        <input type="date" name="end_date" id="early_end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="early_end_date">Tahsilat bitiş</label>
+        <input type="date" name="end_date" id="early_end_date" value="<?= htmlspecialchars($endDate) ?>" class="filter-input">
     </div>
-    <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
-    <a href="/odemeler?status=early" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Ödemeler listesinde filtrele</a>
-</form>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'earlyPaymentsFilterForm';
+$filterFormAction = '/raporlar/erken-odemeler';
+$filterSubmitLabel = 'Göster';
+$filterModalTitle = 'Erken Ödemeler — Filtreler';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
+
 <script>
 function applyEarlyMonthPreset() {
     var y = parseInt(document.getElementById('early_year').value, 10);

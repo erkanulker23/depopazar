@@ -28,31 +28,25 @@ ob_start();
     ], fn($v) => $v !== '');
     $exportQuery = $exportParams ? '?' . http_build_query($exportParams) : '';
     $filterQuery = $exportQuery;
+    $activeFilterTags = [];
+    if ($qGet !== '') $activeFilterTags[] = 'Arama: ' . $qGet;
+    if ($statusGet !== '') $activeFilterTags[] = 'Durum: ' . ($statusLabels[$statusGet] ?? $statusGet);
+    if ($hasContractGet === 'yes') $activeFilterTags[] = 'Aktif sözleşmesi var';
+    elseif ($hasContractGet === 'no') $activeFilterTags[] = 'Aktif sözleşmesi yok';
+    if ($warehouseIdGet !== '') {
+        foreach ($warehouses as $w) {
+            if (($w['id'] ?? '') === $warehouseIdGet) {
+                $activeFilterTags[] = 'Depo: ' . ($w['name'] ?? '');
+                break;
+            }
+        }
+    }
     ?>
-    <form method="get" action="/odalar" id="roomFilterForm" class="page-toolbar-form flex flex-wrap items-center gap-2 w-full sm:flex-1">
-        <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Oda no, kat, blok, depo..." class="flex-1 min-w-0 sm:w-44 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <select name="warehouse_id" class="room-filter-select px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-0 sm:w-auto">
-            <option value="">Tüm Depolar</option>
-            <?php foreach ($warehouses as $w): ?>
-                <option value="<?= htmlspecialchars($w['id']) ?>" <?= $warehouseIdGet === ($w['id'] ?? '') ? 'selected' : '' ?>><?= htmlspecialchars($w['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <select name="status" class="room-filter-select px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-0 sm:w-auto">
-            <option value="">Tüm Durumlar</option>
-            <?php foreach ($statusLabels as $key => $label): ?>
-                <option value="<?= htmlspecialchars($key) ?>" <?= $statusGet === $key ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <select name="has_contract" class="room-filter-select px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-0 sm:w-auto">
-            <option value="">Sözleşme (tümü)</option>
-            <option value="yes" <?= $hasContractGet === 'yes' ? 'selected' : '' ?>>Aktif sözleşmesi var</option>
-            <option value="no" <?= $hasContractGet === 'no' ? 'selected' : '' ?>>Aktif sözleşmesi yok</option>
-        </select>
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-        <?php if ($hasActiveFilters): ?>
-            <a href="/odalar" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
-        <?php endif; ?>
-    </form>
+    <?php
+    $filterModalId = 'roomFilterModal';
+    $filterClearUrl = '/odalar';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <div class="flex flex-wrap items-center gap-2">
         <a href="/odalar/excel-disari-aktar<?= htmlspecialchars($exportQuery) ?>" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar
@@ -163,8 +157,8 @@ ob_start();
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50<?= $isDuplicateRoom ? ' bg-amber-50/80 dark:bg-amber-900/10' : '' ?>">
                             <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="room-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($r['id']) ?>"></label></td>
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars(fmtRoomNumber($r['room_number'] ?? '')) ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600"><?= htmlspecialchars($r['warehouse_name'] ?? '-') ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600"><?= number_format((float)$r['area_m2'], 2, ',', '.') ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['warehouse_name'] ?? '-') ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= number_format((float)$r['area_m2'], 2, ',', '.') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($r['monthly_price'] ?? 0) ?></td>
                             <td class="px-4 py-3">
                                 <?php
@@ -186,7 +180,7 @@ ob_start();
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 mr-1" title="Detay"><i class="bi bi-eye"></i></a>
+                                <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/25 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 mr-1" title="Detay"><i class="bi bi-eye"></i></a>
                                 <button type="button" onclick='openEditRoom(<?= json_encode([
                                     'id' => $r['id'],
                                     'room_number' => $r['room_number'],
@@ -199,10 +193,10 @@ ob_start();
                                     'corridor' => $r['corridor'] ?? '',
                                     'description' => $r['description'] ?? '',
                                     'notes' => $r['notes'] ?? '',
-                                ]) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
+                                ]) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
                                 <form method="post" action="/odalar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('oda')) ?>);">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($r['id']) ?>">
-                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
+                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/25 hover:bg-red-100 dark:hover:bg-red-900/40" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -212,6 +206,48 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="room_filter_q">Ara</label>
+        <input type="search" name="q" id="room_filter_q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Oda no, kat, blok, depo..." class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="room_filter_warehouse">Depo</label>
+        <select name="warehouse_id" id="room_filter_warehouse" class="filter-input">
+            <option value="">Tüm Depolar</option>
+            <?php foreach ($warehouses as $w): ?>
+                <option value="<?= htmlspecialchars($w['id']) ?>" <?= $warehouseIdGet === ($w['id'] ?? '') ? 'selected' : '' ?>><?= htmlspecialchars($w['name']) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="room_filter_status">Durum</label>
+        <select name="status" id="room_filter_status" class="filter-input">
+            <option value="">Tüm Durumlar</option>
+            <?php foreach ($statusLabels as $key => $label): ?>
+                <option value="<?= htmlspecialchars($key) ?>" <?= $statusGet === $key ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="room_filter_contract">Sözleşme</label>
+        <select name="has_contract" id="room_filter_contract" class="filter-input">
+            <option value="">Sözleşme (tümü)</option>
+            <option value="yes" <?= $hasContractGet === 'yes' ? 'selected' : '' ?>>Aktif sözleşmesi var</option>
+            <option value="no" <?= $hasContractGet === 'no' ? 'selected' : '' ?>>Aktif sözleşmesi yok</option>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'roomFilterForm';
+$filterFormAction = '/odalar';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Oda Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <!-- Modal: Yeni Oda -->
 <div id="addRoomModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
@@ -369,15 +405,7 @@ ob_start();
 
 <script>
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.body.style.overflow = ''; }
-(function() {
-    var filterForm = document.getElementById('roomFilterForm');
-    document.querySelectorAll('.room-filter-select').forEach(function(el) {
-        el.addEventListener('change', function() {
-            if (filterForm) filterForm.submit();
-        });
-    });
-})();
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); if (!document.querySelector('.modal-overlay:not(.hidden), .filter-modal-overlay:not(.hidden)')) document.body.style.overflow = ''; }
 function openEditRoom(d) {
     document.getElementById('edit_id').value = d.id || '';
     document.getElementById('edit_warehouse_id').value = d.warehouse_id || '';

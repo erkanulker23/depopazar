@@ -8,11 +8,14 @@ ob_start();
 </div>
 
 <div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <form method="get" action="/depolar" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <input type="search" name="q" value="<?= htmlspecialchars(isset($_GET['q']) ? trim($_GET['q']) : '') ?>" placeholder="Depo adı, şehir, adres..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-search text-sm opacity-90" aria-hidden="true"></i> Ara</button>
-        <?php if (!empty($_GET['q'])): ?><a href="/depolar" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
-    </form>
+    <?php
+    $qWh = isset($_GET['q']) ? trim($_GET['q']) : '';
+    $hasActiveFilters = $qWh !== '';
+    $activeFilterTags = $qWh !== '' ? ['Arama: ' . $qWh] : [];
+    $filterModalId = 'warehouseFilterModal';
+    $filterClearUrl = '/depolar';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <div class="flex flex-wrap items-center gap-2">
         <a href="/depolar/excel-disari-aktar" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar
@@ -107,6 +110,22 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="warehouse_filter_q">Ara</label>
+        <input type="search" name="q" id="warehouse_filter_q" value="<?= htmlspecialchars($qWh) ?>" placeholder="Depo adı, şehir, adres..." class="filter-input">
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'warehouseFilterForm';
+$filterFormAction = '/depolar';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Depo Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <!-- Modal: Yeni Depo -->
 <div id="addWarehouseModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">

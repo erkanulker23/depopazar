@@ -54,12 +54,64 @@ class Notification
         }
     }
 
+    /**
+     * Belirli depodan sorumlu depo sorumlularına bildirim + e-posta.
+     *
+     * @param array{push?: bool, email?: bool} $options
+     */
+    public static function createForWarehouse(PDO $pdo, string $warehouseId, ?string $companyId, string $type, string $title, string $message, ?array $metadata = null, array $options = []): void
+    {
+        if ($warehouseId === '') {
+            return;
+        }
+        $sendPush = $options['push'] ?? true;
+        $sendEmail = $options['email'] ?? true;
+
+        $userIds = self::warehouseManagerUserIds($pdo, $warehouseId);
+        if ($userIds === []) {
+            return;
+        }
+
+        $metadata = $metadata ?? [];
+        $metadata['warehouse_id'] = $warehouseId;
+        $metaJson = json_encode($metadata, JSON_UNESCAPED_UNICODE);
+
+        $placeholders = [];
+        $params = [];
+        foreach ($userIds as $uid) {
+            $placeholders[] = '(?, ?, ?, ?, ?, ?)';
+            array_push($params, self::uuid(), $uid, $type, $title, $message, $metaJson);
+        }
+        $sql = 'INSERT INTO notifications (id, user_id, type, title, message, metadata) VALUES '
+            . implode(', ', $placeholders);
+        $pdo->prepare($sql)->execute($params);
+
+        if ($sendPush || $sendEmail) {
+            $url = self::resolveNotificationUrl($type, $metadata);
+            $emailContext = self::emailContextForNotification($title, $metadata);
+            self::deferDelivery($pdo, $companyId, $userIds, $title, $message, $type, $url, $sendPush, $sendEmail, $emailContext);
+        }
+    }
+
+    /**
+     * Şirket geneli + depo sorumlularına (depo olayları için).
+     *
+     * @param array{push?: bool, email?: bool} $options
+     */
+    public static function createForCompanyAndWarehouse(PDO $pdo, ?string $companyId, ?string $warehouseId, string $type, string $title, string $message, ?array $metadata = null, array $options = []): void
+    {
+        self::createForCompany($pdo, $companyId, $type, $title, $message, $metadata, $options);
+        if ($warehouseId !== null && $warehouseId !== '') {
+            self::createForWarehouse($pdo, $warehouseId, $companyId, $type, $title, $message, $metadata, $options);
+        }
+    }
+
     /** @return list<string> */
     private static function companyStaffUserIds(PDO $pdo, ?string $companyId): array
     {
         $userIds = [];
         if ($companyId) {
-            $stmt = $pdo->prepare('SELECT id FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (' . RolePermissions::sqlCompanyOperativeRoles() . ')');
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (' . RolePermissions::sqlCompanyBroadcastNotificationRoles() . ')');
             $stmt->execute([$companyId]);
             $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
@@ -68,6 +120,16 @@ class Notification
             $userIds[] = $row['id'];
         }
         return array_values(array_unique($userIds));
+    }
+
+    /** @return list<string> */
+    private static function warehouseManagerUserIds(PDO $pdo, string $warehouseId): array
+    {
+        $stmt = $pdo->prepare(
+            "SELECT id FROM users WHERE deleted_at IS NULL AND is_active = 1 AND role = 'warehouse_manager' AND managed_warehouse_id = ?"
+        );
+        $stmt->execute([$warehouseId]);
+        return array_values(array_filter($stmt->fetchAll(PDO::FETCH_COLUMN)));
     }
 
     /** @return array{actor_name?: string, acted_at: string, action_title: string} */
@@ -127,6 +189,12 @@ class Notification
         if ($type === 'contract' && !empty($metadata['contract_id'])) {
             return '/girisler/' . $metadata['contract_id'];
         }
+        if ($type === 'room' && !empty($metadata['room_id'])) {
+            return '/odalar/' . $metadata['room_id'];
+        }
+        if ($type === 'warehouse' && !empty($metadata['warehouse_id'])) {
+            return '/depolar/' . $metadata['warehouse_id'];
+        }
         if ($type === 'customer' && !empty($metadata['customer_id'])) {
             return '/musteriler/' . $metadata['customer_id'];
         }
@@ -135,6 +203,7 @@ class Notification
             'customer' => '/musteriler',
             'transport' => '/nakliye-isler',
             'warehouse' => '/depolar',
+            'room' => '/odalar',
             'expense' => '/masraflar',
             'proposal' => '/teklifler',
             'vehicle' => '/araclar',

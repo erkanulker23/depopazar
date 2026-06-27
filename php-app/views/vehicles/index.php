@@ -74,20 +74,18 @@ if (!empty($upcomingKasko) || !empty($upcomingInspection)) {
 <?php
 $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
 $alertGet = isset($_GET['alert']) ? $_GET['alert'] : '';
+$hasActiveFilters = $qGet !== '' || $alertGet !== '';
+$activeFilterTags = [];
+if ($qGet !== '') $activeFilterTags[] = 'Arama: ' . $qGet;
+if ($alertGet === 'kasko') $activeFilterTags[] = 'Kasko kayıtlı';
+elseif ($alertGet === 'inspection') $activeFilterTags[] = 'Muayene kayıtlı';
 ?>
-<div class="page-toolbar flex flex-wrap items-center gap-2 mb-4">
-    <form method="get" action="/araclar" class="page-toolbar-form flex flex-wrap items-center gap-2 flex-1 min-w-0">
-        <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Plaka, model yılı, not..." class="flex-1 min-w-0 sm:w-56 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <select name="alert" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white flex-1 min-w-[140px]">
-            <option value="">Tüm Araçlar</option>
-            <option value="kasko" <?= $alertGet === 'kasko' ? 'selected' : '' ?>>Kasko kayıtlı</option>
-            <option value="inspection" <?= $alertGet === 'inspection' ? 'selected' : '' ?>>Muayene kayıtlı</option>
-        </select>
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-search text-sm opacity-90" aria-hidden="true"></i> Ara</button>
-        <?php if ($qGet !== '' || $alertGet !== ''): ?>
-            <a href="/araclar" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
-        <?php endif; ?>
-    </form>
+<div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+    <?php
+    $filterModalId = 'vehicleFilterModal';
+    $filterClearUrl = '/araclar';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <?php if ($tableExists): ?>
     <button type="button" onclick="document.getElementById('addVehicleModal').classList.remove('hidden')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Araç Ekle
@@ -142,6 +140,30 @@ $alertGet = isset($_GET['alert']) ? $_GET['alert'] : '';
         </table>
     </div>
 </div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="vehicle_filter_q">Ara</label>
+        <input type="search" name="q" id="vehicle_filter_q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Plaka, model yılı, not..." class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="vehicle_filter_alert">Kayıt türü</label>
+        <select name="alert" id="vehicle_filter_alert" class="filter-input">
+            <option value="">Tüm Araçlar</option>
+            <option value="kasko" <?= $alertGet === 'kasko' ? 'selected' : '' ?>>Kasko kayıtlı</option>
+            <option value="inspection" <?= $alertGet === 'inspection' ? 'selected' : '' ?>>Muayene kayıtlı</option>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'vehicleFilterForm';
+$filterFormAction = '/araclar';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Araç Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <!-- Modal: Araç Ekle -->
 <div id="addVehicleModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog" aria-labelledby="addVehicleModalTitle">

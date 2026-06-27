@@ -150,9 +150,10 @@ class WarehousesController
             'monthly_base_fee' => $monthlyFee !== '' ? (float) str_replace(',', '.', $monthlyFee) : null,
         ];
         try {
-            Warehouse::create($this->pdo, $data);
+            $created = Warehouse::create($this->pdo, $data);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-            Notification::createForCompany($this->pdo, $companyId, 'warehouse', 'Depo eklendi', $name . ' depo olarak eklendi.', ['actor_name' => $actorName]);
+            $whId = $created['id'] ?? null;
+            Notification::createForCompanyAndWarehouse($this->pdo, $companyId, $whId, 'warehouse', 'Depo eklendi', $name . ' depo olarak eklendi.', ['actor_name' => $actorName, 'warehouse_id' => $whId]);
             Auth::setSession('flash_success', 'Depo eklendi.');
         } catch (Exception $e) {
             Auth::setSession('flash_error', 'Depo eklenemedi: ' . $e->getMessage());
@@ -202,7 +203,7 @@ class WarehousesController
         ];
         Warehouse::update($this->pdo, $id, $data);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo güncellendi', ($data['name'] ?? $warehouse['name']) . ' depo bilgileri güncellendi.', ['actor_name' => $actorName]);
+        Notification::createForCompanyAndWarehouse($this->pdo, $warehouse['company_id'] ?? null, $id, 'warehouse', 'Depo güncellendi', ($data['name'] ?? $warehouse['name']) . ' depo bilgileri güncellendi.', ['actor_name' => $actorName, 'warehouse_id' => $id]);
         Auth::setSession('flash_success', 'Depo güncellendi.');
         header('Location: /depolar');
         exit;
@@ -239,7 +240,7 @@ class WarehousesController
             }
             Warehouse::remove($this->pdo, $id);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-            Notification::createForCompany($this->pdo, $warehouse['company_id'] ?? null, 'warehouse', 'Depo silindi', ($warehouse['name'] ?? '') . ' depo silindi.', ['actor_name' => $actorName]);
+            Notification::createForCompanyAndWarehouse($this->pdo, $warehouse['company_id'] ?? null, $id, 'warehouse', 'Depo silindi', ($warehouse['name'] ?? '') . ' depo silindi.', ['actor_name' => $actorName, 'warehouse_id' => $id]);
             $deleted++;
         }
         if (!empty($errors)) {

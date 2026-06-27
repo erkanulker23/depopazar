@@ -151,7 +151,18 @@ class RoomsController
             'notes'         => trim($_POST['notes'] ?? '') ?: null,
         ];
         try {
-            Room::create($this->pdo, $data);
+            $created = Room::create($this->pdo, $data);
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            $roomId = is_array($created) ? ($created['id'] ?? null) : null;
+            Notification::createForCompanyAndWarehouse(
+                $this->pdo,
+                $companyId,
+                $warehouseId,
+                'room',
+                'Oda eklendi',
+                ($roomNumber ?: 'Oda') . ' — ' . ($warehouse['name'] ?? 'depo') . ' deposuna eklendi.',
+                ['actor_name' => $actorName, 'warehouse_id' => $warehouseId, 'room_id' => $roomId]
+            );
             Auth::setSession('flash_success', 'Oda eklendi.');
             $this->redirectToRoomsIndex($warehouseId);
         } catch (InvalidArgumentException $e) {
@@ -215,6 +226,16 @@ class RoomsController
             header('Location: /odalar' . $this->roomsIndexQuery());
             exit;
         }
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        Notification::createForCompanyAndWarehouse(
+            $this->pdo,
+            $room['company_id'] ?? $companyId,
+            $warehouseId,
+            'room',
+            'Oda güncellendi',
+            ($data['room_number'] ?? $room['room_number'] ?? 'Oda') . ' güncellendi.',
+            ['actor_name' => $actorName, 'warehouse_id' => $warehouseId, 'room_id' => $id]
+        );
         Auth::setSession('flash_success', 'Oda güncellendi.');
         header('Location: /odalar' . $this->roomsIndexQuery());
         exit;
@@ -314,7 +335,20 @@ class RoomsController
                 $errors[] = $room['room_number'] ?? $id;
                 continue;
             }
+            $whId = $room['warehouse_id'] ?? null;
+            $roomNumber = $room['room_number'] ?? $id;
+            $roomCompanyId = $room['company_id'] ?? null;
             Room::remove($this->pdo, $id);
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompanyAndWarehouse(
+                $this->pdo,
+                $roomCompanyId,
+                $whId,
+                'room',
+                'Oda silindi',
+                $roomNumber . ' odası silindi.',
+                ['actor_name' => $actorName, 'warehouse_id' => $whId, 'room_id' => $id]
+            );
             $deleted++;
         }
         if (!empty($errors)) {

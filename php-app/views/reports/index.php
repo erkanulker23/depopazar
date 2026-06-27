@@ -15,6 +15,10 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 $periodLabel = ($periodMode ?? 'month') === 'custom'
     ? (date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate)))
     : (($monthDisplay ?? 0) === 0 ? 'Tüm Yıl ' . $year : (($monthNames[($monthDisplay ?? 1) - 1] ?? '') . ' ' . $year));
+$defaultStart = date('Y-m-01');
+$defaultEnd = date('Y-m-t');
+$hasActiveFilters = ($periodMode ?? 'month') === 'custom' || $year !== (int) date('Y') || ($monthDisplay ?? 0) !== (int) date('n');
+$activeFilterTags = ['Dönem: ' . $periodLabel];
 ob_start();
 ?>
 <div class="mb-8">
@@ -22,47 +26,62 @@ ob_start();
     <p class="page-subtitle">Doluluk, gelir ve müşteri ödeme raporları</p>
 </div>
 
-<form method="get" action="/raporlar" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-4" id="reportPeriodForm">
-    <div class="flex flex-wrap gap-4 items-end">
-        <div>
-            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Dönem</label>
-            <select name="period_mode" id="report_period_mode" onchange="toggleReportPeriodMode()" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                <option value="month" <?= ($periodMode ?? 'month') === 'month' ? 'selected' : '' ?>>Ay bazlı</option>
-                <option value="custom" <?= ($periodMode ?? '') === 'custom' ? 'selected' : '' ?>>Özel tarih aralığı</option>
+<div class="page-toolbar mb-6">
+    <?php
+    $filterModalId = 'reportPeriodFilterModal';
+    $filterClearUrl = '/raporlar';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
+</div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="report_period_mode">Dönem</label>
+        <select name="period_mode" id="report_period_mode" onchange="toggleReportPeriodMode()" class="filter-input">
+            <option value="month" <?= ($periodMode ?? 'month') === 'month' ? 'selected' : '' ?>>Ay bazlı</option>
+            <option value="custom" <?= ($periodMode ?? '') === 'custom' ? 'selected' : '' ?>>Özel tarih aralığı</option>
+        </select>
+    </div>
+    <div id="report_month_fields" class="space-y-4 <?= ($periodMode ?? 'month') === 'custom' ? 'hidden' : '' ?>">
+        <div class="filter-field">
+            <label class="filter-label" for="report_year">Yıl</label>
+            <select name="year" id="report_year" class="filter-input">
+                <?php for ($y = date('Y'); $y >= date('Y') - 5; $y--): ?>
+                    <option value="<?= $y ?>" <?= $year === $y ? 'selected' : '' ?>><?= $y ?></option>
+                <?php endfor; ?>
             </select>
         </div>
-        <div id="report_month_fields" class="flex flex-wrap gap-4 items-end <?= ($periodMode ?? 'month') === 'custom' ? 'hidden' : '' ?>">
-            <div>
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Yıl</label>
-                <select name="year" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                    <?php for ($y = date('Y'); $y >= date('Y') - 5; $y--): ?>
-                        <option value="<?= $y ?>" <?= $year === $y ? 'selected' : '' ?>><?= $y ?></option>
-                    <?php endfor; ?>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Ay</label>
-                <select name="month" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                    <option value="0" <?= ($monthDisplay ?? 0) === 0 ? 'selected' : '' ?>>Tüm Aylar</option>
-                    <?php foreach ($monthNames as $i => $m): ?>
-                        <option value="<?= $i + 1 ?>" <?= ($monthDisplay ?? 0) === $i + 1 ? 'selected' : '' ?>><?= $m ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+        <div class="filter-field">
+            <label class="filter-label" for="report_month">Ay</label>
+            <select name="month" id="report_month" class="filter-input">
+                <option value="0" <?= ($monthDisplay ?? 0) === 0 ? 'selected' : '' ?>>Tüm Aylar</option>
+                <?php foreach ($monthNames as $i => $m): ?>
+                    <option value="<?= $i + 1 ?>" <?= ($monthDisplay ?? 0) === $i + 1 ? 'selected' : '' ?>><?= $m ?></option>
+                <?php endforeach; ?>
+            </select>
         </div>
-        <div id="report_custom_fields" class="flex flex-wrap gap-4 items-end <?= ($periodMode ?? 'month') === 'custom' ? '' : 'hidden' ?>">
-            <div>
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Başlangıç</label>
-                <input type="date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Bitiş</label>
-                <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            </div>
-        </div>
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
     </div>
-</form>
+    <div id="report_custom_fields" class="space-y-4 <?= ($periodMode ?? 'month') === 'custom' ? '' : 'hidden' ?>">
+        <div class="filter-field">
+            <label class="filter-label" for="report_start_date">Başlangıç</label>
+            <input type="date" name="start_date" id="report_start_date" value="<?= htmlspecialchars($startDate) ?>" class="filter-input">
+        </div>
+        <div class="filter-field">
+            <label class="filter-label" for="report_end_date">Bitiş</label>
+            <input type="date" name="end_date" id="report_end_date" value="<?= htmlspecialchars($endDate) ?>" class="filter-input">
+        </div>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'reportPeriodForm';
+$filterFormAction = '/raporlar';
+$filterSubmitLabel = 'Göster';
+$filterModalTitle = 'Rapor Dönemi';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
+
 <script>
 function toggleReportPeriodMode() {
     var mode = document.getElementById('report_period_mode').value;

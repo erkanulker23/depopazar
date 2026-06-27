@@ -66,61 +66,93 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
 </div>
 
 <!-- Filtre + Masraf ekle -->
-<form method="get" action="/masraflar" class="mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
-        <select name="category_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[160px]">
+<?php
+$expenseQ = isset($_GET['q']) ? trim($_GET['q']) : '';
+$hasActiveFilters = $categoryId || $paymentSourceType || $paymentSourceId || $startDate !== date('Y-m-01') || $endDate !== date('Y-m-t') || $expenseQ !== '';
+$activeFilterTags = [];
+if ($categoryId) {
+    foreach ($categories as $c) {
+        if (($c['id'] ?? '') === $categoryId) { $activeFilterTags[] = 'Kategori: ' . ($c['name'] ?? ''); break; }
+    }
+}
+if ($paymentSourceType === 'bank_account') $activeFilterTags[] = 'Kaynak: Banka';
+elseif ($paymentSourceType === 'credit_card') $activeFilterTags[] = 'Kaynak: Kredi kartı';
+if ($expenseQ !== '') $activeFilterTags[] = 'Arama: ' . $expenseQ;
+if ($startDate !== date('Y-m-01') || $endDate !== date('Y-m-t')) {
+    $activeFilterTags[] = 'Dönem: ' . date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate));
+}
+?>
+<div class="page-toolbar flex flex-wrap items-center gap-3 mb-6">
+    <?php
+    $filterModalId = 'expenseFilterModal';
+    $filterClearUrl = '/masraflar';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
+    <?php if (!empty($categories)): ?>
+    <button type="button" onclick="document.getElementById('addExpenseModal').classList.remove('hidden')" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+        <i class="bi bi-plus-lg mr-2"></i> Masraf Ekle
+    </button>
+    <?php endif; ?>
+</div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="expense_filter_category">Kategori</label>
+        <select name="category_id" id="expense_filter_category" class="filter-input">
             <option value="">Tümü</option>
             <?php foreach ($categories as $c): ?>
                 <option value="<?= htmlspecialchars($c['id']) ?>" <?= $categoryId === $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Kaynağı</label>
-        <select name="payment_source_type" id="filterPaymentSourceType" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[140px]">
+    <div class="filter-field">
+        <label class="filter-label" for="filterPaymentSourceType">Ödeme Kaynağı</label>
+        <select name="payment_source_type" id="filterPaymentSourceType" class="filter-input">
             <option value="">Tümü</option>
             <option value="bank_account" <?= $paymentSourceType === 'bank_account' ? 'selected' : '' ?>>Banka Hesabı</option>
             <option value="credit_card" <?= $paymentSourceType === 'credit_card' ? 'selected' : '' ?>>Kredi Kartı</option>
         </select>
     </div>
-    <div id="filterBankWrap" class="<?= $paymentSourceType !== 'credit_card' ? '' : 'hidden' ?>">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka</label>
-        <select name="payment_source_id" id="filterBankId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[200px]">
+    <div id="filterBankWrap" class="filter-field <?= $paymentSourceType !== 'credit_card' ? '' : 'hidden' ?>">
+        <label class="filter-label" for="filterBankId">Banka</label>
+        <select name="payment_source_id" id="filterBankId" class="filter-input">
             <option value="">Tümü</option>
             <?php foreach ($bankAccounts as $ba): ?>
                 <option value="<?= htmlspecialchars($ba['id']) ?>" <?= $paymentSourceType === 'bank_account' && $paymentSourceId === $ba['id'] ? 'selected' : '' ?>><?= htmlspecialchars($ba['bank_name'] . ' - ' . ($ba['account_holder_name'] ?? '')) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
-    <div id="filterCardWrap" class="<?= $paymentSourceType === 'credit_card' ? '' : 'hidden' ?>">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kredi Kartı</label>
-        <select name="payment_source_id" id="filterCardId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[200px]">
+    <div id="filterCardWrap" class="filter-field <?= $paymentSourceType === 'credit_card' ? '' : 'hidden' ?>">
+        <label class="filter-label" for="filterCardId">Kredi Kartı</label>
+        <select name="payment_source_id" id="filterCardId" class="filter-input">
             <option value="">Tümü</option>
             <?php foreach ($creditCards as $cc): ?>
                 <option value="<?= htmlspecialchars($cc['id']) ?>" <?= $paymentSourceType === 'credit_card' && $paymentSourceId === $cc['id'] ? 'selected' : '' ?>><?= htmlspecialchars(CreditCard::getDisplayName($cc)) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlangıç</label>
-        <input type="date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="expense_start_date">Başlangıç</label>
+        <input type="date" name="start_date" id="expense_start_date" value="<?= htmlspecialchars($startDate) ?>" class="filter-input">
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş</label>
-        <input type="date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="expense_end_date">Bitiş</label>
+        <input type="date" name="end_date" id="expense_end_date" value="<?= htmlspecialchars($endDate) ?>" class="filter-input">
     </div>
-    <div class="w-full sm:w-auto flex-1 min-w-[200px]">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arama</label>
-        <input type="search" name="q" value="<?= htmlspecialchars(isset($_GET['q']) ? trim($_GET['q']) : '') ?>" placeholder="Açıklama, not, kategori..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="expense_filter_q">Arama</label>
+        <input type="search" name="q" id="expense_filter_q" value="<?= htmlspecialchars($expenseQ) ?>" placeholder="Açıklama, not, kategori..." class="filter-input">
     </div>
-    <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-    <?php if (!empty($categories)): ?>
-    <button type="button" onclick="document.getElementById('addExpenseModal').classList.remove('hidden')" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
-        <i class="bi bi-plus-lg mr-2"></i> Masraf Ekle
-    </button>
-    <?php endif; ?>
-</form>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'expenseFilterForm';
+$filterFormAction = '/masraflar';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Masraf Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <!-- Masraf listesi -->
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">

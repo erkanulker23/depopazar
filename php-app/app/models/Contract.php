@@ -440,4 +440,30 @@ class Contract
         );
         return (int) $stmt->fetchColumn();
     }
+
+    /** Bu dönemde en çok satış yapan kullanıcılar (sold_by_user_id) */
+    public static function findTopSellers(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 5): array
+    {
+        $limit = max(1, min(20, $limit));
+        $sql = 'SELECT u.id AS user_id, u.first_name, u.last_name, u.role,
+                       COUNT(c.id) AS sale_count,
+                       COALESCE(SUM(c.monthly_price + COALESCE(c.transportation_fee, 0) - COALESCE(c.discount, 0)), 0) AS sale_total
+                FROM contracts c
+                INNER JOIN users u ON u.id = c.sold_by_user_id AND u.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE c.deleted_at IS NULL AND c.sold_by_user_id IS NOT NULL
+                AND DATE(c.created_at) >= ? AND DATE(c.created_at) <= ? ';
+        $params = [$startDate, $endDate];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY u.id, u.first_name, u.last_name, u.role
+                  ORDER BY sale_count DESC, sale_total DESC
+                  LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

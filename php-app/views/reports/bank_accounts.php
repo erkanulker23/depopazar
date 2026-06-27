@@ -9,6 +9,20 @@ $startDate = $startDate ?? date('Y-m-01');
 $endDate = $endDate ?? date('Y-m-t');
 $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
 $paymentMethodGet = isset($_GET['payment_method']) ? $_GET['payment_method'] : '';
+$periodLabel = date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate));
+$hasActiveFilters = $qGet !== '' || $paymentMethodGet !== '' || $bankAccountId !== '' || $startDate !== date('Y-m-01') || $endDate !== date('Y-m-t');
+$activeFilterTags = ['Dönem: ' . $periodLabel];
+if ($bankAccountId !== '') {
+    foreach ($bankAccounts as $ba) {
+        if (($ba['id'] ?? '') === $bankAccountId) {
+            $activeFilterTags[] = 'Banka: ' . ($ba['bank_name'] ?? '');
+            break;
+        }
+    }
+}
+if ($paymentMethodGet === 'havale') $activeFilterTags[] = 'Yöntem: Havale';
+elseif ($paymentMethodGet === 'kredi_karti') $activeFilterTags[] = 'Yöntem: Kredi Kartı';
+if ($qGet !== '') $activeFilterTags[] = 'Arama: ' . $qGet;
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 ?>
@@ -22,57 +36,70 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Tarih aralığına ve banka hesabına göre tahsilat listesi</p>
 </div>
 
-<form method="get" action="/raporlar/banka-hesaplari" class="page-toolbar mb-6 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-4">
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yıl / Ay (hızlı)</label>
+<div class="page-toolbar mb-6">
+    <?php
+    $filterModalId = 'bankReportFilterModal';
+    $filterClearUrl = '/raporlar/banka-hesaplari?start_date=' . urlencode($startDate) . '&end_date=' . urlencode($endDate);
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
+</div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label">Yıl / Ay (hızlı)</label>
         <div class="flex flex-wrap gap-2">
-            <select id="bank_year" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+            <select id="bank_year" class="filter-input flex-1 min-w-[5rem]">
                 <?php for ($y = (int) date('Y'); $y >= (int) date('Y') - 5; $y--): ?>
                     <option value="<?= $y ?>" <?= (int) date('Y', strtotime($startDate)) === $y ? 'selected' : '' ?>><?= $y ?></option>
                 <?php endfor; ?>
             </select>
-            <select id="bank_month" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white">
+            <select id="bank_month" class="filter-input flex-1 min-w-[5rem]">
                 <?php $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']; foreach ($monthNames as $i => $mn): ?>
                     <option value="<?= $i + 1 ?>"><?= $mn ?></option>
                 <?php endforeach; ?>
             </select>
-            <button type="button" onclick="applyBankMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm">Ay uygula</button>
+            <button type="button" onclick="applyBankMonthPreset()" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm whitespace-nowrap">Ay uygula</button>
         </div>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banka Hesabı</label>
-        <select name="bank_account_id" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[200px]">
+    <div class="filter-field">
+        <label class="filter-label" for="bank_account_id">Banka Hesabı</label>
+        <select name="bank_account_id" id="bank_account_id" class="filter-input">
             <option value="">Tümü</option>
             <?php foreach ($bankAccounts as $ba): ?>
                 <option value="<?= htmlspecialchars($ba['id']) ?>" <?= $bankAccountId === $ba['id'] ? 'selected' : '' ?>><?= htmlspecialchars($ba['bank_name'] . ' - ' . ($ba['account_holder_name'] ?? '')) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlangıç</label>
-        <input type="date" name="start_date" id="bank_start_date" value="<?= htmlspecialchars($startDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="bank_start_date">Başlangıç</label>
+        <input type="date" name="start_date" id="bank_start_date" value="<?= htmlspecialchars($startDate) ?>" class="filter-input">
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş</label>
-        <input type="date" name="end_date" id="bank_end_date" value="<?= htmlspecialchars($endDate) ?>" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="bank_end_date">Bitiş</label>
+        <input type="date" name="end_date" id="bank_end_date" value="<?= htmlspecialchars($endDate) ?>" class="filter-input">
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ödeme Yöntemi</label>
-        <select name="payment_method" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-[140px]">
+    <div class="filter-field">
+        <label class="filter-label" for="bank_payment_method">Ödeme Yöntemi</label>
+        <select name="payment_method" id="bank_payment_method" class="filter-input">
             <option value="">Tümü</option>
             <option value="havale" <?= $paymentMethodGet === 'havale' ? 'selected' : '' ?>>Havale</option>
             <option value="kredi_karti" <?= $paymentMethodGet === 'kredi_karti' ? 'selected' : '' ?>>Kredi Kartı</option>
         </select>
     </div>
-    <div class="w-full sm:w-auto flex-1 min-w-[200px]">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arama</label>
-        <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Ödeme no, sözleşme, müşteri, işlem no..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+    <div class="filter-field">
+        <label class="filter-label" for="bank_search">Arama</label>
+        <input type="search" name="q" id="bank_search" value="<?= htmlspecialchars($qGet) ?>" placeholder="Ödeme no, sözleşme, müşteri, işlem no..." class="filter-input">
     </div>
-    <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
-    <?php if ($qGet !== '' || $paymentMethodGet !== '' || $bankAccountId !== ''): ?>
-        <a href="/raporlar/banka-hesaplari?start_date=<?= urlencode($startDate) ?>&end_date=<?= urlencode($endDate) ?>" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
-    <?php endif; ?>
-</form>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'bankReportFilterForm';
+$filterFormAction = '/raporlar/banka-hesaplari';
+$filterSubmitLabel = 'Göster';
+$filterModalTitle = 'Banka Raporu — Filtreler';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <?php
 $csvUrl = reportExportUrl('/raporlar/banka-hesaplari', array_filter([

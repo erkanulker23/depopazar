@@ -19,6 +19,20 @@ $filterQuery = http_build_query(array_filter([
     'borc' => $borcQuery,
 ], fn($v) => $v !== null && $v !== ''));
 $hasActiveFilters = $q !== '' || $inDepo !== '' || $warehouseId !== '' || array_key_exists('borc', $_GET);
+$activeFilterTags = [];
+if ($q !== '') $activeFilterTags[] = 'Arama: ' . $q;
+if ($inDepo === 'yes') $activeFilterTags[] = 'Depoda olan';
+elseif ($inDepo === 'no') $activeFilterTags[] = 'Depoda olmayan';
+if ($warehouseId !== '') {
+    foreach ($warehouses as $wh) {
+        if (($wh['id'] ?? '') === $warehouseId) {
+            $activeFilterTags[] = 'Depo: ' . ($wh['name'] ?? '');
+            break;
+        }
+    }
+}
+if ($borc === 'overdue') $activeFilterTags[] = 'Vadesi geçmiş borcu olan';
+elseif ($borc === 'unpaid') $activeFilterTags[] = 'Ödenmemiş borcu olan';
 $tableColspan = $debtFilter !== null ? 10 : 9;
 ob_start();
 ?>
@@ -30,27 +44,11 @@ ob_start();
 </div>
 
 <div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <form method="get" action="/musteriler" id="customerFilterForm" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <input type="search" name="q" value="<?= htmlspecialchars($q) ?>" placeholder="Ad, e-posta, telefon veya bilgi notu ara..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <select name="in_depo" class="customer-filter-select px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-0 sm:w-auto" title="Depoda olan müşteriler">
-            <option value="">Tüm müşteriler</option>
-            <option value="yes" <?= $inDepo === 'yes' ? 'selected' : '' ?>>Depoda olan</option>
-            <option value="no" <?= $inDepo === 'no' ? 'selected' : '' ?>>Depoda olmayan</option>
-        </select>
-        <select name="warehouse_id" class="customer-filter-select px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-0 sm:w-auto" title="Hangi depo">
-            <option value="">Tüm depolar</option>
-            <?php foreach ($warehouses as $wh): ?>
-                <option value="<?= htmlspecialchars($wh['id']) ?>" <?= $warehouseId === ($wh['id'] ?? '') ? 'selected' : '' ?>><?= htmlspecialchars($wh['name'] ?? '') ?></option>
-            <?php endforeach; ?>
-        </select>
-        <select name="borc" class="customer-filter-select px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white min-w-0 sm:w-auto" title="Borç durumu">
-            <option value="">Tüm müşteriler</option>
-            <option value="overdue" <?= $borc === 'overdue' ? 'selected' : '' ?>>Vadesi geçmiş borcu olan</option>
-            <option value="unpaid" <?= $borc === 'unpaid' ? 'selected' : '' ?>>Ödenmemiş borcu olan</option>
-        </select>
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-        <?php if ($hasActiveFilters): ?><a href="/musteriler?borc=" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
-    </form>
+    <?php
+    $filterModalId = 'customerFilterModal';
+    $filterClearUrl = '/musteriler?borc=';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <button type="submit" id="bulkDeleteBtn" form="bulkDeleteForm" class="btn-touch hidden inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40">
             <i class="bi bi-trash"></i> Seçilenleri sil
@@ -266,6 +264,47 @@ if (!empty($customers)):
 endif;
 ?>
 
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="customer_filter_q">Ara</label>
+        <input type="search" name="q" id="customer_filter_q" value="<?= htmlspecialchars($q) ?>" placeholder="Ad, e-posta, telefon veya bilgi notu ara..." class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="customer_filter_in_depo">Depo durumu</label>
+        <select name="in_depo" id="customer_filter_in_depo" class="filter-input">
+            <option value="">Tüm müşteriler</option>
+            <option value="yes" <?= $inDepo === 'yes' ? 'selected' : '' ?>>Depoda olan</option>
+            <option value="no" <?= $inDepo === 'no' ? 'selected' : '' ?>>Depoda olmayan</option>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="customer_filter_warehouse">Depo</label>
+        <select name="warehouse_id" id="customer_filter_warehouse" class="filter-input">
+            <option value="">Tüm depolar</option>
+            <?php foreach ($warehouses as $wh): ?>
+                <option value="<?= htmlspecialchars($wh['id']) ?>" <?= $warehouseId === ($wh['id'] ?? '') ? 'selected' : '' ?>><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="customer_filter_borc">Borç durumu</label>
+        <select name="borc" id="customer_filter_borc" class="filter-input">
+            <option value="">Tüm müşteriler</option>
+            <option value="overdue" <?= $borc === 'overdue' ? 'selected' : '' ?>>Vadesi geçmiş borcu olan</option>
+            <option value="unpaid" <?= $borc === 'unpaid' ? 'selected' : '' ?>>Ödenmemiş borcu olan</option>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'customerFilterForm';
+$filterFormAction = '/musteriler';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Müşteri Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
+
 <!-- Modal: Yeni Müşteri -->
 <div id="addCustomerModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
     <div class="flex min-h-full items-center justify-center p-4">
@@ -325,13 +364,6 @@ endif;
 
 <script>
 (function(){
-    // Gerçek zamanlı filtre: Depoda / Depo seçimi değişince formu gönder
-    document.querySelectorAll('.customer-filter-select').forEach(function(el) {
-        el.addEventListener('change', function() {
-            document.getElementById('customerFilterForm').submit();
-        });
-    });
-
     var selectAllCb = document.getElementById('selectAllCb');
     var bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     var customerCbs = document.querySelectorAll('.customer-cb');

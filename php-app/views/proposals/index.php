@@ -4,6 +4,8 @@ $proposals = $proposals ?? [];
 $statusLabels = ['draft' => 'Taslak', 'sent' => 'Gönderildi', 'accepted' => 'Kabul', 'rejected' => 'Red'];
 $proposalTypeLabels = ['depo' => 'Depo Teklifi', 'nakliye' => 'Nakliye Teklifi'];
 $durumGet = isset($_GET['durum']) ? $_GET['durum'] : '';
+$hasActiveFilters = $durumGet !== '';
+$activeFilterTags = $durumGet !== '' ? ['Durum: ' . ($statusLabels[$durumGet] ?? $durumGet)] : [];
 ob_start();
 ?>
 <div class="mb-6">
@@ -19,15 +21,11 @@ ob_start();
 <?php endif; ?>
 
 <div class="page-toolbar flex flex-wrap items-center justify-between gap-2 mb-4">
-    <form method="get" action="/teklifler" class="page-toolbar-form flex flex-wrap items-center gap-2">
-        <select name="durum" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white flex-1 min-w-[140px]">
-            <option value="">Tüm durumlar</option>
-            <?php foreach ($statusLabels as $val => $l): ?>
-                <option value="<?= htmlspecialchars($val) ?>" <?= $durumGet === $val ? 'selected' : '' ?>><?= htmlspecialchars($l) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-    </form>
+    <?php
+    $filterModalId = 'proposalFilterModal';
+    $filterClearUrl = '/teklifler';
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <a href="/teklifler/yeni" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Yeni Teklif
     </a>
@@ -94,6 +92,28 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+ob_start();
+?>
+    <div class="filter-field">
+        <label class="filter-label" for="proposal_filter_durum">Durum</label>
+        <select name="durum" id="proposal_filter_durum" class="filter-input">
+            <option value="">Tüm durumlar</option>
+            <?php foreach ($statusLabels as $val => $l): ?>
+                <option value="<?= htmlspecialchars($val) ?>" <?= $durumGet === $val ? 'selected' : '' ?>><?= htmlspecialchars($l) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'proposalFilterForm';
+$filterFormAction = '/teklifler';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Teklif Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
+
 <script>
 (function() {
     var bulkBar = document.getElementById('propBulkBar');

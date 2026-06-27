@@ -90,6 +90,8 @@ class DashboardController
         $prepaidContracts = [];
         $earlyPaymentsCount = 0;
         $earlyPaymentsSum = 0.0;
+        $topSellers = [];
+        $topPersonnelByJobs = [];
 
         if ($companyId || ($user['role'] ?? '') === 'super_admin') {
             $cid = $companyId;
@@ -109,6 +111,23 @@ class DashboardController
             $prepaidContracts = Payment::findFullyPrepaidContracts($this->pdo, $cid, 6);
             $earlyPaymentsCount = Payment::countEarlyPayments($this->pdo, $cid);
             $earlyPaymentsSum = Payment::sumEarlyPayments($this->pdo, $cid);
+            try {
+                $topSellers = Contract::findTopSellers(
+                    $this->pdo,
+                    $cid,
+                    $monthRange['start'],
+                    $monthRange['end'],
+                    5
+                );
+                $topPersonnelByJobs = Personnel::findTopByJobCount(
+                    $this->pdo,
+                    $cid,
+                    $monthRange['start'],
+                    $monthRange['end'],
+                    5
+                );
+            } catch (Throwable $e) {
+            }
         } else {
             $earlyPaymentsList = [];
             $prepaidContracts = [];

@@ -31,6 +31,11 @@ class UsersController
         $canManageUsers = ($user['role'] ?? '') === 'super_admin' || ($user['role'] ?? '') === 'company_owner';
         $roleLabels = RolePermissions::roleLabels();
         $formRoleOptions = RolePermissions::formRoleOptions(($user['role'] ?? '') === 'super_admin');
+        $warehouses = $this->warehousesForForms($user);
+        $warehouseNamesById = [];
+        foreach ($warehouses as $wh) {
+            $warehouseNamesById[$wh['id']] = $wh['name'];
+        }
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/users/index.php';
     }
@@ -61,6 +66,11 @@ class UsersController
         if (!empty($profile['company_id'])) {
             $c = Company::findOne($this->pdo, $profile['company_id']);
             $companyName = $c['name'] ?? null;
+        }
+        $managedWarehouseName = null;
+        if (!empty($profile['managed_warehouse_id'])) {
+            $wh = Warehouse::findOne($this->pdo, $profile['managed_warehouse_id']);
+            $managedWarehouseName = $wh['name'] ?? null;
         }
         $pageTitle = 'Kullanıcı: ' . trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
         require __DIR__ . '/../../views/users/detail.php';
@@ -101,6 +111,7 @@ class UsersController
         $roleLabels = RolePermissions::roleLabels();
         $currentUserIsSuperAdmin = ($user['role'] ?? '') === 'super_admin';
         $formRoleOptions = RolePermissions::formRoleOptions($currentUserIsSuperAdmin || ($profile['role'] ?? '') === 'super_admin');
+        $warehouses = $this->warehousesForForms($user, (($user['role'] ?? '') === 'super_admin') ? null : ($profile['company_id'] ?? null));
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/users/edit.php';
     }
@@ -168,6 +179,12 @@ class UsersController
                 exit;
             }
         }
+        $managedWarehouseId = $this->resolveManagedWarehouseId($role, $_POST['managed_warehouse_id'] ?? null, $newCompanyId);
+        if ($role === 'warehouse_manager' && !$managedWarehouseId) {
+            Auth::setSession('flash_error', 'Depo sorumlusu için sorumlu depo seçmelisiniz.');
+            header('Location: /kullanicilar');
+            exit;
+        }
         $data = [
             'email' => $email,
             'password' => $password,
@@ -176,10 +193,12 @@ class UsersController
             'phone' => trim($_POST['phone'] ?? '') ?: null,
             'role' => $role,
             'company_id' => $newCompanyId,
+            'managed_warehouse_id' => $managedWarehouseId,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
+            'receive_email_notifications' => isset($_POST['receive_email_notifications']) ? 1 : 0,
         ];
         try {
-            User::create($this->pdo, $data);
+            $created = User::create($this->pdo, $data);
         } catch (PDOException $e) {
             $msg = ($e->getCode() === '23000' || str_contains($e->getMessage(), 'Duplicate'))
                 ? 'Bu e-posta adresi zaten kayıtlı.'
@@ -193,6 +212,13 @@ class UsersController
             Auth::setSession('flash_error', 'Kullanıcı eklenemedi. Lütfen tekrar deneyin.');
             header('Location: /kullanicilar');
             exit;
+        }
+        $newUserId = $created['id'] ?? null;
+        if ($newUserId) {
+            $photoUrl = storeUserPhotoUpload($_FILES['photo'] ?? null, $newUserId);
+            if ($photoUrl) {
+                User::updatePhotoUrl($this->pdo, $newUserId, $photoUrl);
+            }
         }
         $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
@@ -261,13 +287,24 @@ class UsersController
         if (!in_array($submittedRole, $allowedRoles, true)) {
             $submittedRole = $profile['role'];
         }
+        $targetCompanyId = ($user['role'] ?? '') === 'super_admin'
+            ? (trim($_POST['company_id'] ?? '') ?: ($profile['company_id'] ?? null))
+            : ($profile['company_id'] ?? $companyId);
+        $managedWarehouseId = $this->resolveManagedWarehouseId($submittedRole, $_POST['managed_warehouse_id'] ?? null, $targetCompanyId);
+        if ($submittedRole === 'warehouse_manager' && !$managedWarehouseId) {
+            Auth::setSession('flash_error', 'Depo sorumlusu için sorumlu depo seçmelisiniz.');
+            header('Location: /kullanicilar/' . $id . '/duzenle');
+            exit;
+        }
         $data = [
             'first_name' => trim($_POST['first_name'] ?? ''),
             'last_name' => trim($_POST['last_name'] ?? ''),
             'email' => $email,
             'phone' => trim($_POST['phone'] ?? '') ?: null,
             'role' => $submittedRole,
+            'managed_warehouse_id' => $managedWarehouseId,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
+            'receive_email_notifications' => isset($_POST['receive_email_notifications']) ? 1 : 0,
         ];
         if (($user['role'] ?? '') === 'super_admin') {
             $data['company_id'] = trim($_POST['company_id'] ?? '') ?: null;
@@ -276,6 +313,20 @@ class UsersController
             $data['password'] = $_POST['password'];
         }
         User::update($this->pdo, $id, $data);
+        if (!empty($_POST['remove_photo'])) {
+            if (!empty($profile['photo_url'])) {
+                unlinkPublicFile($profile['photo_url']);
+            }
+            User::updatePhotoUrl($this->pdo, $id, null);
+        } elseif (!empty($_FILES['photo']['name'])) {
+            $photoUrl = storeUserPhotoUpload($_FILES['photo'] ?? null, $id);
+            if ($photoUrl) {
+                if (!empty($profile['photo_url'])) {
+                    unlinkPublicFile($profile['photo_url']);
+                }
+                User::updatePhotoUrl($this->pdo, $id, $photoUrl);
+            }
+        }
         // Güncellenen kullanıcı şu an giriş yapmışsa oturumu güncelle (e-posta, rol vb. hemen yansısın)
         if (($user['id'] ?? '') === $id) {
             $updated = User::findOne($this->pdo, $id);
@@ -287,6 +338,7 @@ class UsersController
                     'last_name' => $updated['last_name'],
                     'role' => $updated['role'],
                     'company_id' => $updated['company_id'] ?? null,
+                    'photo_url' => $updated['photo_url'] ?? null,
                 ];
                 Auth::refreshUser($sessionUser);
             }
@@ -375,11 +427,43 @@ class UsersController
             exit;
         }
         $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
+        if (!empty($profile['photo_url'])) {
+            unlinkPublicFile($profile['photo_url']);
+        }
         User::remove($this->pdo, $id);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Kullanıcı silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName]);
         Auth::setSession('flash_success', 'Kullanıcı silindi.');
         header('Location: /kullanicilar');
         exit;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function warehousesForForms(array $user, ?string $companyIdFilter = null): array
+    {
+        if (($user['role'] ?? '') === 'super_admin') {
+            return Warehouse::findAll($this->pdo, $companyIdFilter ?: null);
+        }
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        return $companyId ? Warehouse::findAll($this->pdo, $companyId) : [];
+    }
+
+    private function resolveManagedWarehouseId(string $role, ?string $managedWarehouseId, ?string $companyId): ?string
+    {
+        if ($role !== 'warehouse_manager') {
+            return null;
+        }
+        $managedWarehouseId = trim((string) $managedWarehouseId);
+        if ($managedWarehouseId === '') {
+            return null;
+        }
+        $warehouse = Warehouse::findOne($this->pdo, $managedWarehouseId);
+        if (!$warehouse) {
+            return null;
+        }
+        if ($companyId && ($warehouse['company_id'] ?? '') !== $companyId) {
+            return null;
+        }
+        return $managedWarehouseId;
     }
 }

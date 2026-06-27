@@ -39,7 +39,6 @@ $navItems = [
     ['name' => 'Ayarlar', 'href' => '/ayarlar', 'active' => $currentPath === '/ayarlar'],
 ];
 $navItems = array_values(array_filter($navItems, fn($item) => Auth::canAccessNav($item['href'])));
-$initials = strtoupper(mb_substr($user['first_name'] ?? 'A', 0, 1) . mb_substr($user['last_name'] ?? '', 0, 1));
 $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
 ?>
 <!DOCTYPE html>
@@ -132,6 +131,60 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         .btn-filter:hover { background-color: #1d4ed8; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4); }
         .dark .btn-filter { background-color: #3b82f6; box-shadow: 0 1px 3px rgba(59, 130, 246, 0.45); }
         .dark .btn-filter:hover { background-color: #2563eb; }
+        .filter-field > label,
+        .filter-modal-body .filter-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: rgb(55 65 81);
+            margin-bottom: 0.375rem;
+        }
+        .dark .filter-field > label,
+        .dark .filter-modal-body .filter-label { color: rgb(209 213 219); }
+        .filter-input,
+        .filter-modal-body input[type="search"],
+        .filter-modal-body input[type="date"],
+        .filter-modal-body input[type="text"],
+        .filter-modal-body select,
+        .filter-modal-body textarea {
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            border: 1px solid rgb(209 213 219);
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            background: #fff;
+            color: rgb(17 24 39);
+        }
+        .dark .filter-input,
+        .dark .filter-modal-body input[type="search"],
+        .dark .filter-modal-body input[type="date"],
+        .dark .filter-modal-body input[type="text"],
+        .dark .filter-modal-body select,
+        .dark .filter-modal-body textarea {
+            border-color: rgb(75 85 99);
+            background: rgb(55 65 81);
+            color: #fff;
+        }
+        .filter-modal-body input:focus,
+        .filter-modal-body select:focus,
+        .filter-modal-body textarea:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.45);
+            border-color: rgb(16 185 129);
+        }
+        .filter-modal-panel { animation: filterModalSlideUp 0.22s ease-out; }
+        @keyframes filterModalSlideUp {
+            from { transform: translateY(12px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @media (min-width: 640px) {
+            .filter-modal-panel { animation: filterModalFadeIn 0.18s ease-out; }
+            @keyframes filterModalFadeIn {
+                from { transform: scale(0.97); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+            }
+        }
         .sidebar-mobile { transform: translateX(-100%); transition: transform .3s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
         .sidebar-mobile.open { transform: translateX(0); box-shadow: 20px 0 40px rgba(0,0,0,.2); }
         @media (min-width: 768px) { .sidebar-mobile { transform: none; box-shadow: none; } }
@@ -442,6 +495,36 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         .stat-card { border-radius: 1rem; border: 1px solid rgb(229 231 235); background: white; padding: 1.25rem; transition: all .2s; }
         .dark .stat-card { border-color: rgb(74 63 54); background: rgb(42 35 32); }
         .stat-card:hover { box-shadow: 0 4px 12px rgba(5,150,105,.1); }
+        /* Koyu mod: tablo, modal ve aksiyon butonları okunaklılığı */
+        .dark main table td.text-gray-600,
+        .dark main table tbody .text-gray-600,
+        .dark .modal-overlay .text-gray-600 {
+            color: #cbd5e1;
+        }
+        .dark main table td.text-gray-700,
+        .dark .modal-overlay .text-gray-700 {
+            color: #e2e8f0;
+        }
+        .dark main a.bg-emerald-50,
+        .dark main button.bg-emerald-50 {
+            background-color: rgba(6, 78, 59, 0.28);
+            color: #6ee7b7;
+        }
+        .dark main a.bg-gray-100,
+        .dark main button.bg-gray-100 {
+            background-color: rgba(74, 63, 54, 0.65);
+            color: #e2e8f0;
+        }
+        .dark main a.bg-red-50,
+        .dark main button.bg-red-50 {
+            background-color: rgba(127, 29, 29, 0.28);
+            color: #fca5a5;
+        }
+        .dark main a.hover\:bg-emerald-100:hover { background-color: rgba(6, 78, 59, 0.42); }
+        .dark main a.hover\:bg-gray-200:hover,
+        .dark main button.hover\:bg-gray-200:hover { background-color: rgba(92, 64, 51, 0.85); }
+        .dark main a.hover\:bg-red-100:hover { background-color: rgba(127, 29, 29, 0.42); }
+        .dark .modal-overlay .border-gray-300 { border-color: #4a3f36; }
         .modal-overlay { -webkit-overflow-scrolling: touch; }
         .modal-overlay .relative { max-height: min(90vh, 600px); }
     </style>
@@ -481,7 +564,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             </nav>
             <div class="sidebar-user-footer flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700 p-4 mx-3 mb-4">
                 <div class="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                    <div class="w-9 h-9 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"><?= htmlspecialchars($initials) ?></div>
+                    <?php $userRow = $user; $size = 'sm'; require __DIR__ . '/partials/user_avatar.php'; ?>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-bold text-gray-900 dark:text-white truncate"><?= htmlspecialchars(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?></p>
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($user['email'] ?? '') ?></p>
@@ -710,6 +793,34 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 badge.classList.remove('hidden');
             })
             .catch(function(){});
+    })();
+    (function(){
+        window.openFilterModal = function(id) {
+            var el = document.getElementById(id || 'pageFilterModal');
+            if (!el) return;
+            el.classList.remove('hidden');
+            el.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            var first = el.querySelector('input:not([type="hidden"]), select, textarea');
+            if (first) setTimeout(function(){ first.focus(); }, 80);
+        };
+        window.closeFilterModal = function(id) {
+            var el = document.getElementById(id || 'pageFilterModal');
+            if (!el) return;
+            el.classList.add('hidden');
+            el.setAttribute('aria-hidden', 'true');
+            if (!document.querySelector('.filter-modal-overlay:not(.hidden), .modal-overlay:not(.hidden)')) {
+                document.body.style.overflow = '';
+            }
+        };
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') return;
+            var open = document.querySelector('.filter-modal-overlay:not(.hidden)');
+            if (open) {
+                e.preventDefault();
+                closeFilterModal(open.id);
+            }
+        });
     })();
     </script>
     <script src="/phone-mask.js" defer></script>

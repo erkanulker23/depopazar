@@ -49,6 +49,7 @@ class AuthController
             'last_name' => $user['last_name'],
             'role' => $user['role'],
             'company_id' => $user['company_id'],
+            'photo_url' => $user['photo_url'] ?? null,
         ]);
         if (!empty($user['company_id'])) {
             $company = Company::findOne($this->pdo, $user['company_id']);

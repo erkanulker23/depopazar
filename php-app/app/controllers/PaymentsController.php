@@ -174,16 +174,26 @@ class PaymentsController
                 if ($firstPayment && !empty($firstPayment['contract_id'])) {
                     $contract = Contract::findOne($this->pdo, $firstPayment['contract_id']);
                     if ($contract) {
-                        Notification::createForCompany($this->pdo, $contract['company_id'] ?? null, 'payment', 'Ödeme alındı', 'Sözleşme ' . ($contract['contract_number'] ?? '') . ' için ödeme alındı.', ['contract_id' => $firstPayment['contract_id']]);
+                        $whId = $contract['warehouse_id'] ?? null;
+                        Notification::createForCompanyAndWarehouse($this->pdo, $contract['company_id'] ?? null, $whId, 'payment', 'Ödeme alındı', 'Sözleşme ' . ($contract['contract_number'] ?? '') . ' için ödeme alındı.', ['contract_id' => $firstPayment['contract_id'], 'warehouse_id' => $whId]);
                         $this->sendPaymentReceivedEmails($firstPayment);
                     }
                 }
             } elseif (!empty($paymentIds)) {
                 Payment::markManyAsPaid($this->pdo, $paymentIds, $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt);
+                $notifiedWarehouses = [];
                 foreach ($paymentIds as $pid) {
                     $p = Payment::findOne($this->pdo, $pid);
                     if ($p) {
                         $this->sendPaymentReceivedEmails($p);
+                        if (!empty($p['contract_id'])) {
+                            $c = Contract::findOne($this->pdo, $p['contract_id']);
+                            $whId = $c['warehouse_id'] ?? null;
+                            if ($whId && !isset($notifiedWarehouses[$whId])) {
+                                $notifiedWarehouses[$whId] = true;
+                                Notification::createForWarehouse($this->pdo, $whId, $companyId, 'payment', 'Ödemeler alındı', count($paymentIds) . ' adet ödeme kaydedildi.', ['warehouse_id' => $whId]);
+                            }
+                        }
                     }
                 }
                 Notification::createForCompany($this->pdo, $companyId, 'payment', 'Ödemeler alındı', count($paymentIds) . ' adet ödeme kaydedildi.');

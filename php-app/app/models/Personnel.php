@@ -116,6 +116,19 @@ class Personnel
         return $id;
     }
 
+    public static function updatePhotoUrl(PDO $pdo, string $id, ?string $photoUrl, ?string $companyId = null): bool
+    {
+        $sql = 'UPDATE personnel SET photo_url = ? WHERE id = ? AND deleted_at IS NULL ';
+        $params = [$photoUrl, $id];
+        if ($companyId) {
+            $sql .= ' AND company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->rowCount() > 0;
+    }
+
     public static function update(PDO $pdo, string $id, array $data, ?string $companyId = null): bool
     {
         $sql = 'UPDATE personnel SET first_name = ?, last_name = ?, phone = ?, job_type = ?, is_active = ?, notes = ? WHERE id = ? AND deleted_at IS NULL ';
@@ -148,6 +161,39 @@ class Personnel
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->rowCount() > 0;
+    }
+
+    /** Bu dönemde en çok nakliye işine giden personel */
+    public static function findTopByJobCount(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 5): array
+    {
+        if (!self::tableExists($pdo)) {
+            return [];
+        }
+        try {
+            $pdo->query('SELECT 1 FROM transportation_job_personnel LIMIT 1');
+        } catch (Throwable $e) {
+            return [];
+        }
+        $limit = max(1, min(20, $limit));
+        $sql = 'SELECT p.id AS personnel_id, p.first_name, p.last_name, p.job_type, p.photo_url,
+                       COUNT(DISTINCT tjp.transportation_job_id) AS job_count
+                FROM transportation_job_personnel tjp
+                INNER JOIN personnel p ON p.id = tjp.personnel_id AND p.deleted_at IS NULL
+                INNER JOIN transportation_jobs tj ON tj.id = tjp.transportation_job_id AND tj.deleted_at IS NULL
+                WHERE tjp.deleted_at IS NULL
+                AND COALESCE(DATE(tj.job_date), DATE(tj.created_at)) >= ?
+                AND COALESCE(DATE(tj.job_date), DATE(tj.created_at)) <= ? ';
+        $params = [$startDate, $endDate];
+        if ($companyId) {
+            $sql .= ' AND tj.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY p.id, p.first_name, p.last_name, p.job_type
+                  ORDER BY job_count DESC, p.first_name ASC, p.last_name ASC
+                  LIMIT ' . (int) $limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     private static function uuid(): string

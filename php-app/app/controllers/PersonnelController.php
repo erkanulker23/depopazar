@@ -69,7 +69,7 @@ class PersonnelController
             exit;
         }
         try {
-            Personnel::create($this->pdo, [
+            $id = Personnel::create($this->pdo, [
                 'company_id' => $companyId,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
@@ -78,6 +78,13 @@ class PersonnelController
                 'is_active' => isset($_POST['is_active']) ? 1 : 0,
                 'notes' => trim($_POST['notes'] ?? ''),
             ]);
+            $photoUrl = storePersonnelPhotoUpload($_FILES['photo'] ?? null, $id);
+            if ($photoUrl) {
+                try {
+                    Personnel::updatePhotoUrl($this->pdo, $id, $photoUrl, $companyId);
+                } catch (Throwable $e) {
+                }
+            }
             Notification::createForCompany($this->pdo, $companyId, 'personnel', 'Personel eklendi', trim($firstName . ' ' . $lastName) . ' saha personeli olarak eklendi.');
             Auth::setSession('flash_success', 'Personel eklendi.');
         } catch (Throwable $e) {
@@ -122,6 +129,28 @@ class PersonnelController
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
             'notes' => trim($_POST['notes'] ?? ''),
         ], $companyId ?: null);
+
+        if (!empty($_POST['remove_photo'])) {
+            if (!empty($row['photo_url'])) {
+                unlinkPublicFile($row['photo_url']);
+            }
+            try {
+                Personnel::updatePhotoUrl($this->pdo, $id, null, $companyId ?: null);
+            } catch (Throwable $e) {
+            }
+        } else {
+            $photoUrl = storePersonnelPhotoUpload($_FILES['photo'] ?? null, $id);
+            if ($photoUrl) {
+                if (!empty($row['photo_url'])) {
+                    unlinkPublicFile($row['photo_url']);
+                }
+                try {
+                    Personnel::updatePhotoUrl($this->pdo, $id, $photoUrl, $companyId ?: null);
+                } catch (Throwable $e) {
+                }
+            }
+        }
+
         Notification::createForCompany($this->pdo, $row['company_id'] ?? null, 'personnel', 'Personel güncellendi', trim($firstName . ' ' . $lastName) . ' bilgileri güncellendi.');
         Auth::setSession('flash_success', 'Personel güncellendi.');
         header('Location: /personel');
@@ -149,6 +178,9 @@ class PersonnelController
             exit;
         }
         $name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+        if (!empty($row['photo_url'])) {
+            unlinkPublicFile($row['photo_url']);
+        }
         Personnel::delete($this->pdo, $id, $companyId ?: null);
         Notification::createForCompany($this->pdo, $row['company_id'] ?? null, 'personnel', 'Personel silindi', $name . ' silindi.');
         Auth::setSession('flash_success', 'Personel silindi.');

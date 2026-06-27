@@ -181,6 +181,93 @@ $userDisplayName = trim(($authUser['first_name'] ?? '') . ' ' . ($authUser['last
 </div>
 
 <?php
+$topSellers = $topSellers ?? [];
+$topPersonnelByJobs = $topPersonnelByJobs ?? [];
+$monthRange = $monthRange ?? Payment::currentMonthRange();
+$showPerformancePanel = !empty($showMonthPanel);
+?>
+<?php if ($showPerformancePanel): ?>
+<section class="mb-8 rounded-2xl border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" aria-label="Satış ve saha performansı">
+    <div class="px-5 py-4 border-b border-violet-100 dark:border-violet-900/50 bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-900/20 dark:to-fuchsia-900/20 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                <i class="bi bi-trophy text-xl"></i>
+            </span>
+            <div>
+                <h2 class="text-base font-bold text-gray-900 dark:text-white">Performans</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($monthRange['label'] ?? 'Bu ay') ?> · satış ve saha özeti</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs">
+            <a href="/girisler" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors">Girişler</a>
+            <a href="/nakliye-isler" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors">Nakliye işleri</a>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-gray-700">
+        <div class="p-4 lg:p-5">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <i class="bi bi-person-check text-emerald-600 dark:text-emerald-400"></i>
+                En çok satış yapan kullanıcılar
+            </h3>
+            <?php if (empty($topSellers)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu ay satış kaydı yok veya satış yapan atanmamış</p>
+            <?php else: ?>
+                <ol class="space-y-2">
+                    <?php foreach ($topSellers as $i => $seller):
+                        $name = trim(($seller['first_name'] ?? '') . ' ' . ($seller['last_name'] ?? ''));
+                        $rank = $i + 1;
+                    ?>
+                    <li class="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100/80 dark:border-emerald-900/30">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold <?= $rank === 1 ? 'bg-amber-400 text-amber-950' : ($rank === 2 ? 'bg-slate-300 text-slate-800 dark:bg-slate-500 dark:text-white' : ($rank === 3 ? 'bg-orange-300 text-orange-950' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300')) ?>">
+                            <?= $rank ?>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($name ?: '-') ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400"><?= (int) ($seller['sale_count'] ?? 0) ?> satış · <?= fmtMoney($seller['sale_total'] ?? 0) ?> ₺</p>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        </div>
+        <div class="p-4 lg:p-5 border-t lg:border-t-0 border-slate-100 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <i class="bi bi-truck text-blue-600 dark:text-blue-400"></i>
+                En çok işe giden personel
+            </h3>
+            <?php if (empty($topPersonnelByJobs)): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu ay personel atanan nakliye işi yok</p>
+            <?php else: ?>
+                <ol class="space-y-2">
+                    <?php foreach ($topPersonnelByJobs as $i => $person):
+                        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+                        $jobType = Personnel::jobTypeLabel($person['job_type'] ?? '');
+                        $rank = $i + 1;
+                    ?>
+                    <li class="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/80 dark:border-blue-900/30">
+                        <?php
+                        $personnel = [
+                            'first_name' => $person['first_name'] ?? '',
+                            'last_name' => $person['last_name'] ?? '',
+                            'photo_url' => $person['photo_url'] ?? null,
+                        ];
+                        $size = 'sm';
+                        require __DIR__ . '/../partials/personnel_avatar.php';
+                        ?>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($name ?: '-') ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400"><?= (int) ($person['job_count'] ?? 0) ?> iş · <?= htmlspecialchars($jobType) ?><?= $rank <= 3 ? ' · #' . $rank : '' ?></p>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php
 $monthRange = $monthRange ?? Payment::currentMonthRange();
 $monthOverdueList = $monthOverdueList ?? [];
 $monthDueList = $monthDueList ?? [];

@@ -291,10 +291,12 @@ class ContractsController
             $contractId = $created['id'] ?? null;
             $contractNumber = $created['contract_number'] ?? $contractId ?? '';
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-            Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName]);
+            $whId = $room['warehouse_id'] ?? null;
+            Notification::createForCompanyAndWarehouse($this->pdo, $room['company_id'] ?? $companyId, $whId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName, 'warehouse_id' => $whId]);
             foreach ($createdAdditional as $extraCreated) {
                 $numExtra = $extraCreated['contract_number'] ?? $extraCreated['id'] ?? '';
-                Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $numExtra . ' oluşturuldu.', ['contract_id' => $extraCreated['id'] ?? null, 'actor_name' => $actorName]);
+                $extraWhId = $extraCreated['warehouse_id'] ?? $whId;
+                Notification::createForCompanyAndWarehouse($this->pdo, $room['company_id'] ?? $companyId, $extraWhId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $numExtra . ' oluşturuldu.', ['contract_id' => $extraCreated['id'] ?? null, 'actor_name' => $actorName, 'warehouse_id' => $extraWhId]);
             }
             $this->sendContractCreatedEmails($created);
             foreach ($createdAdditional as $extraCreated) {
@@ -839,6 +841,18 @@ class ContractsController
         if ($roomId) {
             Room::update($this->pdo, $roomId, ['status' => 'empty']);
         }
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        $contractNumber = $contract['contract_number'] ?? $id;
+        $whId = $contract['warehouse_id'] ?? null;
+        Notification::createForCompanyAndWarehouse(
+            $this->pdo,
+            $contract['company_id'] ?? null,
+            $whId,
+            'contract',
+            'Sözleşme sonlandırıldı',
+            'Sözleşme ' . $contractNumber . ' sonlandırıldı.',
+            ['contract_id' => $id, 'actor_name' => $actorName, 'warehouse_id' => $whId]
+        );
         Auth::setSession('flash_success', 'Sözleşme sonlandırıldı.');
         header('Location: /girisler');
         exit;
@@ -899,9 +913,10 @@ class ContractsController
             if ($companyId && ($contract['company_id'] ?? '') !== $companyId) continue;
             $roomId = $contract['room_id'] ?? null;
             $contractNumber = $contract['contract_number'] ?? $id;
+            $whId = $contract['warehouse_id'] ?? null;
             Contract::hardDelete($this->pdo, $id);
             if ($roomId) Room::update($this->pdo, $roomId, ['status' => 'empty']);
-            Notification::createForCompany($this->pdo, $contract['company_id'] ?? null, 'contract', 'Sözleşme silindi', 'Sözleşme ' . $contractNumber . ' silindi.');
+            Notification::createForCompanyAndWarehouse($this->pdo, $contract['company_id'] ?? null, $whId, 'contract', 'Sözleşme silindi', 'Sözleşme ' . $contractNumber . ' silindi.', ['contract_id' => $id, 'warehouse_id' => $whId]);
             $deleted++;
         }
         if ($deleted > 0) {

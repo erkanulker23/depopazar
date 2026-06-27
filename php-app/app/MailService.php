@@ -95,7 +95,7 @@ class MailService
         }
         $placeholders = implode(',', array_fill(0, count($userIds), '?'));
         $stmt = $pdo->prepare(
-            "SELECT DISTINCT email FROM users WHERE id IN ($placeholders) AND deleted_at IS NULL AND email != ''"
+            "SELECT DISTINCT email FROM users WHERE id IN ($placeholders) AND deleted_at IS NULL AND email != '' AND receive_email_notifications = 1"
         );
         $stmt->execute($userIds);
         $emails = [];
@@ -412,7 +412,7 @@ class MailService
      */
     public static function sendToSuperAdmins(PDO $pdo, ?string $companyId, string $subject, string $message, ?array $context = null): void
     {
-        $stmt = $pdo->query("SELECT id FROM users WHERE role = 'super_admin' AND deleted_at IS NULL AND email != ''");
+        $stmt = $pdo->query("SELECT id FROM users WHERE role = 'super_admin' AND deleted_at IS NULL AND email != '' AND receive_email_notifications = 1");
         $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
         if ($userIds === []) {
             return;

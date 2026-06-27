@@ -35,24 +35,21 @@ ob_start();
 $durumGet = isset($_GET['durum']) ? $_GET['durum'] : '';
 $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
 $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
+$hasActiveContractFilters = $qGet !== '' || $durumGet !== '' || $borcGet !== '';
+$activeFilterTags = [];
+if ($qGet !== '') $activeFilterTags[] = 'Arama: ' . $qGet;
+if ($durumGet === 'active') $activeFilterTags[] = 'Durum: Aktif';
+elseif ($durumGet === 'inactive') $activeFilterTags[] = 'Durum: Sonlandırılanlar';
+if ($borcGet === 'with_debt') $activeFilterTags[] = 'Borcu olanlar';
+elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
 ?>
 <div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <form method="get" action="/girisler" class="page-toolbar-form flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Sözleşme no, müşteri, oda, depo, plaka..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <input type="hidden" name="newSale" value="">
-        <select name="durum" class="btn-touch flex-1 min-w-0 sm:w-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            <option value="">Tüm Durumlar</option>
-            <option value="active" <?= $durumGet === 'active' ? 'selected' : '' ?>>Aktif</option>
-            <option value="inactive" <?= $durumGet === 'inactive' ? 'selected' : '' ?>>Sonlandırılanlar</option>
-        </select>
-        <select name="borc" class="btn-touch flex-1 min-w-0 sm:w-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            <option value="">Tümü</option>
-            <option value="with_debt" <?= $borcGet === 'with_debt' ? 'selected' : '' ?>>Borcu olanlar</option>
-            <option value="no_debt" <?= $borcGet === 'no_debt' ? 'selected' : '' ?>>Borcu olmayanlar</option>
-        </select>
-        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
-        <a href="/girisler" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
-    </form>
+    <?php
+    $filterModalId = 'contractFilterModal';
+    $filterClearUrl = '/girisler';
+    $hasActiveFilters = $hasActiveContractFilters;
+    require __DIR__ . '/../partials/page_filter_trigger.php';
+    ?>
     <button type="button" onclick="openNewSaleModal()" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
         <i class="bi bi-plus-circle mr-2"></i> Yeni Satış Gir
     </button>
@@ -196,6 +193,39 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
     $keepParams = array_filter(['q' => $qGet !== '' ? $qGet : null, 'durum' => $durumGet !== '' ? $durumGet : null, 'borc' => $borcGet !== '' ? $borcGet : null, 'newSale' => ($openNewSale ?? false) ? '1' : null]);
     echo renderPagination($contractsTotal, $perPage, $page, '/girisler', $keepParams);
 endif; ?>
+
+<?php
+ob_start();
+?>
+    <input type="hidden" name="newSale" value="">
+    <div class="filter-field">
+        <label class="filter-label" for="contract_filter_q">Ara</label>
+        <input type="search" name="q" id="contract_filter_q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Sözleşme no, müşteri, oda, depo, plaka..." class="filter-input">
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="contract_filter_durum">Durum</label>
+        <select name="durum" id="contract_filter_durum" class="filter-input">
+            <option value="">Tüm Durumlar</option>
+            <option value="active" <?= $durumGet === 'active' ? 'selected' : '' ?>>Aktif</option>
+            <option value="inactive" <?= $durumGet === 'inactive' ? 'selected' : '' ?>>Sonlandırılanlar</option>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="contract_filter_borc">Borç</label>
+        <select name="borc" id="contract_filter_borc" class="filter-input">
+            <option value="">Tümü</option>
+            <option value="with_debt" <?= $borcGet === 'with_debt' ? 'selected' : '' ?>>Borcu olanlar</option>
+            <option value="no_debt" <?= $borcGet === 'no_debt' ? 'selected' : '' ?>>Borcu olmayanlar</option>
+        </select>
+    </div>
+<?php
+$filterModalBody = ob_get_clean();
+$filterFormId = 'contractFilterForm';
+$filterFormAction = '/girisler';
+$filterSubmitLabel = 'Filtrele';
+$filterModalTitle = 'Giriş Filtreleri';
+require __DIR__ . '/../partials/page_filter_modal.php';
+?>
 
 <!-- Modal: Yeni Satış Gir -->
 <div id="newSaleModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">

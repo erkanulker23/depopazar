@@ -15,7 +15,7 @@ $csvLabel = $csvLabel ?? 'Excel Dışa Aktar';
 <style>
 @media print {
     .no-print { display: none !important; }
-    aside, nav, header, footer, .page-toolbar form { display: none !important; }
+    aside, nav, header, footer, .page-toolbar, .page-filter-modal, .filter-modal-overlay { display: none !important; }
     body { background: #fff !important; }
     .card-modern, .stat-card { break-inside: avoid; }
 }
