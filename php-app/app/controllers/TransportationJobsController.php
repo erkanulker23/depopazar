@@ -30,16 +30,17 @@ class TransportationJobsController
         }
         $customers = [];
         $services = [];
-        $staff = [];
+        $personnel = [];
         $vehicles = [];
         $warehouses = [];
+        $personnelTableExists = Personnel::tableExists($this->pdo);
         if ($companyId) {
             $customers = Customer::findAll($this->pdo, $companyId);
             $services = Service::findAll($this->pdo, $companyId);
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
-            $stmt = $this->pdo->prepare('SELECT id, first_name, last_name, email FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (' . RolePermissions::sqlCompanyOperativeRoles() . ') ORDER BY first_name, last_name');
-            $stmt->execute([$companyId]);
-            $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($personnelTableExists) {
+                $personnel = Personnel::findActiveForCompany($this->pdo, $companyId);
+            }
             try {
                 $vehicles = Vehicle::findAll($this->pdo, $companyId);
             } catch (Throwable $e) {
@@ -49,8 +50,9 @@ class TransportationJobsController
             $customers = Customer::findAll($this->pdo, null);
             $services = Service::findAll($this->pdo, null);
             $warehouses = Warehouse::findAll($this->pdo, null);
-            $stmt = $this->pdo->query('SELECT id, first_name, last_name, email FROM users WHERE deleted_at IS NULL AND role IN (' . RolePermissions::sqlCompanyOperativeRoles() . ') ORDER BY first_name, last_name');
-            $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($personnelTableExists) {
+                $personnel = Personnel::findAll($this->pdo, null, null, null, '1');
+            }
             try {
                 $vehicles = Vehicle::findAll($this->pdo, null);
             } catch (Throwable $e) {
@@ -103,10 +105,10 @@ class TransportationJobsController
         }
         $company = !empty($job['company_id']) ? Company::findOne($this->pdo, $job['company_id']) : null;
         $staffNames = [];
-        if (!empty($job['staff_ids'])) {
-            $placeholders = implode(',', array_fill(0, count($job['staff_ids']), '?'));
-            $stmt = $this->pdo->prepare("SELECT CONCAT(first_name, ' ', last_name) AS name FROM users WHERE id IN ($placeholders) AND deleted_at IS NULL");
-            $stmt->execute($job['staff_ids']);
+        if (!empty($job['personnel_ids']) && Personnel::tableExists($this->pdo)) {
+            $placeholders = implode(',', array_fill(0, count($job['personnel_ids']), '?'));
+            $stmt = $this->pdo->prepare("SELECT CONCAT(first_name, ' ', last_name) AS name FROM personnel WHERE id IN ($placeholders) AND deleted_at IS NULL");
+            $stmt->execute($job['personnel_ids']);
             $staffNames = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
         $jobExpenses = [];
@@ -258,13 +260,15 @@ class TransportationJobsController
         }
         $vehicles = [];
         $warehouses = [];
+        $personnel = [];
+        $personnelTableExists = Personnel::tableExists($this->pdo);
         if ($companyId) {
             $customers = Customer::findAll($this->pdo, $companyId);
             $services = Service::findAll($this->pdo, $companyId);
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
-            $stmt = $this->pdo->prepare('SELECT id, first_name, last_name, email FROM users WHERE company_id = ? AND deleted_at IS NULL AND role IN (' . RolePermissions::sqlCompanyOperativeRoles() . ') ORDER BY first_name, last_name');
-            $stmt->execute([$companyId]);
-            $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($personnelTableExists) {
+                $personnel = Personnel::findActiveForCompany($this->pdo, $companyId);
+            }
             try {
                 $vehicles = Vehicle::findAll($this->pdo, $companyId);
             } catch (Throwable $e) {
@@ -274,8 +278,9 @@ class TransportationJobsController
             $customers = Customer::findAll($this->pdo, null);
             $services = Service::findAll($this->pdo, null);
             $warehouses = Warehouse::findAll($this->pdo, null);
-            $stmt = $this->pdo->query('SELECT id, first_name, last_name, email FROM users WHERE deleted_at IS NULL AND role IN (' . RolePermissions::sqlCompanyOperativeRoles() . ') ORDER BY first_name, last_name');
-            $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($personnelTableExists) {
+                $personnel = Personnel::findAll($this->pdo, null, null, null, '1');
+            }
             try {
                 $vehicles = Vehicle::findAll($this->pdo, null);
             } catch (Throwable $e) {
@@ -355,7 +360,7 @@ class TransportationJobsController
                 'status' => trim($_POST['status'] ?? '') ?: 'pending',
                 'is_paid' => isset($_POST['is_paid']) && $_POST['is_paid'] === '1',
                 'notes' => trim($_POST['notes'] ?? '') ?: null,
-                'staff_ids' => isset($_POST['staff_ids']) && is_array($_POST['staff_ids']) ? array_filter($_POST['staff_ids']) : [],
+                'personnel_ids' => $this->resolvePersonnelIds($companyId),
                 'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
             ]);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
@@ -423,7 +428,7 @@ class TransportationJobsController
                 'status' => trim($_POST['status'] ?? '') ?: 'pending',
                 'is_paid' => isset($_POST['is_paid']) && $_POST['is_paid'] === '1',
                 'notes' => trim($_POST['notes'] ?? '') ?: null,
-                'staff_ids' => isset($_POST['staff_ids']) && is_array($_POST['staff_ids']) ? array_filter($_POST['staff_ids']) : [],
+                'personnel_ids' => $this->resolvePersonnelIds($companyId ?: ($job['company_id'] ?? null)),
                 'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
             ]);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
@@ -501,5 +506,17 @@ class TransportationJobsController
         }
         $label = $type === 'ofisten' ? 'Ofisten' : 'Evden';
         return $label . ': ' . implode(', ', $parts);
+    }
+
+    /** @return string[] */
+    private function resolvePersonnelIds(?string $companyId): array
+    {
+        $personnelIds = isset($_POST['personnel_ids']) && is_array($_POST['personnel_ids'])
+            ? array_values(array_filter(array_map('trim', $_POST['personnel_ids'])))
+            : [];
+        if (!$companyId || !Personnel::tableExists($this->pdo) || $personnelIds === []) {
+            return [];
+        }
+        return Personnel::filterIdsForCompany($this->pdo, $personnelIds, $companyId);
     }
 }

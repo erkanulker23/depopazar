@@ -206,6 +206,50 @@ class PaymentsController
         exit;
     }
 
+    /** Ödenmiş kaydın tahsilat tarihini güncelle */
+    public function updatePaidAt(array $params): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /odemeler');
+            exit;
+        }
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            Auth::setSession('flash_error', 'Ödeme bulunamadı.');
+            header('Location: /odemeler');
+            exit;
+        }
+        $payment = Payment::findOne($this->pdo, $id);
+        if (!$payment) {
+            Auth::setSession('flash_error', 'Ödeme kaydı bulunamadı.');
+            header('Location: /odemeler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($payment['company_id'] ?? '') !== $companyId) {
+            Auth::setSession('flash_error', 'Bu ödemeyi düzenleme yetkiniz yok.');
+            header('Location: /odemeler');
+            exit;
+        }
+        if (($payment['status'] ?? '') !== 'paid') {
+            Auth::setSession('flash_error', 'Sadece ödenmiş ödemelerin tarihi değiştirilebilir.');
+            header('Location: /odemeler/' . $id);
+            exit;
+        }
+        $paidAtRaw = trim($_POST['paid_at'] ?? '');
+        if ($paidAtRaw === '') {
+            Auth::setSession('flash_error', 'Tahsilat tarihi zorunludur.');
+            header('Location: /odemeler/' . $id);
+            exit;
+        }
+        Payment::updatePaidAt($this->pdo, $id, $paidAtRaw);
+        Auth::setSession('flash_success', 'Tahsilat tarihi güncellendi.');
+        header('Location: /odemeler/' . $id);
+        exit;
+    }
+
     public function show(array $params): void
     {
         Auth::requireStaff();
@@ -230,6 +274,7 @@ class PaymentsController
         $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
         $company = !empty($payment['company_id']) ? Company::findOne($this->pdo, $payment['company_id']) : null;
         $pageTitle = 'Ödeme: ' . ($payment['payment_number'] ?? $id);
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/payments/detail.php';
     }
 

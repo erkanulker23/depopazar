@@ -396,6 +396,39 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Ödemesi alınmış aylar (Y-m); sözleşme düzenlemede fiyat kilidi için */
+    public static function getPaidMonthsByContractId(PDO $pdo, string $contractId): array
+    {
+        $stmt = $pdo->prepare(
+            "SELECT DISTINCT DATE_FORMAT(due_date, '%Y-%m') AS month_key
+             FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL AND status = 'paid' AND due_date IS NOT NULL
+             ORDER BY month_key ASC"
+        );
+        $stmt->execute([$contractId]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /** Ödemesi alınmış ayların tahsil edilen tutarları (Y-m => amount) */
+    public static function getPaidAmountsByMonthForContract(PDO $pdo, string $contractId): array
+    {
+        $stmt = $pdo->prepare(
+            "SELECT DATE_FORMAT(due_date, '%Y-%m') AS month_key, amount
+             FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL AND status = 'paid' AND due_date IS NOT NULL
+             ORDER BY paid_at DESC"
+        );
+        $stmt->execute([$contractId]);
+        $out = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $key = $row['month_key'] ?? '';
+            if ($key !== '' && !isset($out[$key])) {
+                $out[$key] = (float) ($row['amount'] ?? 0);
+            }
+        }
+        return $out;
+    }
+
     /** Vadesi gelmiş / ödemesi alınmamış müşteriler: sadece bulunduğumuz ay ve önceki aylara ait ödenmemiş borç (gelecek ayların vadeleri dahil değil) */
     public static function findCustomersWithUnpaidPayments(PDO $pdo, ?string $companyId = null, int $limit = 50): array
     {
@@ -732,6 +765,17 @@ class Payment
             'UPDATE payments SET status = \'pending\', paid_at = NULL, payment_method = NULL, transaction_id = NULL, bank_account_id = NULL WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([$paymentId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /** Ödenmiş kaydın tahsilat tarihini güncelle */
+    public static function updatePaidAt(PDO $pdo, string $paymentId, ?string $paidAt): bool
+    {
+        $paidAtValue = normalizePaidAt($paidAt);
+        $stmt = $pdo->prepare(
+            'UPDATE payments SET paid_at = ? WHERE id = ? AND deleted_at IS NULL AND status = \'paid\''
+        );
+        $stmt->execute([$paidAtValue, $paymentId]);
         return $stmt->rowCount() > 0;
     }
 

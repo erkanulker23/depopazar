@@ -3,9 +3,12 @@ class TransportationJob
 {
     public static function findAll(PDO $pdo, ?string $companyId = null, ?string $customerSearch = null, ?int $year = null, ?int $month = null): array
     {
+        $staffNamesSelect = Personnel::tableExists($pdo)
+            ? "(SELECT GROUP_CONCAT(CONCAT(p.first_name, ' ', p.last_name) SEPARATOR ', ') FROM transportation_job_personnel tjp INNER JOIN personnel p ON p.id = tjp.personnel_id AND p.deleted_at IS NULL WHERE tjp.transportation_job_id = tj.id AND (tjp.deleted_at IS NULL))"
+            : 'NULL';
         $sql = 'SELECT tj.*, 
           c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.email AS customer_email, c.phone AS customer_phone,
-          (SELECT GROUP_CONCAT(CONCAT(u.first_name, \' \', u.last_name) SEPARATOR \', \') FROM transportation_job_staff tjs INNER JOIN users u ON u.id = tjs.user_id AND u.deleted_at IS NULL WHERE tjs.transportation_job_id = tj.id AND (tjs.deleted_at IS NULL)) AS staff_names
+          ' . $staffNamesSelect . ' AS staff_names
           FROM transportation_jobs tj
           INNER JOIN customers c ON c.id = tj.customer_id AND c.deleted_at IS NULL
           WHERE tj.deleted_at IS NULL ';
@@ -65,16 +68,24 @@ class TransportationJob
             $data['notes'] ?? null,
             isset($data['vehicle_plate']) && trim($data['vehicle_plate']) !== '' ? trim($data['vehicle_plate']) : null,
         ]);
-        $staffIds = $data['staff_ids'] ?? [];
-        if (is_array($staffIds) && count($staffIds) > 0) {
-            $stmtStaff = $pdo->prepare('INSERT INTO transportation_job_staff (id, transportation_job_id, user_id) VALUES (?, ?, ?)');
-            foreach ($staffIds as $uid) {
-                $uid = trim($uid);
-                if ($uid === '') continue;
-                $stmtStaff->execute([self::uuid(), $id, $uid]);
-            }
-        }
+        self::syncPersonnel($pdo, $id, $data['personnel_ids'] ?? $data['staff_ids'] ?? []);
         return $id;
+    }
+
+    private static function syncPersonnel(PDO $pdo, string $jobId, array $personnelIds): void
+    {
+        if (!Personnel::tableExists($pdo)) {
+            return;
+        }
+        $pdo->prepare('DELETE FROM transportation_job_personnel WHERE transportation_job_id = ?')->execute([$jobId]);
+        $stmt = $pdo->prepare('INSERT INTO transportation_job_personnel (id, transportation_job_id, personnel_id) VALUES (?, ?, ?)');
+        foreach ($personnelIds as $pid) {
+            $pid = trim((string) $pid);
+            if ($pid === '') {
+                continue;
+            }
+            $stmt->execute([self::uuid(), $jobId, $pid]);
+        }
     }
 
     public static function findOne(PDO $pdo, string $id): ?array
@@ -88,9 +99,13 @@ class TransportationJob
         $stmt->execute([$id]);
         $job = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if (!$job) return null;
-        $stmtStaff = $pdo->prepare('SELECT user_id FROM transportation_job_staff WHERE transportation_job_id = ? AND deleted_at IS NULL');
-        $stmtStaff->execute([$id]);
-        $job['staff_ids'] = $stmtStaff->fetchAll(PDO::FETCH_COLUMN);
+        $job['personnel_ids'] = [];
+        if (Personnel::tableExists($pdo)) {
+            $stmtStaff = $pdo->prepare('SELECT personnel_id FROM transportation_job_personnel WHERE transportation_job_id = ? AND deleted_at IS NULL');
+            $stmtStaff->execute([$id]);
+            $job['personnel_ids'] = $stmtStaff->fetchAll(PDO::FETCH_COLUMN);
+        }
+        $job['staff_ids'] = $job['personnel_ids'];
         return $job;
     }
 
@@ -122,16 +137,7 @@ class TransportationJob
             isset($data['vehicle_plate']) && trim($data['vehicle_plate']) !== '' ? trim($data['vehicle_plate']) : null,
             $id,
         ]);
-        $pdo->prepare('DELETE FROM transportation_job_staff WHERE transportation_job_id = ?')->execute([$id]);
-        $staffIds = $data['staff_ids'] ?? [];
-        if (is_array($staffIds) && count($staffIds) > 0) {
-            $stmtStaff = $pdo->prepare('INSERT INTO transportation_job_staff (id, transportation_job_id, user_id) VALUES (?, ?, ?)');
-            foreach ($staffIds as $uid) {
-                $uid = trim($uid);
-                if ($uid === '') continue;
-                $stmtStaff->execute([self::uuid(), $id, $uid]);
-            }
-        }
+        self::syncPersonnel($pdo, $id, $data['personnel_ids'] ?? $data['staff_ids'] ?? []);
     }
 
     public static function remove(PDO $pdo, string $id): void

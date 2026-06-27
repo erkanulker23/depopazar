@@ -20,7 +20,7 @@ class RolePermissions
         return [
             'super_admin' => 'Süper Admin',
             'company_owner' => 'Şirket Sahibi',
-            'company_staff' => 'Personel',
+            'company_staff' => 'Operasyon Kullanıcısı',
             'data_entry' => 'Veri Girişi',
             'accounting' => 'Muhasebe',
             'warehouse_manager' => 'Depo Sorumlusu',
@@ -61,8 +61,8 @@ class RolePermissions
     {
         return [
             'super_admin' => 'Tüm şirketler; kullanıcı/rol yönetimi, ayarlar, raporlar ve operasyonel tüm modüller.',
-            'company_owner' => 'Kendi şirketinde tam yönetim; personel, depo, müşteri, ödeme, masraf ve raporlar.',
-            'company_staff' => 'Günlük operasyon: girişler, müşteri, tahsilat, nakliye, depo/oda; masraf ve ayarlar menüde yok.',
+            'company_owner' => 'Kendi şirketinde tam yönetim; kullanıcı, saha personeli, depo, müşteri, ödeme, masraf ve raporlar.',
+            'company_staff' => 'Günlük operasyon: girişler, müşteri, tahsilat, nakliye, depo/oda; masraf, kullanıcılar ve ayarlar menüde yok.',
             'warehouse_manager' => 'Depo ve oda yönetimi, girişler, müşteri ve tahsilat; araç/hizmet/teklif menüde yok.',
             'data_entry' => 'Müşteri ve depo kayıtları; raporlar, masraflar, kullanıcılar ve ayarlar menüde yok.',
             'accounting' => 'Ödemeler, masraflar, raporlar; kullanıcı/ayar yönetimi yok.',
@@ -93,6 +93,7 @@ class RolePermissions
             ['id' => 'araclar', 'label' => 'Araçlar', 'href' => '/araclar', 'special' => 'Trafik sigortası, kasko, kaza kayıtları ve belge yükleme'],
             ['id' => 'hizmetler', 'label' => 'Hizmetler', 'href' => '/hizmetler', 'special' => 'Kategori ve hizmet tanımları'],
             ['id' => 'teklifler', 'label' => 'Teklifler', 'href' => '/teklifler', 'special' => 'Durum güncelleme, teklif yazdırma'],
+            ['id' => 'personel', 'label' => 'Personel', 'href' => '/personel', 'special' => 'Saha personeli (şoför, taşımacı vb.) — sisteme giriş yapmaz'],
             ['id' => 'kullanicilar', 'label' => 'Kullanıcılar', 'href' => '/kullanicilar', 'special' => 'Rol atama, şifre değiştirme (sadece yöneticiler)'],
             ['id' => 'yetkiler', 'label' => 'Kullanıcı Yetkileri', 'href' => '/yetkiler', 'special' => 'Rol yetki matrisini görüntüleme (Süper Admin)'],
             ['id' => 'depolar', 'label' => 'Depolar', 'href' => '/depolar', 'special' => 'Excel içe/dışa aktarma'],
@@ -210,6 +211,7 @@ class RolePermissions
                 'araclar' => $fullCrud,
                 'hizmetler' => $fullCrud,
                 'teklifler' => $fullCrud,
+                'personel' => $fullCrud,
                 'kullanicilar' => $none,
                 'yetkiler' => $none,
                 'depolar' => $fullCrudExport,

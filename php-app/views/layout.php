@@ -16,7 +16,7 @@ if ($companyName !== '' && $appName !== '') {
 $user = Auth::user();
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
 if (($q = strpos($currentPath, '?')) !== false) $currentPath = substr($currentPath, 0, $q);
-$navIcons = ['Genel Bakış'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Sözleşmeler'=>'file-text','Nakliye İşler'=>'truck','Araçlar'=>'car-front','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Raporlar'=>'bar-chart','Bildirimler'=>'bell','Ayarlar'=>'gear'];
+$navIcons = ['Genel Bakış'=>'house','Depo Girişi Ekle'=>'plus-circle','Ödeme Al'=>'bank','Tüm Sözleşmeler'=>'file-text','Nakliye İşler'=>'truck','Araçlar'=>'car-front','Hizmetler'=>'tag','Teklifler'=>'file-earmark-plus','Personel'=>'person-badge','Kullanıcılar'=>'people','Kullanıcı Yetkileri'=>'shield-check','Depolar'=>'building','Odalar'=>'grid-3x3','Müşteriler'=>'people','Ödemeler'=>'credit-card','Masraflar'=>'wallet2','Raporlar'=>'bar-chart','Bildirimler'=>'bell','Ayarlar'=>'gear'];
 $navItems = [
     ['name' => 'Genel Bakış', 'href' => '/genel-bakis', 'active' => $currentPath === '/genel-bakis'],
     ['name' => 'Depo Girişi Ekle', 'href' => '/girisler?newSale=1', 'active' => false],
@@ -29,6 +29,7 @@ $navItems = [
     ['name' => 'Araçlar', 'href' => '/araclar', 'active' => $currentPath === '/araclar' || (strpos($currentPath, '/araclar/') === 0)],
     ['name' => 'Hizmetler', 'href' => '/hizmetler', 'active' => $currentPath === '/hizmetler'],
     ['name' => 'Teklifler', 'href' => '/teklifler', 'active' => $currentPath === '/teklifler'],
+    ['name' => 'Personel', 'href' => '/personel', 'active' => $currentPath === '/personel'],
     ['name' => 'Kullanıcılar', 'href' => '/kullanicilar', 'active' => $currentPath === '/kullanicilar'],
     ['name' => 'Kullanıcı Yetkileri', 'href' => '/yetkiler', 'active' => $currentPath === '/yetkiler'],
     ['name' => 'Ödemeler', 'href' => '/odemeler', 'active' => $currentPath === '/odemeler'],

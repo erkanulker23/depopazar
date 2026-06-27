@@ -182,29 +182,44 @@ class Contract
         $end = new DateTime(substr($endDate, 0, 10));
         $end->modify('last day of this month');
 
+        $existing = self::getMonthlyPricesByContractId($pdo, $contractId);
+        $existingByMonth = [];
+        foreach ($existing as $row) {
+            $existingByMonth[$row['month']] = $row;
+        }
+        $paidMonths = array_flip(Payment::getPaidMonthsByContractId($pdo, $contractId));
+        $paidAmountsByMonth = Payment::getPaidAmountsByMonthForContract($pdo, $contractId);
+
         $validMonths = [];
         $cursor = new DateTime($start->format('Y-m-01'));
         $endFirst = new DateTime($end->format('Y-m-01'));
         while ($cursor <= $endFirst) {
             $monthStr = $cursor->format('Y-m');
-            $price = $defaultPrice;
-            if (isset($monthlyPricesPost[$monthStr]) && $monthlyPricesPost[$monthStr] !== '') {
-                $price = (float) str_replace(',', '.', (string) $monthlyPricesPost[$monthStr]);
+            if (isset($paidMonths[$monthStr])) {
+                if (isset($existingByMonth[$monthStr])) {
+                    $validMonths[$monthStr] = (float) $existingByMonth[$monthStr]['price'];
+                } elseif (isset($paidAmountsByMonth[$monthStr])) {
+                    $validMonths[$monthStr] = $paidAmountsByMonth[$monthStr];
+                } else {
+                    $validMonths[$monthStr] = $defaultPrice;
+                }
+            } else {
+                $price = $defaultPrice;
+                if (isset($monthlyPricesPost[$monthStr]) && $monthlyPricesPost[$monthStr] !== '') {
+                    $price = (float) str_replace(',', '.', (string) $monthlyPricesPost[$monthStr]);
+                }
+                $validMonths[$monthStr] = $price;
             }
-            $validMonths[$monthStr] = $price;
             $cursor->modify('+1 month');
-        }
-
-        $existing = self::getMonthlyPricesByContractId($pdo, $contractId);
-        $existingByMonth = [];
-        foreach ($existing as $row) {
-            $existingByMonth[$row['month']] = $row;
         }
 
         $stmtUpdate = $pdo->prepare('UPDATE contract_monthly_prices SET price = ?, deleted_at = NULL WHERE id = ?');
         $stmtInsert = $pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)');
 
         foreach ($validMonths as $monthStr => $price) {
+            if (isset($paidMonths[$monthStr])) {
+                continue;
+            }
             if (isset($existingByMonth[$monthStr])) {
                 $stmtUpdate->execute([$price, $existingByMonth[$monthStr]['id']]);
             } else {
@@ -214,6 +229,9 @@ class Contract
 
         foreach ($existingByMonth as $monthStr => $row) {
             if (!isset($validMonths[$monthStr])) {
+                if (isset($paidMonths[$monthStr])) {
+                    continue;
+                }
                 $pdo->prepare('UPDATE contract_monthly_prices SET deleted_at = NOW() WHERE id = ?')->execute([$row['id']]);
             }
         }
@@ -222,6 +240,9 @@ class Contract
             "UPDATE payments SET amount = ? WHERE contract_id = ? AND deleted_at IS NULL AND status = 'pending' AND DATE_FORMAT(due_date, '%Y-%m') = ?"
         );
         foreach ($validMonths as $monthStr => $price) {
+            if (isset($paidMonths[$monthStr])) {
+                continue;
+            }
             $stmtPay->execute([$price, $contractId, $monthStr]);
         }
     }

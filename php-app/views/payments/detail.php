@@ -7,6 +7,8 @@ $ps = paymentStatusDisplay($payment);
 $statusClass = $ps['badge'];
 $statusLabel = $ps['label'];
 $company = $company ?? null;
+$flashSuccess = $flashSuccess ?? null;
+$flashError = $flashError ?? null;
 ob_start();
 ?>
 <div class="mb-6">
@@ -35,6 +37,13 @@ ob_start();
     </div>
 </div>
 
+<?php if ($flashSuccess): ?>
+    <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
+<?php endif; ?>
+<?php if ($flashError): ?>
+    <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
+<?php endif; ?>
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
@@ -61,9 +70,18 @@ ob_start();
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödenme Tarihi</dt>
                     <dd class="mt-1 text-gray-900 dark:text-gray-300">
-                        <?= fmtDateTime($payment['paid_at'] ?? null) ?>
-                        <?php if (paymentIsEarly($payment)): ?>
-                            <span class="block mt-1 text-xs font-medium text-blue-600 dark:text-blue-400">Vadesinden <?= paymentDaysEarly($payment) ?> gün önce tahsil edildi</span>
+                        <?php if (($payment['status'] ?? '') === 'paid'): ?>
+                            <form method="post" action="/odemeler/<?= htmlspecialchars($payment['id'] ?? '') ?>/tarih-guncelle" class="flex flex-col sm:flex-row sm:items-end gap-2 mt-1">
+                                <div class="flex-1 min-w-0">
+                                    <input type="datetime-local" name="paid_at" value="<?= fmtDateTimeLocalInput($payment['paid_at'] ?? null) ?>" required class="w-full max-w-xs px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shrink-0">Tarihi Kaydet</button>
+                            </form>
+                            <?php if (paymentIsEarly($payment)): ?>
+                                <span class="block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">Vadesinden <?= paymentDaysEarly($payment) ?> gün önce tahsil edildi</span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <?= fmtDateTime($payment['paid_at'] ?? null) ?: '–' ?>
                         <?php endif; ?>
                     </dd>
                 </div>

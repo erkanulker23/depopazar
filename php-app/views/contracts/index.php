@@ -10,6 +10,7 @@ foreach ($rooms as $r) {
     $roomsByWarehouse[$wid][] = $r;
 }
 $owners = $owners ?? [];
+$personnel = $personnel ?? [];
 if (!function_exists('formatWarehouseAddress')) {
     function formatWarehouseAddress(array $wh): string
     {
@@ -386,15 +387,19 @@ endif; ?>
                         </select>
                     </div>
                     <?php endif; ?>
-                    <?php if (!empty($staff)): ?>
+                    <?php if (!empty($personnel)): ?>
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-people"></i> Personel Seçimi</h4>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">(Çoklu seçim yapabilirsiniz - Hizmet veren personeller)</p>
+                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-people"></i> Saha Personeli</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Hizmet veren saha personelini seçin (çoklu seçim). <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline">Personel yönetimi</a></p>
                         <div class="flex flex-wrap gap-2">
-                            <?php foreach ($staff as $s): ?>
+                            <?php
+                            $personnelList = $personnel ?? [];
+                            $jobTypeLabels = $jobTypeLabels ?? Personnel::jobTypeLabels();
+                            foreach ($personnelList as $s): ?>
                                 <label class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600">
-                                    <input type="checkbox" name="staff_ids[]" value="<?= htmlspecialchars($s['id']) ?>" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                                    <input type="checkbox" name="personnel_ids[]" value="<?= htmlspecialchars($s['id']) ?>" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                                     <span class="ml-2 text-sm"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></span>
+                                    <span class="ml-1 text-xs text-gray-500">(<?= htmlspecialchars($jobTypeLabels[$s['job_type'] ?? 'diger'] ?? 'Diğer') ?>)</span>
                                 </label>
                             <?php endforeach; ?>
                         </div>

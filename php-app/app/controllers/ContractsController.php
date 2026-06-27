@@ -57,11 +57,15 @@ class ContractsController
         } catch (Throwable $e) {
             // vehicles tablosu yoksa boş bırak
         }
-        $staff = [];
+        $personnel = [];
         $owners = [];
         if ($companyId) {
-            $staff = User::findStaff($this->pdo, $companyId);
-            $owners = array_values(array_filter($staff, fn($u) => ($u['role'] ?? '') === 'company_owner'));
+            if (Personnel::tableExists($this->pdo)) {
+                $personnel = Personnel::findActiveForCompany($this->pdo, $companyId);
+            }
+            $stmt = $this->pdo->prepare("SELECT id, first_name, last_name FROM users WHERE company_id = ? AND deleted_at IS NULL AND role = 'company_owner' AND is_active = 1 ORDER BY first_name, last_name");
+            $stmt->execute([$companyId]);
+            $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $openNewSale = isset($_GET['newSale']) && $_GET['newSale'] !== '0';
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
@@ -202,12 +206,16 @@ class ContractsController
             $created = Contract::create($this->pdo, $data);
             $contractId = $created['id'] ?? null;
             if ($contractId) {
-                $staffIds = isset($_POST['staff_ids']) && is_array($_POST['staff_ids']) ? array_filter($_POST['staff_ids']) : [];
-                foreach ($staffIds as $uid) {
-                    $uid = trim($uid);
-                    if ($uid === '') continue;
-                    $stmtCs = $this->pdo->prepare('INSERT INTO contract_staff (id, contract_id, user_id) VALUES (?, ?, ?)');
-                    $stmtCs->execute([self::uuid(), $contractId, $uid]);
+                $contractCompanyId = $room['company_id'] ?? $companyId;
+                if (Personnel::tableExists($this->pdo) && $contractCompanyId) {
+                    $personnelIds = isset($_POST['personnel_ids']) && is_array($_POST['personnel_ids']) ? array_filter($_POST['personnel_ids']) : [];
+                    $personnelIds = Personnel::filterIdsForCompany($this->pdo, $personnelIds, $contractCompanyId);
+                    $stmtCp = $this->pdo->prepare('INSERT INTO contract_personnel (id, contract_id, personnel_id) VALUES (?, ?, ?)');
+                    foreach ($personnelIds as $pid) {
+                        $pid = trim($pid);
+                        if ($pid === '') continue;
+                        $stmtCp->execute([self::uuid(), $contractId, $pid]);
+                    }
                 }
                 $start = new DateTime($startDate);
                 $end = new DateTime($endDate);
@@ -316,6 +324,13 @@ class ContractsController
                 $monthlyPricesByKey[$mp['month']] = (float) ($mp['price'] ?? 0);
             }
         }
+        $paidMonths = Payment::getPaidMonthsByContractId($this->pdo, $id);
+        $paidAmountsByMonth = Payment::getPaidAmountsByMonthForContract($this->pdo, $id);
+        foreach ($paidAmountsByMonth as $monthKey => $amount) {
+            if (!isset($monthlyPricesByKey[$monthKey])) {
+                $monthlyPricesByKey[$monthKey] = $amount;
+            }
+        }
         require __DIR__ . '/../../views/contracts/edit.php';
     }
 
@@ -374,6 +389,35 @@ class ContractsController
                 'stored_items_condition_note' => $storedConditionNote,
             ]);
             $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
+            $paidMonths = Payment::getPaidMonthsByContractId($this->pdo, $id);
+            $paidAmountsByMonth = Payment::getPaidAmountsByMonthForContract($this->pdo, $id);
+            $existingMonthlyByKey = [];
+            foreach (Contract::getMonthlyPricesByContractId($this->pdo, $id) as $mp) {
+                if (!empty($mp['month'])) {
+                    $existingMonthlyByKey[$mp['month']] = (float) ($mp['price'] ?? 0);
+                }
+            }
+            $monthLabels = ['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
+            foreach ($paidMonths as $monthStr) {
+                if (!array_key_exists($monthStr, $monthlyPricesPost)) {
+                    continue;
+                }
+                $posted = trim((string) $monthlyPricesPost[$monthStr]);
+                if ($posted === '') {
+                    continue;
+                }
+                $newPrice = (float) str_replace(',', '.', $posted);
+                $oldPrice = $existingMonthlyByKey[$monthStr]
+                    ?? $paidAmountsByMonth[$monthStr]
+                    ?? (float) ($contract['monthly_price'] ?? 0);
+                if (abs($newPrice - $oldPrice) > 0.009) {
+                    $parts = explode('-', $monthStr);
+                    $label = (isset($parts[1], $monthLabels[$parts[1]]) ? $monthLabels[$parts[1]] . ' ' . ($parts[0] ?? '') : $monthStr);
+                    Auth::setSession('flash_error', $label . ' ayı için ödeme alındığından oda fiyatı değiştirilemez.');
+                    header('Location: /girisler/' . $id . '/duzenle');
+                    exit;
+                }
+            }
             Contract::syncMonthlyPrices(
                 $this->pdo,
                 $id,

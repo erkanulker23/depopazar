@@ -2,6 +2,7 @@
 $currentPage = 'girisler';
 $contract = $contract ?? [];
 $monthlyPricesByKey = $monthlyPricesByKey ?? [];
+$paidMonths = $paidMonths ?? [];
 $monthlyPriceDisplay = number_format((float) ($contract['monthly_price'] ?? 0), 2, ',', '.');
 ob_start();
 ?>
@@ -45,7 +46,7 @@ ob_start();
             </div>
             <div id="edit_monthly_prices_section">
                 <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar</h4>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Başlangıç–bitiş tarihlerine göre her ay için kira tutarını düzenleyin.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Başlangıç–bitiş tarihlerine göre her ay için kira tutarını düzenleyin. Ödemesi alınmış ayların fiyatı değiştirilemez.</p>
                 <div id="edit_monthly_prices_list" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
             </div>
         </div>
@@ -120,6 +121,7 @@ function toggleEditStoredItemsConditionNote(value) {
 (function() {
     var monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
     var existingMonthlyPrices = <?= json_encode($monthlyPricesByKey, JSON_UNESCAPED_UNICODE) ?>;
+    var paidMonthSet = new Set(<?= json_encode(array_values($paidMonths), JSON_UNESCAPED_UNICODE) ?>);
 
     function formatPriceInput(num) {
         if (num === null || num === undefined || num === '') return '';
@@ -174,11 +176,18 @@ function toggleEditStoredItemsConditionNote(value) {
                 : (existingMonthlyPrices[item.key] !== undefined && existingMonthlyPrices[item.key] !== null
                     ? formatPriceInput(existingMonthlyPrices[item.key])
                     : (defaultVal ? formatPriceInput(defaultVal) : ''));
+            var isPaid = paidMonthSet.has(item.key);
             var row = document.createElement('div');
-            row.className = 'flex items-center gap-3';
+            row.className = 'flex items-center gap-3' + (isPaid ? ' opacity-90' : '');
+            var inputClass = 'flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm ' +
+                (isPaid
+                    ? 'bg-gray-100 dark:bg-gray-600/50 text-gray-600 dark:text-gray-300 cursor-not-allowed'
+                    : 'focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white');
             row.innerHTML = '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0">' + monthNames[item.m] + ' ' + item.y + '</label>' +
-                '<input type="text" name="monthly_prices[' + item.key + ']" value="' + existing + '" placeholder="0,00" class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">' +
-                '<span class="text-gray-500 dark:text-gray-400 text-sm shrink-0">₺</span>';
+                '<input type="text" name="monthly_prices[' + item.key + ']" value="' + existing + '" placeholder="0,00"' +
+                (isPaid ? ' readonly' : '') + ' class="' + inputClass + '">' +
+                '<span class="text-gray-500 dark:text-gray-400 text-sm shrink-0">₺</span>' +
+                (isPaid ? '<span class="text-xs font-medium text-green-700 dark:text-green-400 shrink-0">Ödeme alındı</span>' : '');
             list.appendChild(row);
         });
     }
@@ -194,6 +203,7 @@ function toggleEditStoredItemsConditionNote(value) {
             if (!list) return;
             var val = this.value.replace(',', '.');
             list.querySelectorAll('input[name^="monthly_prices"]').forEach(function(inp) {
+                if (inp.readOnly) return;
                 if (!inp.value || inp.value === '0' || inp.value === '0,00') {
                     inp.value = val ? formatPriceInput(val) : '';
                 }

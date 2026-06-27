@@ -128,7 +128,7 @@ class DashboardController
             'company'   => ['done' => false, 'label' => 'Firma bilgilerini güncelleyiniz', 'href' => '/ayarlar?tab=firma', 'icon' => 'bi-building-gear'],
             'warehouses' => ['done' => false, 'label' => 'Depolarınızı ekleyin', 'href' => '/depolar', 'icon' => 'bi-building'],
             'rooms'     => ['done' => false, 'label' => 'Odalarınızı ekleyin', 'href' => '/odalar', 'icon' => 'bi-grid-3x3'],
-            'staff'     => ['done' => false, 'label' => 'Personel ekleyin', 'href' => '/kullanicilar', 'icon' => 'bi-people'],
+            'staff'     => ['done' => false, 'label' => 'Saha personeli ekleyin', 'href' => '/personel', 'icon' => 'bi-person-badge'],
             'vehicles'  => ['done' => false, 'label' => 'Araçlarınızı ekleyin', 'href' => '/araclar', 'icon' => 'bi-truck'],
             'services'  => ['done' => false, 'label' => 'Hizmetlerinizi ekleyin', 'href' => '/hizmetler', 'icon' => 'bi-list-check'],
         ];
@@ -138,7 +138,7 @@ class DashboardController
                 $setupSteps['company']['done'] = true;
                 $setupSteps['warehouses']['done'] = Warehouse::countAll($this->pdo) > 0;
                 $setupSteps['rooms']['done'] = count(Room::findAll($this->pdo, null)) > 0;
-                $setupSteps['staff']['done'] = count(User::findStaff($this->pdo, null)) >= 1;
+                $setupSteps['staff']['done'] = Personnel::tableExists($this->pdo) && count(Personnel::findAll($this->pdo, null, null, null, '1')) >= 1;
                 $setupSteps['vehicles']['done'] = count(Vehicle::findAll($this->pdo, null)) > 0;
                 $setupSteps['services']['done'] = count(Service::findAll($this->pdo, null)) > 0;
             } elseif ($companyId) {
@@ -150,8 +150,7 @@ class DashboardController
                 }
                 $setupSteps['warehouses']['done'] = $warehousesCount > 0;
                 $setupSteps['rooms']['done'] = $roomsCount > 0;
-                $staffList = User::findStaff($this->pdo, $companyId);
-                $setupSteps['staff']['done'] = count($staffList) >= 1;
+                $setupSteps['staff']['done'] = Personnel::tableExists($this->pdo) && count(Personnel::findActiveForCompany($this->pdo, $companyId)) >= 1;
                 $vehicles = Vehicle::findAll($this->pdo, $companyId);
                 $setupSteps['vehicles']['done'] = count($vehicles) > 0;
                 $services = Service::findAll($this->pdo, $companyId);

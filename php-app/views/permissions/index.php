@@ -200,7 +200,7 @@ ob_start();
 <div id="kullanicilar" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Personel ve etkin yetkileri</h2>
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Kullanıcılar ve etkin yetkileri</h2>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= count($staff) ?> kullanıcı — rolüne göre yukarıdaki matris uygulanır</p>
         </div>
         <a href="/kullanicilar" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
@@ -209,7 +209,7 @@ ob_start();
     </div>
 
     <?php if (empty($staff)): ?>
-        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz personel kaydı yok.</div>
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz kullanıcı kaydı yok.</div>
     <?php else: ?>
         <div class="divide-y divide-gray-200 dark:divide-gray-600">
             <?php foreach ($staff as $u):

@@ -151,7 +151,7 @@ class UsersController
         if (($user['role'] ?? '') === 'super_admin') {
             $newCompanyId = trim($_POST['company_id'] ?? '') ?: null;
             if (!$newCompanyId) {
-                Auth::setSession('flash_error', 'Personel eklerken şirket seçmelisiniz.');
+                Auth::setSession('flash_error', 'Kullanıcı eklerken şirket seçmelisiniz.');
                 header('Location: /kullanicilar');
                 exit;
             }
@@ -201,7 +201,7 @@ class UsersController
                 $this->pdo,
                 $newCompanyId,
                 'user',
-                'Personel eklendi',
+                'Kullanıcı eklendi',
                 $fullName . ' kullanıcı olarak eklendi.',
                 ['actor_name' => $actorName]
             );
@@ -293,7 +293,7 @@ class UsersController
         }
         $fullName = trim(($data['first_name'] ?? $profile['first_name'] ?? '') . ' ' . ($data['last_name'] ?? $profile['last_name'] ?? ''));
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName]);
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Kullanıcı güncellendi', $fullName . ' kullanıcı bilgileri güncellendi.', ['actor_name' => $actorName]);
         Auth::setSession('flash_success', 'Kullanıcı güncellendi.');
         header('Location: /kullanicilar/' . $id);
         exit;
@@ -377,7 +377,7 @@ class UsersController
         $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
         User::remove($this->pdo, $id);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Personel silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName]);
+        Notification::createForCompany($this->pdo, $profile['company_id'] ?? null, 'user', 'Kullanıcı silindi', $fullName . ' kullanıcı silindi.', ['actor_name' => $actorName]);
         Auth::setSession('flash_success', 'Kullanıcı silindi.');
         header('Location: /kullanicilar');
         exit;

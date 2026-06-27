@@ -88,15 +88,13 @@ $page = $page ?? 1;
             <?php foreach ($customersWithDebt as $c):
                 $total = array_sum(array_map(fn($p) => (float)($p['amount'] ?? 0), $c['payments']));
                 $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));
-                $paymentIds = array_column($c['payments'], 'id');
-                $paymentsJson = json_encode(array_map(fn($p) => ['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? ''], $c['payments']));
             ?>
             <div class="p-4 flex items-center justify-between gap-4 collect-debt-row" data-customer-name="<?= htmlspecialchars(mb_strtolower($name)) ?>">
                 <div>
                     <p class="font-semibold text-gray-900 dark:text-white"><?= htmlspecialchars($name) ?></p>
                     <p class="text-sm text-gray-500 dark:text-gray-400"><?= count($c['payments']) ?> adet bekleyen ödeme · Toplam <?= fmtMoney($total) ?> ₺</p>
                 </div>
-                <button type="button" onclick="selectCustomer('<?= htmlspecialchars($c['id']) ?>', <?= htmlspecialchars($paymentsJson) ?>, <?= json_encode($name, JSON_UNESCAPED_UNICODE) ?>)" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 text-sm">
+                <button type="button" data-customer-id="<?= htmlspecialchars($c['id']) ?>" class="collect-debt-pay-btn px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 text-sm">
                     Ödeme Al
                 </button>
             </div>
@@ -181,7 +179,7 @@ $page = $page ?? 1;
                                     <td class="py-2 pr-4"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span></td>
                                     <td class="py-2">
                                         <?php if ($canCollect): ?>
-                                            <button type="button" onclick="event.stopPropagation(); openCollectForPayment(<?= htmlspecialchars($pJson) ?>, <?= json_encode($customerName, JSON_UNESCAPED_UNICODE) ?>)" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Ödeme Al</button>
+                                            <button type="button" class="open-collect-payment-btn text-emerald-600 dark:text-emerald-400 hover:underline font-medium" data-payment="<?= htmlspecialchars($pJson, ENT_QUOTES, 'UTF-8') ?>" data-customer-name="<?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?>">Ödeme Al</button>
                                         <?php else: ?>
                                             <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:underline">Detay</a>
                                         <?php endif; ?>
@@ -660,6 +658,27 @@ document.querySelectorAll('.collect-customer-btn').forEach(function(btn) {
         if (isNaN(idx) || !customersWithDebt || !customersWithDebt[idx]) return;
         var c = customersWithDebt[idx];
         selectCustomer(c.id, c.payments || [], c.name || '');
+    });
+});
+document.querySelectorAll('.collect-debt-pay-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var id = this.getAttribute('data-customer-id');
+        if (!id || !customersWithDebt || !customersWithDebt.length) return;
+        var c = customersWithDebt.find(function(x) { return String(x.id) === String(id); });
+        if (c) selectCustomer(c.id, c.payments || [], c.name || '');
+    });
+});
+document.querySelectorAll('.open-collect-payment-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var raw = this.getAttribute('data-payment');
+        if (!raw) return;
+        try {
+            var payment = JSON.parse(raw);
+            openCollectForPayment(payment, this.getAttribute('data-customer-name') || '');
+        } catch (err) {
+            console.error('Ödeme verisi okunamadı', err);
+        }
     });
 });
 var preselectedCustomerId = <?= json_encode($preselectedCustomerId) ?>;

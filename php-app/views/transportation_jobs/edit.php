@@ -3,10 +3,11 @@ $currentPage = 'nakliye-isler';
 $job = $job ?? [];
 $customers = $customers ?? [];
 $services = $services ?? [];
-$staff = $staff ?? [];
+$personnel = $personnel ?? [];
+$jobTypeLabels = $jobTypeLabels ?? Personnel::jobTypeLabels();
+$personnelIds = isset($job['personnel_ids']) && is_array($job['personnel_ids']) ? $job['personnel_ids'] : (isset($job['staff_ids']) && is_array($job['staff_ids']) ? $job['staff_ids'] : []);
 $vehicles = $vehicles ?? [];
 $warehouses = $warehouses ?? [];
-$staffIds = isset($job['staff_ids']) && is_array($job['staff_ids']) ? $job['staff_ids'] : [];
 $flashSuccess = $flashSuccess ?? null;
 $flashError = $flashError ?? null;
 ob_start();
@@ -161,14 +162,18 @@ ob_start();
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">İşe giden personel</label>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">İşe gidecek personeli seçin (seçilenler listede görünür)</p>
                     <div class="border border-gray-300 dark:border-gray-600 rounded-xl max-h-40 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-700/50">
-                        <?php foreach ($staff as $s): ?>
-                            <label class="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
-                                <input type="checkbox" name="staff_ids[]" value="<?= htmlspecialchars($s['id']) ?>" <?= in_array($s['id'], $staffIds, true) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                                <span class="ml-3 text-sm text-gray-900 dark:text-white"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></span>
-                                <?php if (in_array($s['id'], $staffIds, true)): ?><span class="ml-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">(seçili)</span><?php endif; ?>
-                            </label>
-                        <?php endforeach; ?>
-                        <?php if (empty($staff)): ?><p class="text-sm text-gray-500 dark:text-gray-400">Personel bulunamadı.</p><?php endif; ?>
+                        <?php if (empty($personnel)): ?>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Personel bulunamadı. <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline">Personel</a> sayfasından ekleyin.</p>
+                        <?php else: ?>
+                            <?php foreach ($personnel as $s): ?>
+                                <label class="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
+                                    <input type="checkbox" name="personnel_ids[]" value="<?= htmlspecialchars($s['id']) ?>" <?= in_array($s['id'], $personnelIds, true) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                                    <span class="ml-3 text-sm text-gray-900 dark:text-white"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></span>
+                                    <span class="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"><?= htmlspecialchars($jobTypeLabels[$s['job_type'] ?? 'diger'] ?? 'Diğer') ?></span>
+                                    <?php if (in_array($s['id'], $personnelIds, true)): ?><span class="ml-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">(seçili)</span><?php endif; ?>
+                                </label>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="mt-4">
