@@ -141,7 +141,14 @@ $userDisplayName = trim(($authUser['first_name'] ?? '') . ' ' . ($authUser['last
             <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Toplam Oda</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white"><?= (int) $roomsCount ?></p>
-                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-bold"><?= (int) $occupiedRooms ?> Dolu / <?= (int) $emptyRooms ?> Boş</p>
+                <?php
+                $otherRooms = (int) ($reservedRooms ?? 0) + (int) ($lockedRooms ?? 0);
+                $roomStatusLine = (int) $occupiedRooms . ' Dolu / ' . (int) $emptyRooms . ' Boş';
+                if ($otherRooms > 0) {
+                    $roomStatusLine .= ' / ' . $otherRooms . ' Diğer';
+                }
+                ?>
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-bold"><?= $roomStatusLine ?></p>
             </div>
             <div class="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex-shrink-0 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
                 <i class="bi bi-grid-3x3 text-white text-xl"></i>

@@ -48,6 +48,18 @@ class RoomsController
                 $warehouseRoomStats = Room::statsByWarehouseId($this->pdo, $filterWarehouseId, $companyId);
             }
         }
+        $duplicateRoomKeys = [];
+        $seenRoomKeys = [];
+        foreach ($rooms as $r) {
+            $roomKey = ($r['warehouse_id'] ?? '') . ':' . normalizeRoomNumberKey($r['room_number'] ?? '');
+            if ($roomKey === ':' || $roomKey === '') {
+                continue;
+            }
+            if (isset($seenRoomKeys[$roomKey])) {
+                $duplicateRoomKeys[$roomKey] = true;
+            }
+            $seenRoomKeys[$roomKey] = true;
+        }
         // Oda başına aktif sözleşme sayısı (silinmemiş müşteriye ait, detay sayfasıyla aynı mantık)
         $activeContractCountByRoom = [];
         if (!empty($rooms)) {
@@ -140,6 +152,12 @@ class RoomsController
             'notes'         => trim($_POST['notes'] ?? '') ?: null,
         ];
         try {
+            $existing = Room::findByWarehouseAndNumber($this->pdo, $warehouseId, $roomNumber);
+            if ($existing) {
+                Auth::setSession('flash_error', 'Bu depoda "' . $roomNumber . '" numaralı oda zaten kayıtlı.');
+                header('Location: /odalar' . ($warehouseId !== '' ? '?warehouse_id=' . urlencode($warehouseId) : ''));
+                exit;
+            }
             Room::create($this->pdo, $data);
             Auth::setSession('flash_success', 'Oda eklendi.');
         } catch (Exception $e) {
@@ -194,6 +212,12 @@ class RoomsController
             'description'   => trim($_POST['description'] ?? '') ?: null,
             'notes'         => trim($_POST['notes'] ?? '') ?: null,
         ];
+        $duplicate = Room::findByWarehouseAndNumber($this->pdo, $warehouseId, $data['room_number'], $id);
+        if ($duplicate) {
+            Auth::setSession('flash_error', 'Bu depoda "' . $data['room_number'] . '" numaralı başka bir oda zaten var.');
+            header('Location: /odalar' . $this->roomsIndexQuery());
+            exit;
+        }
         Room::update($this->pdo, $id, $data);
         Auth::setSession('flash_success', 'Oda güncellendi.');
         header('Location: /odalar' . $this->roomsIndexQuery());
@@ -414,7 +438,9 @@ class RoomsController
             $warehouseByName[mb_strtoupper(trim($w['name'] ?? ''))] = $w;
         }
         $added = 0;
+        $updated = 0;
         $errors = [];
+        $batchSeen = [];
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             $row = array_map('trim', $row);
             if (count($row) < 4) continue;
@@ -446,8 +472,16 @@ class RoomsController
             $warehouseId = $warehouse['id'];
             if ($areaM2 <= 0) $areaM2 = 1;
             if ($monthlyPrice < 0) $monthlyPrice = 0;
+            $roomKey = $warehouseId . ':' . normalizeRoomNumberKey($roomNumber);
             try {
-                Room::create($this->pdo, [
+                $existing = null;
+                if ($roomKey !== ':' && isset($batchSeen[$roomKey])) {
+                    $existing = Room::findOne($this->pdo, $batchSeen[$roomKey]);
+                }
+                if (!$existing) {
+                    $existing = Room::findByWarehouseAndNumber($this->pdo, $warehouseId, $roomNumber);
+                }
+                $payload = [
                     'room_number'   => $roomNumber,
                     'warehouse_id'  => $warehouseId,
                     'area_m2'       => $areaM2,
@@ -458,14 +492,36 @@ class RoomsController
                     'corridor'      => $row[7] ?? null,
                     'description'   => $row[8] ?? null,
                     'notes'         => $row[9] ?? null,
-                ]);
-                $added++;
+                ];
+                if ($existing) {
+                    Room::update($this->pdo, $existing['id'], $payload);
+                    $updated++;
+                    if ($roomKey !== ':') {
+                        $batchSeen[$roomKey] = $existing['id'];
+                    }
+                } else {
+                    $created = Room::create($this->pdo, $payload);
+                    $added++;
+                    if ($roomKey !== ':' && !empty($created['id'])) {
+                        $batchSeen[$roomKey] = $created['id'];
+                    }
+                }
             } catch (Throwable $e) {
                 $errors[] = $roomNumber . ': ' . $e->getMessage();
             }
         }
         fclose($handle);
-        if ($added > 0) Auth::setSession('flash_success', $added . ' oda eklendi.');
+        $processed = $added + $updated;
+        if ($processed > 0) {
+            $parts = [];
+            if ($added > 0) {
+                $parts[] = $added . ' yeni eklendi';
+            }
+            if ($updated > 0) {
+                $parts[] = $updated . ' güncellendi';
+            }
+            Auth::setSession('flash_success', implode(', ', $parts) . '.');
+        }
         if (!empty($errors)) Auth::setSession('flash_error', implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : ''));
         header('Location: /odalar/excel-ice-aktar');
         exit;

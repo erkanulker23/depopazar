@@ -7,18 +7,182 @@ if (!function_exists('fmtPrice')) {
     }
 }
 
-/** Oda numarası gösterimi (sayısal değerlerde 01, 02 … biçimi) */
+/** Oda numarası eşleştirme anahtarı (1 = 01 = 001) */
+if (!function_exists('normalizeRoomNumberKey')) {
+    function normalizeRoomNumberKey(?string $roomNumber): string
+    {
+        $value = trim((string) $roomNumber);
+        if ($value === '') {
+            return '';
+        }
+        if (ctype_digit($value)) {
+            return (string) (int) $value;
+        }
+        return mb_strtolower($value);
+    }
+}
+
+/** Oda numarası ekranda (ham değer; 1 ve 01 karıştırılmasın diye pad yok) */
 if (!function_exists('fmtRoomNumber')) {
     function fmtRoomNumber(?string $roomNumber): string
     {
         $value = trim((string) $roomNumber);
+        return $value !== '' ? $value : '–';
+    }
+}
+
+/** UUID biçiminde mi (müşteri içe aktarma) */
+if (!function_exists('isUuidString')) {
+    function isUuidString(?string $value): bool
+    {
+        $value = trim((string) $value);
         if ($value === '') {
-            return '–';
+            return false;
         }
-        if (ctype_digit($value)) {
-            return strlen($value) < 2 ? str_pad($value, 2, '0', STR_PAD_LEFT) : $value;
+        return (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value);
+    }
+}
+
+/** Müşteri CSV başlık satırı mı */
+if (!function_exists('isCustomerCsvHeaderRow')) {
+    function isCustomerCsvHeaderRow(array $row): bool
+    {
+        $c0 = mb_strtolower(trim($row[0] ?? ''));
+        $c1 = mb_strtolower(trim($row[1] ?? ''));
+        if ($c0 === 'ad' || (str_contains($c0, 'ad') && str_contains($c1, 'soyad'))) {
+            return true;
         }
-        return $value;
+        if (str_contains($c0, 'müşteri') && str_contains($c0, 'id')) {
+            return true;
+        }
+        if (str_contains($c0, 'musteri') && str_contains($c0, 'id')) {
+            return true;
+        }
+        if ($c0 === 'id' || $c0 === 'müşteri id' || $c0 === 'musteri id') {
+            return true;
+        }
+        return false;
+    }
+}
+
+/**
+ * Müşteri CSV satırını ayrıştır.
+ * @return array<string, mixed>|null
+ */
+if (!function_exists('parseCustomerImportRow')) {
+    function parseCustomerImportRow(array $row): ?array
+    {
+        $row = array_map(static fn($v) => trim((string) $v), $row);
+        if (count($row) < 2 || isCustomerCsvHeaderRow($row)) {
+            return null;
+        }
+
+        $customerId = null;
+        $externalId = null;
+        $isActive = 1;
+
+        if (count($row) >= 9 && isUuidString($row[0] ?? '')) {
+            $customerId = $row[0];
+            $firstName = $row[1] ?? '';
+            $lastName = $row[2] ?? '';
+            $email = $row[3] ?? '';
+            $phone = ($row[4] ?? '') !== '' ? $row[4] : null;
+            $identityNumber = ($row[5] ?? '') !== '' ? $row[5] : null;
+            $address = ($row[6] ?? '') !== '' ? $row[6] : null;
+            $notes = ($row[7] ?? '') !== '' ? $row[7] : null;
+            if (isset($row[8])) {
+                $v = trim($row[8]);
+                if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
+                    $isActive = 0;
+                }
+            }
+        } elseif (count($row) >= 9 && ($row[0] ?? '') === '') {
+            $firstName = $row[1] ?? '';
+            $lastName = $row[2] ?? '';
+            $email = $row[3] ?? '';
+            $phone = ($row[4] ?? '') !== '' ? $row[4] : null;
+            $identityNumber = ($row[5] ?? '') !== '' ? $row[5] : null;
+            $address = ($row[6] ?? '') !== '' ? $row[6] : null;
+            $notes = ($row[7] ?? '') !== '' ? $row[7] : null;
+            if (isset($row[8])) {
+                $v = trim($row[8]);
+                if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
+                    $isActive = 0;
+                }
+            }
+        } elseif (count($row) >= 9 && ($row[0] ?? '') !== '') {
+            $externalId = $row[0];
+            $firstName = $row[1] ?? '';
+            $lastName = $row[2] ?? '';
+            $email = $row[3] ?? '';
+            $phone = ($row[4] ?? '') !== '' ? $row[4] : null;
+            $identityNumber = ($row[5] ?? '') !== '' ? $row[5] : null;
+            $address = ($row[6] ?? '') !== '' ? $row[6] : null;
+            $notes = ($row[7] ?? '') !== '' ? $row[7] : null;
+            if (isset($row[8])) {
+                $v = trim($row[8]);
+                if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
+                    $isActive = 0;
+                }
+            }
+        } else {
+            $firstName = $row[0] ?? '';
+            $lastName = $row[1] ?? '';
+            $email = $row[2] ?? '';
+            $phone = ($row[3] ?? '') !== '' ? $row[3] : null;
+            $identityNumber = ($row[4] ?? '') !== '' ? $row[4] : null;
+            $address = ($row[5] ?? '') !== '' ? $row[5] : null;
+            $notes = ($row[6] ?? '') !== '' ? $row[6] : null;
+            if (isset($row[7])) {
+                $v = trim($row[7]);
+                if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
+                    $isActive = 0;
+                }
+            }
+        }
+
+        if ($firstName === '' && $lastName === '') {
+            return null;
+        }
+
+        return [
+            'customer_id' => $customerId,
+            'external_id' => $externalId,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'email' => $email,
+            'phone' => $phone,
+            'identity_number' => $identityNumber,
+            'address' => $address,
+            'notes' => $notes,
+            'is_active' => $isActive,
+        ];
+    }
+}
+
+/** İçe aktarma dosyasında tekrar eşleşmesi için anahtar */
+if (!function_exists('customerImportMatchKey')) {
+    function customerImportMatchKey(?string $customerId, ?string $externalId, ?string $email, ?string $phone, ?string $identityNumber): ?string
+    {
+        if ($customerId !== null && $customerId !== '') {
+            return 'id:' . strtolower($customerId);
+        }
+        if ($externalId !== null && $externalId !== '') {
+            return 'ext:' . $externalId;
+        }
+        $email = mb_strtolower(trim((string) $email));
+        if ($email !== '') {
+            return 'email:' . $email;
+        }
+        $phoneDigits = normalizePhoneDigits($phone);
+        if ($phoneDigits !== null) {
+            return 'phone:' . $phoneDigits;
+        }
+        $identityNumber = trim((string) $identityNumber);
+        if ($identityNumber !== '') {
+            return 'tc:' . $identityNumber;
+        }
+        return null;
     }
 }
 

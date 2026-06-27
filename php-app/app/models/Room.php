@@ -51,6 +51,66 @@ class Room
         return ['total' => $total, 'by_status' => $byStatus];
     }
 
+    /** Şirket (veya tüm sistem) oda sayısı */
+    public static function countAll(PDO $pdo, ?string $companyId = null): int
+    {
+        $sql = 'SELECT COUNT(*) FROM rooms r
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE r.deleted_at IS NULL ';
+        $params = [];
+        if ($companyId !== null && $companyId !== '') {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** Durum dağılımı (genel bakış) */
+    public static function statusCounts(PDO $pdo, ?string $companyId = null): array
+    {
+        $sql = 'SELECT r.status, COUNT(*) AS cnt FROM rooms r
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE r.deleted_at IS NULL ';
+        $params = [];
+        if ($companyId !== null && $companyId !== '') {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' GROUP BY r.status ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $byStatus = ['empty' => 0, 'occupied' => 0, 'reserved' => 0, 'locked' => 0];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $st = $row['status'] ?? 'empty';
+            if (isset($byStatus[$st])) {
+                $byStatus[$st] = (int) ($row['cnt'] ?? 0);
+            }
+        }
+        return $byStatus;
+    }
+
+    /** Aynı depoda oda numarası eşleşmesi (1 = 01) */
+    public static function findByWarehouseAndNumber(PDO $pdo, string $warehouseId, string $roomNumber, ?string $excludeId = null): ?array
+    {
+        $key = normalizeRoomNumberKey($roomNumber);
+        if ($key === '') {
+            return null;
+        }
+        $stmt = $pdo->prepare('SELECT * FROM rooms WHERE warehouse_id = ? AND deleted_at IS NULL');
+        $stmt->execute([$warehouseId]);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if ($excludeId !== null && $excludeId !== '' && ($row['id'] ?? '') === $excludeId) {
+                continue;
+            }
+            if (normalizeRoomNumberKey($row['room_number'] ?? '') === $key) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();

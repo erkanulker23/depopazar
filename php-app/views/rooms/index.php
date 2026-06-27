@@ -79,6 +79,12 @@ ob_start();
     </div>
 <?php endif; ?>
 
+<?php if (!empty($duplicateRoomKeys)): ?>
+    <div class="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-sm">
+        <strong>Çift kayıt uyarısı:</strong> Aynı depoda aynı oda numarasına sahip birden fazla kayıt var (ör. 1 ve 01). Gereksiz olanları toplu sil ile kaldırın; yeni ekleme ve içe aktarma artık tekrar oluşturmaz.
+    </div>
+<?php endif; ?>
+
 <?php if ($warehouseIdGet !== '' && $filterWarehouseMeta): ?>
     <?php
     $whName = $filterWarehouseMeta['name'] ?? 'Seçili depo';
@@ -148,9 +154,13 @@ ob_start();
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                    <?php $activeContractCountByRoom = $activeContractCountByRoom ?? []; foreach ($rooms as $r): ?>
-                        <?php $status = $r['status'] ?? 'empty'; ?>
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <?php $activeContractCountByRoom = $activeContractCountByRoom ?? []; $duplicateRoomKeys = $duplicateRoomKeys ?? []; foreach ($rooms as $r): ?>
+                        <?php
+                        $status = $r['status'] ?? 'empty';
+                        $roomDupKey = ($r['warehouse_id'] ?? '') . ':' . normalizeRoomNumberKey($r['room_number'] ?? '');
+                        $isDuplicateRoom = isset($duplicateRoomKeys[$roomDupKey]);
+                        ?>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50<?= $isDuplicateRoom ? ' bg-amber-50/80 dark:bg-amber-900/10' : '' ?>">
                             <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="room-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($r['id']) ?>"></label></td>
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars(fmtRoomNumber($r['room_number'] ?? '')) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600"><?= htmlspecialchars($r['warehouse_name'] ?? '-') ?></td>

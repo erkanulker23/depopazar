@@ -18,6 +18,8 @@ class DashboardController
         $roomsCount = 0;
         $occupiedRooms = 0;
         $emptyRooms = 0;
+        $reservedRooms = 0;
+        $lockedRooms = 0;
         $customersCount = 0;
         $activeContracts = 0;
         $monthlyRevenue = 0.0;
@@ -30,11 +32,12 @@ class DashboardController
         if ($companyId) {
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
             $warehousesCount = count($warehouses);
-            $rooms = Room::findAll($this->pdo, null);
-            $companyRooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
-            $roomsCount = count($companyRooms);
-            $occupiedRooms = count(array_filter($companyRooms, fn($r) => ($r['status'] ?? '') === 'occupied'));
-            $emptyRooms = count(array_filter($companyRooms, fn($r) => ($r['status'] ?? '') === 'empty'));
+            $roomStatusCounts = Room::statusCounts($this->pdo, $companyId);
+            $roomsCount = Room::countAll($this->pdo, $companyId);
+            $occupiedRooms = (int) ($roomStatusCounts['occupied'] ?? 0);
+            $emptyRooms = (int) ($roomStatusCounts['empty'] ?? 0);
+            $reservedRooms = (int) ($roomStatusCounts['reserved'] ?? 0);
+            $lockedRooms = (int) ($roomStatusCounts['locked'] ?? 0);
             $customersCount = Customer::count($this->pdo, $companyId);
             $activeContracts = Contract::countActiveByCompany($this->pdo, $companyId);
             $monthlyRevenue = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
@@ -49,10 +52,12 @@ class DashboardController
             }
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehousesCount = Warehouse::countAll($this->pdo);
-            $rooms = Room::findAll($this->pdo, null);
-            $roomsCount = count($rooms);
-            $occupiedRooms = count(array_filter($rooms, fn($r) => ($r['status'] ?? '') === 'occupied'));
-            $emptyRooms = count(array_filter($rooms, fn($r) => ($r['status'] ?? '') === 'empty'));
+            $roomStatusCounts = Room::statusCounts($this->pdo, null);
+            $roomsCount = Room::countAll($this->pdo, null);
+            $occupiedRooms = (int) ($roomStatusCounts['occupied'] ?? 0);
+            $emptyRooms = (int) ($roomStatusCounts['empty'] ?? 0);
+            $reservedRooms = (int) ($roomStatusCounts['reserved'] ?? 0);
+            $lockedRooms = (int) ($roomStatusCounts['locked'] ?? 0);
             $customersCount = Customer::count($this->pdo, null);
             $activeContracts = Contract::countActiveGlobal($this->pdo);
             $monthlyRevenue = Payment::sumPaidThisMonthGlobal($this->pdo);
@@ -137,7 +142,7 @@ class DashboardController
             if ($isSuperAdmin) {
                 $setupSteps['company']['done'] = true;
                 $setupSteps['warehouses']['done'] = Warehouse::countAll($this->pdo) > 0;
-                $setupSteps['rooms']['done'] = count(Room::findAll($this->pdo, null)) > 0;
+                $setupSteps['rooms']['done'] = Room::countAll($this->pdo, null) > 0;
                 $setupSteps['staff']['done'] = Personnel::tableExists($this->pdo) && count(Personnel::findAll($this->pdo, null, null, null, '1')) >= 1;
                 $setupSteps['vehicles']['done'] = count(Vehicle::findAll($this->pdo, null)) > 0;
                 $setupSteps['services']['done'] = count(Service::findAll($this->pdo, null)) > 0;

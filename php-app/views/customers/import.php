@@ -25,7 +25,7 @@ ob_start();
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CSV / Excel dosyası</label>
             <input type="file" name="csv_file" accept=".csv" required class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 dark:file:bg-emerald-900/30 dark:file:text-emerald-300">
-            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">CSV dosyası yükleyin (Excel’de “CSV (Ayırıcı: noktalı virgül)” olarak kaydedebilirsiniz). Sütunlar: Ad; Soyad; E-posta; Telefon; TC Kimlik No; Adres; Notlar; Aktif (Evet/Hayır). UTF-8 önerilir.</p>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">CSV dosyası yükleyin (Excel’de “CSV (Ayırıcı: noktalı virgül)” olarak kaydedebilirsiniz). Sütunlar: Müşteri ID; Ad; Soyad; E-posta; Telefon; TC Kimlik No; Adres; Notlar; Aktif (Evet/Hayır). Dışa aktarılan dosyayı tekrar yüklediğinizde müşteriler güncellenir, tekrar oluşturulmaz. Müşteri ID yeni kayıtlar için boş bırakılabilir.</p>
         </div>
         <div class="form-submit-bar flex flex-wrap items-center gap-3">
             <button type="submit" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
@@ -41,9 +41,9 @@ ob_start();
 
 <div class="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
     <h3 class="text-sm font-semibold text-gray-800 dark:text-white mb-2">Örnek CSV (ilk satır başlık, sonraki satırlar veri)</h3>
-    <pre class="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">Ad;Soyad;E-posta;Telefon;TC Kimlik No;Adres;Notlar;Aktif
-Ahmet;Yılmaz;ahmet@ornek.com;05551234567;;İstanbul;Aktif müşteri;Evet
-Ayşe;Demir;ayse@ornek.com;;12345678901;Ankara;;Evet</pre>
+    <pre class="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">Müşteri ID;Ad;Soyad;E-posta;Telefon;TC Kimlik No;Adres;Notlar;Aktif
+;Ahmet;Yılmaz;ahmet@ornek.com;05551234567;;İstanbul;Aktif müşteri;Evet
+;Ayşe;Demir;ayse@ornek.com;;12345678901;Ankara;;Evet</pre>
 </div>
 
 <?php

@@ -891,7 +891,7 @@ class CustomersController
 
         $out = fopen('php://output', 'wb');
         fprintf($out, "\xEF\xBB\xBF"); // UTF-8 BOM (Excel için)
-        $headers = ['Ad', 'Soyad', 'E-posta', 'Telefon', 'TC Kimlik No', 'Adres', 'Notlar', 'Aktif'];
+        $headers = ['Müşteri ID', 'Ad', 'Soyad', 'E-posta', 'Telefon', 'TC Kimlik No', 'Adres', 'Notlar', 'Aktif'];
         if ($debtFilter === 'overdue') {
             $headers[] = 'Gecikmiş ödeme sayısı';
             $headers[] = 'Gecikmiş borç (₺)';
@@ -903,6 +903,7 @@ class CustomersController
 
         foreach ($customers as $c) {
             $row = [
+                $c['id'] ?? '',
                 $c['first_name'] ?? '',
                 $c['last_name'] ?? '',
                 $c['email'] ?? '',
@@ -935,9 +936,9 @@ class CustomersController
         header('Cache-Control: no-cache, no-store, must-revalidate');
         $out = fopen('php://output', 'wb');
         fprintf($out, "\xEF\xBB\xBF");
-        fputcsv($out, ['Ad', 'Soyad', 'E-posta', 'Telefon', 'TC Kimlik No', 'Adres', 'Notlar', 'Aktif'], ';');
-        fputcsv($out, ['Ahmet', 'Yılmaz', 'ahmet@ornek.com', '05551234567', '', 'İstanbul', 'Not', 'Evet'], ';');
-        fputcsv($out, ['Ayşe', 'Demir', 'ayse@ornek.com', '', '12345678901', 'Ankara', '', 'Evet'], ';');
+        fputcsv($out, ['Müşteri ID', 'Ad', 'Soyad', 'E-posta', 'Telefon', 'TC Kimlik No', 'Adres', 'Notlar', 'Aktif'], ';');
+        fputcsv($out, ['', 'Ahmet', 'Yılmaz', 'ahmet@ornek.com', '05551234567', '', 'İstanbul', 'Not', 'Evet'], ';');
+        fputcsv($out, ['', 'Ayşe', 'Demir', 'ayse@ornek.com', '', '12345678901', 'Ankara', '', 'Evet'], ';');
         fclose($out);
         exit;
     }
@@ -1012,57 +1013,27 @@ class CustomersController
         }
 
         $added = 0;
+        $updated = 0;
         $skipped = 0;
         $errors = [];
+        $batchSeen = [];
 
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
-            $row = array_map('trim', $row);
-            if (count($row) < 2) {
+            $parsed = parseCustomerImportRow($row);
+            if ($parsed === null) {
                 continue;
             }
-            // Opsiyonel: ilk sütun external_id (Müşteri No); 9 sütun varsa kullan
-            $externalId = null;
-            $col0 = $row[0] ?? '';
-            $col1 = $row[1] ?? '';
-            if (count($row) >= 9 && $col0 !== '' && (stripos($col0, 'ad') === false && stripos($col1, 'soyad') === false)) {
-                $externalId = $col0;
-                $firstName = $col1;
-                $lastName = $row[2] ?? '';
-                $email = $row[3] ?? '';
-                $phone = isset($row[4]) ? trim($row[4]) : null;
-                $identityNumber = isset($row[5]) && $row[5] !== '' ? trim($row[5]) : null;
-                $address = isset($row[6]) && $row[6] !== '' ? trim($row[6]) : null;
-                $notes = isset($row[7]) && $row[7] !== '' ? trim($row[7]) : null;
-                $isActive = 1;
-                if (isset($row[8])) {
-                    $v = trim($row[8]);
-                    if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
-                        $isActive = 0;
-                    }
-                }
-            } else {
-                $externalId = null;
-                $firstName = $col0;
-                $lastName = $col1;
-                $email = $row[2] ?? '';
-                $phone = isset($row[3]) ? trim($row[3]) : null;
-                $identityNumber = isset($row[4]) && $row[4] !== '' ? trim($row[4]) : null;
-                $address = isset($row[5]) && $row[5] !== '' ? trim($row[5]) : null;
-                $notes = isset($row[6]) && $row[6] !== '' ? trim($row[6]) : null;
-                $isActive = 1;
-                if (isset($row[7])) {
-                    $v = trim($row[7]);
-                    if (stripos($v, 'hayır') !== false || $v === '0' || strtolower($v) === 'no') {
-                        $isActive = 0;
-                    }
-                }
-            }
-            if ($firstName === '' && $lastName === '') {
-                continue;
-            }
-            if (stripos($firstName, 'ad') !== false && stripos($lastName, 'soyad') !== false) {
-                continue; // başlık satırı
-            }
+
+            $firstName = $parsed['first_name'];
+            $lastName = $parsed['last_name'];
+            $email = $parsed['email'];
+            $phone = $parsed['phone'];
+            $identityNumber = $parsed['identity_number'];
+            $address = $parsed['address'];
+            $notes = $parsed['notes'];
+            $isActive = $parsed['is_active'];
+            $customerId = $parsed['customer_id'];
+            $externalId = $parsed['external_id'];
 
             if ($identityNumber !== null && !validateTcIdentity($identityNumber)) {
                 $errors[] = $firstName . ' ' . $lastName . ': TC Kimlik No en fazla 11 haneli rakam olmalıdır.';
@@ -1076,15 +1047,25 @@ class CustomersController
             }
             $phoneFormatted = ($phone !== null && $phone !== '') ? formatPhoneInput($phone) : null;
 
+            $matchKey = customerImportMatchKey($customerId, $externalId, $email, $phoneFormatted, $identityNumber);
             $existing = null;
-            if ($externalId !== null && $externalId !== '') {
+            if ($matchKey !== null && isset($batchSeen[$matchKey])) {
+                $existing = Customer::findOneForCompany($this->pdo, $batchSeen[$matchKey], $companyId);
+            }
+            if (!$existing && $customerId !== null && $customerId !== '') {
+                $existing = Customer::findOneForCompany($this->pdo, $customerId, $companyId);
+            }
+            if (!$existing && $externalId !== null && $externalId !== '') {
                 $existing = Customer::findByExternalId($this->pdo, $companyId, $externalId);
             }
             if (!$existing && $email !== '') {
                 $existing = Customer::findByEmail($this->pdo, $companyId, $email, null);
             }
             if (!$existing && $phoneFormatted !== null) {
-                $existing = Customer::findByPhoneOrPhone2($this->pdo, $companyId, $phoneFormatted, null);
+                $existing = Customer::findByPhoneNormalized($this->pdo, $companyId, $phoneFormatted, null);
+            }
+            if (!$existing && $identityNumber !== null && $identityNumber !== '') {
+                $existing = Customer::findByIdentityNumber($this->pdo, $companyId, $identityNumber, null);
             }
 
             try {
@@ -1102,10 +1083,16 @@ class CustomersController
                 ];
                 if ($existing) {
                     Customer::update($this->pdo, $existing['id'], $data);
-                    $added++; // güncelleme de "işlendi" sayılır
+                    $updated++;
+                    if ($matchKey !== null) {
+                        $batchSeen[$matchKey] = $existing['id'];
+                    }
                 } else {
-                    Customer::create($this->pdo, $data);
+                    $created = Customer::create($this->pdo, $data);
                     $added++;
+                    if ($matchKey !== null && !empty($created['id'])) {
+                        $batchSeen[$matchKey] = $created['id'];
+                    }
                 }
             } catch (Throwable $e) {
                 $errors[] = $firstName . ' ' . $lastName . ': ' . $e->getMessage();
@@ -1114,10 +1101,18 @@ class CustomersController
         }
         fclose($handle);
 
-        if ($added > 0) {
+        $processed = $added + $updated;
+        if ($processed > 0) {
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-            Notification::createForCompany($this->pdo, $companyId, 'customer', 'Toplu müşteri ekleme', $added . ' müşteri Excel ile eklendi.' . ($skipped > 0 ? ' ' . $skipped . ' kayıt atlandı.' : ''), ['actor_name' => $actorName]);
-            $successMsg = $added . ' müşteri eklendi.';
+            Notification::createForCompany($this->pdo, $companyId, 'customer', 'Toplu müşteri içe aktarma', $processed . ' müşteri Excel ile işlendi.' . ($skipped > 0 ? ' ' . $skipped . ' kayıt atlandı.' : ''), ['actor_name' => $actorName]);
+            $successParts = [];
+            if ($added > 0) {
+                $successParts[] = $added . ' yeni eklendi';
+            }
+            if ($updated > 0) {
+                $successParts[] = $updated . ' güncellendi';
+            }
+            $successMsg = implode(', ', $successParts) . '.';
             if ($skipped > 0) {
                 $successMsg .= ' ' . $skipped . ' kayıt atlandı.';
             }
@@ -1125,8 +1120,8 @@ class CustomersController
         }
         if (!empty($errors)) {
             Auth::setSession('flash_error', implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : ''));
-        } elseif ($added === 0 && $skipped === 0) {
-            Auth::setSession('flash_error', 'İşlenecek geçerli satır bulunamadı. CSV formatı: Ad; Soyad; E-posta; Telefon; TC Kimlik No; Adres; Notlar; Aktif');
+        } elseif ($processed === 0 && $skipped === 0) {
+            Auth::setSession('flash_error', 'İşlenecek geçerli satır bulunamadı. CSV formatı: Müşteri ID; Ad; Soyad; E-posta; Telefon; TC Kimlik No; Adres; Notlar; Aktif (Müşteri ID boş bırakılabilir)');
         }
 
         header('Location: /musteriler/excel-ice-aktar');

@@ -197,13 +197,21 @@ class Customer
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    public static function findOneForCompany(PDO $pdo, string $id, string $companyId): ?array
+    {
+        $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = ? AND company_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$id, $companyId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     /** Aynı şirkette aynı e-posta ile kayıtlı müşteri var mı? (excludeId = güncellemede kendi kaydı) */
     public static function findByEmail(PDO $pdo, string $companyId, string $email, ?string $excludeId = null): ?array
     {
+        $email = mb_strtolower(trim($email));
         if ($email === '') {
             return null;
         }
-        $sql = 'SELECT * FROM customers WHERE company_id = ? AND email = ? AND deleted_at IS NULL';
+        $sql = 'SELECT * FROM customers WHERE company_id = ? AND LOWER(email) = ? AND deleted_at IS NULL';
         $params = [$companyId, $email];
         if ($excludeId !== null && $excludeId !== '') {
             $sql .= ' AND id != ?';
@@ -261,6 +269,54 @@ class Customer
         $stmt = $pdo->prepare('SELECT * FROM customers WHERE company_id = ? AND external_id = ? AND deleted_at IS NULL LIMIT 1');
         $stmt->execute([$companyId, $externalId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /** Aynı şirkette TC kimlik no ile müşteri */
+    public static function findByIdentityNumber(PDO $pdo, string $companyId, ?string $identityNumber, ?string $excludeId = null): ?array
+    {
+        $identityNumber = trim((string) $identityNumber);
+        if ($identityNumber === '') {
+            return null;
+        }
+        $sql = 'SELECT * FROM customers WHERE company_id = ? AND identity_number = ? AND deleted_at IS NULL';
+        $params = [$companyId, $identityNumber];
+        if ($excludeId !== null && $excludeId !== '') {
+            $sql .= ' AND id != ?';
+            $params[] = $excludeId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /** Telefon eşleşmesi (biçim farklarını normalize ederek) */
+    public static function findByPhoneNormalized(PDO $pdo, string $companyId, ?string $phone, ?string $excludeId = null): ?array
+    {
+        $digits = normalizePhoneDigits($phone);
+        if ($digits === null) {
+            return null;
+        }
+        $existing = self::findByPhoneOrPhone2($pdo, $companyId, $digits, $excludeId);
+        if ($existing) {
+            return $existing;
+        }
+        $stmt = $pdo->prepare(
+            'SELECT * FROM customers WHERE company_id = ? AND deleted_at IS NULL
+             AND (phone IS NOT NULL OR phone_2 IS NOT NULL)'
+        );
+        $stmt->execute([$companyId]);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if ($excludeId !== null && $excludeId !== '' && ($row['id'] ?? '') === $excludeId) {
+                continue;
+            }
+            foreach (['phone', 'phone_2'] as $field) {
+                if (!empty($row[$field]) && normalizePhoneDigits($row[$field]) === $digits) {
+                    return $row;
+                }
+            }
+        }
+        return null;
     }
 
     public static function update(PDO $pdo, string $id, array $data): void
