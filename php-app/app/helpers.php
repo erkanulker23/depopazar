@@ -1041,3 +1041,71 @@ if (!function_exists('streamCsvDownload')) {
         exit;
     }
 }
+
+if (!function_exists('duePaymentStatusFilterLabel')) {
+    function duePaymentStatusFilterLabel(?string $status): string
+    {
+        return match ($status) {
+            'pending' => 'Bekleyen',
+            'overdue' => 'Vadesi geçmiş',
+            'paid' => 'Ödenmiş',
+            'unpaid' => 'Ödenmemiş',
+            default => 'Tümü',
+        };
+    }
+}
+
+if (!function_exists('streamHtmlExcelReport')) {
+    /**
+     * @param list<string> $headers
+     * @param list<list<string>> $rows
+     * @param list<string> $metaLines
+     * @param list<string> $summaryLines
+     */
+    function streamHtmlExcelReport(string $filename, string $title, array $metaLines, array $headers, array $rows, array $summaryLines = []): never
+    {
+        $safeName = preg_replace('/[^a-zA-Z0-9._-]+/', '_', $filename);
+        if (!str_ends_with(strtolower((string) $safeName), '.xls')) {
+            $safeName .= '.xls';
+        }
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $safeName . '"');
+        echo "\xEF\xBB\xBF";
+        echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' . htmlspecialchars($title) . '</title>';
+        echo '<style>
+            body { font-family: Calibri, Arial, sans-serif; margin: 24px; color: #111827; }
+            h1 { color: #047857; font-size: 20pt; margin: 0 0 4px; }
+            .meta { color: #4b5563; font-size: 10pt; margin-bottom: 16px; line-height: 1.6; }
+            table { border-collapse: collapse; width: 100%; }
+            th { background: #047857; color: #fff; padding: 10px 8px; text-align: left; font-size: 10pt; border: 1px solid #065f46; }
+            td { border: 1px solid #d1d5db; padding: 7px 8px; font-size: 10pt; vertical-align: top; }
+            tr:nth-child(even) td { background: #f9fafb; }
+            .num { text-align: right; mso-number-format:"#,##0.00"; }
+            .summary { margin-top: 18px; font-size: 10pt; color: #374151; }
+            .summary strong { color: #047857; }
+        </style></head><body>';
+        echo '<h1>' . htmlspecialchars($title) . '</h1>';
+        if ($metaLines !== []) {
+            echo '<div class="meta">' . implode('<br>', array_map(static fn($line) => htmlspecialchars($line), $metaLines)) . '</div>';
+        }
+        echo '<table><thead><tr>';
+        foreach ($headers as $header) {
+            echo '<th>' . htmlspecialchars($header) . '</th>';
+        }
+        echo '</tr></thead><tbody>';
+        foreach ($rows as $row) {
+            echo '<tr>';
+            foreach ($row as $i => $cell) {
+                $class = ($i === count($row) - 1) ? ' class="num"' : '';
+                echo '<td' . $class . '>' . htmlspecialchars((string) $cell) . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+        if ($summaryLines !== []) {
+            echo '<div class="summary">' . implode('<br>', array_map(static fn($line) => htmlspecialchars($line), $summaryLines)) . '</div>';
+        }
+        echo '</body></html>';
+        exit;
+    }
+}

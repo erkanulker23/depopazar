@@ -978,19 +978,21 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** Seçilen dönemde vadesi gelen (ödenmemiş) ödemeler */
+    /** Seçilen dönemde vadesi gelen ödemeler (due_date aralığı; durum filtresi opsiyonel) */
     public static function findDuePaymentRowsInPeriod(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 1000, ?string $search = null, ?string $status = null): array
     {
-        $sql = 'SELECT p.id, p.payment_number, p.amount, p.due_date, p.status,
+        $sql = 'SELECT p.id, p.payment_number, p.amount, p.due_date, p.status, p.paid_at, p.payment_method,
                        c.contract_number, c.id AS contract_id, c.customer_id,
                        cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.phone AS customer_phone,
-                       w.name AS warehouse_name, r.room_number
+                       w.name AS warehouse_name, r.room_number,
+                       ba.bank_name
                 FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
-                WHERE p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')
+                LEFT JOIN bank_accounts ba ON ba.id = p.bank_account_id AND ba.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status != \'cancelled\'
                 AND p.due_date IS NOT NULL
                 AND DATE(p.due_date) >= ? AND DATE(p.due_date) <= ? ';
         $params = [$startDate, $endDate];
@@ -998,9 +1000,14 @@ class Payment
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
         }
-        if ($status === 'pending' || $status === 'overdue') {
-            $sql .= ' AND p.status = ? ';
-            $params[] = $status;
+        if ($status === 'paid') {
+            $sql .= ' AND p.status = \'paid\' ';
+        } elseif ($status === 'overdue') {
+            $sql .= ' AND p.status != \'paid\' AND DATE(p.due_date) < CURDATE() ';
+        } elseif ($status === 'pending') {
+            $sql .= ' AND p.status != \'paid\' AND DATE(p.due_date) >= CURDATE() ';
+        } elseif ($status === 'unpaid') {
+            $sql .= ' AND p.status IN (\'pending\', \'overdue\') ';
         }
         $search = trim((string) $search);
         if ($search !== '') {
@@ -1008,7 +1015,7 @@ class Payment
             $q = '%' . $search . '%';
             $params = array_merge($params, array_fill(0, 7, $q));
         }
-        $sql .= ' ORDER BY p.due_date ASC, cu.last_name, cu.first_name LIMIT ' . (int) $limit;
+        $sql .= ' ORDER BY p.due_date ASC, p.status ASC, cu.last_name, cu.first_name LIMIT ' . (int) $limit;
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

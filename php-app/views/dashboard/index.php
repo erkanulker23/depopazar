@@ -204,12 +204,7 @@ $hasMonthData = !empty($showMonthPanel);
         </a>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-100 dark:bg-gray-700">
-        <div class="bg-white dark:bg-gray-800 p-4">
-            <p class="text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider mb-1">Toplam geciken</p>
-            <p class="text-xl font-bold text-red-700 dark:text-red-300 tabular-nums"><?= fmtMoney($monthOverdueSum ?? 0) ?> ₺</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= (int) ($monthOverdueCount ?? 0) ?> ödeme</p>
-        </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-px bg-slate-100 dark:bg-gray-700">
         <div class="bg-white dark:bg-gray-800 p-4">
             <p class="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider mb-1">Bu ay geciken</p>
             <p class="text-xl font-bold text-orange-700 dark:text-orange-300 tabular-nums"><?= fmtMoney($monthNewOverdueSum ?? 0) ?> ₺</p>
@@ -228,14 +223,14 @@ $hasMonthData = !empty($showMonthPanel);
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:divide-x divide-slate-100 dark:divide-gray-700">
-        <!-- Geciken ödemeler -->
+        <!-- Bu ay geciken ödemeler -->
         <div class="p-4 lg:p-5">
             <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-red-500"></span>
-                Geciken ödemeler
+                Bu ay geciken
             </h3>
             <?php if (empty($monthOverdueList)): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Geciken ödeme yok</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Bu ay geciken ödeme yok</p>
             <?php else: ?>
                 <ul class="space-y-2 max-h-56 overflow-y-auto pr-1">
                     <?php foreach ($monthOverdueList as $p):

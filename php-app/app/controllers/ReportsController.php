@@ -192,15 +192,40 @@ class ReportsController
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
         $search = $search !== '' ? $search : null;
-        $status = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'overdue'], true) ? $_GET['status'] : null;
+        $status = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'overdue', 'paid', 'unpaid'], true) ? $_GET['status'] : null;
         if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             $this->exportDuePaymentsCsv($companyId, $startDate, $endDate, $search, $status);
         }
         $rows = Payment::findDuePaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate, 5000, $search, $status);
         $totalCount = count($rows);
         $totalSum = array_sum(array_map(static fn($r) => (float) ($r['amount'] ?? 0), $rows));
-        $pendingCount = count(array_filter($rows, static fn($r) => ($r['status'] ?? '') === 'pending'));
-        $overdueCount = count(array_filter($rows, static fn($r) => ($r['status'] ?? '') === 'overdue'));
+        $pendingCount = 0;
+        $overdueCount = 0;
+        $paidCount = 0;
+        $unpaidSum = 0.0;
+        $paidSum = 0.0;
+        $overdueSum = 0.0;
+        foreach ($rows as $r) {
+            $display = paymentStatusDisplay($r);
+            if (($r['status'] ?? '') === 'paid') {
+                $paidCount++;
+                $paidSum += (float) ($r['amount'] ?? 0);
+            } else {
+                $unpaidSum += (float) ($r['amount'] ?? 0);
+                if ($display['label'] === 'Vadesi geçmiş') {
+                    $overdueCount++;
+                    $overdueSum += (float) ($r['amount'] ?? 0);
+                } elseif (in_array($display['label'], ['Bekliyor', 'Vadesi gelmemiş'], true)) {
+                    $pendingCount++;
+                }
+            }
+        }
+        $companyName = null;
+        if ($companyId) {
+            $company = Company::findOne($this->pdo, $companyId);
+            $companyName = $company['name'] ?? null;
+        }
+        $statusLabel = duePaymentStatusFilterLabel($status);
         $pageTitle = 'Vadesi Gelen Ödemeler';
         require __DIR__ . '/../../views/reports/due_payments.php';
     }
@@ -522,25 +547,61 @@ class ReportsController
     private function exportDuePaymentsCsv(?string $companyId, string $startDate, string $endDate, ?string $search, ?string $status): never
     {
         $rows = Payment::findDuePaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate, 5000, $search, $status);
+        $companyName = 'DepoPazar';
+        if ($companyId) {
+            $company = Company::findOne($this->pdo, $companyId);
+            $companyName = $company['name'] ?? $companyName;
+        }
         $csvRows = [];
+        $pendingCount = 0;
+        $overdueCount = 0;
+        $paidCount = 0;
+        $totalSum = 0.0;
         foreach ($rows as $r) {
             $name = trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? ''));
             $dStatus = paymentStatusDisplay($r);
+            $amount = (float) ($r['amount'] ?? 0);
+            $totalSum += $amount;
+            if (($r['status'] ?? '') === 'paid') {
+                $paidCount++;
+            } elseif ($dStatus['label'] === 'Vadesi geçmiş') {
+                $overdueCount++;
+            } else {
+                $pendingCount++;
+            }
             $csvRows[] = [
                 $r['payment_number'] ?? '',
                 $name,
                 $r['customer_phone'] ?? '',
                 $r['contract_number'] ?? '',
                 ($r['warehouse_name'] ?? '') . ' / ' . ($r['room_number'] ?? ''),
-                number_format((float) ($r['amount'] ?? 0), 2, ',', '.'),
+                number_format($amount, 2, ',', '.'),
                 !empty($r['due_date']) ? date('d.m.Y', strtotime($r['due_date'])) : '',
                 $dStatus['label'] ?? '',
+                !empty($r['paid_at']) ? date('d.m.Y H:i', strtotime($r['paid_at'])) : '',
+                $r['payment_method'] ?? '',
             ];
         }
-        streamCsvDownload(
-            'vadesi-gelen-' . $startDate . '-' . $endDate . '.csv',
-            ['Ödeme No', 'Müşteri', 'Telefon', 'Sözleşme', 'Depo/Oda', 'Tutar (₺)', 'Vade', 'Durum'],
-            $csvRows
+        $meta = [
+            $companyName,
+            'Dönem: ' . date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate)),
+            'Durum filtresi: ' . duePaymentStatusFilterLabel($status),
+            'Oluşturulma: ' . date('d.m.Y H:i'),
+        ];
+        if ($search) {
+            $meta[] = 'Arama: ' . $search;
+        }
+        $summary = [
+            'Toplam kayıt: ' . count($rows) . ' · Toplam tutar: ' . number_format($totalSum, 2, ',', '.') . ' ₺',
+            'Bekleyen: ' . $pendingCount . ' · Vadesi geçmiş: ' . $overdueCount . ' · Ödenmiş: ' . $paidCount,
+        ];
+        streamHtmlExcelReport(
+            'vadesi-gelen-' . $startDate . '-' . $endDate . '.xls',
+            'Vadesi Gelen Ödemeler Raporu',
+            $meta,
+            ['Ödeme No', 'Müşteri', 'Telefon', 'Sözleşme', 'Depo/Oda', 'Tutar (₺)', 'Vade', 'Durum', 'Tahsilat', 'Yöntem'],
+            $csvRows,
+            $summary
         );
     }
 

@@ -7,6 +7,12 @@ class Customer
         $debtFilter = self::normalizeDebtFilter($debtFilter);
         $withDebtStats = $debtFilter !== null;
         $sql = 'SELECT c.*';
+        $sql .= ', ' . self::contractCountSubquery() . ' AS contract_count';
+        $sql .= ', ' . self::primaryContractFieldSubquery('co.id') . ' AS primary_contract_id';
+        $sql .= ', ' . self::primaryContractFieldSubquery('co.contract_number') . ' AS primary_contract_number';
+        $sql .= ', ' . self::primaryContractFieldSubquery('w.name') . ' AS primary_warehouse_name';
+        $sql .= ', ' . self::primaryContractFieldSubquery('r.room_number') . ' AS primary_room_number';
+        $sql .= ', ' . self::primaryContractFieldSubquery('co.is_active') . ' AS primary_contract_active';
         if ($withDebtStats) {
             if ($debtFilter === 'overdue') {
                 $sql .= ', ' . self::overduePaymentCountSubquery() . ' AS overdue_payment_count';
@@ -109,6 +115,25 @@ class Customer
             WHERE co.customer_id = c.id
             AND p.deleted_at IS NULL
             AND p.status IN (\'pending\', \'overdue\')';
+    }
+
+    private static function contractJoinFromSql(): string
+    {
+        return 'FROM contracts co
+            INNER JOIN rooms r ON r.id = co.room_id AND r.deleted_at IS NULL
+            INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+            WHERE co.customer_id = c.id AND co.deleted_at IS NULL';
+    }
+
+    private static function contractCountSubquery(): string
+    {
+        return '(SELECT COUNT(*) ' . self::contractJoinFromSql() . ')';
+    }
+
+    private static function primaryContractFieldSubquery(string $field): string
+    {
+        return '(SELECT ' . $field . ' ' . self::contractJoinFromSql() . '
+            ORDER BY co.is_active DESC, co.start_date DESC LIMIT 1)';
     }
 
     private static function overduePaymentCountSubquery(): string

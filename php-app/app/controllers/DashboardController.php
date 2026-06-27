@@ -80,8 +80,6 @@ class DashboardController
         $monthOverdueList = [];
         $monthDueList = [];
         $monthPaidList = [];
-        $monthOverdueCount = 0;
-        $monthOverdueSum = 0.0;
         $monthNewOverdueCount = 0;
         $monthNewOverdueSum = 0.0;
         $monthDueCount = 0;
@@ -98,15 +96,9 @@ class DashboardController
             $upcomingPayments = Payment::findUpcoming($this->pdo, $cid, 10);
             $expiringContracts = Contract::findExpiringSoon($this->pdo, $cid, 30);
             $customersWithUnpaid = Payment::findCustomersWithUnpaidPayments($this->pdo, $cid, 50);
-            $monthOverdueList = Payment::findOverdueList($this->pdo, $cid, 12);
+            $monthOverdueList = Payment::findOverdueDueThisMonth($this->pdo, $cid, 12);
             $monthDueList = Payment::findDueThisMonth($this->pdo, $cid, 12);
             $monthPaidList = Payment::findPaidThisMonth($this->pdo, $cid, 8);
-            $monthOverdueCount = $cid
-                ? Payment::countOverdueByDueDate($this->pdo, $cid)
-                : Payment::countOverdueByDueDateGlobal($this->pdo);
-            $monthOverdueSum = $cid
-                ? Payment::sumOverdueByCompany($this->pdo, $cid)
-                : Payment::sumOverdueGlobal($this->pdo);
             $monthNewOverdueCount = Payment::countOverdueDueThisMonth($this->pdo, $cid);
             $monthNewOverdueSum = Payment::sumOverdueDueThisMonth($this->pdo, $cid);
             $monthDueCount = Payment::countDueThisMonth($this->pdo, $cid);

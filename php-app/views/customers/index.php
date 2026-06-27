@@ -19,7 +19,7 @@ $filterQuery = http_build_query(array_filter([
     'borc' => $borcQuery,
 ], fn($v) => $v !== null && $v !== ''));
 $hasActiveFilters = $q !== '' || $inDepo !== '' || $warehouseId !== '' || array_key_exists('borc', $_GET);
-$tableColspan = $debtFilter !== null ? 9 : 8;
+$tableColspan = $debtFilter !== null ? 10 : 9;
 ob_start();
 ?>
 <div class="mb-6">
@@ -94,6 +94,21 @@ ob_start();
                             <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="font-semibold text-gray-900 dark:text-white block truncate"><?= htmlspecialchars($c['first_name'] . ' ' . $c['last_name']) ?></a>
                             <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5"><?= htmlspecialchars($c['email'] ?? '–') ?></p>
                             <p class="text-sm text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($c['phone'] ?? '–') ?></p>
+                            <?php if ((int) ($c['contract_count'] ?? 0) > 0): ?>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                    <a href="/girisler/<?= htmlspecialchars($c['primary_contract_id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($c['primary_contract_number'] ?? '') ?></a>
+                                    <span class="text-gray-400 dark:text-gray-500"> · </span>
+                                    <?= htmlspecialchars(trim(($c['primary_warehouse_name'] ?? '') . ' / ' . ($c['primary_room_number'] ?? ''), ' /')) ?>
+                                    <?php if ((int) ($c['contract_count'] ?? 0) > 1): ?>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">(+<?= (int) $c['contract_count'] - 1 ?> sözleşme)</span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($c['primary_contract_active'])): ?>
+                                        <span class="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
+                                    <?php endif; ?>
+                                </p>
+                            <?php else: ?>
+                                <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Sözleşme yok</p>
+                            <?php endif; ?>
                             <?php if (!empty(trim($c['notes'] ?? ''))): ?>
                                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2"><?= nl2br(htmlspecialchars(mb_substr(trim($c['notes']), 0, 100) . (mb_strlen(trim($c['notes'])) > 100 ? '…' : ''))) ?></p>
                             <?php endif; ?>
@@ -139,6 +154,7 @@ ob_start();
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ad Soyad</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">E-posta</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Telefon</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme</th>
                         <?php if ($debtFilter === 'overdue'): ?>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Gecikmiş borç</th>
                         <?php elseif ($debtFilter === 'unpaid'): ?>
@@ -177,6 +193,24 @@ ob_start();
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['email'] ?? '') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['phone'] ?? '-') ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 max-w-[220px]">
+                                <?php if ((int) ($c['contract_count'] ?? 0) > 0): ?>
+                                    <a href="/girisler/<?= htmlspecialchars($c['primary_contract_id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:underline block truncate"><?= htmlspecialchars($c['primary_contract_number'] ?? '-') ?></a>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars(trim(($c['primary_warehouse_name'] ?? '') . ' / ' . ($c['primary_room_number'] ?? ''), ' /')) ?></span>
+                                    <span class="flex flex-wrap items-center gap-1 mt-0.5">
+                                        <?php if (!empty($c['primary_contract_active'])): ?>
+                                            <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
+                                        <?php else: ?>
+                                            <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">Pasif</span>
+                                        <?php endif; ?>
+                                        <?php if ((int) ($c['contract_count'] ?? 0) > 1): ?>
+                                            <span class="text-[10px] text-gray-500 dark:text-gray-400">+<?= (int) $c['contract_count'] - 1 ?> sözleşme</span>
+                                        <?php endif; ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-gray-400 dark:text-gray-500">–</span>
+                                <?php endif; ?>
+                            </td>
                             <?php if ($debtFilter === 'overdue'): ?>
                             <td class="px-4 py-3 text-sm">
                                 <span class="font-semibold text-red-600 dark:text-red-400 tabular-nums"><?= number_format((float) ($c['overdue_debt_total'] ?? 0), 2, ',', '.') ?> ₺</span>
