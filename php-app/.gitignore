@@ -3,5 +3,8 @@
 /uploads/*
 !uploads/.gitkeep
 /storage/logs/*.log
+/storage/cache/*
+!/storage/cache/.gitkeep
+/storage/il-ilce.json
 *.log
 .DS_Store

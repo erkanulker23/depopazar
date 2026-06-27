@@ -6,7 +6,7 @@
  */
 class IlIlceController
 {
-    private const CACHE_FILE = 'storage/il-ilce.json';
+    private const CACHE_FILE = 'storage/cache/il-ilce.json';
     private const BUNDLE_FILE = 'data/turkiye-il-ilce.json';
     private const CACHE_TTL = 86400 * 7; // 7 gün
 
