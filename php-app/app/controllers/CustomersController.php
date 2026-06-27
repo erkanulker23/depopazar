@@ -123,7 +123,13 @@ class CustomersController
             exit;
         }
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
+        foreach ($contracts as $c) {
+            if (!empty($c['id']) && empty($c['terminated_at'])) {
+                Contract::ensurePaymentsForContract($this->pdo, $c['id']);
+            }
+        }
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
+        $collectiblePayments = Payment::findCollectibleByCustomerId($this->pdo, $id, $companyId);
         $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
         $debtOverdue = Payment::sumUnpaidOverdueByCustomerId($this->pdo, $id, $companyId);
         $debtDueThisMonth = Payment::sumUnpaidDueThisMonthByCustomerId($this->pdo, $id, $companyId);

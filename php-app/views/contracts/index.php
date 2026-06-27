@@ -246,13 +246,35 @@ endif; ?>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="newSale_room_search">Oda <span class="text-red-500">*</span></label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="newSale_room_search">1. Oda <span class="text-red-500">*</span></label>
                                 <input type="hidden" name="room_id" id="newSale_room_id" value="">
                                 <div class="relative">
                                     <input type="search" id="newSale_room_search" placeholder="Önce depo seçin" autocomplete="off" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed">
                                     <div id="newSale_room_results" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-52 overflow-y-auto"></div>
                                 </div>
                                 <p id="newSale_room_hint" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Önce depo seçin</p>
+                            </div>
+                            <div class="pt-2">
+                                <label class="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="newSale_needs_second_room" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" onchange="toggleSecondRoomBlock(this.checked)">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Müşterinin bir odaya daha ihtiyacı var</span>
+                                </label>
+                                <input type="hidden" name="needs_second_room" id="newSale_needs_second_room_val" value="0">
+                            </div>
+                            <div id="newSale_second_room_block" class="hidden space-y-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="newSale_room_search_2">2. Oda <span class="text-red-500">*</span></label>
+                                    <input type="hidden" name="room_id_2" id="newSale_room_id_2" value="">
+                                    <div class="relative">
+                                        <input type="search" id="newSale_room_search_2" placeholder="Önce depo seçin" autocomplete="off" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed">
+                                        <div id="newSale_room_results_2" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-52 overflow-y-auto"></div>
+                                    </div>
+                                    <p id="newSale_room_hint_2" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Aynı depodaki başka bir oda seçin</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="newSale_monthly_price_2">2. Oda Aylık Ücret (₺) <span class="text-red-500">*</span></label>
+                                    <input type="text" name="monthly_price_2" id="newSale_monthly_price_2" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -580,6 +602,28 @@ function syncDeliveryFromContractWarehouse() {
     preview.textContent = addr;
     hidden.value = addr;
 }
+function toggleSecondRoomBlock(show) {
+    var block = document.getElementById('newSale_second_room_block');
+    var hiddenInput = document.getElementById('newSale_needs_second_room_val');
+    var price2 = document.getElementById('newSale_monthly_price_2');
+    if (block) block.classList.toggle('hidden', !show);
+    if (hiddenInput) hiddenInput.value = show ? '1' : '0';
+    if (price2) price2.required = show;
+    if (!show) {
+        if (window.newSaleRoomPicker2) {
+            window.newSaleRoomPicker2.clearSelected();
+            window.newSaleRoomPicker2.setEnabled(false);
+        }
+        var room2Search = document.getElementById('newSale_room_search_2');
+        if (room2Search) room2Search.value = '';
+        if (price2) price2.value = '';
+    } else {
+        var wh = document.getElementById('newSale_warehouse');
+        if (window.newSaleRoomPicker2 && wh && wh.value) {
+            window.newSaleRoomPicker2.setEnabled(true);
+        }
+    }
+}
 function toggleStoredItemsConditionNote(value) {
     var block = document.getElementById('newSale_stored_items_condition_note_block');
     var note = document.getElementById('newSale_stored_items_condition_note');
@@ -612,10 +656,24 @@ function openNewSaleModal() {
         window.newSaleRoomPicker.clearSelected();
         window.newSaleRoomPicker.setEnabled(false);
     }
+    if (window.newSaleRoomPicker2) {
+        window.newSaleRoomPicker2.clearSelected();
+        window.newSaleRoomPicker2.setEnabled(false);
+    }
     var roomSearch = document.getElementById('newSale_room_search');
     if (roomSearch) {
         roomSearch.value = '';
         roomSearch.placeholder = 'Önce depo seçin';
+    }
+    var roomSearch2 = document.getElementById('newSale_room_search_2');
+    if (roomSearch2) {
+        roomSearch2.value = '';
+        roomSearch2.placeholder = 'Önce depo seçin';
+    }
+    var needsSecond = document.getElementById('newSale_needs_second_room');
+    if (needsSecond) {
+        needsSecond.checked = false;
+        toggleSecondRoomBlock(false);
     }
 }
 function closeNewSaleModal() {
@@ -648,16 +706,58 @@ function closeNewSaleModal() {
             warehouseSelectId: 'newSale_warehouse',
             hintId: 'newSale_room_hint',
             rooms: <?= json_encode($newSaleRoomsJson, JSON_UNESCAPED_UNICODE) ?>,
+            getExcludeIds: function () {
+                var id2 = document.getElementById('newSale_room_id_2');
+                return id2 && id2.value ? [id2.value] : [];
+            },
             onWarehouseChange: function () {
                 applyWarehouseBaseFee();
                 buildMonthlyPricesList();
                 syncDeliveryFromContractWarehouse();
+                if (window.newSaleRoomPicker2) {
+                    window.newSaleRoomPicker2.clearSelected();
+                    var needsSecond = document.getElementById('newSale_needs_second_room');
+                    window.newSaleRoomPicker2.setEnabled(!!(needsSecond && needsSecond.checked));
+                }
             },
             onSelect: function (room) {
                 applyRoomMonthlyPrice(room);
+                var id2 = document.getElementById('newSale_room_id_2');
+                if (id2 && room && id2.value === room.id && window.newSaleRoomPicker2) {
+                    window.newSaleRoomPicker2.clearSelected();
+                }
             },
             onClear: function () {
                 applyWarehouseBaseFee();
+            }
+        });
+        window.newSaleRoomPicker2 = initRoomPicker({
+            hiddenInputId: 'newSale_room_id_2',
+            searchInputId: 'newSale_room_search_2',
+            resultsId: 'newSale_room_results_2',
+            warehouseSelectId: 'newSale_warehouse',
+            hintId: 'newSale_room_hint_2',
+            rooms: <?= json_encode($newSaleRoomsJson, JSON_UNESCAPED_UNICODE) ?>,
+            isRequired: function () {
+                var needsSecond = document.getElementById('newSale_needs_second_room');
+                return !!(needsSecond && needsSecond.checked);
+            },
+            getExcludeIds: function () {
+                var id1 = document.getElementById('newSale_room_id');
+                return id1 && id1.value ? [id1.value] : [];
+            },
+            onSelect: function (room) {
+                var price2 = document.getElementById('newSale_monthly_price_2');
+                if (!price2 || !room) return;
+                if (room.monthly_price !== null && room.monthly_price !== undefined && room.monthly_price !== '') {
+                    price2.value = String(room.monthly_price).replace('.', ',');
+                }
+            },
+            onWarehouseChange: function () {
+                var needsSecond = document.getElementById('newSale_needs_second_room');
+                if (needsSecond && needsSecond.checked) {
+                    window.newSaleRoomPicker2.setEnabled(true);
+                }
             }
         });
     }
@@ -800,6 +900,31 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
                     e.preventDefault();
                     alert('Hasarlı ürünler için hasar notu zorunludur.');
                     if (note) note.focus();
+                    return;
+                }
+            }
+            var needsSecond = document.getElementById('newSale_needs_second_room');
+            if (needsSecond && needsSecond.checked) {
+                var room2 = document.getElementById('newSale_room_id_2');
+                var price2 = document.getElementById('newSale_monthly_price_2');
+                if (!room2 || !room2.value) {
+                    e.preventDefault();
+                    alert('Lütfen 2. odayı seçin.');
+                    var search2 = document.getElementById('newSale_room_search_2');
+                    if (search2) search2.focus();
+                    return;
+                }
+                if (!price2 || !price2.value.trim()) {
+                    e.preventDefault();
+                    alert('Lütfen 2. oda aylık ücretini girin.');
+                    if (price2) price2.focus();
+                    return;
+                }
+                var room1 = document.getElementById('newSale_room_id');
+                if (room1 && room1.value && room1.value === room2.value) {
+                    e.preventDefault();
+                    alert('1. ve 2. oda aynı olamaz.');
+                    return;
                 }
             }
         });

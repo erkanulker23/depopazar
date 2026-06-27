@@ -236,15 +236,71 @@ class Contract
             }
         }
 
-        $stmtPay = $pdo->prepare(
-            "UPDATE payments SET amount = ? WHERE contract_id = ? AND deleted_at IS NULL AND status = 'pending' AND DATE_FORMAT(due_date, '%Y-%m') = ?"
+        $stmtPayMonths = $pdo->prepare(
+            "SELECT id, status, DATE_FORMAT(due_date, '%Y-%m') AS month_key
+             FROM payments WHERE contract_id = ? AND deleted_at IS NULL AND due_date IS NOT NULL"
         );
+        $stmtPayMonths->execute([$contractId]);
+        $paymentsByMonth = [];
+        while ($row = $stmtPayMonths->fetch(PDO::FETCH_ASSOC)) {
+            $monthKey = $row['month_key'] ?? '';
+            if ($monthKey !== '' && !isset($paymentsByMonth[$monthKey])) {
+                $paymentsByMonth[$monthKey] = $row;
+            }
+        }
+
+        $stmtPayUpdate = $pdo->prepare(
+            "UPDATE payments SET amount = ? WHERE contract_id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue') AND DATE_FORMAT(due_date, '%Y-%m') = ?"
+        );
+        $stmtPayDelete = $pdo->prepare(
+            "UPDATE payments SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
+        );
+
         foreach ($validMonths as $monthStr => $price) {
             if (isset($paidMonths[$monthStr])) {
                 continue;
             }
-            $stmtPay->execute([$price, $contractId, $monthStr]);
+            if (!isset($paymentsByMonth[$monthStr])) {
+                Payment::create($pdo, [
+                    'contract_id' => $contractId,
+                    'amount' => $price,
+                    'status' => 'pending',
+                    'due_date' => $monthStr . '-01 00:00:00',
+                ]);
+            } else {
+                $stmtPayUpdate->execute([$price, $contractId, $monthStr]);
+            }
         }
+
+        foreach ($paymentsByMonth as $monthStr => $row) {
+            if (isset($validMonths[$monthStr]) || ($row['status'] ?? '') === 'paid') {
+                continue;
+            }
+            $stmtPayDelete->execute([$row['id']]);
+        }
+    }
+
+    /** Sözleşme dönemine göre eksik ödeme kayıtlarını oluşturur (bitiş uzatma sonrası vb.) */
+    public static function ensurePaymentsForContract(PDO $pdo, string $contractId): void
+    {
+        $contract = self::findOne($pdo, $contractId);
+        if (!$contract) {
+            return;
+        }
+        $monthlyPricesPost = [];
+        foreach (self::getMonthlyPricesByContractId($pdo, $contractId) as $mp) {
+            if (!empty($mp['month'])) {
+                $monthlyPricesPost[$mp['month']] = $mp['price'];
+            }
+        }
+        self::syncMonthlyPrices(
+            $pdo,
+            $contractId,
+            $contract['start_date'] ?? null,
+            $contract['end_date'] ?? null,
+            (float) ($contract['monthly_price'] ?? 0),
+            $monthlyPricesPost
+        );
     }
 
     public static function getMonthlyPricesByContractId(PDO $pdo, string $contractId): array
@@ -254,6 +310,22 @@ class Contract
         );
         $stmt->execute([$contractId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Tek ay için contract_monthly_prices kaydını güncelle veya oluştur */
+    public static function setMonthlyPriceForMonth(PDO $pdo, string $contractId, string $monthYm, float $price): void
+    {
+        $stmt = $pdo->prepare(
+            'SELECT id FROM contract_monthly_prices WHERE contract_id = ? AND month = ? AND deleted_at IS NULL LIMIT 1'
+        );
+        $stmt->execute([$contractId, $monthYm]);
+        $existingId = $stmt->fetchColumn();
+        if ($existingId) {
+            $pdo->prepare('UPDATE contract_monthly_prices SET price = ? WHERE id = ?')->execute([$price, $existingId]);
+            return;
+        }
+        $pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)')
+            ->execute([self::uuid(), $contractId, $monthYm, $price]);
     }
 
     public static function findByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): array

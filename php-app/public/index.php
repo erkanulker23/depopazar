@@ -74,6 +74,7 @@ $router->get('/girisler/{id}/cikis-belgesi', fn(array $p) => (new ContractsContr
 $router->get('/girisler/{id}/duzenle', fn(array $p) => (new ContractsController($pdo))->edit($p));
 $router->post('/girisler/guncelle', fn() => (new ContractsController($pdo))->update());
 $router->post('/girisler/esya-listesi-guncelle', fn() => (new ContractsController($pdo))->updateItems());
+$router->post('/girisler/odeme-tutar-guncelle', fn() => (new ContractsController($pdo))->updatePaymentAmount());
 $router->get('/girisler/{id}', fn(array $p) => (new ContractsController($pdo))->show($p));
 $router->post('/girisler/ekle', fn() => (new ContractsController($pdo))->create());
 $router->post('/girisler/sonlandir', fn() => (new ContractsController($pdo))->terminate());

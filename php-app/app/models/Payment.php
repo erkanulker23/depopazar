@@ -429,6 +429,16 @@ class Payment
         return $out;
     }
 
+    /** Bekleyen/gecikmiş ödeme tutarını güncelle (ödenmiş aylar kilitli) */
+    public static function updatePendingAmount(PDO $pdo, string $paymentId, float $amount): bool
+    {
+        $stmt = $pdo->prepare(
+            "UPDATE payments SET amount = ? WHERE id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
+        );
+        $stmt->execute([$amount, $paymentId]);
+        return $stmt->rowCount() > 0;
+    }
+
     /** Vadesi gelmiş / ödemesi alınmamış müşteriler: sadece bulunduğumuz ay ve önceki aylara ait ödenmemiş borç (gelecek ayların vadeleri dahil değil) */
     public static function findCustomersWithUnpaidPayments(PDO $pdo, ?string $companyId = null, int $limit = 50): array
     {
@@ -707,6 +717,27 @@ class Payment
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE c.customer_id = ? AND p.deleted_at IS NULL ';
+        $params = [$customerId];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.due_date ASC ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Müşteri: tahsil edilebilir ödemeler (vadesi gelmemiş dahil, vade tarihi filtresi yok) */
+    public static function findCollectibleByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): array
+    {
+        $sql = 'SELECT p.*, c.contract_number
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE c.customer_id = ? AND p.deleted_at IS NULL
+                AND p.status IN (\'pending\', \'overdue\') ';
         $params = [$customerId];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';

@@ -148,6 +148,37 @@ class ContractsController
             header('Location: /girisler');
             exit;
         }
+        $needsSecondRoom = isset($_POST['needs_second_room']) && $_POST['needs_second_room'] === '1';
+        $roomId2 = trim($_POST['room_id_2'] ?? '');
+        $room2 = null;
+        if ($needsSecondRoom) {
+            if ($roomId2 === '') {
+                Auth::setSession('flash_error', '2. oda seçilmelidir.');
+                header('Location: /girisler?newSale=1');
+                exit;
+            }
+            if ($roomId2 === $roomId) {
+                Auth::setSession('flash_error', '1. ve 2. oda aynı olamaz.');
+                header('Location: /girisler?newSale=1');
+                exit;
+            }
+            $room2 = Room::findOne($this->pdo, $roomId2);
+            if (!$room2) {
+                Auth::setSession('flash_error', 'Geçersiz 2. oda.');
+                header('Location: /girisler?newSale=1');
+                exit;
+            }
+            if (($room2['warehouse_id'] ?? '') !== ($room['warehouse_id'] ?? '')) {
+                Auth::setSession('flash_error', '2. oda, seçilen depodaki odalardan biri olmalıdır.');
+                header('Location: /girisler?newSale=1');
+                exit;
+            }
+            if ($user['role'] !== 'super_admin' && $companyId && ($room2['company_id'] ?? '') !== $companyId) {
+                Auth::setSession('flash_error', '2. odaya erişim yetkiniz yok.');
+                header('Location: /girisler');
+                exit;
+            }
+        }
         [$storedCondition, $storedConditionNote, $storedConditionError] = parseStoredItemsConditionFromRequest($_POST, true);
         if ($storedConditionError) {
             Auth::setSession('flash_error', $storedConditionError);
@@ -155,6 +186,17 @@ class ContractsController
             exit;
         }
         $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== '' ? (float) str_replace(',', '.', $_POST['monthly_price']) : (float) $room['monthly_price'];
+        $monthlyPrice2 = null;
+        if ($needsSecondRoom && $room2) {
+            $monthlyPrice2 = isset($_POST['monthly_price_2']) && $_POST['monthly_price_2'] !== ''
+                ? (float) str_replace(',', '.', $_POST['monthly_price_2'])
+                : (float) ($room2['monthly_price'] ?? 0);
+            if ($monthlyPrice2 <= 0) {
+                Auth::setSession('flash_error', '2. oda aylık ücreti geçerli olmalıdır.');
+                header('Location: /girisler?newSale=1');
+                exit;
+            }
+        }
         $transportationFee = isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? (float) str_replace(',', '.', $_POST['transportation_fee']) : 0;
         $discount = isset($_POST['discount']) && $_POST['discount'] !== '' ? (float) str_replace(',', '.', $_POST['discount']) : 0;
         $soldBy = trim($_POST['sold_by_user_id'] ?? '') ?: null;
@@ -184,71 +226,64 @@ class ContractsController
             }
         }
         $pickupLocation = $this->resolvePickupLocation($_POST);
-        $data = [
+        $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
+        $sharedContractFields = [
             'customer_id' => $customerId,
-            'room_id' => $roomId,
             'start_date' => $startDate . ' 00:00:00',
             'end_date' => $endDate . ' 23:59:59',
-            'monthly_price' => $monthlyPrice,
             'sold_by_user_id' => $soldBy,
-            'transportation_fee' => $transportationFee,
             'pickup_location' => $pickupLocation,
-            'discount' => $discount,
             'driver_name' => trim($_POST['driver_name'] ?? '') ?: null,
             'driver_phone' => trim($_POST['driver_phone'] ?? '') ?: null,
             'vehicle_plate' => $vehiclePlate ?: null,
-            'contract_pdf_url' => $contractPdfUrl,
             'notes' => trim($_POST['notes'] ?? '') ?: null,
             'stored_items_condition' => $storedCondition,
             'stored_items_condition_note' => $storedConditionNote,
         ];
         try {
-            $created = Contract::create($this->pdo, $data);
-            $contractId = $created['id'] ?? null;
-            if ($contractId) {
-                $contractCompanyId = $room['company_id'] ?? $companyId;
-                if (Personnel::tableExists($this->pdo) && $contractCompanyId) {
-                    $personnelIds = isset($_POST['personnel_ids']) && is_array($_POST['personnel_ids']) ? array_filter($_POST['personnel_ids']) : [];
-                    $personnelIds = Personnel::filterIdsForCompany($this->pdo, $personnelIds, $contractCompanyId);
-                    $stmtCp = $this->pdo->prepare('INSERT INTO contract_personnel (id, contract_id, personnel_id) VALUES (?, ?, ?)');
-                    foreach ($personnelIds as $pid) {
-                        $pid = trim($pid);
-                        if ($pid === '') continue;
-                        $stmtCp->execute([self::uuid(), $contractId, $pid]);
-                    }
-                }
-                $start = new DateTime($startDate);
-                $end = new DateTime($endDate);
-                $end->modify('last day of this month');
-                $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
-                $stmtCmp = $this->pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)');
-                while ($start <= $end) {
-                    $monthStr = $start->format('Y-m');
-                    $priceForMonth = $monthlyPrice;
-                    if (isset($monthlyPricesPost[$monthStr]) && $monthlyPricesPost[$monthStr] !== '') {
-                        $priceForMonth = (float) str_replace(',', '.', $monthlyPricesPost[$monthStr]);
-                    }
-                    $dueDate = $monthStr . '-01 00:00:00';
-                    $cmpId = self::uuid();
-                    $stmtCmp->execute([$cmpId, $contractId, $monthStr, $priceForMonth]);
-                    Payment::create($this->pdo, [
-                        'contract_id' => $contractId,
-                        'amount' => $priceForMonth,
-                        'status' => 'pending',
-                        'due_date' => $dueDate,
-                    ]);
-                    $start->modify('+1 month');
-                }
-                Room::update($this->pdo, $roomId, ['status' => 'occupied']);
-                $contractItems = parseContractItemsFromRequest($_POST);
-                if (!empty($contractItems)) {
-                    Item::syncForContract($this->pdo, $contractId, $roomId, $contractItems, $startDate . ' 00:00:00');
-                }
+            $created = $this->createSingleSaleContract(
+                $user,
+                $companyId,
+                $room,
+                $roomId,
+                $monthlyPrice,
+                $monthlyPricesPost,
+                $sharedContractFields,
+                $transportationFee,
+                $discount,
+                $contractPdfUrl,
+                true,
+                $_POST
+            );
+            $createdSecond = null;
+            if ($needsSecondRoom && $room2 && $monthlyPrice2 !== null) {
+                $createdSecond = $this->createSingleSaleContract(
+                    $user,
+                    $companyId,
+                    $room2,
+                    $roomId2,
+                    $monthlyPrice2,
+                    [],
+                    $sharedContractFields,
+                    0,
+                    0,
+                    null,
+                    false,
+                    $_POST
+                );
             }
+            $contractId = $created['id'] ?? null;
             $contractNumber = $created['contract_number'] ?? $contractId ?? '';
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $room['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName]);
+            if ($createdSecond) {
+                $num2 = $createdSecond['contract_number'] ?? $createdSecond['id'] ?? '';
+                Notification::createForCompany($this->pdo, $room2['company_id'] ?? $companyId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $num2 . ' oluşturuldu.', ['contract_id' => $createdSecond['id'] ?? null, 'actor_name' => $actorName]);
+            }
             $this->sendContractCreatedEmails($created);
+            if ($createdSecond) {
+                $this->sendContractCreatedEmails($createdSecond);
+            }
 
             // Nakliye bilgisi işaretlendiyse nakliye işi oluştur (nakliye-isler listesine düşer)
             $hasTransportation = isset($_POST['has_transportation']) && $_POST['has_transportation'] === '1';
@@ -269,6 +304,10 @@ class ContractsController
                     'ofisten' => 'Ofisten depo nakliyesi',
                     'depo' => 'Depodan depo nakliyesi',
                 ];
+                $transportNotes = 'Sözleşme: ' . $contractNumber;
+                if ($createdSecond) {
+                    $transportNotes .= ', ' . ($createdSecond['contract_number'] ?? $createdSecond['id'] ?? '');
+                }
                 try {
                     TransportationJob::create($this->pdo, [
                         'company_id' => $room['company_id'] ?? $companyId,
@@ -280,19 +319,99 @@ class ContractsController
                         'job_date' => $startDate,
                         'status' => 'pending',
                         'vehicle_plate' => $vehiclePlate ?: null,
-                        'notes' => 'Sözleşme: ' . ($contractNumber ?? $contractId),
+                        'notes' => $transportNotes,
                     ]);
                 } catch (Throwable $e) {
                     // Nakliye işi oluşturulamazsa sözleşme yine başarılı sayılır
                 }
             }
 
-            Auth::setSession('flash_success', 'Sözleşme oluşturuldu.');
+            if ($createdSecond) {
+                Auth::setSession('flash_success', '2 sözleşme oluşturuldu (' . $contractNumber . ', ' . ($createdSecond['contract_number'] ?? '') . ').');
+            } else {
+                Auth::setSession('flash_success', 'Sözleşme oluşturuldu.');
+            }
         } catch (Exception $e) {
             Auth::setSession('flash_error', 'Kayıt oluşturulamadı: ' . $e->getMessage());
         }
         header('Location: /girisler');
         exit;
+    }
+
+    /**
+     * @param array<string, string|float|null> $sharedFields
+     * @param array<string, string|float> $monthlyPricesPost
+     */
+    private function createSingleSaleContract(
+        array $user,
+        ?string $companyId,
+        array $room,
+        string $roomId,
+        float $monthlyPrice,
+        array $monthlyPricesPost,
+        array $sharedFields,
+        float $transportationFee,
+        float $discount,
+        ?string $contractPdfUrl,
+        bool $attachStoredItems,
+        array $post
+    ): array {
+        $data = array_merge($sharedFields, [
+            'room_id' => $roomId,
+            'monthly_price' => $monthlyPrice,
+            'transportation_fee' => $transportationFee,
+            'discount' => $discount,
+            'contract_pdf_url' => $contractPdfUrl,
+        ]);
+        $created = Contract::create($this->pdo, $data);
+        $contractId = $created['id'] ?? null;
+        if (!$contractId) {
+            throw new Exception('Sözleşme kaydı oluşturulamadı.');
+        }
+        $contractCompanyId = $room['company_id'] ?? $companyId;
+        if (Personnel::tableExists($this->pdo) && $contractCompanyId) {
+            $personnelIds = isset($post['personnel_ids']) && is_array($post['personnel_ids']) ? array_filter($post['personnel_ids']) : [];
+            $personnelIds = Personnel::filterIdsForCompany($this->pdo, $personnelIds, $contractCompanyId);
+            $stmtCp = $this->pdo->prepare('INSERT INTO contract_personnel (id, contract_id, personnel_id) VALUES (?, ?, ?)');
+            foreach ($personnelIds as $pid) {
+                $pid = trim($pid);
+                if ($pid === '') {
+                    continue;
+                }
+                $stmtCp->execute([self::uuid(), $contractId, $pid]);
+            }
+        }
+        $startDate = substr((string) ($sharedFields['start_date'] ?? ''), 0, 10);
+        $endDate = substr((string) ($sharedFields['end_date'] ?? ''), 0, 10);
+        $start = new DateTime($startDate);
+        $end = new DateTime($endDate);
+        $end->modify('last day of this month');
+        $stmtCmp = $this->pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)');
+        while ($start <= $end) {
+            $monthStr = $start->format('Y-m');
+            $priceForMonth = $monthlyPrice;
+            if (isset($monthlyPricesPost[$monthStr]) && $monthlyPricesPost[$monthStr] !== '') {
+                $priceForMonth = (float) str_replace(',', '.', (string) $monthlyPricesPost[$monthStr]);
+            }
+            $dueDate = $monthStr . '-01 00:00:00';
+            $cmpId = self::uuid();
+            $stmtCmp->execute([$cmpId, $contractId, $monthStr, $priceForMonth]);
+            Payment::create($this->pdo, [
+                'contract_id' => $contractId,
+                'amount' => $priceForMonth,
+                'status' => 'pending',
+                'due_date' => $dueDate,
+            ]);
+            $start->modify('+1 month');
+        }
+        Room::update($this->pdo, $roomId, ['status' => 'occupied']);
+        if ($attachStoredItems) {
+            $contractItems = parseContractItemsFromRequest($post);
+            if (!empty($contractItems)) {
+                Item::syncForContract($this->pdo, $contractId, $roomId, $contractItems, $startDate . ' 00:00:00');
+            }
+        }
+        return $created;
     }
 
     public function edit(array $params): void
@@ -483,6 +602,78 @@ class ContractsController
         exit;
     }
 
+    /** Sözleşme detayından ödeme takvimi tutarı güncelle (AJAX) */
+    public function updatePaymentAmount(): void
+    {
+        Auth::requireStaff();
+        header('Content-Type: application/json; charset=utf-8');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'error' => 'Geçersiz istek.']);
+            exit;
+        }
+        $paymentId = trim($_POST['payment_id'] ?? '');
+        $contractId = trim($_POST['contract_id'] ?? '');
+        $amountRaw = trim(str_replace([' ', '₺'], '', $_POST['amount'] ?? ''));
+        if (str_contains($amountRaw, ',')) {
+            $amountRaw = str_replace('.', '', $amountRaw);
+            $amountRaw = str_replace(',', '.', $amountRaw);
+        }
+        if ($paymentId === '' || $contractId === '') {
+            echo json_encode(['ok' => false, 'error' => 'Eksik bilgi.']);
+            exit;
+        }
+        if ($amountRaw === '' || !is_numeric($amountRaw)) {
+            echo json_encode(['ok' => false, 'error' => 'Geçerli bir tutar girin.']);
+            exit;
+        }
+        $amount = (float) $amountRaw;
+        if ($amount <= 0) {
+            echo json_encode(['ok' => false, 'error' => 'Tutar 0\'dan büyük olmalı.']);
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $contractId);
+        if (!$contract) {
+            echo json_encode(['ok' => false, 'error' => 'Sözleşme bulunamadı.']);
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Bu sözleşmeye erişim yetkiniz yok.']);
+            exit;
+        }
+        $payment = Payment::findOne($this->pdo, $paymentId);
+        if (!$payment || ($payment['contract_id'] ?? '') !== $contractId) {
+            echo json_encode(['ok' => false, 'error' => 'Ödeme kaydı bulunamadı.']);
+            exit;
+        }
+        if (($payment['status'] ?? '') === 'paid') {
+            echo json_encode(['ok' => false, 'error' => 'Ödemesi alınmış ayların tutarı değiştirilemez.']);
+            exit;
+        }
+        if (($payment['status'] ?? '') === 'cancelled') {
+            echo json_encode(['ok' => false, 'error' => 'İptal edilmiş ödeme düzenlenemez.']);
+            exit;
+        }
+        if (!Payment::updatePendingAmount($this->pdo, $paymentId, $amount)) {
+            echo json_encode(['ok' => false, 'error' => 'Tutar güncellenemedi.']);
+            exit;
+        }
+        $monthYm = !empty($payment['due_date']) ? date('Y-m', strtotime($payment['due_date'])) : '';
+        if ($monthYm !== '') {
+            Contract::setMonthlyPriceForMonth($this->pdo, $contractId, $monthYm, $amount);
+        }
+        echo json_encode([
+            'ok' => true,
+            'amount' => $amount,
+            'formatted' => fmtPrice($amount),
+            'month_key' => $monthYm,
+        ]);
+        exit;
+    }
+
     public function show(array $params): void
     {
         Auth::requireStaff();
@@ -504,6 +695,9 @@ class ContractsController
             header('Location: /girisler');
             exit;
         }
+        if (empty($contract['terminated_at'])) {
+            Contract::ensurePaymentsForContract($this->pdo, $id);
+        }
         $payments = Payment::findByContractId($this->pdo, $id);
         $monthlyPrices = Contract::getMonthlyPricesByContractId($this->pdo, $id);
         $monthNames = ['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
@@ -520,6 +714,7 @@ class ContractsController
             foreach ($monthlyPrices as &$mp) {
                 $ym = $mp['month'] ?? '';
                 if (preg_match('/^(\d{4})-(\d{2})$/', $ym, $m)) {
+                    $mp['month_key'] = $ym;
                     $mp['month'] = ($monthNames[$m[2]] ?? $m[2]) . ' ' . $m[1];
                 }
             }

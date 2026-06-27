@@ -36,8 +36,12 @@
                 return [];
             }
             var q = (query || '').trim().toLowerCase();
+            var exclude = typeof options.getExcludeIds === 'function' ? options.getExcludeIds() : [];
             return rooms.filter(function (r) {
                 if ((r.warehouse_id || '') !== wh) {
+                    return false;
+                }
+                if (exclude.indexOf(r.id) !== -1 || exclude.indexOf(String(r.id)) !== -1) {
                     return false;
                 }
                 if (!q) {
@@ -151,6 +155,10 @@
         var form = hiddenId.closest('form');
         if (form) {
             form.addEventListener('submit', function (e) {
+                var required = typeof options.isRequired === 'function' ? options.isRequired() : true;
+                if (!required) {
+                    return;
+                }
                 if (!hiddenId.value) {
                     e.preventDefault();
                     if (!currentWarehouseId()) {

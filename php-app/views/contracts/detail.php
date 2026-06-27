@@ -2,6 +2,27 @@
 $currentPage = 'girisler';
 $customerName = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
 $company = $company ?? null;
+$contractId = $contract['id'] ?? '';
+$renderPaymentAmountCell = function (array $p) use ($contractId): void {
+    $status = $p['status'] ?? 'pending';
+    $editable = !in_array($status, ['paid', 'cancelled'], true);
+    $monthKey = !empty($p['due_date']) ? date('Y-m', strtotime($p['due_date'])) : '';
+    $amount = (float) ($p['amount'] ?? 0);
+    if ($editable): ?>
+        <button type="button"
+                class="payment-amount-editable inline-flex items-center gap-1 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap rounded-lg px-2 py-1 -mx-2 border border-transparent hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                data-payment-id="<?= htmlspecialchars($p['id'] ?? '') ?>"
+                data-contract-id="<?= htmlspecialchars($contractId) ?>"
+                data-month-key="<?= htmlspecialchars($monthKey) ?>"
+                data-amount="<?= htmlspecialchars((string) $amount) ?>"
+                title="Tutarı değiştirmek için tıklayın">
+            <span class="payment-amount-display"><?= fmtPrice($amount) ?></span>
+            <i class="bi bi-pencil-square text-xs text-emerald-600 dark:text-emerald-400 opacity-70" aria-hidden="true"></i>
+        </button>
+    <?php else: ?>
+        <span class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap"><?= fmtPrice($amount) ?></span>
+    <?php endif;
+};
 ob_start();
 ?>
 <style>
@@ -258,6 +279,7 @@ ob_start();
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-credit-card text-emerald-600"></i> Ödeme Takvimi
             </h2>
+            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz.</p>
             <?php if (empty($payments)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu sözleşmeye ait ödeme kaydı yok.</div>
             <?php else: ?>
@@ -272,7 +294,7 @@ ob_start();
                                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ödendi: <?= fmtDateTime($p['paid_at']) ?></p>
                                     <?php endif; ?>
                                 </div>
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap"><?= fmtPrice($p['amount'] ?? 0) ?></p>
+                                <?php $renderPaymentAmountCell($p); ?>
                             </div>
                             <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
@@ -302,7 +324,7 @@ ob_start();
                             <?php foreach ($payments as $p): ?>
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td>
-                                    <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= fmtPrice($p['amount'] ?? 0) ?></td>
+                                    <td class="px-4 py-3"><?php $renderPaymentAmountCell($p); ?></td>
                                     <td class="px-4 py-3">
                                         <?php $ps = paymentStatusDisplay($p); ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
@@ -337,9 +359,9 @@ ob_start();
             <?php else: ?>
                 <ul class="divide-y divide-gray-100 dark:divide-gray-700 max-h-64 overflow-y-auto">
                     <?php foreach ($monthlyPrices as $mp): ?>
-                        <li class="px-4 py-3 flex justify-between items-center text-sm">
+                        <li class="px-4 py-3 flex justify-between items-center text-sm"<?= !empty($mp['month_key']) ? ' id="monthly-price-' . htmlspecialchars($mp['month_key']) . '"' : '' ?>>
                             <span class="text-gray-700 dark:text-gray-300"><?= htmlspecialchars($mp['month'] ?? '') ?></span>
-                            <span class="font-medium text-gray-900 dark:text-white"><?= fmtPrice($mp['price'] ?? 0) ?></span>
+                            <span class="font-medium text-gray-900 dark:text-white monthly-price-value"><?= fmtPrice($mp['price'] ?? 0) ?></span>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -534,6 +556,161 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
             });
+    });
+})();
+</script>
+
+<script>
+(function() {
+    var activeEditor = null;
+
+    function parseAmountInput(val) {
+        val = (val || '').trim().replace(/\s/g, '').replace(/₺/g, '');
+        if (val.indexOf(',') >= 0) {
+            val = val.replace(/\./g, '').replace(',', '.');
+        }
+        return val;
+    }
+
+    function showAmountError(btn, message) {
+        var existing = btn.parentElement && btn.parentElement.querySelector('.payment-amount-error');
+        if (existing) existing.remove();
+        if (!message) return;
+        var err = document.createElement('p');
+        err.className = 'payment-amount-error text-xs text-red-600 dark:text-red-400 mt-1';
+        err.textContent = message;
+        if (btn.parentElement) btn.parentElement.appendChild(err);
+        setTimeout(function() { if (err.parentElement) err.remove(); }, 4000);
+    }
+
+    function updateCollectButtonsForPayment(paymentId, newAmount) {
+        document.querySelectorAll('.contract-collect-pay-btn').forEach(function(collectBtn) {
+            var raw = collectBtn.getAttribute('data-payments');
+            if (!raw) return;
+            try {
+                var arr = JSON.parse(raw);
+                var changed = false;
+                arr.forEach(function(p) {
+                    if (String(p.id) === String(paymentId)) {
+                        p.amount = newAmount;
+                        changed = true;
+                    }
+                });
+                if (changed) collectBtn.setAttribute('data-payments', JSON.stringify(arr));
+            } catch (e) {}
+        });
+    }
+
+    function syncMonthlyPriceSidebar(monthKey, formatted) {
+        if (!monthKey) return;
+        var row = document.getElementById('monthly-price-' + monthKey);
+        if (row) {
+            var val = row.querySelector('.monthly-price-value');
+            if (val) val.textContent = formatted;
+        }
+    }
+
+    function finishEditor(save) {
+        if (!activeEditor) return;
+        var wrap = activeEditor.wrap;
+        var btn = activeEditor.btn;
+        var input = activeEditor.input;
+        var paymentId = btn.getAttribute('data-payment-id');
+        var contractId = btn.getAttribute('data-contract-id');
+        var monthKey = btn.getAttribute('data-month-key') || '';
+        var previous = parseFloat(btn.getAttribute('data-amount') || '0');
+
+        if (!save) {
+            wrap.replaceChild(btn, input);
+            activeEditor = null;
+            return;
+        }
+
+        var parsed = parseAmountInput(input.value);
+        if (parsed === '' || isNaN(parseFloat(parsed)) || parseFloat(parsed) <= 0) {
+            showAmountError(btn, 'Geçerli bir tutar girin.');
+            input.focus();
+            return;
+        }
+        var newAmount = parseFloat(parsed);
+        if (Math.abs(newAmount - previous) < 0.009) {
+            wrap.replaceChild(btn, input);
+            activeEditor = null;
+            return;
+        }
+
+        input.disabled = true;
+        var fd = new FormData();
+        fd.append('payment_id', paymentId);
+        fd.append('contract_id', contractId);
+        fd.append('amount', input.value);
+
+        fetch('/girisler/odeme-tutar-guncelle', { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (!data.ok) {
+                    showAmountError(btn, data.error || 'Kaydedilemedi.');
+                    input.disabled = false;
+                    input.focus();
+                    return;
+                }
+                btn.setAttribute('data-amount', String(data.amount));
+                var display = btn.querySelector('.payment-amount-display');
+                if (display) display.textContent = data.formatted;
+                document.querySelectorAll('.payment-amount-editable[data-payment-id="' + paymentId + '"]').forEach(function(other) {
+                    other.setAttribute('data-amount', String(data.amount));
+                    var d = other.querySelector('.payment-amount-display');
+                    if (d) d.textContent = data.formatted;
+                });
+                updateCollectButtonsForPayment(paymentId, data.amount);
+                syncMonthlyPriceSidebar(data.month_key || monthKey, data.formatted);
+                wrap.replaceChild(btn, input);
+                activeEditor = null;
+            })
+            .catch(function() {
+                showAmountError(btn, 'Bağlantı hatası. Tekrar deneyin.');
+                input.disabled = false;
+                input.focus();
+            });
+    }
+
+    document.querySelectorAll('.payment-amount-editable').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (activeEditor) return;
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.inputMode = 'decimal';
+            input.autocomplete = 'off';
+            input.className = 'w-28 min-w-[6rem] px-2 py-1 text-sm font-semibold border-2 border-emerald-500 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400';
+            var raw = parseFloat(btn.getAttribute('data-amount') || '0');
+            input.value = raw === Math.floor(raw)
+                ? String(Math.floor(raw))
+                : String(raw).replace('.', ',');
+
+            var wrap = btn.parentElement;
+            if (!wrap) return;
+            wrap.replaceChild(input, btn);
+            input.focus();
+            input.select();
+            activeEditor = { btn: btn, input: input, wrap: wrap };
+
+            input.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Enter') {
+                    ev.preventDefault();
+                    finishEditor(true);
+                } else if (ev.key === 'Escape') {
+                    ev.preventDefault();
+                    finishEditor(false);
+                }
+            });
+            input.addEventListener('blur', function() {
+                setTimeout(function() {
+                    if (activeEditor && activeEditor.input === input) finishEditor(true);
+                }, 120);
+            });
+        });
     });
 })();
 </script>

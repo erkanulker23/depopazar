@@ -456,7 +456,8 @@ function renderPaymentChecklist(payments) {
                 '<input type="checkbox" class="collect-payment-cb mt-1 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0" value="' + (p.id || '') + '">' +
                 '<span class="min-w-0">' +
                     '<span class="block font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span>' +
-                    '<span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Vade: ' + (p.due_date ? p.due_date.split(' ')[0] : '-') + '</span>' +
+                    (p.contract_number ? '<span class="block text-xs text-gray-600 dark:text-gray-300 mt-0.5">Sözleşme: ' + p.contract_number + '</span>' : '') +
+                    '<span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Vade: ' + (formatDueMonth(p.due_date) || (p.due_date ? p.due_date.split(' ')[0] : '-')) + '</span>' +
                 '</span>' +
             '</span>' +
             '<span class="flex flex-col items-end gap-1 shrink-0">' +

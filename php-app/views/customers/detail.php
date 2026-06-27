@@ -389,7 +389,8 @@ ob_start();
             </div>
             <?php endif; ?>
             <p class="text-sm text-gray-600 dark:text-gray-400">Sözleşme sayısı: <strong><?= count($contracts) ?></strong></p>
-            <?php if ($debt > 0): ?>
+            <?php $collectiblePayments = $collectiblePayments ?? []; $hasCollectible = !empty($collectiblePayments) || !empty(array_filter($charges ?? [], fn($c) => ($c['status'] ?? '') === 'pending')); ?>
+            <?php if ($hasCollectible): ?>
             <button type="button" onclick="document.getElementById('paymentModal').classList.remove('hidden')" class="mt-4 w-full text-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
                 <i class="bi bi-bank mr-2"></i> Ödeme Al
             </button>
@@ -509,7 +510,8 @@ ob_start();
 
 <?php
 $charges = $charges ?? [];
-$unpaidPayments = array_filter($payments ?? [], fn($p) => paymentIsCollectible($p));
+$collectiblePayments = $collectiblePayments ?? array_filter($payments ?? [], fn($p) => paymentIsCollectible($p));
+$unpaidPayments = $collectiblePayments;
 $unpaidCharges = array_filter($charges, fn($c) => ($c['status'] ?? '') === 'pending');
 $bankAccounts = $bankAccounts ?? [];
 ?>
@@ -523,23 +525,25 @@ $bankAccounts = $bankAccounts ?? [];
                 <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
             </div>
             <?php if (empty($unpaidPayments) && empty($unpaidCharges)): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 py-4">Bu müşteriye ait bekleyen ödeme veya borç yok.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-4">Bu müşteriye ait tahsil edilecek ödeme veya borç kaydı yok. Sözleşme varsa ödeme takvimi otomatik oluşturulur; sayfayı yenileyin veya sözleşme detayından kontrol edin.</p>
                 <div class="flex justify-end">
                     <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Kapat</button>
                 </div>
             <?php else: ?>
                 <form method="post" action="/odemeler/odeme-al" id="paymentModalForm">
                     <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
-                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">Ödeme alınacak kalemleri işaretleyin.</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">Ödeme alınacak kalemleri işaretleyin. Vadesi gelmemiş aylar için erken tahsilat yapılabilir.</p>
                     <div class="max-h-48 overflow-y-auto space-y-2 mb-4">
                         <?php foreach ($unpaidPayments as $p): ?>
+                            <?php $psModal = paymentStatusDisplay($p); ?>
                             <label class="flex items-center justify-between gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
-                                <span class="flex items-center gap-2">
-                                    <input type="checkbox" name="payment_ids[]" value="<?= htmlspecialchars($p['id']) ?>" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
+                                <span class="flex items-center gap-2 min-w-0 flex-wrap">
+                                    <input type="checkbox" name="payment_ids[]" value="<?= htmlspecialchars($p['id']) ?>" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0">
                                     <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></span>
                                     <span class="text-xs text-gray-500 dark:text-gray-400">Vade: <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $psModal['badge'] ?>"><?= htmlspecialchars($psModal['label']) ?></span>
                                 </span>
-                                <span class="font-semibold text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</span>
+                                <span class="font-semibold text-gray-900 dark:text-white shrink-0"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</span>
                             </label>
                         <?php endforeach; ?>
                         <?php foreach ($unpaidCharges as $ch): ?>
