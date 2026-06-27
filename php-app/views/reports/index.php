@@ -5,9 +5,7 @@ $month = $month ?? (int) date('n');
 $periodMode = $periodMode ?? 'month';
 $startDate = $startDate ?? date('Y-m-01');
 $endDate = $endDate ?? date('Y-m-t');
-$duePayments = $duePayments ?? [];
 $paidPayments = $paidPayments ?? [];
-$dueTotal = $dueTotal ?? 0;
 $paidPeriodTotal = $paidPeriodTotal ?? 0;
 $csvUrl = $csvUrl ?? null;
 $occupancy = $occupancy ?? ['total_rooms' => 0, 'occupied_rooms' => 0, 'empty_rooms' => 0, 'occupancy_rate' => 0];
@@ -98,6 +96,18 @@ function toggleReportPeriodMode() {
             <div class="flex-1">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Masraf Raporu</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Kategoriye ve ödeme kaynağına göre harcamalar</p>
+            </div>
+            <span class="text-emerald-600 dark:text-emerald-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
+        </div>
+    </a>
+    <a href="/raporlar/vadesi-gelen" class="block p-6 card-modern hover:border-emerald-500/50 dark:hover:border-emerald-500/50 group">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-calendar-event text-2xl text-white"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Vadesi Gelen Ödemeler</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Seçilen dönemde vadesi gelen bekleyen ve gecikmiş ödemeler — filtrele, yazdır, Excel</p>
             </div>
             <span class="text-emerald-600 dark:text-emerald-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
         </div>
@@ -246,50 +256,8 @@ function toggleReportPeriodMode() {
     </div>
 </div>
 
-<!-- Vadesi gelen + Tahsil edilen müşteriler -->
+<!-- Tahsil edilen müşteriler -->
 <div class="grid grid-cols-1 gap-6 mb-8">
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
-        <div class="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 flex flex-wrap justify-between items-center gap-2">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <i class="bi bi-calendar-event text-amber-600"></i> Vadesi gelen ödemeler
-            </h2>
-            <span class="text-sm font-semibold text-amber-800 dark:text-amber-300"><?= count($duePayments) ?> kayıt · <?= fmtMoney($dueTotal) ?> ₺</span>
-        </div>
-        <?php if (empty($duePayments)): ?>
-            <div class="p-6 text-center text-gray-500 dark:text-gray-400">Seçilen dönemde vadesi gelen ödenmemiş kayıt yok.</div>
-        <?php else: ?>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-700/50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Müşteri</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Sözleşme</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Depo / Oda</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Vade</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Durum</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Tutar</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                    <?php foreach ($duePayments as $dp):
-                        $dName = trim(($dp['customer_first_name'] ?? '') . ' ' . ($dp['customer_last_name'] ?? ''));
-                        $dStatus = paymentStatusDisplay($dp);
-                    ?>
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td class="px-4 py-3"><a href="/musteriler/<?= htmlspecialchars($dp['customer_id'] ?? '') ?>" class="font-medium text-emerald-600 hover:underline"><?= htmlspecialchars($dName) ?></a></td>
-                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($dp['contract_number'] ?? '-') ?></td>
-                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(($dp['warehouse_name'] ?? '') . ' / ' . ($dp['room_number'] ?? '')) ?></td>
-                        <td class="px-4 py-3"><?= !empty($dp['due_date']) ? date('d.m.Y', strtotime($dp['due_date'])) : '–' ?></td>
-                        <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $dStatus['badge'] ?? 'bg-gray-100 text-gray-800' ?>"><?= htmlspecialchars($dStatus['label'] ?? '') ?></span></td>
-                        <td class="px-4 py-3 text-right font-semibold"><?= fmtMoney($dp['amount'] ?? 0) ?> ₺</td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php endif; ?>
-    </div>
-
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
         <div class="px-4 py-3 bg-green-50 dark:bg-green-900/20 border-b border-green-100 dark:border-green-800 flex flex-wrap justify-between items-center gap-2">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -370,6 +338,9 @@ function toggleReportPeriodMode() {
             <i class="bi bi-link-45deg text-emerald-600 dark:text-emerald-400"></i> Hızlı Erişim
         </h2>
         <div class="flex flex-wrap gap-2">
+            <a href="/raporlar/vadesi-gelen" class="inline-flex items-center px-4 py-2 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
+                <i class="bi bi-calendar-event mr-2"></i> Vadesi Gelen
+            </a>
             <a href="/raporlar/banka-hesaplari" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors">
                 <i class="bi bi-bank mr-2"></i> Banka Raporu
             </a>

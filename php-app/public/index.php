@@ -151,6 +151,7 @@ $router->post('/yetkiler/guncelle', fn() => (new PermissionsController($pdo))->u
 $router->post('/yetkiler/sifirla', fn() => (new PermissionsController($pdo))->resetRole());
 $router->get('/raporlar', fn() => (new ReportsController($pdo))->index());
 $router->get('/raporlar/banka-hesaplari', fn() => (new ReportsController($pdo))->bankAccountPayments());
+$router->get('/raporlar/vadesi-gelen', fn() => (new ReportsController($pdo))->duePaymentsReport());
 $router->get('/raporlar/erken-odemeler', fn() => (new ReportsController($pdo))->earlyPaymentsReport());
 $router->get('/raporlar/masraflar', fn() => (new ReportsController($pdo))->expensesReport());
 $router->get('/masraflar', fn() => (new ExpensesController($pdo))->index());

@@ -979,7 +979,7 @@ class Payment
     }
 
     /** Seçilen dönemde vadesi gelen (ödenmemiş) ödemeler */
-    public static function findDuePaymentRowsInPeriod(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 1000): array
+    public static function findDuePaymentRowsInPeriod(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 1000, ?string $search = null, ?string $status = null): array
     {
         $sql = 'SELECT p.id, p.payment_number, p.amount, p.due_date, p.status,
                        c.contract_number, c.id AS contract_id, c.customer_id,
@@ -997,6 +997,16 @@ class Payment
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
+        }
+        if ($status === 'pending' || $status === 'overdue') {
+            $sql .= ' AND p.status = ? ';
+            $params[] = $status;
+        }
+        $search = trim((string) $search);
+        if ($search !== '') {
+            $sql .= ' AND (p.payment_number LIKE ? OR c.contract_number LIKE ? OR cu.first_name LIKE ? OR cu.last_name LIKE ? OR cu.phone LIKE ? OR w.name LIKE ? OR r.room_number LIKE ?) ';
+            $q = '%' . $search . '%';
+            $params = array_merge($params, array_fill(0, 7, $q));
         }
         $sql .= ' ORDER BY p.due_date ASC, cu.last_name, cu.first_name LIMIT ' . (int) $limit;
         $stmt = $pdo->prepare($sql);
