@@ -24,14 +24,18 @@ class Room
         return self::findOne($pdo, $id);
     }
 
-    public static function findAll(PDO $pdo, ?string $warehouseId = null, ?string $search = null, ?string $status = null, ?string $hasContract = null): array
+    public static function findAll(PDO $pdo, ?string $warehouseId = null, ?string $search = null, ?string $status = null, ?string $hasContract = null, ?string $companyId = null): array
     {
         $sql = 'SELECT r.*, w.name AS warehouse_name, w.company_id 
                 FROM rooms r 
-                LEFT JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL 
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL 
                 WHERE r.deleted_at IS NULL ';
         $params = [];
-        if ($warehouseId) {
+        if ($companyId !== null && $companyId !== '') {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        if ($warehouseId !== null && $warehouseId !== '') {
             $sql .= ' AND r.warehouse_id = ? ';
             $params[] = $warehouseId;
         }

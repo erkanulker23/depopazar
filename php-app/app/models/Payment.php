@@ -299,7 +299,7 @@ class Payment
 
     public static function findAll(PDO $pdo, ?string $companyId = null): array
     {
-        $sql = 'SELECT p.*, c.contract_number, c.customer_id, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
+        $sql = 'SELECT p.*, c.contract_number, c.customer_id, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.email AS customer_email
                 FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
@@ -315,6 +315,74 @@ class Payment
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Ödeme listesi: arama, vade tarihi ve durum filtreleri (SQL).
+     */
+    public static function findForList(
+        PDO $pdo,
+        ?string $companyId,
+        ?string $statusFilter = null,
+        ?string $search = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        bool $collectibleOnly = false
+    ): array {
+        $sql = 'SELECT p.*, c.contract_number, c.customer_id, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.email AS customer_email
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        if ($collectibleOnly) {
+            $sql .= " AND p.status IN ('pending', 'overdue') ";
+        }
+        if ($statusFilter === 'paid') {
+            $sql .= " AND p.status = 'paid' ";
+        } elseif ($statusFilter === 'cancelled') {
+            $sql .= " AND p.status = 'cancelled' ";
+        } elseif ($statusFilter === 'overdue') {
+            $sql .= " AND p.status IN ('pending', 'overdue') AND p.due_date IS NOT NULL AND DATE(p.due_date) < CURDATE() ";
+        } elseif ($statusFilter === 'pending') {
+            $sql .= " AND p.status = 'pending' AND (p.due_date IS NULL OR DATE(p.due_date) >= CURDATE()) ";
+        } elseif ($statusFilter === 'unpaid') {
+            $sql .= " AND p.status IN ('pending', 'overdue') ";
+        } elseif ($statusFilter === 'early') {
+            $sql .= " AND p.status = 'paid' AND p.paid_at IS NOT NULL AND p.due_date IS NOT NULL AND DATE(p.paid_at) < DATE(p.due_date) ";
+        }
+        if ($search !== null && $search !== '') {
+            $like = '%' . $search . '%';
+            $sql .= ' AND (
+                p.payment_number LIKE ? OR c.contract_number LIKE ? OR
+                cu.first_name LIKE ? OR cu.last_name LIKE ? OR
+                CONCAT(cu.first_name, \' \', cu.last_name) LIKE ? OR
+                cu.email LIKE ? OR CAST(p.amount AS CHAR) LIKE ?
+            ) ';
+            array_push($params, $like, $like, $like, $like, $like, $like, $like);
+        }
+        if ($dateFrom !== null && $dateFrom !== '') {
+            $sql .= ' AND p.due_date IS NOT NULL AND DATE(p.due_date) >= ? ';
+            $params[] = $dateFrom;
+        }
+        if ($dateTo !== null && $dateTo !== '') {
+            $sql .= ' AND p.due_date IS NOT NULL AND DATE(p.due_date) <= ? ';
+            $params[] = $dateTo;
+        }
+        $sql .= ' ORDER BY p.due_date DESC ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($statusFilter !== null && $statusFilter !== '') {
+            $rows = array_values(array_filter($rows, fn($p) => paymentMatchesStatusFilter($p, $statusFilter)));
+        }
+        return $rows;
     }
 
     public static function findByContractId(PDO $pdo, string $contractId): array

@@ -39,7 +39,7 @@ $activeGet = isset($_GET['is_active']) ? $_GET['is_active'] : '';
         <option value="1" <?= $activeGet === '1' ? 'selected' : '' ?>>Aktif</option>
         <option value="0" <?= $activeGet === '0' ? 'selected' : '' ?>>Pasif</option>
     </select>
-    <button type="submit" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
+    <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
     <?php if ($qGet !== '' || $roleGet !== '' || $activeGet !== ''): ?>
         <a href="/kullanicilar" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
     <?php endif; ?>

@@ -36,7 +36,7 @@ $borcGet = isset($_GET['borc']) ? $_GET['borc'] : '';
 $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
 ?>
 <div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <form method="get" action="/girisler" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+    <form method="get" action="/girisler" class="page-toolbar-form flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Sözleşme no, müşteri, oda, depo, plaka..." class="flex-1 min-w-0 sm:w-56 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
         <input type="hidden" name="newSale" value="">
         <select name="durum" class="btn-touch flex-1 min-w-0 sm:w-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
@@ -49,7 +49,7 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
             <option value="with_debt" <?= $borcGet === 'with_debt' ? 'selected' : '' ?>>Borcu olanlar</option>
             <option value="no_debt" <?= $borcGet === 'no_debt' ? 'selected' : '' ?>>Borcu olmayanlar</option>
         </select>
-        <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
+        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
         <a href="/girisler" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
     </form>
     <button type="button" onclick="openNewSaleModal()" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
@@ -75,33 +75,57 @@ $qGet = isset($_GET['q']) ? trim($_GET['q']) : '';
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz sözleşme yok. "Yeni Satış Gir" ile ekleyebilirsiniz.</div>
     <?php else: ?>
         <!-- Toplu işlem çubuğu -->
-        <div id="bulkBar" class="hidden md:flex items-center justify-between gap-3 px-4 py-3 bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+        <div id="bulkBar" class="hidden flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><span id="bulkCount">0</span> sözleşme seçildi</span>
             <form method="post" action="/girisler/sil" id="bulkDeleteForm" onsubmit="return submitBulkDelete();">
                 <div id="bulkIdsContainer"></div>
-                <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Toplu Sil</button>
+                <button type="submit" class="w-full sm:w-auto px-3 py-2 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Toplu Sil</button>
             </form>
         </div>
         <!-- Mobil: kart listesi -->
         <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
-            <?php foreach ($contracts as $c): ?>
-                <div class="p-4 active:bg-gray-50 dark:active:bg-gray-700/50 flex items-start gap-3">
-                    <label class="flex-shrink-0 mt-0.5"><input type="checkbox" class="contract-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($c['id'] ?? '') ?>"></label>
-                    <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="block flex-1 min-w-0">
-                        <p class="font-semibold text-gray-900 dark:text-white"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></p>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"><?= htmlspecialchars(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? '')) ?></p>
-                        <p class="text-sm text-gray-500 dark:text-gray-500"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></p>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"><?= fmtDateTime($c['created_at'] ?? null) ?></p>
-                    </a>
-                    <p class="text-sm font-medium text-gray-900 dark:text-white mt-2"><?= fmtPrice($c['monthly_price'] ?? 0) ?>/ay</p>
-                    <div class="flex flex-wrap gap-2 mt-3">
-                        <?php if (!empty($c['is_active'])): ?>
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
-                        <?php else: ?>
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-300">Sonlandı</span>
-                        <?php endif; ?>
-                        <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?collectPay=1" class="text-sm font-medium text-emerald-600 dark:text-emerald-400">Ödeme Al</a>
-                        <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="text-sm font-medium text-gray-600 dark:text-gray-400">Detay</a>
+            <?php $contractDebt = $contractDebt ?? []; foreach ($contracts as $c):
+                $debt = $contractDebt[$c['id'] ?? ''] ?? ['overdue' => 0, 'pending' => 0];
+            ?>
+                <div class="p-4 active:bg-gray-50 dark:active:bg-gray-700/50">
+                    <div class="flex items-start gap-3">
+                        <label class="flex-shrink-0 mt-1 cursor-pointer">
+                            <input type="checkbox" class="contract-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
+                        </label>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-2">
+                                <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="min-w-0 flex-1">
+                                    <p class="font-semibold text-emerald-600 dark:text-emerald-400 truncate"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></p>
+                                    <p class="text-sm text-gray-900 dark:text-white mt-0.5 truncate"><?= htmlspecialchars(trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''))) ?></p>
+                                </a>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0"><?= fmtPrice($c['monthly_price'] ?? 0) ?><span class="text-xs font-normal text-gray-500 dark:text-gray-400">/ay</span></p>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> · Oda <?= htmlspecialchars($c['room_number'] ?? '') ?></p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5"><?= fmtDateTime($c['created_at'] ?? null) ?></p>
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <?php if (!empty($c['is_active'])): ?>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
+                                    <?php if ($debt['overdue'] > 0): ?><span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">Gecikmiş</span><?php endif; ?>
+                                    <?php if ($debt['overdue'] === 0 && $debt['pending'] > 0): ?><span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">Ödenmedi</span><?php endif; ?>
+                                <?php else: ?>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-300">Sonlandı</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?collectPay=1" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Ödeme Al</a>
+                                <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600">Detay</a>
+                                <?php if (!empty($c['is_active'])): ?>
+                                    <form method="post" action="/girisler/sonlandir" class="inline" onsubmit="return confirm('Bu sözleşmeyi sonlandırmak istediğinize emin misiniz?');">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
+                                        <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20">Sonlandır</button>
+                                    </form>
+                                <?php endif; ?>
+                                <form method="post" action="/girisler/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('sözleşme')) ?>);">
+                                    <input type="hidden" name="ids[]" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
+                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20">Sil</button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -705,7 +729,10 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
         var cbs = document.querySelectorAll('.contract-cb:checked');
         var n = cbs.length;
         if (bulkCountEl) bulkCountEl.textContent = n;
-        if (bulkBar) bulkBar.classList.toggle('hidden', n === 0);
+        if (bulkBar) {
+            bulkBar.classList.toggle('hidden', n === 0);
+            bulkBar.classList.toggle('flex', n > 0);
+        }
         if (selectAll) selectAll.checked = n > 0 && document.querySelectorAll('.contract-cb').length === n;
     }
     function submitBulkDelete() {

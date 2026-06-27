@@ -40,7 +40,7 @@ ob_start();
                     <option value="<?= $m ?>" <?= $currentMonth === $m ? 'selected' : '' ?>><?= str_pad((string)$m, 2, '0', STR_PAD_LEFT) ?></option>
                 <?php endfor; ?>
             </select>
-            <button type="submit" class="btn-touch px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">Filtrele</button>
+            <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
         </form>
         <a href="/nakliye-isler" class="px-3 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50">Filtreleri Temizle</a>
     </div>

@@ -23,36 +23,41 @@ ob_start();
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Sözleşme Detayı</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($contract['contract_number'] ?? '') ?></p>
     </div>
-    <div class="flex flex-wrap gap-2">
+    <div class="page-header-actions flex flex-wrap gap-2">
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/duzenle" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
             <i class="bi bi-pencil mr-2"></i> Düzenle
         </a>
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/yazdir" target="_blank" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
             <i class="bi bi-printer mr-2"></i> Yazdır
         </a>
-        <?php if (!empty($contract['contract_pdf_url'])): ?>
-            <a href="<?= htmlspecialchars($contract['contract_pdf_url']) ?>" target="_blank" rel="noopener" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
-                <i class="bi bi-file-pdf mr-2"></i> PDF İndir
-            </a>
-        <?php endif; ?>
+        <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/pdf-indir" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+            <i class="bi bi-file-pdf mr-2"></i> PDF İndir
+        </a>
         <a href="mailto:<?= htmlspecialchars($contract['customer_email'] ?? '') ?>?subject=Sözleşme%20<?= urlencode($contract['contract_number'] ?? '') ?>" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
             <i class="bi bi-envelope mr-2"></i> E-posta Gönder
         </a>
         <?php
-        $printUrl = (isset($_SERVER['REQUEST_SCHEME']) && isset($_SERVER['HTTP_HOST']) ? $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] : '') . '/girisler/' . ($contract['id'] ?? '') . '/yazdir';
+        $pdfDownloadUrl = '/girisler/' . ($contract['id'] ?? '') . '/pdf-indir';
+        $pdfFilename = ContractPdf::filename($contract);
         $waPhone = preg_replace('/[^0-9]/', '', $contract['customer_phone'] ?? '');
-        if (substr($waPhone, 0, 1) === '0') $waPhone = '90' . substr($waPhone, 1);
-        elseif (strlen($waPhone) === 10) $waPhone = '90' . $waPhone;
-        $waText = rawurlencode('Sözleşme PDF: ' . $printUrl);
-        if ($waPhone): ?>
-        <a href="https://wa.me/<?= htmlspecialchars($waPhone) ?>?text=<?= $waText ?>" target="_blank" rel="noopener" class="inline-flex items-center px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700" title="WhatsApp ile PDF gönder">
+        if (substr($waPhone, 0, 1) === '0') {
+            $waPhone = '90' . substr($waPhone, 1);
+        } elseif (strlen($waPhone) === 10) {
+            $waPhone = '90' . $waPhone;
+        }
+        $waMessage = 'Merhaba, ' . ($contract['contract_number'] ?? 'sözleşme') . ' numaralı sözleşme belgeniz ektedir.';
+        $waBase = $waPhone !== '' ? ('https://wa.me/' . $waPhone) : 'https://wa.me/';
+        $waUrl = $waBase . '?text=' . rawurlencode($waMessage);
+        ?>
+        <button type="button"
+                id="contractWhatsAppBtn"
+                class="inline-flex items-center px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-60"
+                title="PDF indir ve WhatsApp ile gönder"
+                data-pdf-url="<?= htmlspecialchars($pdfDownloadUrl) ?>"
+                data-wa-url="<?= htmlspecialchars($waUrl) ?>"
+                data-filename="<?= htmlspecialchars($pdfFilename) ?>">
             <i class="bi bi-whatsapp mr-2"></i> WhatsApp Gönder
-        </a>
-        <?php else: ?>
-        <a href="https://wa.me/?text=<?= $waText ?>" target="_blank" rel="noopener" class="inline-flex items-center px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700" title="WhatsApp ile PDF paylaş (numara seçin)">
-            <i class="bi bi-whatsapp mr-2"></i> WhatsApp Gönder
-        </a>
-        <?php endif; ?>
+        </button>
     </div>
 </div>
 
@@ -202,7 +207,24 @@ ob_start();
             <?php if (empty($items)): ?>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Henüz eşya listesi girilmemiş. Sağ üstteki <strong class="font-medium text-gray-700 dark:text-gray-300">+</strong> butonuna basarak ekleyebilirsiniz.</p>
             <?php else: ?>
-                <div class="overflow-x-auto">
+                <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+                    <?php foreach ($items as $i => $item): ?>
+                    <div class="p-4">
+                        <div class="flex items-start justify-between gap-2">
+                            <p class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($item['name'] ?? '') ?></p>
+                            <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">#<?= $i + 1 ?></span>
+                        </div>
+                        <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                            <div><span class="text-gray-500 dark:text-gray-400">Durum:</span> <span class="text-gray-900 dark:text-white"><?= htmlspecialchars(itemConditionLabel($item['condition'] ?? null)) ?></span></div>
+                            <div><span class="text-gray-500 dark:text-gray-400">Adet:</span> <span class="text-gray-900 dark:text-white"><?= (int) ($item['quantity'] ?? 1) ?> <?= htmlspecialchars($item['unit'] ?? 'adet') ?></span></div>
+                        </div>
+                        <?php if (!empty($item['description']) && ($item['description'] ?? '') !== '-'): ?>
+                            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400"><?= htmlspecialchars($item['description']) ?></p>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="hidden md:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
@@ -239,7 +261,31 @@ ob_start();
             <?php if (empty($payments)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu sözleşmeye ait ödeme kaydı yok.</div>
             <?php else: ?>
-                <div class="overflow-x-auto">
+                <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+                    <?php foreach ($payments as $p): ?>
+                        <?php $ps = paymentStatusDisplay($p); ?>
+                        <div class="p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></p>
+                                    <?php if (!empty($p['paid_at'])): ?>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ödendi: <?= fmtDateTime($p['paid_at']) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap"><?= fmtPrice($p['amount'] ?? 0) ?></p>
+                            </div>
+                            <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
+                                <?php if (paymentIsCollectible($p)): ?>
+                                    <button type="button" onclick="openCollectModal(<?= htmlspecialchars(json_encode([['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? '']])) ?>)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Ödeme al</button>
+                                <?php else: ?>
+                                    <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600">Detay</a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="hidden md:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
@@ -426,6 +472,57 @@ document.getElementById('collectModal').addEventListener('keydown', function(e) 
 <?php if (!empty($_GET['collectPay'])): ?>document.addEventListener('DOMContentLoaded', function() { openCollectModal(); });<?php endif; ?>
 </script>
 <?php endif; ?>
+
+<script>
+(function() {
+    var btn = document.getElementById('contractWhatsAppBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+        var pdfUrl = btn.getAttribute('data-pdf-url');
+        var waUrl = btn.getAttribute('data-wa-url');
+        var filename = btn.getAttribute('data-filename') || 'Sozlesme.pdf';
+        if (!pdfUrl) return;
+        btn.disabled = true;
+        var originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split mr-2"></i> PDF hazırlanıyor…';
+        fetch(pdfUrl, { credentials: 'same-origin' })
+            .then(function(res) {
+                if (!res.ok) throw new Error('PDF indirilemedi');
+                return res.blob();
+            })
+            .then(function(blob) {
+                var file = new File([blob], filename, { type: 'application/pdf' });
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    return navigator.share({
+                        files: [file],
+                        title: filename.replace(/\.pdf$/i, ''),
+                        text: 'Sözleşme belgeniz ektedir.'
+                    });
+                }
+                var objectUrl = URL.createObjectURL(blob);
+                var link = document.createElement('a');
+                link.href = objectUrl;
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(function() {
+                    URL.revokeObjectURL(objectUrl);
+                    if (waUrl) window.open(waUrl, '_blank', 'noopener');
+                }, 700);
+            })
+            .catch(function() {
+                if (waUrl) window.open(waUrl, '_blank', 'noopener');
+                else alert('PDF indirilemedi. Lütfen PDF İndir butonunu deneyin.');
+            })
+            .finally(function() {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            });
+    });
+})();
+</script>
 
 <?php
 $content = ob_get_clean();

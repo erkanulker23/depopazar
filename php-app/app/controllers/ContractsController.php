@@ -310,6 +310,12 @@ class ContractsController
         }
         $pageTitle = 'Sözleşme Düzenle: ' . ($contract['contract_number'] ?? '');
         $items = Item::findByContractId($this->pdo, $id);
+        $monthlyPricesByKey = [];
+        foreach (Contract::getMonthlyPricesByContractId($this->pdo, $id) as $mp) {
+            if (!empty($mp['month'])) {
+                $monthlyPricesByKey[$mp['month']] = (float) ($mp['price'] ?? 0);
+            }
+        }
         require __DIR__ . '/../../views/contracts/edit.php';
     }
 
@@ -349,10 +355,14 @@ class ContractsController
             header('Location: /girisler/' . $id . '/duzenle');
             exit;
         }
+        $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== ''
+            ? (float) str_replace(',', '.', $_POST['monthly_price'])
+            : (float) ($contract['monthly_price'] ?? 0);
         try {
             Contract::update($this->pdo, $id, [
                 'start_date' => $startDate ?? $contract['start_date'],
                 'end_date' => $endDate ?? $contract['end_date'],
+                'monthly_price' => $monthlyPrice,
                 'transportation_fee' => isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? (float) str_replace(',', '.', $_POST['transportation_fee']) : 0,
                 'pickup_location' => trim($_POST['pickup_location'] ?? '') ?: null,
                 'discount' => isset($_POST['discount']) && $_POST['discount'] !== '' ? (float) str_replace(',', '.', $_POST['discount']) : 0,
@@ -363,6 +373,15 @@ class ContractsController
                 'stored_items_condition' => $storedCondition,
                 'stored_items_condition_note' => $storedConditionNote,
             ]);
+            $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
+            Contract::syncMonthlyPrices(
+                $this->pdo,
+                $id,
+                $startDate ?? $contract['start_date'],
+                $endDate ?? $contract['end_date'],
+                $monthlyPrice,
+                $monthlyPricesPost
+            );
             $roomId = $contract['room_id'] ?? '';
             if ($roomId) {
                 $storedAt = ($startDate ?? $contract['start_date'] ?? null) ?: date('Y-m-d H:i:s');
@@ -506,6 +525,32 @@ class ContractsController
         $soldByName = trim(($contract['sold_by_first_name'] ?? '') . ' ' . ($contract['sold_by_last_name'] ?? '')) ?: '-';
         $items = Item::findByContractId($this->pdo, $id);
         require __DIR__ . '/../../views/contracts/print.php';
+    }
+
+    /** Sözleşme PDF indir – yüklenmiş PDF veya otomatik oluşturulan belge */
+    public function downloadPdf(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /girisler');
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
+            header('Location: /girisler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
+            header('Location: /girisler');
+            exit;
+        }
+        ContractPdf::sendDownload($this->pdo, $contract);
+        exit;
     }
 
     public function terminate(): void

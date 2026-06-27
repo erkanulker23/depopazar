@@ -550,6 +550,43 @@ if (!function_exists('deleteConfirmMessage')) {
 }
 
 /** public/uploads altındaki dosyayı diskten kaldırır */
+if (!function_exists('publicFilePath')) {
+    function publicFilePath(?string $relativePath): ?string
+    {
+        if ($relativePath === null || $relativePath === '') {
+            return null;
+        }
+        $relativePath = '/' . ltrim($relativePath, '/');
+        if (strpos($relativePath, '/uploads/') !== 0) {
+            return null;
+        }
+        $root = defined('APP_ROOT') ? APP_ROOT . '/public' : dirname(__DIR__) . '/public';
+        $full = $root . $relativePath;
+        return is_file($full) ? $full : null;
+    }
+}
+
+if (!function_exists('absoluteAppUrl')) {
+    function absoluteAppUrl(string $path = ''): string
+    {
+        $path = '/' . ltrim($path, '/');
+        if ($path === '/') {
+            $path = '';
+        }
+        if (!empty($_SERVER['HTTP_HOST'])) {
+            $scheme = 'https';
+            if (!empty($_SERVER['REQUEST_SCHEME'])) {
+                $scheme = (string) $_SERVER['REQUEST_SCHEME'];
+            } elseif (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
+                $scheme = 'http';
+            }
+            return $scheme . '://' . $_SERVER['HTTP_HOST'] . $path;
+        }
+        return $path;
+    }
+}
+
+/** public/uploads altındaki dosyayı diskten kaldırır */
 if (!function_exists('unlinkPublicFile')) {
     function unlinkPublicFile(?string $relativePath): void
     {

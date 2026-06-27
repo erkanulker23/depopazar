@@ -83,7 +83,7 @@ $alertGet = isset($_GET['alert']) ? $_GET['alert'] : '';
             <option value="kasko" <?= $alertGet === 'kasko' ? 'selected' : '' ?>>Kasko kayıtlı</option>
             <option value="inspection" <?= $alertGet === 'inspection' ? 'selected' : '' ?>>Muayene kayıtlı</option>
         </select>
-        <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Ara</button>
+        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-search text-sm opacity-90" aria-hidden="true"></i> Ara</button>
         <?php if ($qGet !== '' || $alertGet !== ''): ?>
             <a href="/araclar" class="btn-touch px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
         <?php endif; ?>

@@ -4,6 +4,11 @@ $statusLabels = $statusLabels ?? [];
 $payments = $payments ?? [];
 $paymentsByCustomer = $paymentsByCustomer ?? [];
 $collectMode = $collectMode ?? false;
+$hasActiveFilters = $hasActiveFilters ?? false;
+$payStatus = $payStatus ?? '';
+$payQ = $payQ ?? '';
+$dateFrom = $dateFrom ?? '';
+$dateTo = $dateTo ?? '';
 $bankAccounts = $bankAccounts ?? [];
 $customersWithDebt = $customersWithDebt ?? [];
 $flashSuccess = $flashSuccess ?? null;
@@ -17,37 +22,53 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 </div>
 
 <?php
-$payStatus = isset($_GET['status']) ? $_GET['status'] : '';
-$payQ = isset($_GET['q']) ? trim($_GET['q']) : '';
-$dateFrom = isset($_GET['date_from']) ? $_GET['date_from'] : '';
-$dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 $totalPages = $totalPages ?? 1;
 $page = $page ?? 1;
 ?>
 <?php $preselectedCustomerId = $preselectedCustomerId ?? ''; ?>
 <div class="page-toolbar flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <form method="get" action="/odemeler" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+    <form method="get" action="/odemeler" id="paymentFilterForm" class="page-toolbar-form flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <?php if ($collectMode): ?><input type="hidden" name="collect" value="1"><?php endif; ?>
         <?php if ($collectMode && $preselectedCustomerId !== ''): ?><input type="hidden" name="customer" value="<?= htmlspecialchars($preselectedCustomerId) ?>"><?php endif; ?>
-        <input type="search" name="q" value="<?= htmlspecialchars($payQ) ?>" placeholder="Ödeme no, sözleşme, müşteri ara..." class="flex-1 min-w-0 sm:w-48 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-        <input type="date" name="date_from" value="<?= htmlspecialchars($dateFrom) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi başlangıç">
-        <input type="date" name="date_to" value="<?= htmlspecialchars($dateTo) ?>" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi bitiş">
-        <select name="status" class="btn-touch flex-1 min-w-0 sm:w-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-            <option value="">Tüm Durumlar</option>
+        <input type="search" name="q" id="paymentSearchInput" value="<?= htmlspecialchars($payQ) ?>" placeholder="<?= $collectMode ? 'Müşteri, ödeme no, sözleşme ara...' : 'Ödeme no, sözleşme, müşteri ara...' ?>" class="flex-1 min-w-0 sm:w-48 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        <input type="date" name="date_from" value="<?= htmlspecialchars($dateFrom) ?>" class="pay-filter-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi başlangıç">
+        <input type="date" name="date_to" value="<?= htmlspecialchars($dateTo) ?>" class="pay-filter-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" title="Vade tarihi bitiş">
+        <select name="status" class="pay-filter-auto btn-touch flex-1 min-w-0 sm:w-auto px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+            <option value=""><?= $collectMode ? 'Tüm borçlar' : 'Tüm Durumlar' ?></option>
+            <?php if (!$collectMode): ?>
             <option value="unpaid" <?= $payStatus === 'unpaid' ? 'selected' : '' ?>>Bekleyen / Gecikmiş</option>
-            <option value="pending" <?= $payStatus === 'pending' ? 'selected' : '' ?>>Bekliyor</option>
+            <?php endif; ?>
+            <option value="pending" <?= $payStatus === 'pending' ? 'selected' : '' ?>>Bekliyor<?= $collectMode ? ' / vadesi gelmemiş' : '' ?></option>
             <option value="overdue" <?= $payStatus === 'overdue' ? 'selected' : '' ?>>Gecikmiş</option>
+            <?php if (!$collectMode): ?>
             <option value="paid" <?= $payStatus === 'paid' ? 'selected' : '' ?>>Ödendi</option>
             <option value="early" <?= $payStatus === 'early' ? 'selected' : '' ?>>Erken ödendi (vadesinden önce)</option>
             <option value="cancelled" <?= $payStatus === 'cancelled' ? 'selected' : '' ?>>İptal</option>
+            <?php endif; ?>
         </select>
-        <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
-        <?php if ($payStatus !== '' || $payQ !== '' || $dateFrom !== '' || $dateTo !== ''): ?><a href="/odemeler<?= $collectMode ? '?collect=1' . ($preselectedCustomerId !== '' ? '&customer=' . urlencode($preselectedCustomerId) : '') : '' ?>" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
+        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
+        <?php if ($hasActiveFilters): ?><a href="/odemeler<?= $collectMode ? '?collect=1' . ($preselectedCustomerId !== '' ? '&customer=' . urlencode($preselectedCustomerId) : '') : '' ?>" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
     </form>
     <button type="button" onclick="openCollectModal()" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
         <i class="bi bi-bank mr-2"></i> Ödeme Al
     </button>
 </div>
+
+<?php if ($hasActiveFilters): ?>
+    <div class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+        <span class="text-gray-600 dark:text-gray-400">
+            <?php if ($collectMode): ?>
+                <?= count($customersWithDebt) ?> müşteri listeleniyor
+            <?php else: ?>
+                <?= count($paymentsByCustomer) ?> müşteri · <?= (int) $totalPayments ?> ödeme listeleniyor
+            <?php endif; ?>
+        </span>
+        <?php if ($payQ !== ''): ?><span class="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300">Arama: <?= htmlspecialchars($payQ) ?></span><?php endif; ?>
+        <?php if ($payStatus !== ''): ?><span class="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Durum: <?= htmlspecialchars($statusLabels[$payStatus] ?? $payStatus) ?></span><?php endif; ?>
+        <?php if ($dateFrom !== ''): ?><span class="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Başlangıç: <?= htmlspecialchars($dateFrom) ?></span><?php endif; ?>
+        <?php if ($dateTo !== ''): ?><span class="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Bitiş: <?= htmlspecialchars($dateTo) ?></span><?php endif; ?>
+    </div>
+<?php endif; ?>
 
 <?php if ($flashSuccess): ?>
     <div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"><?= htmlspecialchars($flashSuccess) ?></div>
@@ -70,7 +91,7 @@ $page = $page ?? 1;
                 $paymentIds = array_column($c['payments'], 'id');
                 $paymentsJson = json_encode(array_map(fn($p) => ['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? ''], $c['payments']));
             ?>
-            <div class="p-4 flex items-center justify-between gap-4">
+            <div class="p-4 flex items-center justify-between gap-4 collect-debt-row" data-customer-name="<?= htmlspecialchars(mb_strtolower($name)) ?>">
                 <div>
                     <p class="font-semibold text-gray-900 dark:text-white"><?= htmlspecialchars($name) ?></p>
                     <p class="text-sm text-gray-500 dark:text-gray-400"><?= count($c['payments']) ?> adet bekleyen ödeme · Toplam <?= fmtMoney($total) ?> ₺</p>
@@ -111,8 +132,9 @@ $page = $page ?? 1;
                 }
                 $expandId = 'payments-customer-' . $idx;
                 $unpaidText = $unpaidCount > 0 ? 'Toplam borç: ' . fmtMoney($unpaidSum) . ' ₺ · Vadesi gelmiş: ' . fmtMoney($overdueSum) . ' ₺ · Vadesi gelmemiş: ' . fmtMoney($notDueSum) . ' ₺' : '';
+                $searchBlob = mb_strtolower($customerName . ' ' . implode(' ', array_map(fn($p) => ($p['payment_number'] ?? '') . ' ' . ($p['contract_number'] ?? ''), $payList)));
             ?>
-            <div class="payments-customer-row" data-customer-id="<?= htmlspecialchars($cust['id'] ?? '') ?>">
+            <div class="payments-customer-row" data-customer-id="<?= htmlspecialchars($cust['id'] ?? '') ?>" data-search-text="<?= htmlspecialchars($searchBlob) ?>">
                 <div class="flex items-center justify-between gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer group" onclick="toggleCustomerPayments('<?= $expandId ?>', this)" onkeydown="if (event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleCustomerPayments('<?= $expandId ?>', this); }" role="button" tabindex="0" aria-expanded="false" aria-controls="<?= $expandId ?>">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         <span class="payments-expand-icon text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-transform" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
@@ -210,7 +232,7 @@ $page = $page ?? 1;
                         $total = array_sum(array_map(fn($p) => (float)($p['amount'] ?? 0), $c['payments']));
                         $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));
                         ?>
-                        <button type="button" data-customer-index="<?= (int) $idx ?>" class="collect-customer-btn w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between">
+                        <button type="button" data-customer-index="<?= (int) $idx ?>" data-customer-name="<?= htmlspecialchars(mb_strtolower($name)) ?>" class="collect-customer-btn w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between">
                             <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($name) ?></span>
                             <span class="text-sm font-semibold text-amber-700 dark:text-amber-300"><?= fmtMoney($total) ?> ₺</span>
                         </button>
@@ -373,6 +395,12 @@ function openCollectModal() {
     collectSelectedPayments = [];
     collectSelectedCustomerName = '';
     updateCollectCustomerBanner('');
+    var searchInput = document.getElementById('paymentSearchInput');
+    var modalSearch = document.getElementById('customerSearch');
+    if (modalSearch && searchInput) {
+        modalSearch.value = searchInput.value;
+        applyPaymentSearchFilter(searchInput.value);
+    }
     collectStep(1);
 }
 function sortPaymentsByDueDate(payments) {
@@ -569,18 +597,63 @@ function setPaymentMethod(method) {
         document.getElementById('stepCreditCardNote').classList.remove('hidden');
     }
 }
-document.getElementById('selectAllPayments').addEventListener('change', function() {
+document.getElementById('selectAllPayments')?.addEventListener('change', function() {
     var checked = this.checked;
     document.querySelectorAll('#paymentList .collect-payment-cb').forEach(function(cb) { cb.checked = checked; });
     updatePaymentSelectionUi();
 });
-document.getElementById('customerSearch').addEventListener('input', function() {
-    var q = this.value.trim().toLowerCase();
-    document.querySelectorAll('#customerList button').forEach(function(btn) {
-        var name = (btn.querySelector('span') && btn.querySelector('span').textContent) || '';
-        btn.style.display = !q || name.toLowerCase().indexOf(q) >= 0 ? 'block' : 'none';
+function filterCollectCustomerRows(query) {
+    var q = (query || '').trim().toLowerCase();
+    document.querySelectorAll('#customerList .collect-customer-btn, .collect-debt-row').forEach(function(el) {
+        var name = (el.getAttribute('data-customer-name') || '').toLowerCase();
+        el.style.display = !q || name.indexOf(q) >= 0 ? '' : 'none';
     });
+}
+function filterPaymentCustomerRows(query) {
+    var q = (query || '').trim().toLowerCase();
+    document.querySelectorAll('.payments-customer-row').forEach(function(el) {
+        var text = (el.getAttribute('data-search-text') || '').toLowerCase();
+        el.style.display = !q || text.indexOf(q) >= 0 ? '' : 'none';
+    });
+}
+function applyPaymentSearchFilter(query) {
+    filterCollectCustomerRows(query);
+    filterPaymentCustomerRows(query);
+}
+document.getElementById('customerSearch')?.addEventListener('input', function() {
+    applyPaymentSearchFilter(this.value);
 });
+(function() {
+    var filterForm = document.getElementById('paymentFilterForm');
+    var submitFilters = function() {
+        if (filterForm) filterForm.submit();
+    };
+    document.querySelectorAll('.pay-filter-auto').forEach(function(el) {
+        el.addEventListener('change', submitFilters);
+    });
+    var searchInput = document.getElementById('paymentSearchInput');
+    var searchTimer;
+    if (searchInput && filterForm) {
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitFilters();
+            }
+        });
+        searchInput.addEventListener('input', function() {
+            applyPaymentSearchFilter(this.value);
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(submitFilters, 500);
+        });
+        if (searchInput.value.trim() !== '') {
+            applyPaymentSearchFilter(searchInput.value);
+        }
+    }
+    var modalSearch = document.getElementById('customerSearch');
+    if (modalSearch && searchInput && searchInput.value.trim() !== '') {
+        modalSearch.value = searchInput.value;
+    }
+})();
 document.querySelectorAll('.collect-customer-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         var idx = parseInt(this.getAttribute('data-customer-index'), 10);
@@ -596,10 +669,8 @@ var preselectedCustomerId = <?= json_encode($preselectedCustomerId) ?>;
         if (c && c.payments && c.payments.length) {
             openCollectModal();
             selectCustomer(c.id, c.payments, c.name || '');
-            return;
         }
     }
-    openCollectModal();
 });<?php endif; ?>
 </script>
 <?php

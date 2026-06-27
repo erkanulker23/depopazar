@@ -52,7 +52,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arama</label>
         <input type="search" name="q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Ödeme no, sözleşme, müşteri, işlem no..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
     </div>
-    <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Göster</button>
+    <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Göster</button>
     <?php if ($qGet !== '' || $paymentMethodGet !== '' || $bankAccountId !== ''): ?>
         <a href="/raporlar/banka-hesaplari?start_date=<?= urlencode($startDate) ?>&end_date=<?= urlencode($endDate) ?>" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a>
     <?php endif; ?>

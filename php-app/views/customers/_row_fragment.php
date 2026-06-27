@@ -14,6 +14,11 @@ $statusStyles = [
 ];
 ?>
 <div class="row-fragment-modern bg-gradient-to-b from-slate-50/80 to-white dark:from-gray-800/80 dark:to-gray-800 border-t border-slate-200 dark:border-gray-700">
+    <div class="px-4 py-3 md:hidden border-b border-slate-200/80 dark:border-gray-700">
+        <a href="/musteriler/<?= htmlspecialchars($customer['id'] ?? '') ?>" class="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+            Müşteri detayına git <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
     <div class="px-4 py-4 md:px-6 md:py-5">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Depo / Sözleşmeler -->

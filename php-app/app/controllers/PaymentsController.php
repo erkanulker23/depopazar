@@ -13,39 +13,26 @@ class PaymentsController
         Auth::requireStaff();
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
-        if ($companyId) {
-            $payments = Payment::findAll($this->pdo, $companyId);
-        } elseif (($user['role'] ?? '') === 'super_admin') {
-            $payments = Payment::findAll($this->pdo, null);
-        } else {
-            $payments = [];
-        }
+        $collectMode = isset($_GET['collect']) && $_GET['collect'] !== '0';
+        $preselectedCustomerId = isset($_GET['customer']) ? trim((string) $_GET['customer']) : '';
         $statusFilter = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'paid', 'overdue', 'cancelled', 'unpaid', 'early'], true) ? $_GET['status'] : '';
-        if ($statusFilter === 'unpaid') {
-            $payments = array_filter($payments, fn($p) => paymentMatchesStatusFilter($p, 'unpaid'));
-        } elseif ($statusFilter !== '') {
-            $payments = array_filter($payments, fn($p) => paymentMatchesStatusFilter($p, $statusFilter));
-        }
-        $dateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
-        $dateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
-        if ($dateFrom !== '') {
-            $payments = array_filter($payments, fn($p) => (strtotime($p['due_date'] ?? '') >= strtotime($dateFrom . ' 00:00:00')));
-        }
-        if ($dateTo !== '') {
-            $payments = array_filter($payments, fn($p) => (strtotime($p['due_date'] ?? '') <= strtotime($dateTo . ' 23:59:59')));
-        }
-        $searchQ = isset($_GET['q']) ? trim($_GET['q']) : '';
-        if ($searchQ !== '') {
-            $q = mb_strtolower($searchQ);
-            $payments = array_filter($payments, function ($p) use ($q) {
-                return (
-                    str_contains(mb_strtolower($p['payment_number'] ?? ''), $q) ||
-                    str_contains(mb_strtolower($p['contract_number'] ?? ''), $q) ||
-                    str_contains(mb_strtolower(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? '')), $q) ||
-                    str_contains(mb_strtolower($p['customer_email'] ?? ''), $q) ||
-                    str_contains((string)($p['amount'] ?? ''), $q)
-                );
-            });
+        $dateFrom = isset($_GET['date_from']) ? trim((string) $_GET['date_from']) : '';
+        $dateTo = isset($_GET['date_to']) ? trim((string) $_GET['date_to']) : '';
+        $searchQ = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
+        $listCompanyId = $companyId;
+        if (!$listCompanyId && ($user['role'] ?? '') !== 'super_admin') {
+            $listCompanyId = null;
+            $payments = [];
+        } else {
+            $payments = Payment::findForList(
+                $this->pdo,
+                $listCompanyId,
+                $statusFilter !== '' ? $statusFilter : null,
+                $searchQ !== '' ? $searchQ : null,
+                $dateFrom !== '' ? $dateFrom : null,
+                $dateTo !== '' ? $dateTo : null,
+                $collectMode && $statusFilter === ''
+            );
         }
         $payments = array_values($payments);
         $unpaid = array_filter($payments, fn($p) => paymentIsCollectible($p));
@@ -61,6 +48,22 @@ class PaymentsController
             $first = $list[0];
             $customersWithDebt[] = ['id' => $cid, 'customer_first_name' => $first['customer_first_name'] ?? '', 'customer_last_name' => $first['customer_last_name'] ?? '', 'payments' => $list];
         }
+        if ($preselectedCustomerId !== '') {
+            $customersWithDebt = array_values(array_filter(
+                $customersWithDebt,
+                fn($c) => (string) ($c['id'] ?? '') === $preselectedCustomerId
+            ));
+        }
+        usort($customersWithDebt, function ($a, $b) {
+            $totalA = array_sum(array_map(fn($p) => (float) ($p['amount'] ?? 0), $a['payments'] ?? []));
+            $totalB = array_sum(array_map(fn($p) => (float) ($p['amount'] ?? 0), $b['payments'] ?? []));
+            if ($totalA !== $totalB) {
+                return $totalB <=> $totalA;
+            }
+            $na = trim(($a['customer_first_name'] ?? '') . ' ' . ($a['customer_last_name'] ?? ''));
+            $nb = trim(($b['customer_first_name'] ?? '') . ' ' . ($b['customer_last_name'] ?? ''));
+            return strcasecmp($na, $nb);
+        });
         // Müşteri bazlı liste: tüm ödemeleri müşteriye göre grupla (dropdown için)
         $paymentsByCustomer = [];
         foreach ($payments as $p) {
@@ -95,9 +98,10 @@ class PaymentsController
         $totalPayments = count($payments);
         $totalPages = 1;
         $page = 1;
-        $collectMode = isset($_GET['collect']) && $_GET['collect'] !== '0';
-        $preselectedCustomerId = isset($_GET['customer']) ? trim($_GET['customer']) : '';
-        $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
+        $hasActiveFilters = $statusFilter !== '' || $searchQ !== '' || $dateFrom !== '' || $dateTo !== '';
+        $payStatus = $statusFilter;
+        $payQ = $searchQ;
+        $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal', 'unpaid' => 'Bekleyen / Gecikmiş', 'early' => 'Erken ödendi'];
         $bankAccounts = [];
         if ($companyId) {
             $stmt = $this->pdo->prepare('SELECT * FROM bank_accounts WHERE company_id = ? AND deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');

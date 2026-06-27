@@ -11,24 +11,32 @@ class RoomsController
     public function index(): void
     {
         Auth::requireStaff();
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
-        $filterWarehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null;
-        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $filterWarehouseId = isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim((string) $_GET['warehouse_id']) : null;
+        $search = isset($_GET['q']) ? trim((string) $_GET['q']) : null;
         $search = $search !== '' ? $search : null;
         $statusFilter = isset($_GET['status']) && in_array($_GET['status'], ['empty', 'occupied', 'reserved', 'locked'], true) ? $_GET['status'] : null;
         $hasContract = isset($_GET['has_contract']) && in_array($_GET['has_contract'], ['yes', 'no'], true) ? $_GET['has_contract'] : null;
         if ($companyId) {
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
-            $rooms = Room::findAll($this->pdo, $filterWarehouseId, $search, $statusFilter, $hasContract);
-            $rooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
+            if ($filterWarehouseId !== null) {
+                $filterWh = Warehouse::findOne($this->pdo, $filterWarehouseId);
+                if (!$filterWh || ($filterWh['company_id'] ?? '') !== $companyId) {
+                    $filterWarehouseId = null;
+                }
+            }
+            $rooms = Room::findAll($this->pdo, $filterWarehouseId, $search, $statusFilter, $hasContract, $companyId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehouses = Warehouse::findAll($this->pdo, null);
-            $rooms = Room::findAll($this->pdo, $filterWarehouseId, $search, $statusFilter, $hasContract);
+            $rooms = Room::findAll($this->pdo, $filterWarehouseId, $search, $statusFilter, $hasContract, null);
         } else {
             $warehouses = [];
             $rooms = [];
         }
+        $rooms = array_values($rooms);
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         // Oda başına aktif sözleşme sayısı (silinmemiş müşteriye ait, detay sayfasıyla aynı mantık)
         $activeContractCountByRoom = [];
@@ -289,10 +297,15 @@ class RoomsController
         $statusFilter = isset($_GET['status']) && in_array($_GET['status'], ['empty', 'occupied', 'reserved', 'locked'], true) ? $_GET['status'] : null;
         $hasContract = isset($_GET['has_contract']) && in_array($_GET['has_contract'], ['yes', 'no'], true) ? $_GET['has_contract'] : null;
         if ($companyId) {
-            $rooms = Room::findAll($this->pdo, $warehouseId, $search, $statusFilter, $hasContract);
-            $rooms = array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $companyId);
+            if ($warehouseId !== null) {
+                $filterWh = Warehouse::findOne($this->pdo, $warehouseId);
+                if (!$filterWh || ($filterWh['company_id'] ?? '') !== $companyId) {
+                    $warehouseId = null;
+                }
+            }
+            $rooms = Room::findAll($this->pdo, $warehouseId, $search, $statusFilter, $hasContract, $companyId);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $rooms = Room::findAll($this->pdo, $warehouseId, $search, $statusFilter, $hasContract);
+            $rooms = Room::findAll($this->pdo, $warehouseId, $search, $statusFilter, $hasContract, null);
         } else {
             $rooms = [];
         }

@@ -149,11 +149,12 @@ class Contract
     public static function update(PDO $pdo, string $id, array $data): void
     {
         $stmt = $pdo->prepare(
-            'UPDATE contracts SET start_date = ?, end_date = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ?, stored_items_condition = ?, stored_items_condition_note = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE contracts SET start_date = ?, end_date = ?, monthly_price = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ?, stored_items_condition = ?, stored_items_condition_note = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
             $data['start_date'] ?? null,
             $data['end_date'] ?? null,
+            $data['monthly_price'] ?? 0,
             $data['transportation_fee'] ?? 0,
             $data['pickup_location'] ?? null,
             $data['discount'] ?? 0,
@@ -165,6 +166,64 @@ class Contract
             $data['stored_items_condition_note'] ?? null,
             $id,
         ]);
+    }
+
+    /**
+     * Sözleşme dönemindeki aylık fiyatları günceller; bekleyen ödeme tutarlarını eşitler.
+     *
+     * @param array<string, string|float> $monthlyPricesPost Anahtar: Y-m (ör. 2026-03)
+     */
+    public static function syncMonthlyPrices(PDO $pdo, string $contractId, ?string $startDate, ?string $endDate, float $defaultPrice, array $monthlyPricesPost): void
+    {
+        if ($startDate === null || $startDate === '' || $endDate === null || $endDate === '') {
+            return;
+        }
+        $start = new DateTime(substr($startDate, 0, 10));
+        $end = new DateTime(substr($endDate, 0, 10));
+        $end->modify('last day of this month');
+
+        $validMonths = [];
+        $cursor = new DateTime($start->format('Y-m-01'));
+        $endFirst = new DateTime($end->format('Y-m-01'));
+        while ($cursor <= $endFirst) {
+            $monthStr = $cursor->format('Y-m');
+            $price = $defaultPrice;
+            if (isset($monthlyPricesPost[$monthStr]) && $monthlyPricesPost[$monthStr] !== '') {
+                $price = (float) str_replace(',', '.', (string) $monthlyPricesPost[$monthStr]);
+            }
+            $validMonths[$monthStr] = $price;
+            $cursor->modify('+1 month');
+        }
+
+        $existing = self::getMonthlyPricesByContractId($pdo, $contractId);
+        $existingByMonth = [];
+        foreach ($existing as $row) {
+            $existingByMonth[$row['month']] = $row;
+        }
+
+        $stmtUpdate = $pdo->prepare('UPDATE contract_monthly_prices SET price = ?, deleted_at = NULL WHERE id = ?');
+        $stmtInsert = $pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)');
+
+        foreach ($validMonths as $monthStr => $price) {
+            if (isset($existingByMonth[$monthStr])) {
+                $stmtUpdate->execute([$price, $existingByMonth[$monthStr]['id']]);
+            } else {
+                $stmtInsert->execute([self::uuid(), $contractId, $monthStr, $price]);
+            }
+        }
+
+        foreach ($existingByMonth as $monthStr => $row) {
+            if (!isset($validMonths[$monthStr])) {
+                $pdo->prepare('UPDATE contract_monthly_prices SET deleted_at = NOW() WHERE id = ?')->execute([$row['id']]);
+            }
+        }
+
+        $stmtPay = $pdo->prepare(
+            "UPDATE payments SET amount = ? WHERE contract_id = ? AND deleted_at IS NULL AND status = 'pending' AND DATE_FORMAT(due_date, '%Y-%m') = ?"
+        );
+        foreach ($validMonths as $monthStr => $price) {
+            $stmtPay->execute([$price, $contractId, $monthStr]);
+        }
     }
 
     public static function getMonthlyPricesByContractId(PDO $pdo, string $contractId): array

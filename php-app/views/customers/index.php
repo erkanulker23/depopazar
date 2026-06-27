@@ -48,7 +48,7 @@ ob_start();
             <option value="overdue" <?= $borc === 'overdue' ? 'selected' : '' ?>>Vadesi geçmiş borcu olan</option>
             <option value="unpaid" <?= $borc === 'unpaid' ? 'selected' : '' ?>>Ödenmemiş borcu olan</option>
         </select>
-        <button type="submit" class="btn-touch px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Filtrele</button>
+        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
         <?php if ($hasActiveFilters): ?><a href="/musteriler?borc=" class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-sm">Temizle</a><?php endif; ?>
     </form>
     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -74,7 +74,7 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
-<form id="bulkDeleteForm" method="post" action="/musteriler/toplu-sil<?= $filterQuery !== '' ? '?' . $filterQuery : '' ?>" onsubmit="var n=document.querySelectorAll('.customer-cb:checked').length;if(!n)return false;return confirm(deleteConfirmMsg('müşteri',n));">
+<form id="bulkDeleteForm" method="post" action="/musteriler/toplu-sil<?= $filterQuery !== '' ? '?' . $filterQuery : '' ?>" onsubmit="var n=document.querySelectorAll('.customer-cb:checked').length;if(!n)return false;return confirm(deleteConfirmMsg('müşteri',n));" class="hidden" aria-hidden="true"></form>
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible">
     <?php if (empty($customers)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz müşteri kaydı yok<?= $filterQuery !== '' ? ' veya filtreye uygun müşteri bulunamadı.' : '.' ?></div>
@@ -114,14 +114,14 @@ ob_start();
                                 <?php else: ?>
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">Pasif</span>
                                 <?php endif; ?>
-                                <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="text-sm font-medium text-emerald-600 dark:text-emerald-400">Detay →</a>
+                                <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 btn-touch">Detay</a>
                                 <?php if ($debtFilter !== null): ?>
-                                    <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($c['id']) ?>" class="text-sm font-medium text-white bg-emerald-600 px-2 py-0.5 rounded-lg hover:bg-emerald-700">Ödeme Al</a>
+                                    <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($c['id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 btn-touch">Ödeme Al</a>
                                 <?php endif; ?>
-                                <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>/barkod" target="_blank" class="text-sm font-medium text-gray-600 dark:text-gray-400">Barkod</a>
+                                <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>/barkod" target="_blank" rel="noopener" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 btn-touch">Barkod</a>
                             </div>
                         </div>
-                        <button type="button" class="expand-row-mobile flex-shrink-0 p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600" aria-label="Detayı aç"><i class="bi bi-chevron-down expand-icon-mobile text-lg"></i></button>
+                        <button type="button" class="expand-row-mobile flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-400" aria-label="Hızlı özet" aria-expanded="false"><i class="bi bi-chevron-down expand-icon-mobile text-lg"></i></button>
                     </div>
                     <div class="expandable-mobile hidden mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 fragment-cell-mobile"></div>
                 </div>
@@ -216,7 +216,6 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
-</form>
 <?php
 if (!empty($customers)):
     $paginationParams = array_filter([
@@ -321,16 +320,36 @@ endif;
     });
     updateBulkUi();
 
-    function loadFragment(id, cell, icon, isOpen) {
+    function loadFragment(id, cell, icon, isOpen, btn) {
         if (cell.innerHTML === '') {
-            fetch('/musteriler/' + id + '/satir-detay').then(function(r){ return r.text(); }).then(function(html){
-                cell.innerHTML = html;
-            });
+            cell.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 py-2">Yükleniyor…</p>';
+            fetch('/musteriler/' + encodeURIComponent(id) + '/satir-detay', { credentials: 'same-origin' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('Detay yüklenemedi');
+                    return r.text();
+                })
+                .then(function(html) {
+                    if (!html || !html.trim()) {
+                        cell.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400 py-2">Detay gösterilemedi.</p>';
+                        return;
+                    }
+                    cell.innerHTML = html;
+                })
+                .catch(function() {
+                    cell.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400 py-2">Detay yüklenemedi. <a href="/musteriler/' + encodeURIComponent(id) + '" class="text-emerald-600 underline">Müşteri sayfasına git</a></p>';
+                })
+                .finally(function() {
+                    if (btn) btn.disabled = false;
+                });
+        } else if (btn) {
+            btn.disabled = false;
         }
         if (icon) { icon.classList.toggle('bi-chevron-down', !isOpen); icon.classList.toggle('bi-chevron-up', isOpen); }
     }
     document.querySelectorAll('.expand-row').forEach(function(btn){
-        btn.addEventListener('click', function(){
+        btn.addEventListener('click', function(e){
+            e.preventDefault();
+            e.stopPropagation();
             var tr = this.closest('tr');
             var id = tr.getAttribute('data-customer-id');
             var expandRow = document.getElementById('expand-' + id);
@@ -339,7 +358,7 @@ endif;
             if (!expandRow || !cell) return;
             var isOpen = !expandRow.classList.contains('hidden');
             if (!isOpen) {
-                loadFragment(id, cell, icon, true);
+                loadFragment(id, cell, icon, true, null);
                 expandRow.classList.remove('hidden');
                 btn.setAttribute('aria-expanded', 'true');
             } else {
@@ -350,20 +369,25 @@ endif;
         });
     });
     document.querySelectorAll('.expand-row-mobile').forEach(function(btn){
-        btn.addEventListener('click', function(){
+        btn.addEventListener('click', function(e){
+            e.preventDefault();
+            e.stopPropagation();
             var card = this.closest('[data-customer-id]');
             var id = card && card.getAttribute('data-customer-id');
             var panel = card && card.querySelector('.expandable-mobile');
             var cell = panel && panel.querySelector('.fragment-cell-mobile');
             var icon = this.querySelector('.expand-icon-mobile');
-            if (!panel || !cell) return;
+            if (!panel || !cell || !id) return;
             var isOpen = !panel.classList.contains('hidden');
             if (isOpen) {
                 panel.classList.add('hidden');
                 if (icon) { icon.classList.remove('bi-chevron-up'); icon.classList.add('bi-chevron-down'); }
+                btn.setAttribute('aria-expanded', 'false');
             } else {
-                loadFragment(id, cell, icon, true);
+                btn.disabled = true;
+                loadFragment(id, cell, icon, true, btn);
                 panel.classList.remove('hidden');
+                btn.setAttribute('aria-expanded', 'true');
             }
         });
     });

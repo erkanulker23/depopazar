@@ -106,9 +106,47 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
         .dark .nav-active { background: linear-gradient(135deg, #6b4c3b 0%, #5c4033 100%); box-shadow: 0 4px 14px rgba(92,64,51,.35); }
         .nav-active .nav-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: rgba(255,255,255,.9); border-radius: 0 3px 3px 0; }
+        .btn-filter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            min-height: 44px;
+            padding: 0.625rem 1rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1.25rem;
+            background-color: #2563eb;
+            color: #fff;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35);
+            transition: background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .btn-filter:hover { background-color: #1d4ed8; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4); }
+        .dark .btn-filter { background-color: #3b82f6; box-shadow: 0 1px 3px rgba(59, 130, 246, 0.45); }
+        .dark .btn-filter:hover { background-color: #2563eb; }
         .sidebar-mobile { transform: translateX(-100%); transition: transform .3s cubic-bezier(0.4,0,0.2,1); will-change: transform; }
         .sidebar-mobile.open { transform: translateX(0); box-shadow: 20px 0 40px rgba(0,0,0,.2); }
         @media (min-width: 768px) { .sidebar-mobile { transform: none; box-shadow: none; } }
+        @media (max-width: 767px) {
+            #sidebar.sidebar-mobile.open { z-index: 60; }
+            #sidebarOverlay:not(.hidden) { z-index: 55; }
+            body.sidebar-open #mobileBottomNav {
+                visibility: hidden;
+                pointer-events: none;
+            }
+            #sidebar .sidebar-user-footer {
+                padding-bottom: max(1.25rem, var(--safe-bottom));
+                margin-bottom: 0;
+            }
+            #sidebar .sidebar-logout-btn {
+                min-width: 44px;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
         * { -webkit-tap-highlight-color: transparent; }
         html { overflow-x: hidden; scroll-padding-bottom: calc(6.5rem + var(--safe-bottom)); }
         .main-content-wrap { padding-bottom: env(safe-area-inset-bottom, 0); }
@@ -191,7 +229,7 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                 backdrop-filter: blur(6px);
             }
             .dark .form-submit-bar {
-                background: linear-gradient(to top, rgba(17,24,39,0.98) 70%, rgba(17,24,39,0));
+                background: linear-gradient(to top, rgba(26,22,20,0.98) 70%, rgba(26,22,20,0));
             }
             .form-submit-bar button[type="submit"],
             .form-submit-bar .btn-submit,
@@ -295,6 +333,30 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
             .btn-touch { min-height: 44px; min-width: 44px; padding: 0.625rem 1rem; }
         }
         input, select, textarea { font-size: 16px !important; }
+        /* Koyu mod: form — etiketler ve input metni okunaklı olsun */
+        .dark label { color: #cbd5e1; }
+        .dark input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="image"]):not([type="range"]),
+        .dark select,
+        .dark textarea {
+            background-color: #2a2320;
+            color: #f1f5f9;
+            border-color: #4a3f36;
+        }
+        .dark input::placeholder,
+        .dark textarea::placeholder {
+            color: #9a8a7e;
+            opacity: 1;
+        }
+        .dark input[type="date"],
+        .dark input[type="datetime-local"],
+        .dark input[type="time"],
+        .dark input[type="month"] {
+            color-scheme: dark;
+        }
+        .dark select option {
+            background-color: #2a2320;
+            color: #f1f5f9;
+        }
         .touch-manipulation { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
         #pushBanner, #pwaInstallBanner { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
         @media (max-width: 767px) {
@@ -355,14 +417,14 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
                     </a>
                 <?php endforeach; ?>
             </nav>
-            <div class="flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700 p-4 mx-3 mb-4">
+            <div class="sidebar-user-footer flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700 p-4 mx-3 mb-4">
                 <div class="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                     <div class="w-9 h-9 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"><?= htmlspecialchars($initials) ?></div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-bold text-gray-900 dark:text-white truncate"><?= htmlspecialchars(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?></p>
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($user['email'] ?? '') ?></p>
                     </div>
-                    <a href="/cikis" class="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0" title="Çıkış"><i class="bi bi-box-arrow-right text-lg"></i></a>
+                    <a href="/cikis" class="sidebar-logout-btn p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0" title="Çıkış" aria-label="Çıkış"><i class="bi bi-box-arrow-right text-lg"></i></a>
                 </div>
             </div>
         </aside>
@@ -459,9 +521,9 @@ $companyLogoUrl = $_SESSION['company_logo_url'] ?? null;
     (function(){
         var t=document.getElementById('menuToggle'), s=document.getElementById('sidebar'), o=document.getElementById('sidebarOverlay');
         var mobileMenuBtn = document.getElementById('mobileMenuOpenBtn');
-        function closeSidebar(){ if(s) s.classList.remove('open'); if(o) o.classList.add('hidden'); document.body.style.overflow = ''; }
-        function openSidebar(){ if(s) s.classList.add('open'); if(o) o.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-        if(t&&s){ t.addEventListener('click',function(){ s.classList.toggle('open'); if(o) o.classList.toggle('hidden'); document.body.style.overflow = s.classList.contains('open') ? 'hidden' : ''; }); }
+        function closeSidebar(){ if(s) s.classList.remove('open'); if(o) o.classList.add('hidden'); document.body.style.overflow = ''; document.body.classList.remove('sidebar-open'); }
+        function openSidebar(){ if(s) s.classList.add('open'); if(o) o.classList.remove('hidden'); document.body.style.overflow = 'hidden'; document.body.classList.add('sidebar-open'); }
+        if(t&&s){ t.addEventListener('click',function(){ s.classList.toggle('open'); if(o) o.classList.toggle('hidden'); var isOpen = s.classList.contains('open'); document.body.style.overflow = isOpen ? 'hidden' : ''; document.body.classList.toggle('sidebar-open', isOpen); }); }
         if(mobileMenuBtn&&s){ mobileMenuBtn.addEventListener('click', openSidebar); }
         if(o&&s){ o.addEventListener('click', closeSidebar); }
         document.querySelectorAll('.nav-link').forEach(function(el){ el.addEventListener('click', closeSidebar); });

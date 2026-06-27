@@ -26,7 +26,7 @@ ob_start();
                 <option value="<?= htmlspecialchars($cat['id']) ?>" <?= $kategoriGet === $cat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['name']) ?></option>
             <?php endforeach; ?>
         </select>
-        <button type="submit" class="btn-touch px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium">Filtrele</button>
+        <button type="submit" class="btn-touch btn-filter"><i class="bi bi-funnel-fill text-sm opacity-90" aria-hidden="true"></i> Filtrele</button>
     </form>
     <button type="button" onclick="openSvcModal('addCategoryModal')" class="btn-touch inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
         <i class="bi bi-plus-lg mr-2"></i> Kategori Ekle
