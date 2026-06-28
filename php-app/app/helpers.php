@@ -7,6 +7,23 @@ if (!function_exists('fmtPrice')) {
     }
 }
 
+/** Form tutar alanı: 5.000,00 / 5000 / 5000,50 → float */
+if (!function_exists('parseMoneyInput')) {
+    function parseMoneyInput(mixed $value): float
+    {
+        $val = trim(str_replace(["\xc2\xa0", ' '], '', (string) $value));
+        if ($val === '') {
+            return 0.0;
+        }
+        $val = str_replace('₺', '', $val);
+        if (str_contains($val, ',')) {
+            $val = str_replace('.', '', $val);
+            $val = str_replace(',', '.', $val);
+        }
+        return (float) $val;
+    }
+}
+
 /** Oda numarası eşleştirme anahtarı (1 = 01 = 001) */
 if (!function_exists('normalizeRoomNumberKey')) {
     function normalizeRoomNumberKey(?string $roomNumber): string

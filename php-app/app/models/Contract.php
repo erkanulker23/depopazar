@@ -254,11 +254,101 @@ class Contract
      *
      * @param array<string, string|float> $monthlyPricesPost Anahtar: Y-m-d (ör. 2026-06-28)
      */
+    /**
+     * Aynı takvim ayında yanlış vade günü (ör. ayın 1'i) ile giriş yıl dönümü çakışan ödemeleri birleştirir.
+     * Ödenmiş kayıt doğru vade gününe taşınır; aynı ay için yinelenen bekleyen kayıtlar silinir.
+     */
+    public static function reconcilePaymentDueDates(PDO $pdo, string $contractId, ?string $startDate, ?string $endDate): void
+    {
+        $start = ContractBilling::normalizeDate($startDate);
+        $end = ContractBilling::normalizeDate($endDate);
+        if ($start === '' || $end === '') {
+            return;
+        }
+
+        $periodsByYm = [];
+        foreach (ContractBilling::periods($start, $end) as $period) {
+            $periodsByYm[substr($period['key'], 0, 7)] = $period;
+        }
+        if ($periodsByYm === []) {
+            return;
+        }
+
+        $stmt = $pdo->prepare(
+            'SELECT id, status, due_date FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL AND due_date IS NOT NULL'
+        );
+        $stmt->execute([$contractId]);
+        $byYm = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $dueKey = ContractBilling::periodKeyFromDueDate($row['due_date'] ?? null);
+            if (strlen($dueKey) < 7) {
+                continue;
+            }
+            $ym = substr($dueKey, 0, 7);
+            if (!isset($periodsByYm[$ym])) {
+                continue;
+            }
+            $byYm[$ym][] = $row;
+        }
+
+        $stmtMoveDue = $pdo->prepare('UPDATE payments SET due_date = ? WHERE id = ? AND deleted_at IS NULL');
+        $stmtSoftDel = $pdo->prepare(
+            'UPDATE payments SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
+        );
+
+        foreach ($periodsByYm as $ym => $period) {
+            if (empty($byYm[$ym])) {
+                continue;
+            }
+            $correctKey = $period['key'];
+            $correctDue = $period['due_date'];
+            $paid = [];
+            $unpaid = [];
+            foreach ($byYm[$ym] as $row) {
+                if (($row['status'] ?? '') === 'paid') {
+                    $paid[] = $row;
+                } elseif (in_array($row['status'] ?? '', ['pending', 'overdue'], true)) {
+                    $unpaid[] = $row;
+                }
+            }
+
+            if ($paid !== []) {
+                $keeper = $paid[0];
+                if (ContractBilling::periodKeyFromDueDate($keeper['due_date'] ?? null) !== $correctKey) {
+                    $stmtMoveDue->execute([$correctDue, $keeper['id']]);
+                }
+                foreach (array_slice($paid, 1) as $extraPaid) {
+                    if (ContractBilling::periodKeyFromDueDate($extraPaid['due_date'] ?? null) !== $correctKey) {
+                        $stmtMoveDue->execute([$correctDue, $extraPaid['id']]);
+                    }
+                }
+                foreach ($unpaid as $row) {
+                    $stmtSoftDel->execute([$row['id']]);
+                }
+                continue;
+            }
+
+            if ($unpaid === []) {
+                continue;
+            }
+            $keeper = $unpaid[0];
+            if (ContractBilling::periodKeyFromDueDate($keeper['due_date'] ?? null) !== $correctKey) {
+                $stmtMoveDue->execute([$correctDue, $keeper['id']]);
+            }
+            foreach (array_slice($unpaid, 1) as $row) {
+                $stmtSoftDel->execute([$row['id']]);
+            }
+        }
+    }
+
     public static function syncMonthlyPrices(PDO $pdo, string $contractId, ?string $startDate, ?string $endDate, float $defaultPrice, array $monthlyPricesPost): void
     {
         if ($startDate === null || $startDate === '' || $endDate === null || $endDate === '') {
             return;
         }
+
+        self::reconcilePaymentDueDates($pdo, $contractId, $startDate, $endDate);
 
         $existing = self::getMonthlyPricesByContractId($pdo, $contractId);
         $existingByMonth = [];
@@ -331,15 +421,26 @@ class Contract
         );
         $stmtPayPeriods->execute([$contractId]);
         $paymentsByPeriod = [];
+        $paymentsByYm = [];
         while ($row = $stmtPayPeriods->fetch(PDO::FETCH_ASSOC)) {
             $periodKey = $row['period_key'] ?? '';
-            if ($periodKey !== '' && !isset($paymentsByPeriod[$periodKey])) {
+            if ($periodKey === '') {
+                continue;
+            }
+            if (!isset($paymentsByPeriod[$periodKey])) {
                 $paymentsByPeriod[$periodKey] = $row;
+            }
+            $ym = substr($periodKey, 0, 7);
+            if (!isset($paymentsByYm[$ym])) {
+                $paymentsByYm[$ym] = $row;
             }
         }
 
         $stmtPayUpdate = $pdo->prepare(
             'UPDATE payments SET amount = ? WHERE contract_id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\') AND DATE(due_date) = ?'
+        );
+        $stmtPayUpdateDueAndAmount = $pdo->prepare(
+            'UPDATE payments SET amount = ?, due_date = ? WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
         );
         $stmtPayDelete = $pdo->prepare(
             'UPDATE payments SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
@@ -349,15 +450,29 @@ class Contract
             if (ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys)) {
                 continue;
             }
-            if (!isset($paymentsByPeriod[$periodKey])) {
+            $ym = substr($periodKey, 0, 7);
+            if (isset($paymentsByPeriod[$periodKey])) {
+                $stmtPayUpdate->execute([$info['price'], $contractId, $periodKey]);
+            } elseif (isset($paymentsByYm[$ym])) {
+                $row = $paymentsByYm[$ym];
+                if (in_array($row['status'] ?? '', ['pending', 'overdue'], true)) {
+                    $stmtPayUpdateDueAndAmount->execute([$info['price'], $info['due_date'], $row['id']]);
+                    $paymentsByPeriod[$periodKey] = array_merge($row, ['period_key' => $periodKey]);
+                } else {
+                    Payment::create($pdo, [
+                        'contract_id' => $contractId,
+                        'amount' => $info['price'],
+                        'status' => 'pending',
+                        'due_date' => $info['due_date'],
+                    ]);
+                }
+            } else {
                 Payment::create($pdo, [
                     'contract_id' => $contractId,
                     'amount' => $info['price'],
                     'status' => 'pending',
                     'due_date' => $info['due_date'],
                 ]);
-            } else {
-                $stmtPayUpdate->execute([$info['price'], $contractId, $periodKey]);
             }
         }
 

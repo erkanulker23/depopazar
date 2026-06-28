@@ -193,7 +193,7 @@ class ContractsController
                 }
                 $extraPriceRaw = $additionalMonthlyPrices[$i] ?? '';
                 $extraMonthlyPrice = $extraPriceRaw !== ''
-                    ? (float) str_replace(',', '.', (string) $extraPriceRaw)
+                    ? parseMoneyInput($extraPriceRaw)
                     : (float) ($extraRoom['monthly_price'] ?? 0);
                 if ($extraMonthlyPrice <= 0) {
                     Auth::setSession('flash_error', 'Ek oda aylık ücreti geçerli olmalıdır.');
@@ -213,9 +213,9 @@ class ContractsController
             header('Location: ' . $redirectTargets['error']);
             exit;
         }
-        $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== '' ? (float) str_replace(',', '.', $_POST['monthly_price']) : (float) $room['monthly_price'];
-        $transportationFee = isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? (float) str_replace(',', '.', $_POST['transportation_fee']) : 0;
-        $discount = isset($_POST['discount']) && $_POST['discount'] !== '' ? (float) str_replace(',', '.', $_POST['discount']) : 0;
+        $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== '' ? parseMoneyInput($_POST['monthly_price']) : (float) $room['monthly_price'];
+        $transportationFee = isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? parseMoneyInput($_POST['transportation_fee']) : 0;
+        $discount = isset($_POST['discount']) && $_POST['discount'] !== '' ? parseMoneyInput($_POST['discount']) : 0;
         $soldBy = trim($_POST['sold_by_user_id'] ?? '') ?: null;
         $vehiclePlate = trim($_POST['vehicle_plate'] ?? '');
         if ($vehiclePlate === '' && !empty($_POST['vehicle_id'])) {
@@ -545,7 +545,7 @@ class ContractsController
             exit;
         }
         $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== ''
-            ? (float) str_replace(',', '.', $_POST['monthly_price'])
+            ? parseMoneyInput($_POST['monthly_price'])
             : (float) ($contract['monthly_price'] ?? 0);
         $newRoomId = trim($_POST['room_id'] ?? '') ?: ($contract['room_id'] ?? '');
         if ($newRoomId === '') {
@@ -564,9 +564,9 @@ class ContractsController
                 'start_date' => $startDate ?? $contract['start_date'],
                 'end_date' => $endDate ?? $contract['end_date'],
                 'monthly_price' => $monthlyPrice,
-                'transportation_fee' => isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? (float) str_replace(',', '.', $_POST['transportation_fee']) : 0,
+                'transportation_fee' => isset($_POST['transportation_fee']) && $_POST['transportation_fee'] !== '' ? parseMoneyInput($_POST['transportation_fee']) : 0,
                 'pickup_location' => trim($_POST['pickup_location'] ?? '') ?: null,
-                'discount' => isset($_POST['discount']) && $_POST['discount'] !== '' ? (float) str_replace(',', '.', $_POST['discount']) : 0,
+                'discount' => isset($_POST['discount']) && $_POST['discount'] !== '' ? parseMoneyInput($_POST['discount']) : 0,
                 'driver_name' => trim($_POST['driver_name'] ?? '') ?: null,
                 'driver_phone' => trim($_POST['driver_phone'] ?? '') ?: null,
                 'vehicle_plate' => trim($_POST['vehicle_plate'] ?? '') ?: null,
@@ -591,7 +591,7 @@ class ContractsController
                 if ($posted === '') {
                     continue;
                 }
-                $newPrice = (float) str_replace(',', '.', $posted);
+                $newPrice = parseMoneyInput($posted);
                 $oldPrice = $existingMonthlyByKey[$postKey]
                     ?? ContractBilling::paidAmountForPeriodKey((string) $postKey, $paidAmountsByMonth)
                     ?? (float) ($contract['monthly_price'] ?? 0);

@@ -84,11 +84,11 @@ class ContractBilling
     public static function resolvePriceForPeriod(string $periodKey, float $defaultPrice, array $monthlyPricesPost): float
     {
         if (isset($monthlyPricesPost[$periodKey]) && $monthlyPricesPost[$periodKey] !== '') {
-            return (float) str_replace(',', '.', (string) $monthlyPricesPost[$periodKey]);
+            return parseMoneyInput($monthlyPricesPost[$periodKey]);
         }
         $legacyYm = strlen($periodKey) >= 7 ? substr($periodKey, 0, 7) : $periodKey;
         if ($legacyYm !== $periodKey && isset($monthlyPricesPost[$legacyYm]) && $monthlyPricesPost[$legacyYm] !== '') {
-            return (float) str_replace(',', '.', (string) $monthlyPricesPost[$legacyYm]);
+            return parseMoneyInput($monthlyPricesPost[$legacyYm]);
         }
         return $defaultPrice;
     }
