@@ -112,11 +112,12 @@ class ContractsController
             header('Location: /girisler');
             exit;
         }
+        $redirectTargets = $this->contractCreateRedirectTargets();
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if (!$companyId && ($user['role'] ?? '') !== 'super_admin') {
             Auth::setSession('flash_error', 'Şirket bilgisi gerekli.');
-            header('Location: /girisler');
+            header('Location: ' . $redirectTargets['generic']);
             exit;
         }
         $customerId = trim($_POST['customer_id'] ?? '');
@@ -125,13 +126,13 @@ class ContractsController
         $endDate = trim($_POST['end_date'] ?? '');
         if (!$customerId || !$roomId || !$startDate || !$endDate) {
             Auth::setSession('flash_error', 'Müşteri, oda ve tarihler zorunludur.');
-            header('Location: /girisler');
+            header('Location: ' . $redirectTargets['error']);
             exit;
         }
         $room = Room::findOne($this->pdo, $roomId);
         if (!$room) {
             Auth::setSession('flash_error', 'Geçersiz oda.');
-            header('Location: /girisler');
+            header('Location: ' . $redirectTargets['error']);
             exit;
         }
         $customer = null;
@@ -140,12 +141,12 @@ class ContractsController
         $customer = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$customer) {
             Auth::setSession('flash_error', 'Geçersiz müşteri.');
-            header('Location: /girisler');
+            header('Location: ' . $redirectTargets['error']);
             exit;
         }
         if ($user['role'] !== 'super_admin' && $companyId && $room['company_id'] !== $companyId) {
             Auth::setSession('flash_error', 'Bu odaya erişim yetkiniz yok.');
-            header('Location: /girisler');
+            header('Location: ' . $redirectTargets['error']);
             exit;
         }
         $needsAdditionalRooms = isset($_POST['needs_additional_rooms']) && $_POST['needs_additional_rooms'] === '1';
@@ -159,35 +160,35 @@ class ContractsController
         if ($needsAdditionalRooms) {
             if ($additionalRoomIds === []) {
                 Auth::setSession('flash_error', 'En az bir ek oda seçilmelidir.');
-                header('Location: /girisler?newSale=1');
+                header('Location: ' . $redirectTargets['error']);
                 exit;
             }
             if (count($additionalRoomIds) !== count($additionalMonthlyPrices)) {
                 Auth::setSession('flash_error', 'Ek odalar için aylık ücret bilgisi eksik.');
-                header('Location: /girisler?newSale=1');
+                header('Location: ' . $redirectTargets['error']);
                 exit;
             }
             $allRoomIds = array_merge([$roomId], $additionalRoomIds);
             if (count($allRoomIds) !== count(array_unique($allRoomIds))) {
                 Auth::setSession('flash_error', 'Aynı oda birden fazla kez seçilemez.');
-                header('Location: /girisler?newSale=1');
+                header('Location: ' . $redirectTargets['error']);
                 exit;
             }
             foreach ($additionalRoomIds as $i => $extraRoomId) {
                 $extraRoom = Room::findOne($this->pdo, $extraRoomId);
                 if (!$extraRoom) {
                     Auth::setSession('flash_error', 'Geçersiz ek oda seçimi.');
-                    header('Location: /girisler?newSale=1');
+                    header('Location: ' . $redirectTargets['error']);
                     exit;
                 }
                 if (($extraRoom['warehouse_id'] ?? '') !== ($room['warehouse_id'] ?? '')) {
                     Auth::setSession('flash_error', 'Ek odalar, seçilen depodaki odalardan olmalıdır.');
-                    header('Location: /girisler?newSale=1');
+                    header('Location: ' . $redirectTargets['error']);
                     exit;
                 }
                 if ($user['role'] !== 'super_admin' && $companyId && ($extraRoom['company_id'] ?? '') !== $companyId) {
                     Auth::setSession('flash_error', 'Seçilen ek odaya erişim yetkiniz yok.');
-                    header('Location: /girisler');
+                    header('Location: ' . $redirectTargets['error']);
                     exit;
                 }
                 $extraPriceRaw = $additionalMonthlyPrices[$i] ?? '';
@@ -196,7 +197,7 @@ class ContractsController
                     : (float) ($extraRoom['monthly_price'] ?? 0);
                 if ($extraMonthlyPrice <= 0) {
                     Auth::setSession('flash_error', 'Ek oda aylık ücreti geçerli olmalıdır.');
-                    header('Location: /girisler?newSale=1');
+                    header('Location: ' . $redirectTargets['error']);
                     exit;
                 }
                 $additionalRooms[] = [
@@ -209,7 +210,7 @@ class ContractsController
         [$storedCondition, $storedConditionNote, $storedConditionError] = parseStoredItemsConditionFromRequest($_POST, true);
         if ($storedConditionError) {
             Auth::setSession('flash_error', $storedConditionError);
-            header('Location: /girisler?newSale=1');
+            header('Location: ' . $redirectTargets['error']);
             exit;
         }
         $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== '' ? (float) str_replace(',', '.', $_POST['monthly_price']) : (float) $room['monthly_price'];
@@ -361,9 +362,31 @@ class ContractsController
         } catch (Exception $e) {
             error_log('Contract create failed: ' . $e->getMessage());
             Auth::setSession('flash_error', 'Kayıt oluşturulamadı: ' . $e->getMessage());
+            header('Location: ' . $redirectTargets['error']);
+            exit;
         }
-        header('Location: /girisler');
+        header('Location: ' . $redirectTargets['success']);
         exit;
+    }
+
+    /** @return array{success: string, error: string, generic: string} */
+    private function contractCreateRedirectTargets(): array
+    {
+        $redirect = trim($_POST['redirect'] ?? '');
+        $fromCustomer = $redirect !== '' && preg_match('#^/musteriler/[0-9a-f\-]{36}$#i', $redirect);
+        if ($fromCustomer) {
+            return [
+                'success' => $redirect,
+                'error' => $redirect . '?addContract=1',
+                'generic' => $redirect . '?addContract=1',
+            ];
+        }
+
+        return [
+            'success' => '/girisler',
+            'error' => '/girisler?newSale=1',
+            'generic' => '/girisler',
+        ];
     }
 
     /**

@@ -186,6 +186,31 @@ class CustomersController
             $stmt = $this->pdo->query('SELECT * FROM bank_accounts WHERE deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
             $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
+        $openAddContract = isset($_GET['addContract']) && $_GET['addContract'] !== '0';
+        $warehouses = [];
+        $contractRoomsJson = [];
+        $custCompanyId = $customer['company_id'] ?? $companyId;
+        if ($custCompanyId) {
+            $warehouses = Warehouse::findAll($this->pdo, $custCompanyId);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $warehouses = Warehouse::findAll($this->pdo, null);
+        }
+        $rooms = Room::findAll($this->pdo, null);
+        if ($custCompanyId) {
+            $rooms = array_values(array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $custCompanyId));
+        }
+        foreach ($rooms as $r) {
+            $roomNum = preg_replace('/\s*\([^)]*\)\s*$/', '', (string) ($r['room_number'] ?? ''));
+            $roomPrice = isset($r['monthly_price']) && $r['monthly_price'] !== null && $r['monthly_price'] !== ''
+                ? (float) $r['monthly_price'] : null;
+            $contractRoomsJson[] = [
+                'id' => $r['id'] ?? '',
+                'warehouse_id' => $r['warehouse_id'] ?? '',
+                'room_number' => $roomNum,
+                'monthly_price' => $roomPrice,
+                'status' => $r['status'] ?? '',
+            ];
+        }
         $pageTitle = 'Müşteri: ' . trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
         require __DIR__ . '/../../views/customers/detail.php';
     }
@@ -364,18 +389,14 @@ class CustomersController
             exit;
         }
         $file = $_FILES['document'] ?? null;
-        if (!$file || ($file['error'] ?? 0) !== UPLOAD_ERR_OK) {
-            Auth::setSession('flash_error', 'Lütfen bir dosya seçin veya yükleme hatası oluştu.');
-            header('Location: /musteriler/' . $customerId);
-            exit;
-        }
         $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx'];
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if (!in_array($ext, $allowedExt, true)) {
-            Auth::setSession('flash_error', 'İzin verilen formatlar: ' . implode(', ', $allowedExt));
-            header('Location: /musteriler/' . $customerId);
+        $uploadError = validateUploadedDocument($file, $allowedExt);
+        if ($uploadError !== null) {
+            Auth::setSession('flash_error', $uploadError);
+            header('Location: /musteriler/' . $customerId . '/belge-ekle');
             exit;
         }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
         $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/customer_documents' : __DIR__ . '/../../public/uploads/customer_documents';
         if (!is_dir($uploadDir)) {
             @mkdir($uploadDir, 0755, true);

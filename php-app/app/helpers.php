@@ -494,6 +494,61 @@ if (!function_exists('storedItemsConditionLabel')) {
     }
 }
 
+/** Maksimum dosya yükleme boyutu (bayt) — nginx client_max_body_size ile uyumlu tutun */
+if (!function_exists('uploadMaxBytes')) {
+    function uploadMaxBytes(): int
+    {
+        return 20 * 1024 * 1024;
+    }
+}
+
+if (!function_exists('uploadMaxBytesLabel')) {
+    function uploadMaxBytesLabel(): string
+    {
+        return ((int) (uploadMaxBytes() / (1024 * 1024))) . ' MB';
+    }
+}
+
+if (!function_exists('uploadErrorMessage')) {
+    function uploadErrorMessage(int $code): string
+    {
+        return match ($code) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Dosya boyutu çok büyük (en fazla ' . uploadMaxBytesLabel() . '). Sunucuda nginx client_max_body_size ayarı da gerekli olabilir.',
+            UPLOAD_ERR_PARTIAL => 'Dosya yüklemesi yarım kaldı. Tekrar deneyin.',
+            UPLOAD_ERR_NO_FILE => 'Lütfen bir dosya seçin.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Sunucu geçici dizin hatası.',
+            UPLOAD_ERR_CANT_WRITE => 'Dosya diske yazılamadı.',
+            UPLOAD_ERR_EXTENSION => 'Sunucu uzantı engeli nedeniyle yükleme reddedildi.',
+            default => 'Dosya yüklenemedi.',
+        };
+    }
+}
+
+/**
+ * @param list<string> $allowedExt
+ */
+if (!function_exists('validateUploadedDocument')) {
+    function validateUploadedDocument(?array $file, array $allowedExt, ?int $maxBytes = null): ?string
+    {
+        $maxBytes = $maxBytes ?? uploadMaxBytes();
+        if (!$file || empty($file['name'])) {
+            return 'Lütfen bir dosya seçin.';
+        }
+        $err = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($err !== UPLOAD_ERR_OK) {
+            return uploadErrorMessage($err);
+        }
+        if (($file['size'] ?? 0) > $maxBytes) {
+            return 'Dosya boyutu ' . uploadMaxBytesLabel() . ' sınırını aşıyor.';
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, $allowedExt, true)) {
+            return 'İzin verilen formatlar: ' . implode(', ', $allowedExt);
+        }
+        return null;
+    }
+}
+
 /**
  * POST'tan ürün durumu doğrular.
  * @return array{0: ?string, 1: ?string, 2: ?string} [condition, note, errorMessage]

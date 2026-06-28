@@ -131,6 +131,16 @@ Bu adımlardan sonra depo ve müşteri ekleme çalışır. Uygulama artık bu du
 - **Forge site.conf** (`/etc/nginx/forge-conf/SITE_ID/site.conf`): İçinde `root` yoksa en üste `root /home/forge/SITENIZ/php-app/public;` ekleyin. Tam örnek: **`scripts/forge-site-conf-ORNEK.conf`**.
 - Genel örnek: **`scripts/nginx-forge-awapanel.conf`** (PROJE_KOYU ve PHP-FPM socket’i kendi sunucunuza göre düzenleyin).
 
+### Belge yüklerken 413 Request Entity Too Large
+
+Nginx varsayılan olarak ~1 MB üzeri istekleri reddeder. Müşteri belgesi, sözleşme PDF’i vb. için Forge **Sites → Nginx Configuration** içinde `server { ... }` bloğuna şunu ekleyin:
+
+```nginx
+client_max_body_size 20M;
+```
+
+Kaydedip Nginx’i yeniden yükleyin. PHP tarafı için `php-app/public/.user.ini` dosyası `upload_max_filesize` ve `post_max_size` değerlerini ayarlar; Forge’da PHP sürüm ayarlarından da kontrol edebilirsiniz.
+
 ---
 
 ## SSL: "Bu siteye ulaşılamıyor" / ERR_SSL_UNRECOGNIZED_NAME_ALERT

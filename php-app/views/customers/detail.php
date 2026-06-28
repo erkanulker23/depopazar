@@ -102,6 +102,9 @@ ob_start();
             <a href="/girisler?newSale=1&newCustomerId=<?= htmlspecialchars($customer['id']) ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors">
                 <i class="bi bi-bag-plus"></i> Depo Girişi Ekle
             </a>
+            <button type="button" onclick="openEditCustomerModal('contract')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-cyan-600 text-white hover:bg-cyan-700 transition-colors">
+                <i class="bi bi-file-earmark-plus"></i> Sözleşme Ekle
+            </button>
             <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/belge-ekle" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
                 <i class="bi bi-file-earmark-plus"></i> Belge Ekle
             </a>
@@ -170,9 +173,14 @@ ob_start();
 
         <!-- Sözleşmeler -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-                <i class="bi bi-file-text text-emerald-600"></i> Sözleşmeler
-            </h2>
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="bi bi-file-text text-emerald-600"></i> Sözleşmeler
+                </h2>
+                <button type="button" onclick="openEditCustomerModal('contract')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-cyan-600 text-white hover:bg-cyan-700 transition-colors">
+                    <i class="bi bi-plus-lg"></i> Sözleşme Ekle
+                </button>
+            </div>
             <?php if (empty($contracts)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Depo girişi yok.</div>
             <?php else: ?>
@@ -451,15 +459,20 @@ ob_start();
     </div>
 </div>
 
-<!-- Modal: Müşteri Düzenle -->
+<!-- Modal: Müşteri Düzenle / Sözleşme Ekle -->
 <div id="editCustomerModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/50" onclick="document.getElementById('editCustomerModal').classList.add('hidden')"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div class="fixed inset-0 bg-black/50" onclick="closeEditCustomerModal()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-600">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i class="bi bi-pencil text-emerald-600 mr-2"></i> Müşteri Düzenle</h3>
-                <button type="button" onclick="document.getElementById('editCustomerModal').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg"><i class="bi bi-x-lg"></i></button>
+                <button type="button" onclick="closeEditCustomerModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg"><i class="bi bi-x-lg"></i></button>
             </div>
+            <div class="flex border-b border-gray-200 dark:border-gray-600 mb-4 -mt-1">
+                <button type="button" id="editTabBtn_info" onclick="switchEditCustomerTab('info')" class="edit-customer-tab px-4 py-2 text-sm font-medium border-b-2 border-emerald-600 text-emerald-600 dark:text-emerald-400">Müşteri Bilgileri</button>
+                <button type="button" id="editTabBtn_contract" onclick="switchEditCustomerTab('contract')" class="edit-customer-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">Sözleşme Ekle</button>
+            </div>
+            <div id="editTab_info">
             <form method="post" action="/musteriler/guncelle" class="space-y-3">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($customer['id']) ?>">
                 <div class="grid grid-cols-2 gap-3">
@@ -505,10 +518,14 @@ ob_start();
                     <label for="edit_is_active" class="text-sm font-medium text-gray-700 dark:text-gray-300">Aktif müşteri</label>
                 </div>
                 <div class="form-submit-bar flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="document.getElementById('editCustomerModal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="button" onclick="closeEditCustomerModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
                     <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Kaydet</button>
                 </div>
             </form>
+            </div>
+            <div id="editTab_contract" class="hidden">
+                <?php require __DIR__ . '/../partials/customer_edit_contract_tab.php'; ?>
+            </div>
         </div>
     </div>
 </div>
@@ -658,14 +675,119 @@ $bankAccounts = $bankAccounts ?? [];
     </div>
 </div>
 
+<script src="/room-picker.js"></script>
 <script>
-window.openEditCustomerModal = function() {
+window.closeEditCustomerModal = function() {
+    var modal = document.getElementById('editCustomerModal');
+    if (modal) modal.classList.add('hidden');
+};
+window.switchEditCustomerTab = function(tab) {
+    ['info', 'contract'].forEach(function(t) {
+        var panel = document.getElementById('editTab_' + t);
+        var btn = document.getElementById('editTabBtn_' + t);
+        if (panel) panel.classList.toggle('hidden', t !== tab);
+        if (btn) {
+            var active = t === tab;
+            btn.classList.toggle('border-emerald-600', active);
+            btn.classList.toggle('text-emerald-600', active);
+            btn.classList.toggle('dark:text-emerald-400', active);
+            btn.classList.toggle('border-transparent', !active);
+            btn.classList.toggle('text-gray-500', !active);
+            btn.classList.toggle('dark:text-gray-400', !active);
+        }
+    });
+    if (tab === 'contract' && typeof window.initCustContractRoomPicker === 'function') {
+        window.initCustContractRoomPicker();
+    }
+};
+window.openEditCustomerModal = function(tab) {
+    tab = tab || 'info';
     var modal = document.getElementById('editCustomerModal');
     if (modal) {
         if (window.initPhoneMasks) window.initPhoneMasks();
+        switchEditCustomerTab(tab);
         modal.classList.remove('hidden');
     }
 };
+function toggleCustContractConditionNote(value) {
+    var block = document.getElementById('custContract_condition_note_block');
+    var note = document.getElementById('custContract_condition_note');
+    var show = value === 'hasarli';
+    if (block) block.classList.toggle('hidden', !show);
+    if (note) {
+        note.required = show;
+        if (!show) note.value = '';
+    }
+}
+(function() {
+    var custContractRoomsData = <?= json_encode($contractRoomsJson ?? [], JSON_UNESCAPED_UNICODE) ?>;
+    var whSelect = document.getElementById('custContract_warehouse');
+    function applyCustWarehouseBaseFee() {
+        var priceEl = document.getElementById('custContract_monthly_price');
+        if (!priceEl || !whSelect) return;
+        var opt = whSelect.options[whSelect.selectedIndex];
+        var baseFee = opt && opt.getAttribute('data-monthly-base-fee');
+        priceEl.value = baseFee ? baseFee.replace('.', ',') : '';
+    }
+    function applyCustRoomMonthlyPrice(room) {
+        var priceEl = document.getElementById('custContract_monthly_price');
+        if (!priceEl || !room) return;
+        if (room.monthly_price !== null && room.monthly_price !== undefined && room.monthly_price !== '') {
+            priceEl.value = String(room.monthly_price).replace('.', ',');
+        }
+    }
+    window.initCustContractRoomPicker = function() {
+        if (typeof initRoomPicker !== 'function') return;
+        if (window.custContractRoomPicker) return;
+        window.custContractRoomPicker = initRoomPicker({
+            hiddenInputId: 'custContract_room_id',
+            searchInputId: 'custContract_room_search',
+            resultsId: 'custContract_room_results',
+            warehouseSelectId: 'custContract_warehouse',
+            hintId: 'custContract_room_hint',
+            rooms: custContractRoomsData,
+            onWarehouseChange: function() {
+                applyCustWarehouseBaseFee();
+            },
+            onSelect: function(room) {
+                applyCustRoomMonthlyPrice(room);
+            },
+            onClear: function() {
+                applyCustWarehouseBaseFee();
+            }
+        });
+    };
+    var form = document.getElementById('custContractForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            var roomId = document.getElementById('custContract_room_id');
+            if (!roomId || !roomId.value) {
+                e.preventDefault();
+                alert('Lütfen oda seçin.');
+                return;
+            }
+            var selected = form.querySelector('input[name="stored_items_condition"]:checked');
+            if (!selected) {
+                e.preventDefault();
+                alert('Giriş yapılan ürün durumu seçilmelidir.');
+                return;
+            }
+            if (selected.value === 'hasarli') {
+                var note = document.getElementById('custContract_condition_note');
+                if (!note || !note.value.trim()) {
+                    e.preventDefault();
+                    alert('Hasarlı ürünler için hasar notu zorunludur.');
+                    if (note) note.focus();
+                }
+            }
+        });
+    }
+    <?php if (!empty($openAddContract)): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        openEditCustomerModal('contract');
+    });
+    <?php endif; ?>
+})();
 </script>
 
 <?php
