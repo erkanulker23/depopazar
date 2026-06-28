@@ -230,7 +230,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
 <div id="newSaleModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" onclick="closeNewSaleModal()"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-[95vw] sm:max-w-3xl lg:max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
             <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-600">
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0"><i class="bi bi-plus-lg text-lg"></i></div>
@@ -420,11 +420,12 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                     </div>
                     <?php if (!empty($owners)): ?>
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-person-badge"></i> Satışı Yapan Kişi (Depo sahibi)</h4>
-                        <select name="sold_by_user_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-person-badge"></i> Sözleşmeyi Yapan</h4>
+                        <select name="sold_by_user_id" id="newSale_sold_by_user_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                             <option value="">Seçin</option>
                             <?php foreach ($owners as $o): ?>
-                                <option value="<?= htmlspecialchars($o['id']) ?>"><?= htmlspecialchars($o['first_name'] . ' ' . $o['last_name']) ?></option>
+                                <?php $soldBySelected = ($defaultSoldByUserId ?? '') !== '' && ($defaultSoldByUserId ?? '') === ($o['id'] ?? ''); ?>
+                                <option value="<?= htmlspecialchars($o['id']) ?>" <?= $soldBySelected ? 'selected' : '' ?>><?= htmlspecialchars(trim(($o['first_name'] ?? '') . ' ' . ($o['last_name'] ?? ''))) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>

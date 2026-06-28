@@ -105,7 +105,7 @@ ob_start();
         </div>
         <?php if (!empty($owners)): ?>
         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-person-badge"></i> Satışı Yapan Kişi (Depo sahibi)</h4>
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-person-badge"></i> Sözleşmeyi Yapan</h4>
             <select name="sold_by_user_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                 <option value="">Seçin</option>
                 <?php foreach ($owners as $o): ?>

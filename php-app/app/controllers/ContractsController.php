@@ -57,16 +57,10 @@ class ContractsController
         } catch (Throwable $e) {
             // vehicles tablosu yoksa boş bırak
         }
-        $personnel = [];
-        $owners = [];
-        if ($companyId) {
-            if (Personnel::tableExists($this->pdo)) {
-                $personnel = Personnel::findActiveForCompany($this->pdo, $companyId);
-            }
-            $stmt = $this->pdo->prepare("SELECT id, first_name, last_name FROM users WHERE company_id = ? AND deleted_at IS NULL AND role = 'company_owner' AND is_active = 1 ORDER BY first_name, last_name");
-            $stmt->execute([$companyId]);
-            $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
+        $staffOptions = $this->loadContractStaffOptions($companyId ?: null);
+        $personnel = $staffOptions['personnel'];
+        $owners = $this->ensureSoldByInOwnersList($staffOptions['owners'], $user['id'] ?? null);
+        $defaultSoldByUserId = $user['id'] ?? '';
         $openNewSale = ($_GET['newSale'] ?? '') === '1';
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
         $contractDebt = $this->getContractDebtCounts($contracts);
@@ -1320,11 +1314,7 @@ class ContractsController
             if (Personnel::tableExists($this->pdo)) {
                 $personnel = Personnel::findActiveForCompany($this->pdo, $companyId);
             }
-            $stmt = $this->pdo->prepare(
-                "SELECT id, first_name, last_name FROM users WHERE company_id = ? AND deleted_at IS NULL AND role = 'company_owner' AND is_active = 1 ORDER BY first_name, last_name"
-            );
-            $stmt->execute([$companyId]);
-            $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $owners = User::findStaff($this->pdo, $companyId, null, null, '1');
         }
         return ['owners' => $owners, 'personnel' => $personnel];
     }
