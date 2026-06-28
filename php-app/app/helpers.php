@@ -552,10 +552,9 @@ if (!function_exists('buildPaymentMonthsCalendar')) {
                 if (!isset($months[$ym])) {
                     $months[$ym] = ['items' => [], 'amount' => 0.0, 'contract_number' => $contractNumber];
                 }
-                foreach ($matched as $p) {
-                    $months[$ym]['items'][] = $p;
-                    $months[$ym]['amount'] += (float) ($p['amount'] ?? 0);
-                }
+                $primary = pickPrimaryPaymentForPeriod($matched);
+                $months[$ym]['items'][] = $primary;
+                $months[$ym]['amount'] += (float) ($primary['amount'] ?? 0);
                 if ($contractNumber !== '' && ($months[$ym]['contract_number'] ?? '') === '') {
                     $months[$ym]['contract_number'] = $contractNumber;
                 }
@@ -664,7 +663,7 @@ if (!function_exists('filterPaymentsToValidContractPeriods')) {
  * @param array<string, mixed> $contract
  * @param list<array<string, mixed>> $payments
  * @param array<string, float> $monthlyPricesByKey
- * @return array{total: float, overdue: float, future: float, paid: float, contract_total: float, period_count: int}
+ * @return array{total: float, overdue: float, future: float, due_this_month: float, paid: float, contract_total: float, period_count: int}
  */
 if (!function_exists('computeContractDebtSummary')) {
     function computeContractDebtSummary(array $contract, array $payments, array $monthlyPricesByKey = []): array
@@ -684,8 +683,11 @@ if (!function_exists('computeContractDebtSummary')) {
         $overdue = 0.0;
         $paid = 0.0;
         $contractTotal = 0.0;
+        $dueThisMonth = 0.0;
         $today = date('Y-m-d');
         $periods = ($start !== '' && $end !== '') ? ContractBilling::periods($start, $end) : [];
+        $unpaidPeriodCount = 0;
+        $overduePeriodCount = 0;
 
         foreach ($periods as $period) {
             $pk = $period['key'];
@@ -702,12 +704,20 @@ if (!function_exists('computeContractDebtSummary')) {
                 $paid += $amount;
                 continue;
             }
+            if ($p !== null && ($p['status'] ?? '') === 'cancelled') {
+                $p = null;
+            }
             if ($p !== null && !in_array($p['status'] ?? '', ['pending', 'overdue'], true)) {
                 continue;
             }
             $total += $amount;
+            $unpaidPeriodCount++;
             if ($pk < $today) {
                 $overdue += $amount;
+                $overduePeriodCount++;
+            }
+            if (substr($pk, 0, 7) === substr($today, 0, 7)) {
+                $dueThisMonth += $amount;
             }
         }
 
@@ -715,10 +725,283 @@ if (!function_exists('computeContractDebtSummary')) {
             'total' => $total,
             'overdue' => $overdue,
             'future' => max(0.0, $total - $overdue),
+            'due_this_month' => $dueThisMonth,
             'paid' => $paid,
             'contract_total' => $contractTotal,
             'period_count' => count($periods),
+            'unpaid_period_count' => $unpaidPeriodCount,
+            'overdue_period_count' => $overduePeriodCount,
         ];
+    }
+}
+
+/** Aynı dönem için birden fazla ödeme satırı varsa gösterim için birincil kaydı seçer. */
+if (!function_exists('pickPrimaryPaymentForPeriod')) {
+    function pickPrimaryPaymentForPeriod(array $payments): array
+    {
+        if ($payments === []) {
+            return ['status' => 'pending', 'amount' => 0];
+        }
+        if (count($payments) === 1) {
+            return $payments[0];
+        }
+        foreach ($payments as $p) {
+            if (($p['status'] ?? '') === 'paid') {
+                return $p;
+            }
+        }
+        foreach ($payments as $p) {
+            if (in_array($p['status'] ?? '', ['pending', 'overdue'], true)) {
+                return $p;
+            }
+        }
+        return $payments[0];
+    }
+}
+
+if (!function_exists('loadMonthlyPricesMapForContracts')) {
+    /** @param list<string> $contractIds
+     * @return array<string, array<string, float>>
+     */
+    function loadMonthlyPricesMapForContracts(PDO $pdo, array $contractIds): array
+    {
+        $contractIds = array_values(array_filter(array_unique($contractIds)));
+        if ($contractIds === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($contractIds), '?'));
+        $stmt = $pdo->prepare(
+            "SELECT contract_id, month, price FROM contract_monthly_prices
+             WHERE contract_id IN ($placeholders) AND deleted_at IS NULL"
+        );
+        $stmt->execute($contractIds);
+        $map = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $cid = (string) ($row['contract_id'] ?? '');
+            if ($cid === '') {
+                continue;
+            }
+            $map[$cid][(string) ($row['month'] ?? '')] = (float) ($row['price'] ?? 0);
+        }
+        return $map;
+    }
+}
+
+if (!function_exists('groupPaymentsByContractId')) {
+    /** @param list<array<string, mixed>> $payments
+     * @return array<string, list<array<string, mixed>>>
+     */
+    function groupPaymentsByContractId(array $payments): array
+    {
+        $grouped = [];
+        foreach ($payments as $p) {
+            $cid = (string) ($p['contract_id'] ?? '');
+            if ($cid === '') {
+                continue;
+            }
+            $grouped[$cid][] = $p;
+        }
+        return $grouped;
+    }
+}
+
+if (!function_exists('aggregateDebtSummaries')) {
+    /** @param list<array<string, mixed>> $summaries
+     * @return array{total: float, overdue: float, future: float, due_this_month: float, paid: float, contract_total: float, period_count: int}
+     */
+    function aggregateDebtSummaries(array $summaries): array
+    {
+        $out = [
+            'total' => 0.0,
+            'overdue' => 0.0,
+            'future' => 0.0,
+            'due_this_month' => 0.0,
+            'paid' => 0.0,
+            'contract_total' => 0.0,
+            'period_count' => 0,
+            'unpaid_period_count' => 0,
+            'overdue_period_count' => 0,
+        ];
+        foreach ($summaries as $summary) {
+            foreach (['total', 'overdue', 'future', 'due_this_month', 'paid', 'contract_total'] as $key) {
+                $out[$key] += (float) ($summary[$key] ?? 0);
+            }
+            $out['period_count'] += (int) ($summary['period_count'] ?? 0);
+            $out['unpaid_period_count'] += (int) ($summary['unpaid_period_count'] ?? 0);
+            $out['overdue_period_count'] += (int) ($summary['overdue_period_count'] ?? 0);
+        }
+        return $out;
+    }
+}
+
+/**
+ * Birden fazla sözleşme için dönem bazlı borç özeti (tek seferde toplu hesap).
+ *
+ * @param list<array<string, mixed>> $contracts
+ * @param list<array<string, mixed>>|null $payments
+ * @return array{summary: array{total: float, overdue: float, future: float, due_this_month: float, paid: float, contract_total: float, period_count: int}, by_contract: array<string, array<string, mixed>>}
+ */
+if (!function_exists('computeDebtsForContracts')) {
+    function computeDebtsForContracts(PDO $pdo, array $contracts, ?array $payments = null, ?array $monthlyPricesMap = null): array
+    {
+        $contractIds = array_values(array_filter(array_map(static fn(array $c): string => (string) ($c['id'] ?? ''), $contracts)));
+        if ($contractIds === []) {
+            return ['summary' => aggregateDebtSummaries([]), 'by_contract' => []];
+        }
+        if ($payments === null) {
+            $payments = Payment::findByContractIds($pdo, $contractIds);
+        }
+        $payments = filterPaymentsToValidContractPeriods($payments, $contracts);
+        $paymentsByContract = groupPaymentsByContractId($payments);
+        if ($monthlyPricesMap === null) {
+            $monthlyPricesMap = loadMonthlyPricesMapForContracts($pdo, $contractIds);
+        }
+
+        $byContract = [];
+        $summaries = [];
+        foreach ($contracts as $contract) {
+            $cid = (string) ($contract['id'] ?? '');
+            if ($cid === '') {
+                continue;
+            }
+            $summary = computeContractDebtSummary(
+                $contract,
+                $paymentsByContract[$cid] ?? [],
+                $monthlyPricesMap[$cid] ?? []
+            );
+            $byContract[$cid] = $summary;
+            $summaries[] = $summary;
+        }
+
+        return [
+            'summary' => aggregateDebtSummaries($summaries),
+            'by_contract' => $byContract,
+        ];
+    }
+}
+
+/**
+ * Müşteri borç özeti: tüm aktif sözleşmeler + manuel borçlandırmalar.
+ *
+ * @return array{total: float, overdue: float, future: float, due_this_month: float, paid: float, contract_total: float, period_count: int, by_contract: array<string, array<string, mixed>>}
+ */
+if (!function_exists('computeCustomerDebtSummary')) {
+    function computeCustomerDebtSummary(PDO $pdo, string $customerId, ?string $companyId, bool $normalizePayments = false): array
+    {
+        $contracts = Contract::findByCustomerId($pdo, $customerId, $companyId);
+        if ($normalizePayments) {
+            foreach ($contracts as $contract) {
+                $contractId = (string) ($contract['id'] ?? '');
+                if ($contractId !== '' && empty($contract['terminated_at'])) {
+                    try {
+                        Contract::normalizeContractPayments($pdo, $contractId);
+                        Contract::ensurePaymentsForContract($pdo, $contractId);
+                    } catch (Throwable $e) {
+                        error_log('computeCustomerDebtSummary sync failed for ' . $contractId . ': ' . $e->getMessage());
+                    }
+                }
+            }
+        }
+
+        $debtContracts = array_values(array_filter(
+            $contracts,
+            static fn(array $c): bool => empty($c['terminated_at']) && !empty($c['is_active'])
+        ));
+        $payments = Payment::findByCustomerId($pdo, $customerId, $companyId);
+        $result = computeDebtsForContracts($pdo, $debtContracts, $payments);
+        $summary = $result['summary'];
+        $summary['by_contract'] = $result['by_contract'];
+
+        try {
+            $summary['total'] += CustomerCharge::sumUnpaidByCustomerId($pdo, $customerId, $companyId);
+            $summary['paid'] += CustomerCharge::sumPaidByCustomerId($pdo, $customerId, $companyId);
+        } catch (Throwable $e) {
+            // customer_charges tablosu yoksa yoksay
+        }
+
+        return $summary;
+    }
+}
+
+/**
+ * Şirket (veya global) borç özeti + müşteri bazlı dağılım.
+ *
+ * @return array{
+ *   total: float, overdue: float, future: float, due_this_month: float, paid: float, contract_total: float, period_count: int,
+ *   by_customer: array<string, array{total: float, overdue: float, customer_first_name: string, customer_last_name: string}>
+ * }
+ */
+if (!function_exists('computeCompanyDebtSummary')) {
+    function computeCompanyDebtSummary(PDO $pdo, ?string $companyId): array
+    {
+        $contracts = Contract::findForDebtSummary($pdo, $companyId);
+        $result = computeDebtsForContracts($pdo, $contracts);
+        $summary = $result['summary'];
+        $byCustomer = [];
+
+        foreach ($contracts as $contract) {
+            $customerId = (string) ($contract['customer_id'] ?? '');
+            $contractId = (string) ($contract['id'] ?? '');
+            if ($customerId === '' || $contractId === '') {
+                continue;
+            }
+            $contractSummary = $result['by_contract'][$contractId] ?? null;
+            if ($contractSummary === null) {
+                continue;
+            }
+            if (!isset($byCustomer[$customerId])) {
+                $byCustomer[$customerId] = [
+                    'total' => 0.0,
+                    'overdue' => 0.0,
+                    'customer_first_name' => (string) ($contract['customer_first_name'] ?? ''),
+                    'customer_last_name' => (string) ($contract['customer_last_name'] ?? ''),
+                ];
+            }
+            $byCustomer[$customerId]['total'] += (float) ($contractSummary['total'] ?? 0);
+            $byCustomer[$customerId]['overdue'] += (float) ($contractSummary['overdue'] ?? 0);
+        }
+
+        try {
+            $chargeSql = 'SELECT cc.customer_id, cu.first_name, cu.last_name, COALESCE(SUM(cc.amount), 0) AS charge_total
+                FROM customer_charges cc
+                INNER JOIN customers cu ON cu.id = cc.customer_id AND cu.deleted_at IS NULL
+                WHERE cc.deleted_at IS NULL AND cc.status = \'pending\'';
+            $params = [];
+            if ($companyId) {
+                $chargeSql .= ' AND cc.company_id = ?';
+                $params[] = $companyId;
+            }
+            $chargeSql .= ' GROUP BY cc.customer_id, cu.first_name, cu.last_name';
+            $stmt = $pdo->prepare($chargeSql);
+            $stmt->execute($params);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $customerId = (string) ($row['customer_id'] ?? '');
+                if ($customerId === '') {
+                    continue;
+                }
+                $chargeTotal = (float) ($row['charge_total'] ?? 0);
+                $summary['total'] += $chargeTotal;
+                if (!isset($byCustomer[$customerId])) {
+                    $byCustomer[$customerId] = [
+                        'total' => 0.0,
+                        'overdue' => 0.0,
+                        'customer_first_name' => (string) ($row['first_name'] ?? ''),
+                        'customer_last_name' => (string) ($row['last_name'] ?? ''),
+                    ];
+                }
+                $byCustomer[$customerId]['total'] += $chargeTotal;
+            }
+        } catch (Throwable $e) {
+            // customer_charges tablosu yoksa yoksay
+        }
+
+        uasort($byCustomer, static fn(array $a, array $b): int => ($b['total'] <=> $a['total']) ?: strcasecmp(
+            trim(($a['customer_first_name'] ?? '') . ' ' . ($a['customer_last_name'] ?? '')),
+            trim(($b['customer_first_name'] ?? '') . ' ' . ($b['customer_last_name'] ?? ''))
+        ));
+
+        $summary['by_customer'] = $byCustomer;
+        return $summary;
     }
 }
 

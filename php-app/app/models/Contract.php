@@ -788,6 +788,44 @@ class Contract
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Borç hesabı için aktif sözleşmeler (dönem bazlı toplam). */
+    public static function findForDebtSummary(PDO $pdo, ?string $companyId): array
+    {
+        $sql = 'SELECT c.*, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
+                FROM contracts c
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE c.deleted_at IS NULL AND c.is_active = 1 AND c.terminated_at IS NULL ';
+        $params = [];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY c.start_date DESC ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** @param list<string> $ids */
+    public static function findByIds(PDO $pdo, array $ids): array
+    {
+        $ids = array_values(array_filter(array_unique($ids)));
+        if ($ids === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $pdo->prepare(
+            "SELECT c.*, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name
+             FROM contracts c
+             INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+             WHERE c.id IN ($placeholders) AND c.deleted_at IS NULL"
+        );
+        $stmt->execute($ids);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     private static function generateContractNumber(PDO $pdo): string
     {
         $y = date('Y');

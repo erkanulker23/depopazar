@@ -35,6 +35,11 @@ class PaymentsController
             );
         }
         $payments = array_values($payments);
+        $contractIds = array_values(array_unique(array_filter(array_map(static fn(array $p): string => (string) ($p['contract_id'] ?? ''), $payments))));
+        if ($contractIds !== []) {
+            $paymentContracts = Contract::findByIds($this->pdo, $contractIds);
+            $payments = filterPaymentsToValidContractPeriods($payments, $paymentContracts);
+        }
         $unpaid = array_filter($payments, fn($p) => paymentIsCollectible($p));
         $unpaidPaymentsByCustomer = [];
         foreach ($unpaid as $p) {

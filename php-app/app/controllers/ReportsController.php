@@ -28,26 +28,69 @@ class ReportsController
         }
 
         if ($companyId) {
-            $totalUnpaid = Payment::sumUnpaidByCompany($this->pdo, $companyId);
-            try {
-                $totalUnpaid += CustomerCharge::sumUnpaidByCompany($this->pdo, $companyId);
-            } catch (Throwable $e) {
-            }
+            $companyDebtSummary = computeCompanyDebtSummary($this->pdo, $companyId);
+            $totalUnpaid = $companyDebtSummary['total'];
             $paidThisMonth = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
             $activeContracts = Contract::countActiveByCompany($this->pdo, $companyId);
             $pendingCount = Payment::countByStatus($this->pdo, $companyId, 'pending');
             $overdueCount = Payment::countOverdueByDueDate($this->pdo, $companyId);
-        } else {
-            $totalUnpaid = Payment::sumUnpaidGlobal($this->pdo);
-            try {
-                $stmt = $this->pdo->query('SELECT COALESCE(SUM(amount), 0) FROM customer_charges WHERE deleted_at IS NULL AND status = \'pending\'');
-                $totalUnpaid += (float) $stmt->fetchColumn();
-            } catch (Throwable $e) {
+            $overdueCustomers = [];
+            foreach (array_slice($companyDebtSummary['by_customer'] ?? [], 0, 50, true) as $customerId => $row) {
+                if ((float) ($row['overdue'] ?? 0) <= 0.009) {
+                    continue;
+                }
+                $overdueCustomers[] = [
+                    'id' => $customerId,
+                    'first_name' => $row['customer_first_name'] ?? '',
+                    'last_name' => $row['customer_last_name'] ?? '',
+                    'total_debt' => (float) ($row['overdue'] ?? 0),
+                ];
             }
+            $pendingCustomers = [];
+            foreach (array_slice($companyDebtSummary['by_customer'] ?? [], 0, 50, true) as $customerId => $row) {
+                $pendingTotal = (float) ($row['total'] ?? 0) - (float) ($row['overdue'] ?? 0);
+                if ($pendingTotal <= 0.009) {
+                    continue;
+                }
+                $pendingCustomers[] = [
+                    'id' => $customerId,
+                    'first_name' => $row['customer_first_name'] ?? '',
+                    'last_name' => $row['customer_last_name'] ?? '',
+                    'total_debt' => $pendingTotal,
+                ];
+            }
+        } else {
+            $companyDebtSummary = computeCompanyDebtSummary($this->pdo, null);
+            $totalUnpaid = $companyDebtSummary['total'];
             $paidThisMonth = Payment::sumPaidThisMonthGlobal($this->pdo);
             $activeContracts = Contract::countActiveGlobal($this->pdo);
             $pendingCount = Payment::countByStatusGlobal($this->pdo, 'pending');
             $overdueCount = Payment::countOverdueByDueDateGlobal($this->pdo);
+            $overdueCustomers = [];
+            foreach (array_slice($companyDebtSummary['by_customer'] ?? [], 0, 50, true) as $customerId => $row) {
+                if ((float) ($row['overdue'] ?? 0) <= 0.009) {
+                    continue;
+                }
+                $overdueCustomers[] = [
+                    'id' => $customerId,
+                    'first_name' => $row['customer_first_name'] ?? '',
+                    'last_name' => $row['customer_last_name'] ?? '',
+                    'total_debt' => (float) ($row['overdue'] ?? 0),
+                ];
+            }
+            $pendingCustomers = [];
+            foreach (array_slice($companyDebtSummary['by_customer'] ?? [], 0, 50, true) as $customerId => $row) {
+                $pendingTotal = (float) ($row['total'] ?? 0) - (float) ($row['overdue'] ?? 0);
+                if ($pendingTotal <= 0.009) {
+                    continue;
+                }
+                $pendingCustomers[] = [
+                    'id' => $customerId,
+                    'first_name' => $row['customer_first_name'] ?? '',
+                    'last_name' => $row['customer_last_name'] ?? '',
+                    'total_debt' => $pendingTotal,
+                ];
+            }
         }
         $paidInYear = $this->sumPaidInYear($companyId, $year);
         $occupancy = $this->getOccupancy($companyId);
@@ -55,8 +98,6 @@ class ReportsController
         $paymentBreakdown = $this->getPaymentBreakdownByMethodInPeriod($companyId, $startDate, $endDate);
         $paidPayments = Payment::findPaidPaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate);
         $paidPeriodTotal = array_sum(array_map(static fn($r) => (float) ($r['amount'] ?? 0), $paidPayments));
-        $pendingCustomers = Payment::findCustomersWithPendingNotOverdue($this->pdo, $companyId);
-        $overdueCustomers = Payment::findCustomersWithOverduePayments($this->pdo, $companyId);
         $exportQuery = array_filter([
             'period_mode' => $periodMode,
             'year' => $periodMode === 'month' ? $year : null,

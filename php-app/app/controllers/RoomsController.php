@@ -98,8 +98,7 @@ class RoomsController
         }
         $contracts = [];
         $stmt = $this->pdo->prepare(
-            'SELECT c.*, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.id AS customer_id,
-             (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.contract_id = c.id AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\')) AS debt
+            'SELECT c.*, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.id AS customer_id
              FROM contracts c
              INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
              WHERE c.room_id = ? AND c.deleted_at IS NULL
@@ -107,6 +106,12 @@ class RoomsController
         );
         $stmt->execute([$id]);
         $contracts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $debtByContract = computeDebtsForContracts($this->pdo, $contracts)['by_contract'];
+        foreach ($contracts as &$contractRow) {
+            $contractId = (string) ($contractRow['id'] ?? '');
+            $contractRow['debt'] = (float) (($debtByContract[$contractId]['total'] ?? 0));
+        }
+        unset($contractRow);
         require __DIR__ . '/../../views/rooms/detail.php';
     }
 

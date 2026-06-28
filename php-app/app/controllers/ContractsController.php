@@ -69,34 +69,25 @@ class ContractsController
         require __DIR__ . '/../../views/contracts/index.php';
     }
 
-    /** Birden fazla sözleşme için borç sayılarını tek sorguda alır (N+1 önleme) */
+    /** Birden fazla sözleşme için dönem bazlı borç sayıları (liste rozetleri). */
     private function getContractDebtCounts(array $contracts): array
     {
         if (empty($contracts)) {
             return [];
         }
-        $ids = array_map(fn($c) => $c['id'] ?? '', array_filter($contracts, fn($c) => !empty($c['id'])));
-        if (empty($ids)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $this->pdo->prepare(
-            "SELECT contract_id,
-                SUM(CASE WHEN status IN ('pending','overdue') AND due_date IS NOT NULL AND DATE(due_date) < CURDATE() THEN 1 ELSE 0 END) AS overdue_cnt,
-                SUM(CASE WHEN status IN ('pending','overdue') AND (due_date IS NULL OR DATE(due_date) >= CURDATE()) THEN 1 ELSE 0 END) AS pending_cnt
-             FROM payments WHERE contract_id IN ($placeholders) AND deleted_at IS NULL GROUP BY contract_id"
-        );
-        $stmt->execute($ids);
-        $result = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $result[$row['contract_id']] = ['overdue' => (int) ($row['overdue_cnt'] ?? 0), 'pending' => (int) ($row['pending_cnt'] ?? 0)];
-        }
-        foreach ($ids as $id) {
-            if (!isset($result[$id])) {
-                $result[$id] = ['overdue' => 0, 'pending' => 0];
+        $result = computeDebtsForContracts($this->pdo, $contracts)['by_contract'];
+        $counts = [];
+        foreach ($contracts as $contract) {
+            $id = (string) ($contract['id'] ?? '');
+            if ($id === '') {
+                continue;
             }
+            $summary = $result[$id] ?? [];
+            $overdueCnt = (int) ($summary['overdue_period_count'] ?? 0);
+            $pendingCnt = max(0, (int) ($summary['unpaid_period_count'] ?? 0) - $overdueCnt);
+            $counts[$id] = ['overdue' => $overdueCnt, 'pending' => $pendingCnt];
         }
-        return $result;
+        return $counts;
     }
 
     public function create(): void

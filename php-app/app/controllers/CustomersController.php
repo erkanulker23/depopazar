@@ -137,16 +137,11 @@ class CustomersController
         $payments = filterPaymentsToValidContractPeriods($payments, $contracts);
         $collectiblePayments = Payment::findCollectibleByCustomerId($this->pdo, $id, $companyId);
         $collectiblePayments = filterPaymentsToValidContractPeriods($collectiblePayments, $contracts);
-        $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
-        $debtOverdue = Payment::sumUnpaidOverdueByCustomerId($this->pdo, $id, $companyId);
-        $debtDueThisMonth = Payment::sumUnpaidDueThisMonthByCustomerId($this->pdo, $id, $companyId);
-        $totalCollected = Payment::sumPaidByCustomerId($this->pdo, $id, $companyId);
-        try {
-            $debt += CustomerCharge::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
-            $totalCollected += CustomerCharge::sumPaidByCustomerId($this->pdo, $id, $companyId);
-        } catch (Throwable $e) {
-            // customer_charges tablosu yoksa yoksay
-        }
+        $customerDebtSummary = computeCustomerDebtSummary($this->pdo, $id, $companyId, false);
+        $debt = $customerDebtSummary['total'];
+        $debtOverdue = $customerDebtSummary['overdue'];
+        $debtDueThisMonth = $customerDebtSummary['due_this_month'];
+        $totalCollected = $customerDebtSummary['paid'];
         $charges = [];
         try {
             $charges = CustomerCharge::findByCustomerId($this->pdo, $id, $companyId);
@@ -801,7 +796,9 @@ class CustomersController
         }
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
-        $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
+        $payments = filterPaymentsToValidContractPeriods($payments, $contracts);
+        $customerDebtSummary = computeCustomerDebtSummary($this->pdo, $id, $companyId, false);
+        $debt = $customerDebtSummary['total'];
         $company = !empty($customer['company_id']) ? Company::findOne($this->pdo, $customer['company_id']) : null;
         require __DIR__ . '/../../views/customers/print.php';
     }
@@ -829,9 +826,11 @@ class CustomersController
         }
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
-        $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
-        $debtOverdue = Payment::sumUnpaidOverdueByCustomerId($this->pdo, $id, $companyId);
-        $debtDueThisMonth = Payment::sumUnpaidDueThisMonthByCustomerId($this->pdo, $id, $companyId);
+        $payments = filterPaymentsToValidContractPeriods($payments, $contracts);
+        $customerDebtSummary = computeCustomerDebtSummary($this->pdo, $id, $companyId, false);
+        $debt = $customerDebtSummary['total'];
+        $debtOverdue = $customerDebtSummary['overdue'];
+        $debtDueThisMonth = $customerDebtSummary['due_this_month'];
         require __DIR__ . '/../../views/customers/_row_fragment.php';
     }
 

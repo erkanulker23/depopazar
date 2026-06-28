@@ -424,6 +424,24 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** @param list<string> $contractIds */
+    public static function findByContractIds(PDO $pdo, array $contractIds): array
+    {
+        $contractIds = array_values(array_filter(array_unique($contractIds)));
+        if ($contractIds === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($contractIds), '?'));
+        $stmt = $pdo->prepare(
+            "SELECT p.*
+             FROM payments p
+             WHERE p.contract_id IN ($placeholders) AND p.deleted_at IS NULL
+             ORDER BY p.due_date ASC"
+        );
+        $stmt->execute($contractIds);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /** Sözleşme: ödenmemiş toplam borç (vadesi gelmemiş taksitler dahil) */
     public static function sumUnpaidByContractId(PDO $pdo, string $contractId): float
     {

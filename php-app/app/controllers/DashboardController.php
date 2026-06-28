@@ -28,6 +28,7 @@ class DashboardController
         $debtOverdue = 0.0;      // vadesi geçmiş borç (tutar)
         $debtDueThisMonth = 0.0; // vadesi gelmiş borç – bu ay (tutar)
         $totalDebt = 0.0;        // toplam borç (tüm ödenmemiş)
+        $companyDebtSummary = null;
 
         if ($companyId) {
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
@@ -43,13 +44,10 @@ class DashboardController
             $monthlyRevenue = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
             $pendingPayments = Payment::countByStatus($this->pdo, $companyId, 'pending');
             $overduePayments = Payment::countOverdueByDueDate($this->pdo, $companyId);
-            $debtOverdue = Payment::sumOverdueByCompany($this->pdo, $companyId);
-            $debtDueThisMonth = Payment::sumDueThisMonthByCompany($this->pdo, $companyId);
-            $totalDebt = Payment::sumUnpaidByCompany($this->pdo, $companyId);
-            try {
-                $totalDebt += CustomerCharge::sumUnpaidByCompany($this->pdo, $companyId);
-            } catch (Throwable $e) {
-            }
+            $companyDebtSummary = computeCompanyDebtSummary($this->pdo, $companyId);
+            $debtOverdue = $companyDebtSummary['overdue'];
+            $debtDueThisMonth = $companyDebtSummary['due_this_month'];
+            $totalDebt = $companyDebtSummary['total'];
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehousesCount = Warehouse::countAll($this->pdo);
             $roomStatusCounts = Room::statusCounts($this->pdo, null);
@@ -63,14 +61,10 @@ class DashboardController
             $monthlyRevenue = Payment::sumPaidThisMonthGlobal($this->pdo);
             $pendingPayments = Payment::countByStatusGlobal($this->pdo, 'pending');
             $overduePayments = Payment::countOverdueByDueDateGlobal($this->pdo);
-            $debtOverdue = Payment::sumOverdueGlobal($this->pdo);
-            $debtDueThisMonth = Payment::sumDueThisMonthGlobal($this->pdo);
-            $totalDebt = Payment::sumUnpaidGlobal($this->pdo);
-            try {
-                $stmt = $this->pdo->query('SELECT COALESCE(SUM(amount), 0) FROM customer_charges WHERE deleted_at IS NULL AND status = \'pending\'');
-                $totalDebt += (float) $stmt->fetchColumn();
-            } catch (Throwable $e) {
-            }
+            $companyDebtSummary = computeCompanyDebtSummary($this->pdo, null);
+            $debtOverdue = $companyDebtSummary['overdue'];
+            $debtDueThisMonth = $companyDebtSummary['due_this_month'];
+            $totalDebt = $companyDebtSummary['total'];
         }
 
         $upcomingPayments = [];
@@ -97,7 +91,21 @@ class DashboardController
             $cid = $companyId;
             $upcomingPayments = Payment::findUpcoming($this->pdo, $cid, 10);
             $expiringContracts = Contract::findExpiringSoon($this->pdo, $cid, 30);
-            $customersWithUnpaid = Payment::findCustomersWithUnpaidPayments($this->pdo, $cid, 50);
+            if ($companyDebtSummary === null) {
+                $companyDebtSummary = computeCompanyDebtSummary($this->pdo, $cid);
+            }
+            foreach (array_slice($companyDebtSummary['by_customer'] ?? [], 0, 50, true) as $customerId => $row) {
+                if ((float) ($row['total'] ?? 0) <= 0.009) {
+                    continue;
+                }
+                $customersWithUnpaid[] = [
+                    'customer_id' => $customerId,
+                    'customer_first_name' => $row['customer_first_name'] ?? '',
+                    'customer_last_name' => $row['customer_last_name'] ?? '',
+                    'total_debt' => (float) ($row['total'] ?? 0),
+                    'payment_count' => 0,
+                ];
+            }
             $monthOverdueList = Payment::findOverdueDueThisMonth($this->pdo, $cid, 12);
             $monthDueList = Payment::findDueThisMonth($this->pdo, $cid, 12);
             $monthPaidList = Payment::findPaidThisMonth($this->pdo, $cid, 8);
