@@ -73,7 +73,7 @@ ob_start();
 <?php endif; ?>
 
 <form id="bulkDeleteForm" method="post" action="/musteriler/toplu-sil<?= $filterQuery !== '' ? '?' . $filterQuery : '' ?>" onsubmit="var n=document.querySelectorAll('.customer-cb:checked').length;if(!n)return false;return confirm(deleteConfirmMsg('müşteri',n));" class="hidden" aria-hidden="true"></form>
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($customers)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz müşteri kaydı yok<?= $filterQuery !== '' ? ' veya filtreye uygun müşteri bulunamadı.' : '.' ?></div>
     <?php else: ?>

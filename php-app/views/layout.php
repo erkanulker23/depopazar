@@ -106,7 +106,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             --safe-bottom: env(safe-area-inset-bottom);
             --safe-left: env(safe-area-inset-left);
             --safe-right: env(safe-area-inset-right);
-            --mobile-nav-height: calc(4.25rem + var(--safe-bottom));
+            --mobile-nav-height: calc(5rem + var(--safe-bottom));
         }
         html, body, input, select, textarea, button { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
@@ -212,18 +212,28 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         .main-content-wrap { padding-bottom: env(safe-area-inset-bottom, 0); }
         @media (max-width: 767px) {
             html { scroll-padding-bottom: var(--mobile-nav-height); }
+            body {
+                overflow-x: hidden;
+                max-width: 100vw;
+            }
+            #appShell,
+            body > .flex.min-h-screen {
+                display: block;
+                min-height: 0 !important;
+                width: 100%;
+            }
             .main-shell {
                 flex: none !important;
                 min-height: 0 !important;
                 width: 100%;
-            }
-            body > .flex.min-h-screen {
-                min-height: 0;
-                align-items: flex-start;
+                display: block;
             }
             .main-content-wrap {
                 flex: none !important;
                 padding-bottom: var(--mobile-nav-height) !important;
+            }
+            .mobile-card.overflow-visible {
+                overflow: hidden;
             }
             /* Alt menü yüksekliği kadar boşluk — fazla padding kaldırıldı */
             .page-header-actions {
@@ -432,13 +442,57 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         }
         @media (max-width: 767px) {
             #mobileBottomNav {
-                position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-                background: rgba(255,255,255,.95); backdrop-filter: blur(12px);
+                position: fixed !important;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                max-width: 100vw;
+                z-index: 50;
+                margin: 0;
+                padding-top: 1.25rem;
+                background: rgba(255,255,255,.95);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
                 border-top: 1px solid rgb(229 231 235);
                 box-shadow: 0 -4px 24px rgba(0,0,0,.06);
+                transform: translate3d(0, 0, 0);
+                -webkit-transform: translate3d(0, 0, 0);
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+            }
+            #mobileBottomNav .mobile-nav-bar {
+                position: relative;
+                display: flex;
+                align-items: flex-end;
+                justify-content: space-around;
+                width: 100%;
+                min-height: 3.5rem;
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            #mobileBottomNav .mobile-nav-fab {
+                position: absolute;
+                left: 50%;
+                top: 0;
+                transform: translate(-50%, -38%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 3.5rem;
+                height: 3.5rem;
+                border-radius: 1rem;
+                background: #059669;
+                color: #fff;
+                box-shadow: 0 10px 25px rgba(5, 150, 105, 0.35);
+                flex-shrink: 0;
+            }
+            #mobileBottomNav .mobile-nav-fab:active {
+                transform: translate(-50%, -38%) scale(0.95);
             }
             .dark #mobileBottomNav {
-                background: rgba(26,22,20,.98); border-top-color: rgb(61 52 46);
+                background: rgba(26,22,20,.98);
+                border-top-color: rgb(61 52 46);
                 box-shadow: 0 -4px 24px rgba(0,0,0,.35);
             }
         }
@@ -530,7 +584,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 antialiased" style="touch-action: manipulation;" data-auth="<?= ($user && !empty($user['id'])) ? '1' : '0' ?>" data-app-name="<?= htmlspecialchars($projectName) ?>">
-    <div class="flex min-h-screen">
+    <div id="appShell" class="flex min-h-screen">
         <div id="sidebarOverlay" class="md:hidden fixed inset-0 bg-black/50 z-30 hidden transition-opacity" aria-hidden="true"></div>
         <aside id="sidebar" class="sidebar-mobile fixed md:static inset-y-0 left-0 z-40 w-72 flex flex-col pt-6 bg-white dark:bg-[#241e1b] border-r border-gray-200/50 dark:border-[#3d342e] overflow-y-auto overflow-x-hidden">
             <div class="flex items-center flex-shrink-0 px-6 mb-6">
@@ -646,8 +700,10 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 <?= $content ?? '' ?>
             </div>
         </main>
+    </div>
 
-        <nav id="mobileBottomNav" class="md:hidden flex items-center justify-around pt-2 px-2" aria-label="Hızlı erişim">
+    <nav id="mobileBottomNav" class="md:hidden" aria-label="Hızlı erişim">
+        <div class="mobile-nav-bar">
             <a href="/genel-bakis" class="flex flex-col items-center justify-center flex-1 min-h-[3.5rem] gap-0.5 <?= $currentPath === '/genel-bakis' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500' ?>">
                 <i class="bi bi-house text-xl"></i>
                 <span class="text-[9px] font-bold">Ana Sayfa</span>
@@ -656,7 +712,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 <i class="bi bi-people text-xl"></i>
                 <span class="text-[9px] font-bold">Müşteriler</span>
             </a>
-            <a href="/girisler?newSale=1" class="relative -mt-6 flex-shrink-0 flex items-center justify-center w-14 h-14 bg-emerald-600 rounded-2xl text-white shadow-xl shadow-emerald-500/30 active:scale-95 transition-transform" aria-label="Yeni depo girişi">
+            <a href="/girisler?newSale=1" class="mobile-nav-fab" aria-label="Yeni depo girişi">
                 <i class="bi bi-plus-lg text-2xl"></i>
             </a>
             <a href="/odemeler" class="flex flex-col items-center justify-center flex-1 min-h-[3.5rem] gap-0.5 <?= (strpos($currentPath, '/odemeler') === 0) ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500' ?>">
@@ -667,8 +723,8 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 <i class="bi bi-list text-xl"></i>
                 <span class="text-[9px] font-bold">Menü</span>
             </button>
-        </nav>
-    </div>
+        </div>
+    </nav>
     <script>
     (function(){
         var t=document.getElementById('menuToggle'), s=document.getElementById('sidebar'), o=document.getElementById('sidebarOverlay');
