@@ -6,6 +6,11 @@ $paidMonths = $paidMonths ?? [];
 $warehouses = $warehouses ?? [];
 $contractRoomsJson = $contractRoomsJson ?? [];
 $monthlyPriceDisplay = number_format((float) ($contract['monthly_price'] ?? 0), 2, ',', '.');
+$owners = $owners ?? [];
+$personnel = $personnel ?? [];
+$contractPersonnelIds = $contractPersonnelIds ?? [];
+$jobTypeLabels = $jobTypeLabels ?? Personnel::jobTypeLabels();
+$soldByUserId = $contract['sold_by_user_id'] ?? '';
 ob_start();
 ?>
 <div class="mb-6">
@@ -98,6 +103,32 @@ ob_start();
                 <input type="text" name="vehicle_plate" value="<?= htmlspecialchars($contract['vehicle_plate'] ?? '') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700 dark:text-white">
             </div>
         </div>
+        <?php if (!empty($owners)): ?>
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-person-badge"></i> Satışı Yapan Kişi (Depo sahibi)</h4>
+            <select name="sold_by_user_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                <option value="">Seçin</option>
+                <?php foreach ($owners as $o): ?>
+                    <?php $selected = $soldByUserId !== '' && $soldByUserId === ($o['id'] ?? ''); ?>
+                    <option value="<?= htmlspecialchars($o['id']) ?>" <?= $selected ? 'selected' : '' ?>><?= htmlspecialchars(trim(($o['first_name'] ?? '') . ' ' . ($o['last_name'] ?? ''))) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($personnel)): ?>
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-people"></i> Saha Personeli</h4>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Hizmet veren saha personelini seçin (çoklu seçim).</p>
+            <div class="flex flex-wrap gap-2">
+                <?php foreach ($personnel as $s):
+                    $person = $s;
+                    $checked = in_array($s['id'] ?? '', $contractPersonnelIds, true);
+                    $style = 'pill';
+                    require __DIR__ . '/../partials/personnel_checkbox_row.php';
+                endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Giriş Yapılan Ürün Durumu <span class="text-red-500">*</span></label>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">

@@ -199,9 +199,13 @@ class Contract
 
     public static function update(PDO $pdo, string $id, array $data): void
     {
+        $soldBy = $data['sold_by_user_id'] ?? null;
+        if ($soldBy === '') {
+            $soldBy = null;
+        }
         if (self::hasStoredItemsColumns($pdo)) {
             $stmt = $pdo->prepare(
-                'UPDATE contracts SET start_date = ?, end_date = ?, monthly_price = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ?, stored_items_condition = ?, stored_items_condition_note = ? WHERE id = ? AND deleted_at IS NULL'
+                'UPDATE contracts SET start_date = ?, end_date = ?, monthly_price = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ?, stored_items_condition = ?, stored_items_condition_note = ?, sold_by_user_id = ? WHERE id = ? AND deleted_at IS NULL'
             );
             $stmt->execute([
                 $data['start_date'] ?? null,
@@ -216,12 +220,13 @@ class Contract
                 $data['notes'] ?? null,
                 $data['stored_items_condition'] ?? null,
                 $data['stored_items_condition_note'] ?? null,
+                $soldBy,
                 $id,
             ]);
             return;
         }
         $stmt = $pdo->prepare(
-            'UPDATE contracts SET start_date = ?, end_date = ?, monthly_price = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE contracts SET start_date = ?, end_date = ?, monthly_price = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ?, sold_by_user_id = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
             $data['start_date'] ?? null,
@@ -234,8 +239,39 @@ class Contract
             $data['driver_phone'] ?? null,
             $data['vehicle_plate'] ?? null,
             $data['notes'] ?? null,
+            $soldBy,
             $id,
         ]);
+    }
+
+    /** @return list<string> */
+    public static function getPersonnelIdsByContractId(PDO $pdo, string $contractId): array
+    {
+        if (!Personnel::tableExists($pdo)) {
+            return [];
+        }
+        $stmt = $pdo->prepare(
+            'SELECT personnel_id FROM contract_personnel WHERE contract_id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([$contractId]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /** @param list<string> $personnelIds */
+    public static function syncPersonnel(PDO $pdo, string $contractId, array $personnelIds): void
+    {
+        if (!Personnel::tableExists($pdo)) {
+            return;
+        }
+        $pdo->prepare('DELETE FROM contract_personnel WHERE contract_id = ?')->execute([$contractId]);
+        $stmt = $pdo->prepare('INSERT INTO contract_personnel (id, contract_id, personnel_id) VALUES (?, ?, ?)');
+        foreach ($personnelIds as $pid) {
+            $pid = trim((string) $pid);
+            if ($pid === '') {
+                continue;
+            }
+            $stmt->execute([self::uuid(), $contractId, $pid]);
+        }
     }
 
     public static function setContractPdfUrl(PDO $pdo, string $id, ?string $url): void

@@ -406,17 +406,10 @@ class ContractsController
             throw new Exception('Sözleşme kaydı oluşturulamadı.');
         }
         $contractCompanyId = $room['company_id'] ?? $companyId;
-        if (Personnel::tableExists($this->pdo) && $contractCompanyId) {
+        if ($contractCompanyId && Personnel::tableExists($this->pdo)) {
             $personnelIds = isset($post['personnel_ids']) && is_array($post['personnel_ids']) ? array_filter($post['personnel_ids']) : [];
             $personnelIds = Personnel::filterIdsForCompany($this->pdo, $personnelIds, $contractCompanyId);
-            $stmtCp = $this->pdo->prepare('INSERT INTO contract_personnel (id, contract_id, personnel_id) VALUES (?, ?, ?)');
-            foreach ($personnelIds as $pid) {
-                $pid = trim($pid);
-                if ($pid === '') {
-                    continue;
-                }
-                $stmtCp->execute([self::uuid(), $contractId, $pid]);
-            }
+            Contract::syncPersonnel($this->pdo, $contractId, $personnelIds);
         }
         $startDate = substr((string) ($sharedFields['start_date'] ?? ''), 0, 10);
         $endDate = substr((string) ($sharedFields['end_date'] ?? ''), 0, 10);
@@ -505,6 +498,12 @@ class ContractsController
                 'status' => $r['status'] ?? '',
             ];
         }
+        $staffOptions = $this->loadContractStaffOptions($contractCompanyId);
+        $owners = $staffOptions['owners'];
+        $personnel = $staffOptions['personnel'];
+        $owners = $this->ensureSoldByInOwnersList($owners, $contract['sold_by_user_id'] ?? null);
+        $contractPersonnelIds = Contract::getPersonnelIdsByContractId($this->pdo, $id);
+        $jobTypeLabels = Personnel::jobTypeLabels();
         require __DIR__ . '/../../views/contracts/edit.php';
     }
 
@@ -573,7 +572,16 @@ class ContractsController
                 'notes' => trim($_POST['notes'] ?? '') ?: null,
                 'stored_items_condition' => $storedCondition,
                 'stored_items_condition_note' => $storedConditionNote,
+                'sold_by_user_id' => trim($_POST['sold_by_user_id'] ?? '') ?: null,
             ]);
+            $contractCompanyId = $contract['company_id'] ?? $companyId;
+            if ($contractCompanyId) {
+                $personnelIds = isset($_POST['personnel_ids']) && is_array($_POST['personnel_ids'])
+                    ? array_filter($_POST['personnel_ids'])
+                    : [];
+                $personnelIds = Personnel::filterIdsForCompany($this->pdo, $personnelIds, $contractCompanyId);
+                Contract::syncPersonnel($this->pdo, $id, $personnelIds);
+            }
             $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
             $paidMonths = Payment::getPaidPeriodKeysByContractId($this->pdo, $id);
             $paidAmountsByMonth = Payment::getPaidAmountsByPeriodForContract($this->pdo, $id);
@@ -1272,6 +1280,47 @@ class ContractsController
         }
         $label = $type === 'ofisten' ? 'Ofisten' : 'Evden';
         return $label . ': ' . $detail;
+    }
+
+    /** @return array{owners: array<int, array<string, mixed>>, personnel: array<int, array<string, mixed>>} */
+    private function loadContractStaffOptions(?string $companyId): array
+    {
+        $personnel = [];
+        $owners = [];
+        if ($companyId) {
+            if (Personnel::tableExists($this->pdo)) {
+                $personnel = Personnel::findActiveForCompany($this->pdo, $companyId);
+            }
+            $stmt = $this->pdo->prepare(
+                "SELECT id, first_name, last_name FROM users WHERE company_id = ? AND deleted_at IS NULL AND role = 'company_owner' AND is_active = 1 ORDER BY first_name, last_name"
+            );
+            $stmt->execute([$companyId]);
+            $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        return ['owners' => $owners, 'personnel' => $personnel];
+    }
+
+    /** Kayıtlı satış yapan listede yoksa (pasif vb.) seçeneklere ekle */
+    private function ensureSoldByInOwnersList(array $owners, ?string $soldByUserId): array
+    {
+        $soldByUserId = trim((string) $soldByUserId);
+        if ($soldByUserId === '') {
+            return $owners;
+        }
+        foreach ($owners as $owner) {
+            if (($owner['id'] ?? '') === $soldByUserId) {
+                return $owners;
+            }
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT id, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1'
+        );
+        $stmt->execute([$soldByUserId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $owners[] = $user;
+        }
+        return $owners;
     }
 
     private static function uuid(): string
