@@ -898,19 +898,20 @@ class ContractsController
         $pageTitle = 'Sözleşme: ' . ($contract['contract_number'] ?? $id);
         $items = Item::findByContractId($this->pdo, $id);
         $fromCustomer = ($_GET['fromCustomer'] ?? '') === '1';
-        $contractDebtTotal = Payment::sumUnpaidByContractId($this->pdo, $id);
-        $contractDebtOverdue = Payment::sumUnpaidOverdueByContractId($this->pdo, $id);
-        $contractPaidTotal = Payment::sumPaidByContractId($this->pdo, $id);
-        $contractTotalValue = $contractDebtTotal + $contractPaidTotal;
-        if ($contractTotalValue <= 0 && !empty($monthlyPrices)) {
-            foreach ($monthlyPrices as $mp) {
-                $contractTotalValue += (float) ($mp['price'] ?? 0);
+        $monthlyPricesByKey = [];
+        foreach ($monthlyPrices as $mp) {
+            $key = $mp['month_key'] ?? $mp['month'] ?? '';
+            if ($key !== '') {
+                $monthlyPricesByKey[$key] = (float) ($mp['price'] ?? 0);
             }
         }
-        $contractDebtFuture = max(0.0, $contractDebtTotal - $contractDebtOverdue);
-        $contractStartYmd = substr((string) ($contract['start_date'] ?? ''), 0, 10);
-        $contractEndYmd = substr((string) ($contract['end_date'] ?? ''), 0, 10);
-        $contractPeriodCount = count(ContractBilling::periods($contractStartYmd, $contractEndYmd));
+        $contractDebtSummary = computeContractDebtSummary($contract, $payments, $monthlyPricesByKey);
+        $contractDebtTotal = $contractDebtSummary['total'];
+        $contractDebtOverdue = $contractDebtSummary['overdue'];
+        $contractDebtFuture = $contractDebtSummary['future'];
+        $contractPaidTotal = $contractDebtSummary['paid'];
+        $contractTotalValue = $contractDebtSummary['contract_total'];
+        $contractPeriodCount = $contractDebtSummary['period_count'];
         require __DIR__ . '/../../views/contracts/detail.php';
     }
 

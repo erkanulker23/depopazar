@@ -45,6 +45,27 @@ class NotificationsController
         ], JSON_UNESCAPED_UNICODE);
     }
 
+    /** Bildirimi okundu işaretle ve ilgili sayfaya yönlendir */
+    public function go(array $p): void
+    {
+        Auth::requireStaff();
+        $user = Auth::user();
+        $userId = $user['id'] ?? '';
+        $id = trim($p['id'] ?? '');
+        if (!$userId || $id === '') {
+            header('Location: /bildirimler');
+            exit;
+        }
+        $notification = Notification::findOneByUser($this->pdo, $userId, $id);
+        if (!$notification) {
+            header('Location: /bildirimler');
+            exit;
+        }
+        Notification::markRead($this->pdo, $userId, $id);
+        header('Location: ' . ($notification['url'] ?? '/bildirimler'));
+        exit;
+    }
+
     public function markAllRead(): void
     {
         Auth::requireStaff();

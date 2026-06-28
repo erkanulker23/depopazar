@@ -106,7 +106,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             --safe-bottom: env(safe-area-inset-bottom);
             --safe-left: env(safe-area-inset-left);
             --safe-right: env(safe-area-inset-right);
-            --mobile-nav-height: calc(5rem + var(--safe-bottom));
+            --mobile-nav-height: calc(4.75rem + max(0.5rem, var(--safe-bottom)));
         }
         html, body, input, select, textarea, button { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
@@ -450,50 +450,145 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 max-width: 100vw;
                 z-index: 50;
                 margin: 0;
-                padding-top: 1.25rem;
-                background: rgba(255,255,255,.95);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
+                padding-top: 0.625rem;
+                padding-left: max(0.5rem, var(--safe-left));
+                padding-right: max(0.5rem, var(--safe-right));
+                background: rgba(255,255,255,.97);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
                 border-top: 1px solid rgb(229 231 235);
-                box-shadow: 0 -4px 24px rgba(0,0,0,.06);
-                transform: translate3d(0, 0, 0);
-                -webkit-transform: translate3d(0, 0, 0);
-                backface-visibility: hidden;
-                -webkit-backface-visibility: hidden;
+                box-shadow: 0 -8px 32px rgba(0,0,0,.08);
             }
             #mobileBottomNav .mobile-nav-bar {
-                position: relative;
+                display: grid;
+                grid-template-columns: 1fr auto 1fr;
+                align-items: end;
+                gap: 0.375rem;
+                width: 100%;
+                min-height: 3.25rem;
+            }
+            #mobileBottomNav .mobile-nav-group {
                 display: flex;
                 align-items: flex-end;
                 justify-content: space-around;
-                width: 100%;
-                min-height: 3.5rem;
-                padding-left: 0.5rem;
-                padding-right: 0.5rem;
+                gap: 0.125rem;
+                min-width: 0;
+            }
+            #mobileBottomNav .mobile-nav-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 0.125rem;
+                min-width: 0;
+                flex: 1 1 0;
+                max-width: 4.75rem;
+                min-height: 3rem;
+                padding: 0.25rem 0.125rem;
+                border: none;
+                background: transparent;
+                -webkit-tap-highlight-color: transparent;
+            }
+            #mobileBottomNav .mobile-nav-item i {
+                font-size: 1.25rem;
+                line-height: 1;
+            }
+            #mobileBottomNav .mobile-nav-item span {
+                font-size: 0.5625rem;
+                font-weight: 700;
+                line-height: 1.1;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
             }
             #mobileBottomNav .mobile-nav-fab {
-                position: absolute;
-                left: 50%;
-                top: 0;
-                transform: translate(-50%, -38%);
+                position: relative;
+                top: -0.5rem;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 3.5rem;
-                height: 3.5rem;
+                width: 3.25rem;
+                height: 3.25rem;
+                margin: 0 auto 0.125rem;
                 border-radius: 1rem;
-                background: #059669;
+                background: linear-gradient(135deg, #059669 0%, #047857 100%);
                 color: #fff;
-                box-shadow: 0 10px 25px rgba(5, 150, 105, 0.35);
+                box-shadow: 0 8px 20px rgba(5, 150, 105, 0.4);
                 flex-shrink: 0;
             }
             #mobileBottomNav .mobile-nav-fab:active {
-                transform: translate(-50%, -38%) scale(0.95);
+                transform: scale(0.94);
             }
             .dark #mobileBottomNav {
                 background: rgba(26,22,20,.98);
                 border-top-color: rgb(61 52 46);
-                box-shadow: 0 -4px 24px rgba(0,0,0,.35);
+                box-shadow: 0 -8px 32px rgba(0,0,0,.4);
+            }
+            /* Mobil bildirim paneli */
+            #notificationBackdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 54;
+                background: rgba(15, 23, 42, 0.45);
+                backdrop-filter: blur(2px);
+                -webkit-backdrop-filter: blur(2px);
+            }
+            body.notification-panel-open {
+                overflow: hidden;
+            }
+            body.notification-panel-open #mobileBottomNav {
+                visibility: hidden;
+                pointer-events: none;
+            }
+            #notificationDropdown.notification-panel-mobile {
+                position: fixed !important;
+                left: max(0.75rem, var(--safe-left)) !important;
+                right: max(0.75rem, var(--safe-right)) !important;
+                top: calc(max(0.75rem, var(--safe-top)) + 3.25rem) !important;
+                bottom: calc(var(--mobile-nav-height) + 0.5rem) !important;
+                width: auto !important;
+                max-height: none !important;
+                margin: 0 !important;
+                z-index: 55 !important;
+                border-radius: 1rem;
+                box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
+            }
+            #notificationDropdown.notification-panel-mobile #notificationListWrap {
+                min-height: 0;
+                flex: 1 1 auto;
+            }
+            #notificationDropdown .notification-item {
+                padding: 0.875rem 1rem;
+            }
+            #notificationDropdown .notification-item-clickable {
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+            }
+            #notificationDropdown .notification-item-clickable:active {
+                background-color: rgba(243, 244, 246, 0.95);
+            }
+            .dark #notificationDropdown .notification-item-clickable:active {
+                background-color: rgba(55, 65, 81, 0.55);
+            }
+            #notificationDropdown .notification-item-icon {
+                width: 2.5rem;
+                height: 2.5rem;
+                border-radius: 0.75rem;
+            }
+            #notificationDropdown .notification-item-title {
+                font-size: 0.875rem;
+                font-weight: 600;
+                line-height: 1.35;
+            }
+            #notificationDropdown .notification-item-message {
+                font-size: 0.8125rem;
+                line-height: 1.45;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
             }
         }
         @media (min-width: 768px) { #mobileBottomNav { display: none !important; } }
@@ -643,11 +738,12 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                             <span id="notificationBadge" class="absolute top-1.5 right-1.5 md:top-1 md:right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center hidden">0</span>
                         </button>
                         <div id="notificationDropdown" class="hidden absolute right-0 top-full mt-2 w-[min(90vw,380px)] max-h-[min(70vh,420px)] flex flex-col rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl z-50 overflow-hidden">
-                            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50">
+                            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 shrink-0">
                                 <span class="font-semibold text-gray-900 dark:text-white">Bildirimler</span>
                                 <div class="flex items-center gap-1">
-                                    <button type="button" id="notificationMarkAllRead" class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600" title="Tümünü okundu işaretle"><i class="bi bi-check-all"></i></button>
-                                    <button type="button" id="notificationDeleteAll" class="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20" title="Tümünü sil"><i class="bi bi-trash"></i></button>
+                                    <button type="button" id="notificationMarkAllRead" class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center" title="Tümünü okundu işaretle"><i class="bi bi-check-all"></i></button>
+                                    <button type="button" id="notificationCloseMobile" class="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center" title="Kapat" aria-label="Kapat"><i class="bi bi-x-lg"></i></button>
+                                    <button type="button" id="notificationDeleteAll" class="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 min-h-[44px] min-w-[44px] flex items-center justify-center" title="Tümünü sil"><i class="bi bi-trash"></i></button>
                                 </div>
                             </div>
                             <div id="notificationListWrap" class="flex-1 overflow-y-auto min-h-[120px]">
@@ -702,27 +798,33 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         </main>
     </div>
 
+    <div id="notificationBackdrop" class="hidden md:hidden" aria-hidden="true"></div>
+
     <nav id="mobileBottomNav" class="md:hidden" aria-label="Hızlı erişim">
         <div class="mobile-nav-bar">
-            <a href="/genel-bakis" class="flex flex-col items-center justify-center flex-1 min-h-[3.5rem] gap-0.5 <?= $currentPath === '/genel-bakis' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500' ?>">
-                <i class="bi bi-house text-xl"></i>
-                <span class="text-[9px] font-bold">Ana Sayfa</span>
-            </a>
-            <a href="/musteriler" class="flex flex-col items-center justify-center flex-1 min-h-[3.5rem] gap-0.5 <?= $currentPath === '/musteriler' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500' ?>">
-                <i class="bi bi-people text-xl"></i>
-                <span class="text-[9px] font-bold">Müşteriler</span>
-            </a>
+            <div class="mobile-nav-group">
+                <a href="/genel-bakis" class="mobile-nav-item <?= $currentPath === '/genel-bakis' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400' ?>">
+                    <i class="bi bi-house"></i>
+                    <span>Ana Sayfa</span>
+                </a>
+                <a href="/musteriler" class="mobile-nav-item <?= $currentPath === '/musteriler' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400' ?>">
+                    <i class="bi bi-people"></i>
+                    <span>Müşteriler</span>
+                </a>
+            </div>
             <a href="/girisler?newSale=1" class="mobile-nav-fab" aria-label="Yeni depo girişi">
                 <i class="bi bi-plus-lg text-2xl"></i>
             </a>
-            <a href="/odemeler" class="flex flex-col items-center justify-center flex-1 min-h-[3.5rem] gap-0.5 <?= (strpos($currentPath, '/odemeler') === 0) ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500' ?>">
-                <i class="bi bi-credit-card text-xl"></i>
-                <span class="text-[9px] font-bold">Ödemeler</span>
-            </a>
-            <button type="button" id="mobileMenuOpenBtn" class="flex flex-col items-center justify-center flex-1 min-h-[3.5rem] gap-0.5 text-gray-400 dark:text-gray-500" aria-label="Menüyü aç">
-                <i class="bi bi-list text-xl"></i>
-                <span class="text-[9px] font-bold">Menü</span>
-            </button>
+            <div class="mobile-nav-group">
+                <a href="/odemeler" class="mobile-nav-item <?= (strpos($currentPath, '/odemeler') === 0) ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400' ?>">
+                    <i class="bi bi-credit-card"></i>
+                    <span>Ödemeler</span>
+                </a>
+                <button type="button" id="mobileMenuOpenBtn" class="mobile-nav-item text-gray-500 dark:text-gray-400" aria-label="Menüyü aç">
+                    <i class="bi bi-list"></i>
+                    <span>Menü</span>
+                </button>
+            </div>
         </div>
     </nav>
     <script>
@@ -769,6 +871,17 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         var listEmpty = document.getElementById('notificationListEmpty');
         var markAllBtn = document.getElementById('notificationMarkAllRead');
         var deleteAllBtn = document.getElementById('notificationDeleteAll');
+        var closeMobileBtn = document.getElementById('notificationCloseMobile');
+        var backdrop = document.getElementById('notificationBackdrop');
+        var mobileMq = window.matchMedia('(max-width: 767px)');
+
+        function isMobilePanel() {
+            return mobileMq.matches;
+        }
+
+        function escHtml(s) {
+            return String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
 
         function setBadge(n) {
             if (!badge) return;
@@ -795,17 +908,58 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 var icon = typeIcons[n.type] || typeIcons.default;
                 var read = n.is_read == 1;
                 var li = document.createElement('li');
-                li.className = 'px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ' + (read ? '' : 'bg-emerald-50/50 dark:bg-emerald-900/10');
+                var goHref = n.id ? ('/bildirimler/' + encodeURIComponent(n.id) + '/git') : (n.url || '/bildirimler');
+                li.className = 'notification-item notification-item-clickable border-b border-gray-100 dark:border-gray-700/80 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 ' + (read ? '' : 'bg-emerald-50/60 dark:bg-emerald-900/15');
+                li.dataset.href = goHref;
+                li.setAttribute('role', 'link');
+                li.setAttribute('tabindex', '0');
                 var time = n.created_at ? new Date(n.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
                 var actor = (n.metadata && n.metadata.actor_name) ? ' · ' + n.metadata.actor_name : '';
-                li.innerHTML = '<div class="flex items-start gap-3"><div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ' + (read ? 'bg-gray-100 dark:bg-gray-600 text-gray-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400') + '"><i class="bi bi-' + icon + '"></i></div><div class="flex-1 min-w-0"><p class="font-medium text-gray-900 dark:text-white text-sm">' + (n.title || '').replace(/</g,'&lt;') + '</p><p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">' + (n.message || '').replace(/</g,'&lt;').substring(0,120) + (n.message && n.message.length > 120 ? '…' : '') + actor + '</p><p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">' + time + '</p></div></div>';
+                var iconBg = read ? 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400';
+                li.innerHTML =
+                    '<div class="flex items-start gap-3">' +
+                        '<div class="notification-item-icon flex-shrink-0 flex items-center justify-center ' + iconBg + '"><i class="bi bi-' + icon + ' text-base"></i></div>' +
+                        '<div class="flex-1 min-w-0">' +
+                            '<p class="notification-item-title text-gray-900 dark:text-white">' + escHtml(n.title) + '</p>' +
+                            '<p class="notification-item-message text-gray-600 dark:text-gray-400 mt-1">' + escHtml(n.message) + escHtml(actor) + '</p>' +
+                            '<p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">' + escHtml(time) + '</p>' +
+                        '</div>' +
+                        (read ? '' : '<span class="flex-shrink-0 mt-1.5 w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true"></span>') +
+                    '</div>';
                 listEl.appendChild(li);
             });
         }
 
+        function followNotificationLink(li) {
+            if (!li || !li.dataset.href) return;
+            closeDropdown();
+            window.location.href = li.dataset.href;
+        }
+
+        listEl.addEventListener('click', function(e) {
+            var li = e.target.closest('li[data-href]');
+            if (!li) return;
+            followNotificationLink(li);
+        });
+        listEl.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var li = e.target.closest('li[data-href]');
+            if (!li) return;
+            e.preventDefault();
+            followNotificationLink(li);
+        });
+
         function openDropdown() {
             dropdown.classList.remove('hidden');
             bell.setAttribute('aria-expanded', 'true');
+            if (isMobilePanel()) {
+                dropdown.classList.add('notification-panel-mobile');
+                document.body.classList.add('notification-panel-open');
+                if (backdrop) {
+                    backdrop.classList.remove('hidden');
+                    backdrop.setAttribute('aria-hidden', 'false');
+                }
+            }
             listEl.innerHTML = '';
             listLoading.classList.remove('hidden');
             listEmpty.classList.add('hidden');
@@ -814,6 +968,12 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
 
         function closeDropdown() {
             dropdown.classList.add('hidden');
+            dropdown.classList.remove('notification-panel-mobile');
+            document.body.classList.remove('notification-panel-open');
+            if (backdrop) {
+                backdrop.classList.add('hidden');
+                backdrop.setAttribute('aria-hidden', 'true');
+            }
             bell.setAttribute('aria-expanded', 'false');
         }
 
@@ -823,7 +983,19 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         });
 
         wrap.addEventListener('click', function(e){ e.stopPropagation(); });
-        document.documentElement.addEventListener('click', function(){ closeDropdown(); });
+        document.documentElement.addEventListener('click', function(){
+            if (!isMobilePanel()) closeDropdown();
+        });
+
+        if (backdrop) backdrop.addEventListener('click', closeDropdown);
+        if (closeMobileBtn) closeMobileBtn.addEventListener('click', function(e){
+            e.stopPropagation();
+            closeDropdown();
+        });
+
+        mobileMq.addEventListener('change', function(){
+            if (!mobileMq.matches) closeDropdown();
+        });
 
         if (markAllBtn) markAllBtn.addEventListener('click', function(){
             var csrf = document.querySelector('input[name="_token"]');

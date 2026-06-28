@@ -14,7 +14,7 @@ class Notification
             $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : null,
         ]);
         if ($sendPush || $sendEmail) {
-            $url = self::resolveNotificationUrl($type, $metadata);
+            $url = self::resolveUrl($type, $metadata);
             $emailContext = self::emailContextForNotification($title, $metadata);
             self::deferDelivery($pdo, null, [$userId], $title, $message, $type, $url, $sendPush, $sendEmail, $emailContext);
         }
@@ -48,7 +48,7 @@ class Notification
         $pdo->prepare($sql)->execute($params);
 
         if ($sendPush || $sendEmail) {
-            $url = self::resolveNotificationUrl($type, $metadata);
+            $url = self::resolveUrl($type, $metadata);
             $emailContext = self::emailContextForNotification($title, $metadata);
             self::deferDelivery($pdo, $companyId, $userIds, $title, $message, $type, $url, $sendPush, $sendEmail, $emailContext);
         }
@@ -87,7 +87,7 @@ class Notification
         $pdo->prepare($sql)->execute($params);
 
         if ($sendPush || $sendEmail) {
-            $url = self::resolveNotificationUrl($type, $metadata);
+            $url = self::resolveUrl($type, $metadata);
             $emailContext = self::emailContextForNotification($title, $metadata);
             self::deferDelivery($pdo, $companyId, $userIds, $title, $message, $type, $url, $sendPush, $sendEmail, $emailContext);
         }
@@ -186,25 +186,34 @@ class Notification
         });
     }
 
-    private static function resolveNotificationUrl(string $type, ?array $metadata): string
+    /** Bildirim türü ve metadata'dan hedef sayfa yolu */
+    public static function resolveUrl(string $type, ?array $metadata): string
     {
+        $metadata = $metadata ?? [];
         if (!empty($metadata['url']) && is_string($metadata['url'])) {
             return $metadata['url'];
         }
-        if ($type === 'contract' && !empty($metadata['contract_id'])) {
-            return '/girisler/' . $metadata['contract_id'];
-        }
-        if ($type === 'room' && !empty($metadata['room_id'])) {
-            return '/odalar/' . $metadata['room_id'];
-        }
-        if ($type === 'warehouse' && !empty($metadata['warehouse_id'])) {
-            return '/depolar/' . $metadata['warehouse_id'];
-        }
-        if ($type === 'customer' && !empty($metadata['customer_id'])) {
-            return '/musteriler/' . $metadata['customer_id'];
+        $entityPaths = [
+            'contract_id' => '/girisler/',
+            'payment_id' => '/odemeler/',
+            'customer_id' => '/musteriler/',
+            'room_id' => '/odalar/',
+            'warehouse_id' => '/depolar/',
+            'proposal_id' => '/teklifler/',
+            'user_id' => '/kullanicilar/',
+            'vehicle_id' => '/araclar/',
+            'transport_job_id' => '/nakliye-isler/',
+            'transportation_job_id' => '/nakliye-isler/',
+            'job_id' => '/nakliye-isler/',
+        ];
+        foreach ($entityPaths as $key => $prefix) {
+            if (!empty($metadata[$key]) && is_string($metadata[$key])) {
+                return $prefix . $metadata[$key];
+            }
         }
         return match ($type) {
-            'contract', 'payment' => '/girisler',
+            'contract' => '/girisler',
+            'payment' => '/odemeler',
             'customer' => '/musteriler',
             'transport' => '/nakliye-isler',
             'warehouse' => '/depolar',
@@ -213,6 +222,8 @@ class Notification
             'proposal' => '/teklifler',
             'vehicle' => '/araclar',
             'user' => '/kullanicilar',
+            'personnel' => '/personel',
+            'service' => '/hizmetler',
             'settings', 'bank' => '/ayarlar',
             default => '/bildirimler',
         };
@@ -232,9 +243,36 @@ class Notification
         foreach ($rows as &$r) {
             if (!empty($r['metadata'])) {
                 $r['metadata'] = json_decode($r['metadata'], true);
+            } else {
+                $r['metadata'] = null;
             }
+            $r['url'] = self::resolveUrl($r['type'], $r['metadata']);
         }
+        unset($r);
         return $rows;
+    }
+
+    public static function findOneByUser(PDO $pdo, string $userId, string $id): ?array
+    {
+        $stmt = $pdo->prepare('SELECT id, type, title, message, is_read, metadata FROM notifications WHERE id = ? AND user_id = ? AND deleted_at IS NULL LIMIT 1');
+        $stmt->execute([$id, $userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        if (!empty($row['metadata'])) {
+            $row['metadata'] = json_decode($row['metadata'], true);
+        } else {
+            $row['metadata'] = null;
+        }
+        $row['url'] = self::resolveUrl($row['type'], $row['metadata']);
+        return $row;
+    }
+
+    public static function markRead(PDO $pdo, string $userId, string $id): void
+    {
+        $stmt = $pdo->prepare('UPDATE notifications SET is_read = 1, read_at = NOW() WHERE id = ? AND user_id = ? AND deleted_at IS NULL');
+        $stmt->execute([$id, $userId]);
     }
 
     public static function countUnread(PDO $pdo, string $userId): int

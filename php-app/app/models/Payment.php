@@ -245,7 +245,7 @@ class Payment
 
     public static function create(PDO $pdo, array $data): string
     {
-        $maxAttempts = 5;
+        $maxAttempts = 10;
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
             $id = self::uuid();
             $paymentNumber = $data['payment_number'] ?? self::generatePaymentNumber($pdo);

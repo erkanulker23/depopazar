@@ -658,6 +658,70 @@ if (!function_exists('filterPaymentsToValidContractPeriods')) {
     }
 }
 
+/**
+ * Sözleşme dönemlerine göre borç özeti (hatalı / aralık dışı ödemeler hariç).
+ *
+ * @param array<string, mixed> $contract
+ * @param list<array<string, mixed>> $payments
+ * @param array<string, float> $monthlyPricesByKey
+ * @return array{total: float, overdue: float, future: float, paid: float, contract_total: float, period_count: int}
+ */
+if (!function_exists('computeContractDebtSummary')) {
+    function computeContractDebtSummary(array $contract, array $payments, array $monthlyPricesByKey = []): array
+    {
+        $start = ContractBilling::normalizeDate($contract['start_date'] ?? null);
+        $end = ContractBilling::normalizeDate($contract['end_date'] ?? null);
+        $defaultPrice = (float) ($contract['monthly_price'] ?? 0);
+        $paymentsByKey = [];
+        foreach ($payments as $p) {
+            $pk = ContractBilling::periodKeyFromDueDate($p['due_date'] ?? null);
+            if ($pk !== '') {
+                $paymentsByKey[$pk] = $p;
+            }
+        }
+
+        $total = 0.0;
+        $overdue = 0.0;
+        $paid = 0.0;
+        $contractTotal = 0.0;
+        $today = date('Y-m-d');
+        $periods = ($start !== '' && $end !== '') ? ContractBilling::periods($start, $end) : [];
+
+        foreach ($periods as $period) {
+            $pk = $period['key'];
+            $p = $paymentsByKey[$pk] ?? null;
+            $amount = $defaultPrice;
+            if ($p !== null) {
+                $amount = (float) ($p['amount'] ?? $defaultPrice);
+            } elseif (isset($monthlyPricesByKey[$pk])) {
+                $amount = (float) $monthlyPricesByKey[$pk];
+            }
+            $contractTotal += $amount;
+
+            if ($p !== null && ($p['status'] ?? '') === 'paid') {
+                $paid += $amount;
+                continue;
+            }
+            if ($p !== null && !in_array($p['status'] ?? '', ['pending', 'overdue'], true)) {
+                continue;
+            }
+            $total += $amount;
+            if ($pk < $today) {
+                $overdue += $amount;
+            }
+        }
+
+        return [
+            'total' => $total,
+            'overdue' => $overdue,
+            'future' => max(0.0, $total - $overdue),
+            'paid' => $paid,
+            'contract_total' => $contractTotal,
+            'period_count' => count($periods),
+        ];
+    }
+}
+
 /** Ödeme durumu etiketi ve rozet sınıfı (vade tarihine göre; DB overdue status kullanılmaz).
  * @return array{label: string, badge: string, collectible: bool, early?: bool, days_early?: int}
  */

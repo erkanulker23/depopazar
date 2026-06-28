@@ -48,18 +48,37 @@ ob_start();
         </div>
     <?php else: ?>
         <ul class="divide-y divide-gray-200 dark:divide-gray-600">
-            <?php foreach ($notifications as $n): ?>
-                <li class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 <?= empty($n['is_read']) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : '' ?>">
-                    <div class="flex items-start gap-3">
-                        <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center <?= empty($n['is_read']) ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400' ?>">
-                            <i class="bi bi-<?= $n['type'] === 'payment' ? 'credit-card' : ($n['type'] === 'contract' ? 'file-text' : 'bell') ?> text-lg"></i>
+            <?php foreach ($notifications as $n):
+                $typeIcon = match ($n['type'] ?? '') {
+                    'payment' => 'credit-card',
+                    'contract' => 'file-text',
+                    'customer' => 'people',
+                    'warehouse' => 'building',
+                    'room' => 'grid-3x3',
+                    'proposal' => 'file-earmark-plus',
+                    'expense' => 'wallet2',
+                    'vehicle' => 'car-front',
+                    'transport' => 'truck',
+                    default => 'bell',
+                };
+                $goHref = '/bildirimler/' . rawurlencode($n['id']) . '/git';
+            ?>
+                <li>
+                    <a href="<?= htmlspecialchars($goHref) ?>" class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-700/70 transition-colors <?= empty($n['is_read']) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : '' ?>">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center <?= empty($n['is_read']) ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400' ?>">
+                                <i class="bi bi-<?= $typeIcon ?> text-lg"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($n['title']) ?></p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"><?= nl2br(htmlspecialchars($n['message'])) ?><?php if (!empty($n['metadata']['actor_name'])): ?> <span class="text-gray-500 dark:text-gray-500">· <?= htmlspecialchars($n['metadata']['actor_name']) ?></span><?php endif; ?></p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"><?= fmtDateTime($n['created_at'] ?? null) ?></p>
+                            </div>
+                            <?php if (empty($n['is_read'])): ?>
+                                <span class="flex-shrink-0 mt-2 w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
+                            <?php endif; ?>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($n['title']) ?></p>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"><?= nl2br(htmlspecialchars($n['message'])) ?><?php if (!empty($n['metadata']['actor_name'])): ?> <span class="text-gray-500 dark:text-gray-500">· <?= htmlspecialchars($n['metadata']['actor_name']) ?></span><?php endif; ?></p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"><?= fmtDateTime($n['created_at'] ?? null) ?></p>
-                        </div>
-                    </div>
+                    </a>
                 </li>
             <?php endforeach; ?>
         </ul>

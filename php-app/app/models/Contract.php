@@ -460,7 +460,9 @@ class Contract
                 continue;
             }
             $stmtExists->execute([$contractId, $periodKey]);
-            if ($stmtExists->fetchColumn()) {
+            $exists = $stmtExists->fetchColumn();
+            $stmtExists->closeCursor();
+            if ($exists) {
                 continue;
             }
             Payment::create($pdo, [
@@ -543,6 +545,7 @@ class Contract
 
             $stmtFindExact->execute([$contractId, $periodKey]);
             $exact = $stmtFindExact->fetch(PDO::FETCH_ASSOC);
+            $stmtFindExact->closeCursor();
             if ($exact) {
                 if (in_array($exact['status'] ?? '', ['pending', 'overdue'], true)) {
                     $stmtUpdateAmount->execute([$info['price'], $exact['id']]);
@@ -553,6 +556,7 @@ class Contract
             $ym = substr($periodKey, 0, 7);
             $stmtFindYmPending->execute([$contractId, $ym]);
             $ymRow = $stmtFindYmPending->fetch(PDO::FETCH_ASSOC);
+            $stmtFindYmPending->closeCursor();
             if ($ymRow && ($ymRow['period_key'] ?? '') !== $periodKey) {
                 $stmtUpdateDueAmount->execute([$info['price'], $info['due_date'], $ymRow['id']]);
                 continue;
@@ -574,7 +578,6 @@ class Contract
             $stmtCleanDup->execute([$contractId, $periodKey, $ym]);
         }
 
-        self::ensurePendingPaymentsForValidPeriods($pdo, $contractId, $validPeriods, $paidPeriodKeys);
         self::purgeOutOfRangePendingPayments($pdo, $contractId, $startDate, $endDate);
     }
 
@@ -614,13 +617,16 @@ class Contract
             return;
         }
 
+        // ALTER TABLE transaction dışında olmalı (MySQL implicit commit yapar)
+        self::ensureMonthlyPricesMonthColumn($pdo);
+
         $ownTransaction = !$pdo->inTransaction();
         if ($ownTransaction) {
             $pdo->beginTransaction();
         }
         try {
             self::syncMonthlyPricesInner($pdo, $contractId, $startDate, $endDate, $defaultPrice, $monthlyPricesPost);
-            if ($ownTransaction) {
+            if ($ownTransaction && $pdo->inTransaction()) {
                 $pdo->commit();
             }
         } catch (Throwable $e) {
@@ -633,7 +639,6 @@ class Contract
 
     private static function syncMonthlyPricesInner(PDO $pdo, string $contractId, ?string $startDate, ?string $endDate, float $defaultPrice, array $monthlyPricesPost): void
     {
-        self::ensureMonthlyPricesMonthColumn($pdo);
         self::reconcilePaymentDueDates($pdo, $contractId, $startDate, $endDate);
 
         $existing = self::getMonthlyPricesByContractId($pdo, $contractId);

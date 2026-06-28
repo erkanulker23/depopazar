@@ -187,6 +187,7 @@ $router->get('/api/musteriler', fn() => (new CustomersController($pdo))->apiSear
 $router->get('/api/iller', fn() => IlIlceController::getProvinces());
 $router->get('/api/ilceler', fn() => IlIlceController::getDistricts());
 $router->get('/bildirimler', fn() => (new NotificationsController($pdo))->index());
+$router->get('/bildirimler/{id}/git', fn(array $p) => (new NotificationsController($pdo))->go($p));
 $router->get('/api/bildirimler', fn() => (new NotificationsController($pdo))->apiList());
 $router->get('/api/tahsil-edilebilir-sayisi', fn() => (new PaymentsController($pdo))->apiCollectibleCount());
 $router->get('/api/push-vapid-public', fn() => (new NotificationsController($pdo))->apiVapidPublic());
