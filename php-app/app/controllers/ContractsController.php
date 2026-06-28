@@ -1027,10 +1027,18 @@ class ContractsController
             header('Location: /girisler');
             exit;
         }
+        $reason = trim($_POST['deletion_reason'] ?? '');
+        if (mb_strlen($reason) < 3) {
+            Auth::setSession('flash_error', 'Sözleşmeyi silmek için neden belirtmelisiniz (en az 3 karakter).');
+            header('Location: ' . $this->contractDeleteRedirect($_POST));
+            exit;
+        }
         $ids = isset($_POST['ids']) && is_array($_POST['ids']) ? array_filter(array_map('trim', $_POST['ids'])) : [];
         if (empty($ids)) {
             $id = trim($_POST['id'] ?? '');
-            if ($id !== '') $ids = [$id];
+            if ($id !== '') {
+                $ids = [$id];
+            }
         }
         if (empty($ids)) {
             Auth::setSession('flash_error', 'Sözleşme seçilmedi.');
@@ -1039,17 +1047,31 @@ class ContractsController
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $deletedByUserId = !empty($user['id']) ? (string) $user['id'] : null;
         $deleted = 0;
         foreach ($ids as $id) {
             $contract = Contract::findOne($this->pdo, $id);
-            if (!$contract) continue;
-            if ($companyId && ($contract['company_id'] ?? '') !== $companyId) continue;
-            $roomId = $contract['room_id'] ?? null;
+            if (!$contract) {
+                continue;
+            }
+            if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+                continue;
+            }
             $contractNumber = $contract['contract_number'] ?? $id;
             $whId = $contract['warehouse_id'] ?? null;
-            Contract::hardDelete($this->pdo, $id);
-            if ($roomId) Room::update($this->pdo, $roomId, ['status' => 'empty']);
-            Notification::createForCompanyAndWarehouse($this->pdo, $contract['company_id'] ?? null, $whId, 'contract', 'Sözleşme silindi', 'Sözleşme ' . $contractNumber . ' silindi.', ['contract_id' => $id, 'warehouse_id' => $whId]);
+            if (!Contract::deleteWithReason($this->pdo, $id, $reason, $deletedByUserId)) {
+                continue;
+            }
+            $reasonShort = mb_strlen($reason) > 120 ? mb_substr($reason, 0, 117) . '…' : $reason;
+            Notification::createForCompanyAndWarehouse(
+                $this->pdo,
+                $contract['company_id'] ?? null,
+                $whId,
+                'contract',
+                'Sözleşme silindi',
+                'Sözleşme ' . $contractNumber . ' silindi. Neden: ' . $reasonShort,
+                ['contract_id' => $id, 'warehouse_id' => $whId, 'deletion_reason' => $reason]
+            );
             $deleted++;
         }
         if ($deleted > 0) {
@@ -1059,6 +1081,54 @@ class ContractsController
         }
         header('Location: /girisler');
         exit;
+    }
+
+    /** Ödeme vadelerini sözleşme giriş tarihine göre yeniden hizalar */
+    public function restructurePaymentDueDates(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /girisler');
+            exit;
+        }
+        $id = trim($_POST['contract_id'] ?? '');
+        if ($id === '') {
+            Auth::setSession('flash_error', 'Sözleşme belirtilmedi.');
+            header('Location: /girisler');
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
+            header('Location: /girisler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
+            header('Location: /girisler/' . $id);
+            exit;
+        }
+        if (!empty($contract['terminated_at'])) {
+            Auth::setSession('flash_error', 'Sonlandırılmış sözleşmede vade yapılandırması yapılamaz.');
+            header('Location: /girisler/' . $id);
+            exit;
+        }
+        Contract::normalizeContractPayments($this->pdo, $id);
+        Contract::ensurePaymentsForContract($this->pdo, $id);
+        Auth::setSession('flash_success', 'Ödeme vadeleri giriş tarihine göre yeniden yapılandırıldı.');
+        header('Location: /girisler/' . $id);
+        exit;
+    }
+
+    private function contractDeleteRedirect(array $post): string
+    {
+        $redirect = trim($post['redirect'] ?? '');
+        if ($redirect !== '' && preg_match('#^/girisler/[a-f0-9\-]+$#i', $redirect)) {
+            return $redirect;
+        }
+        return '/girisler';
     }
 
     /**

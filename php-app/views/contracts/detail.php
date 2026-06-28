@@ -79,6 +79,11 @@ ob_start();
                 data-filename="<?= htmlspecialchars($pdfFilename) ?>">
             <i class="bi bi-whatsapp mr-2"></i> WhatsApp Gönder
         </button>
+        <button type="button"
+                onclick="openContractDeleteModal()"
+                class="inline-flex items-center px-4 py-2 rounded-xl border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 font-medium hover:bg-red-100 dark:hover:bg-red-900/40">
+            <i class="bi bi-trash mr-2"></i> Sil
+        </button>
     </div>
 </div>
 
@@ -318,10 +323,18 @@ ob_start();
 
         <!-- Ödemeler -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-                <i class="bi bi-credit-card text-emerald-600"></i> Ödeme Takvimi
-            </h2>
-            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz.</p>
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="bi bi-credit-card text-emerald-600"></i> Ödeme Takvimi
+                </h2>
+                <form method="post" action="/girisler/vade-yeniden-yapilandir" class="no-print shrink-0" onsubmit="return confirm('Ödeme vadeleri sözleşme giriş tarihine göre yeniden hesaplanacak. Yinelenen veya hatalı vadeler düzeltilir. Devam edilsin mi?');">
+                    <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contractId) ?>">
+                    <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                        <i class="bi bi-calendar-range"></i> Vade tarihlerini yeniden yapılandır
+                    </button>
+                </form>
+            </div>
+            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz. Giriş günü vadeleri hatalıysa yukarıdaki düğmeyi kullanın.</p>
             <?php if (empty($payments)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu sözleşmeye ait ödeme kaydı yok.</div>
             <?php else: ?>
@@ -865,6 +878,61 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
         });
     });
 })();
+</script>
+
+<!-- Sözleşme sil -->
+<div id="contractDeleteModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto no-print" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeContractDeleteModal()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Sözleşmeyi Sil</h3>
+                <button type="button" onclick="closeContractDeleteModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                <strong><?= htmlspecialchars($contract['contract_number'] ?? '') ?></strong> numaralı sözleşme kalıcı olarak arşivlenecek. Devam etmek için silme nedeninizi yazın.
+            </p>
+            <form method="post" action="/girisler/sil" id="contractDeleteForm" onsubmit="return validateContractDeleteForm();">
+                <input type="hidden" name="id" value="<?= htmlspecialchars($contractId) ?>">
+                <input type="hidden" name="redirect" value="/girisler/<?= htmlspecialchars($contractId) ?>">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="contract_deletion_reason">Silme nedeni <span class="text-red-500">*</span></label>
+                <textarea name="deletion_reason" id="contract_deletion_reason" required rows="4" minlength="3" maxlength="2000" placeholder="Örn. Yanlış kayıt, müşteri vazgeçti, çift giriş..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white text-sm"></textarea>
+                <p id="contractDeleteReasonError" class="hidden mt-2 text-sm text-red-600 dark:text-red-400">Silme nedeni en az 3 karakter olmalıdır.</p>
+                <div class="flex justify-end gap-2 mt-5">
+                    <button type="button" onclick="closeContractDeleteModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700">Sil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function openContractDeleteModal() {
+    var modal = document.getElementById('contractDeleteModal');
+    var ta = document.getElementById('contract_deletion_reason');
+    var err = document.getElementById('contractDeleteReasonError');
+    if (ta) ta.value = '';
+    if (err) err.classList.add('hidden');
+    if (modal) modal.classList.remove('hidden');
+}
+function closeContractDeleteModal() {
+    var modal = document.getElementById('contractDeleteModal');
+    if (modal) modal.classList.add('hidden');
+}
+function validateContractDeleteForm() {
+    var ta = document.getElementById('contract_deletion_reason');
+    var err = document.getElementById('contractDeleteReasonError');
+    var val = (ta && ta.value ? ta.value : '').trim();
+    if (val.length < 3) {
+        if (err) err.classList.remove('hidden');
+        if (ta) ta.focus();
+        return false;
+    }
+    return confirm('Bu sözleşmeyi silmek istediğinizden emin misiniz?');
+}
+document.getElementById('contractDeleteModal')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeContractDeleteModal();
+});
 </script>
 
 <?php

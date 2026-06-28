@@ -118,9 +118,9 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                                         <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20">Sonlandır</button>
                                     </form>
                                 <?php endif; ?>
-                                <form method="post" action="/girisler/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('sözleşme')) ?>);">
+                                <form method="post" action="/girisler/sil" class="inline contract-delete-form">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
-                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20">Sil</button>
+                                    <button type="button" onclick="submitContractDeleteForm(this)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20">Sil</button>
                                 </form>
                             </div>
                         </div>
@@ -174,9 +174,9 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                                         <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100">Sonlandır</button>
                                     </form>
                                 <?php endif; ?>
-                                <form method="post" action="/girisler/sil" class="inline ml-1" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('sözleşme')) ?>);">
+                                <form method="post" action="/girisler/sil" class="inline ml-1 contract-delete-form">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
-                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
+                                    <button type="button" onclick="submitContractDeleteForm(this)" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Sil</button>
                                 </form>
                             </td>
                         </tr>
@@ -923,7 +923,12 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
     function submitBulkDelete() {
         var cbs = document.querySelectorAll('.contract-cb:checked');
         if (cbs.length === 0) return false;
-        if (!confirm(deleteConfirmMsg('sözleşme', cbs.length))) return false;
+        var reason = prompt('Seçilen ' + cbs.length + ' sözleşmeyi silme nedeninizi yazın (zorunlu):');
+        if (!reason || reason.trim().length < 3) {
+            alert('Silme nedeni en az 3 karakter olmalıdır.');
+            return false;
+        }
+        if (!confirm('Seçilen ' + cbs.length + ' sözleşme silinecek. Emin misiniz?')) return false;
         if (container) {
             container.innerHTML = '';
             cbs.forEach(function(cb) {
@@ -933,9 +938,32 @@ document.getElementById('newSaleModal').addEventListener('keydown', function(e) 
                 inp.value = cb.value;
                 container.appendChild(inp);
             });
+            var reasonInp = document.createElement('input');
+            reasonInp.type = 'hidden';
+            reasonInp.name = 'deletion_reason';
+            reasonInp.value = reason.trim();
+            container.appendChild(reasonInp);
         }
         return true;
     }
+    window.submitContractDeleteForm = function(btn) {
+        var form = btn.closest('form');
+        if (!form) return;
+        var reason = prompt('Sözleşmeyi silme nedeninizi yazın (zorunlu):');
+        if (!reason || reason.trim().length < 3) {
+            alert('Silme nedeni en az 3 karakter olmalıdır.');
+            return;
+        }
+        if (!confirm('Bu sözleşmeyi silmek istediğinizden emin misiniz?')) return;
+        var existing = form.querySelector('input[name="deletion_reason"]');
+        if (existing) existing.remove();
+        var reasonInp = document.createElement('input');
+        reasonInp.type = 'hidden';
+        reasonInp.name = 'deletion_reason';
+        reasonInp.value = reason.trim();
+        form.appendChild(reasonInp);
+        form.submit();
+    };
     window.submitBulkDelete = submitBulkDelete;
     document.querySelectorAll('.contract-cb').forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
     if (selectAll) selectAll.addEventListener('change', function() { document.querySelectorAll('.contract-cb').forEach(function(cb) { cb.checked = selectAll.checked; }); updateBulkBar(); });

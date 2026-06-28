@@ -83,6 +83,7 @@ $router->post('/girisler/sozlesme-pdf-yukle', fn() => (new ContractsController($
 $router->post('/girisler/sozlesme-pdf-sil', fn() => (new ContractsController($pdo))->deleteContractPdf());
 $router->post('/girisler/esya-listesi-guncelle', fn() => (new ContractsController($pdo))->updateItems());
 $router->post('/girisler/odeme-tutar-guncelle', fn() => (new ContractsController($pdo))->updatePaymentAmount());
+$router->post('/girisler/vade-yeniden-yapilandir', fn() => (new ContractsController($pdo))->restructurePaymentDueDates());
 $router->get('/girisler/{id}', fn(array $p) => (new ContractsController($pdo))->show($p));
 $router->post('/girisler/ekle', fn() => (new ContractsController($pdo))->create());
 $router->post('/girisler/sonlandir', fn() => (new ContractsController($pdo))->terminate());

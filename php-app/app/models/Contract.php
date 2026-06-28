@@ -668,6 +668,59 @@ class Contract
         }
     }
 
+    private static ?bool $hasDeletionAuditColumnsCache = null;
+
+    public static function hasDeletionAuditColumns(PDO $pdo): bool
+    {
+        if (self::$hasDeletionAuditColumnsCache !== null) {
+            return self::$hasDeletionAuditColumnsCache;
+        }
+        try {
+            $pdo->query('SELECT deletion_reason, deleted_by_user_id FROM contracts LIMIT 0');
+            self::$hasDeletionAuditColumnsCache = true;
+        } catch (Throwable $e) {
+            self::$hasDeletionAuditColumnsCache = false;
+        }
+        return self::$hasDeletionAuditColumnsCache;
+    }
+
+    /**
+     * Sözleşmeyi gerekçe ile arşivler (soft delete); ödeme kayıtlarını ve oda durumunu günceller.
+     */
+    public static function deleteWithReason(PDO $pdo, string $id, string $reason, ?string $deletedByUserId): bool
+    {
+        $contract = self::findOne($pdo, $id);
+        if (!$contract) {
+            return false;
+        }
+        $roomId = $contract['room_id'] ?? null;
+
+        if (self::hasDeletionAuditColumns($pdo)) {
+            $stmt = $pdo->prepare(
+                'UPDATE contracts SET deleted_at = NOW(), is_active = 0, terminated_at = COALESCE(terminated_at, NOW()), deletion_reason = ?, deleted_by_user_id = ? WHERE id = ? AND deleted_at IS NULL'
+            );
+            $stmt->execute([$reason, $deletedByUserId, $id]);
+        } else {
+            $stmt = $pdo->prepare(
+                'UPDATE contracts SET deleted_at = NOW(), is_active = 0, terminated_at = COALESCE(terminated_at, NOW()) WHERE id = ? AND deleted_at IS NULL'
+            );
+            $stmt->execute([$id]);
+        }
+        if ($stmt->rowCount() === 0) {
+            return false;
+        }
+
+        $pdo->prepare('UPDATE payments SET deleted_at = NOW() WHERE contract_id = ? AND deleted_at IS NULL')->execute([$id]);
+        $pdo->prepare('UPDATE contract_monthly_prices SET deleted_at = NOW() WHERE contract_id = ? AND deleted_at IS NULL')->execute([$id]);
+        Item::deleteByContractId($pdo, $id);
+
+        if ($roomId && !Room::hasActiveContractExcept($pdo, $roomId, $id)) {
+            Room::update($pdo, $roomId, ['status' => 'empty']);
+        }
+
+        return true;
+    }
+
     public static function hardDelete(PDO $pdo, string $id): bool
     {
         $contract = self::findOne($pdo, $id);
