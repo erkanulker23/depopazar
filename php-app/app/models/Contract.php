@@ -81,37 +81,82 @@ class Contract
         $params = array_merge($params, array_fill(0, 9, $q));
     }
 
+    private static ?bool $hasStoredItemsColumnsCache = null;
+
+    public static function hasStoredItemsColumns(PDO $pdo): bool
+    {
+        if (self::$hasStoredItemsColumnsCache !== null) {
+            return self::$hasStoredItemsColumnsCache;
+        }
+        try {
+            $pdo->query('SELECT stored_items_condition, stored_items_condition_note FROM contracts LIMIT 0');
+            self::$hasStoredItemsColumnsCache = true;
+        } catch (Throwable $e) {
+            self::$hasStoredItemsColumnsCache = false;
+        }
+        return self::$hasStoredItemsColumnsCache;
+    }
+
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
-        $stmt = $pdo->prepare(
-            'INSERT INTO contracts (id, contract_number, customer_id, room_id, start_date, end_date, monthly_price, payment_frequency_months, is_active, sold_by_user_id, transportation_fee, pickup_location, discount, driver_name, driver_phone, vehicle_plate, contract_pdf_url, notes, stored_items_condition, stored_items_condition_note) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
+        $withStoredItems = self::hasStoredItemsColumns($pdo);
+        if ($withStoredItems) {
+            $stmt = $pdo->prepare(
+                'INSERT INTO contracts (id, contract_number, customer_id, room_id, start_date, end_date, monthly_price, payment_frequency_months, is_active, sold_by_user_id, transportation_fee, pickup_location, discount, driver_name, driver_phone, vehicle_plate, contract_pdf_url, notes, stored_items_condition, stored_items_condition_note) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            );
+        } else {
+            $stmt = $pdo->prepare(
+                'INSERT INTO contracts (id, contract_number, customer_id, room_id, start_date, end_date, monthly_price, payment_frequency_months, is_active, sold_by_user_id, transportation_fee, pickup_location, discount, driver_name, driver_phone, vehicle_plate, contract_pdf_url, notes) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            );
+        }
         $maxAttempts = 5;
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
             $contractNumber = $data['contract_number'] ?? self::generateContractNumber($pdo);
             try {
-                $stmt->execute([
-                    $id,
-                    $contractNumber,
-                    $data['customer_id'],
-                    $data['room_id'],
-                    $data['start_date'],
-                    $data['end_date'],
-                    $data['monthly_price'],
-                    $data['sold_by_user_id'] ?? null,
-                    $data['transportation_fee'] ?? 0,
-                    $data['pickup_location'] ?? null,
-                    $data['discount'] ?? 0,
-                    $data['driver_name'] ?? null,
-                    $data['driver_phone'] ?? null,
-                    $data['vehicle_plate'] ?? null,
-                    $data['contract_pdf_url'] ?? null,
-                    $data['notes'] ?? null,
-                    $data['stored_items_condition'] ?? null,
-                    $data['stored_items_condition_note'] ?? null,
-                ]);
+                if ($withStoredItems) {
+                    $stmt->execute([
+                        $id,
+                        $contractNumber,
+                        $data['customer_id'],
+                        $data['room_id'],
+                        $data['start_date'],
+                        $data['end_date'],
+                        $data['monthly_price'],
+                        $data['sold_by_user_id'] ?? null,
+                        $data['transportation_fee'] ?? 0,
+                        $data['pickup_location'] ?? null,
+                        $data['discount'] ?? 0,
+                        $data['driver_name'] ?? null,
+                        $data['driver_phone'] ?? null,
+                        $data['vehicle_plate'] ?? null,
+                        $data['contract_pdf_url'] ?? null,
+                        $data['notes'] ?? null,
+                        $data['stored_items_condition'] ?? null,
+                        $data['stored_items_condition_note'] ?? null,
+                    ]);
+                } else {
+                    $stmt->execute([
+                        $id,
+                        $contractNumber,
+                        $data['customer_id'],
+                        $data['room_id'],
+                        $data['start_date'],
+                        $data['end_date'],
+                        $data['monthly_price'],
+                        $data['sold_by_user_id'] ?? null,
+                        $data['transportation_fee'] ?? 0,
+                        $data['pickup_location'] ?? null,
+                        $data['discount'] ?? 0,
+                        $data['driver_name'] ?? null,
+                        $data['driver_phone'] ?? null,
+                        $data['vehicle_plate'] ?? null,
+                        $data['contract_pdf_url'] ?? null,
+                        $data['notes'] ?? null,
+                    ]);
+                }
                 return self::findOne($pdo, $id);
             } catch (PDOException $e) {
                 if ($attempt === $maxAttempts - 1) {
@@ -148,8 +193,29 @@ class Contract
 
     public static function update(PDO $pdo, string $id, array $data): void
     {
+        if (self::hasStoredItemsColumns($pdo)) {
+            $stmt = $pdo->prepare(
+                'UPDATE contracts SET start_date = ?, end_date = ?, monthly_price = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ?, stored_items_condition = ?, stored_items_condition_note = ? WHERE id = ? AND deleted_at IS NULL'
+            );
+            $stmt->execute([
+                $data['start_date'] ?? null,
+                $data['end_date'] ?? null,
+                $data['monthly_price'] ?? 0,
+                $data['transportation_fee'] ?? 0,
+                $data['pickup_location'] ?? null,
+                $data['discount'] ?? 0,
+                $data['driver_name'] ?? null,
+                $data['driver_phone'] ?? null,
+                $data['vehicle_plate'] ?? null,
+                $data['notes'] ?? null,
+                $data['stored_items_condition'] ?? null,
+                $data['stored_items_condition_note'] ?? null,
+                $id,
+            ]);
+            return;
+        }
         $stmt = $pdo->prepare(
-            'UPDATE contracts SET start_date = ?, end_date = ?, monthly_price = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ?, stored_items_condition = ?, stored_items_condition_note = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE contracts SET start_date = ?, end_date = ?, monthly_price = ?, transportation_fee = ?, pickup_location = ?, discount = ?, driver_name = ?, driver_phone = ?, vehicle_plate = ?, notes = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
             $data['start_date'] ?? null,
@@ -162,8 +228,6 @@ class Contract
             $data['driver_phone'] ?? null,
             $data['vehicle_plate'] ?? null,
             $data['notes'] ?? null,
-            $data['stored_items_condition'] ?? null,
-            $data['stored_items_condition_note'] ?? null,
             $id,
         ]);
     }

@@ -290,14 +290,6 @@ class ContractsController
             }
             $contractId = $created['id'] ?? null;
             $contractNumber = $created['contract_number'] ?? $contractId ?? '';
-            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-            $whId = $room['warehouse_id'] ?? null;
-            Notification::createForCompanyAndWarehouse($this->pdo, $room['company_id'] ?? $companyId, $whId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName, 'warehouse_id' => $whId]);
-            foreach ($createdAdditional as $extraCreated) {
-                $numExtra = $extraCreated['contract_number'] ?? $extraCreated['id'] ?? '';
-                $extraWhId = $extraCreated['warehouse_id'] ?? $whId;
-                Notification::createForCompanyAndWarehouse($this->pdo, $room['company_id'] ?? $companyId, $extraWhId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $numExtra . ' oluşturuldu.', ['contract_id' => $extraCreated['id'] ?? null, 'actor_name' => $actorName, 'warehouse_id' => $extraWhId]);
-            }
             $this->sendContractCreatedEmails($created);
             foreach ($createdAdditional as $extraCreated) {
                 $this->sendContractCreatedEmails($extraCreated);
@@ -354,7 +346,20 @@ class ContractsController
             } else {
                 Auth::setSession('flash_success', 'Sözleşme oluşturuldu.');
             }
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            $whId = $room['warehouse_id'] ?? null;
+            try {
+                Notification::createForCompanyAndWarehouse($this->pdo, $room['company_id'] ?? $companyId, $whId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $contractNumber . ' oluşturuldu.', ['contract_id' => $contractId, 'actor_name' => $actorName, 'warehouse_id' => $whId]);
+                foreach ($createdAdditional as $extraCreated) {
+                    $numExtra = $extraCreated['contract_number'] ?? $extraCreated['id'] ?? '';
+                    $extraWhId = $extraCreated['warehouse_id'] ?? $whId;
+                    Notification::createForCompanyAndWarehouse($this->pdo, $room['company_id'] ?? $companyId, $extraWhId, 'contract', 'Sözleşme oluşturuldu', 'Sözleşme ' . $numExtra . ' oluşturuldu.', ['contract_id' => $extraCreated['id'] ?? null, 'actor_name' => $actorName, 'warehouse_id' => $extraWhId]);
+                }
+            } catch (Throwable $notifyErr) {
+                error_log('Contract create notification failed: ' . $notifyErr->getMessage());
+            }
         } catch (Exception $e) {
+            error_log('Contract create failed: ' . $e->getMessage());
             Auth::setSession('flash_error', 'Kayıt oluşturulamadı: ' . $e->getMessage());
         }
         header('Location: /girisler');

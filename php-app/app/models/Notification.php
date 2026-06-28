@@ -125,11 +125,16 @@ class Notification
     /** @return list<string> */
     private static function warehouseManagerUserIds(PDO $pdo, string $warehouseId): array
     {
-        $stmt = $pdo->prepare(
-            "SELECT id FROM users WHERE deleted_at IS NULL AND is_active = 1 AND role = 'warehouse_manager' AND managed_warehouse_id = ?"
-        );
-        $stmt->execute([$warehouseId]);
-        return array_values(array_filter($stmt->fetchAll(PDO::FETCH_COLUMN)));
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT id FROM users WHERE deleted_at IS NULL AND is_active = 1 AND role = 'warehouse_manager' AND managed_warehouse_id = ?"
+            );
+            $stmt->execute([$warehouseId]);
+            return array_values(array_filter($stmt->fetchAll(PDO::FETCH_COLUMN)));
+        } catch (Throwable $e) {
+            error_log('warehouseManagerUserIds: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /** @return array{actor_name?: string, acted_at: string, action_title: string} */
