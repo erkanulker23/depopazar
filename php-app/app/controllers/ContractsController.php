@@ -1123,9 +1123,38 @@ class ContractsController
             header('Location: /girisler/' . $id);
             exit;
         }
+        $startDateRaw = trim($_POST['start_date'] ?? '');
+        $endDateRaw = trim($_POST['end_date'] ?? '');
+        if ($startDateRaw === '' || $endDateRaw === '') {
+            Auth::setSession('flash_error', 'Depoya giriş ve çıkış tarihleri zorunludur.');
+            header('Location: /girisler/' . $id);
+            exit;
+        }
+        if ($endDateRaw < $startDateRaw) {
+            Auth::setSession('flash_error', 'Çıkış tarihi giriş tarihinden önce olamaz.');
+            header('Location: /girisler/' . $id);
+            exit;
+        }
+        $startDate = $startDateRaw . ' 00:00:00';
+        $endDate = $endDateRaw . ' 23:59:59';
+        Contract::update($this->pdo, $id, [
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'monthly_price' => (float) ($contract['monthly_price'] ?? 0),
+            'transportation_fee' => (float) ($contract['transportation_fee'] ?? 0),
+            'pickup_location' => $contract['pickup_location'] ?? null,
+            'discount' => (float) ($contract['discount'] ?? 0),
+            'driver_name' => $contract['driver_name'] ?? null,
+            'driver_phone' => $contract['driver_phone'] ?? null,
+            'vehicle_plate' => $contract['vehicle_plate'] ?? null,
+            'notes' => $contract['notes'] ?? null,
+            'stored_items_condition' => $contract['stored_items_condition'] ?? null,
+            'stored_items_condition_note' => $contract['stored_items_condition_note'] ?? null,
+            'sold_by_user_id' => $contract['sold_by_user_id'] ?? null,
+        ]);
         Contract::normalizeContractPayments($this->pdo, $id);
         Contract::ensurePaymentsForContract($this->pdo, $id);
-        Auth::setSession('flash_success', 'Ödeme vadeleri giriş tarihine göre yeniden yapılandırıldı.');
+        Auth::setSession('flash_success', 'Ödeme vadeleri giriş/çıkış tarihlerine göre yeniden yapılandırıldı.');
         header('Location: /girisler/' . $id);
         exit;
     }

@@ -3,6 +3,8 @@ $currentPage = 'girisler';
 $customerName = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
 $company = $company ?? null;
 $contractId = $contract['id'] ?? '';
+$contractStartDateInput = !empty($contract['start_date']) ? date('Y-m-d', strtotime($contract['start_date'])) : '';
+$contractEndDateInput = !empty($contract['end_date']) ? date('Y-m-d', strtotime($contract['end_date'])) : '';
 $renderPaymentAmountCell = function (array $p) use ($contractId): void {
     $status = $p['status'] ?? 'pending';
     $editable = !in_array($status, ['paid', 'cancelled'], true);
@@ -327,14 +329,13 @@ ob_start();
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <i class="bi bi-credit-card text-emerald-600"></i> Ödeme Takvimi
                 </h2>
-                <form method="post" action="/girisler/vade-yeniden-yapilandir" class="no-print shrink-0" onsubmit="return confirm('Ödeme vadeleri sözleşme giriş tarihine göre yeniden hesaplanacak. Yinelenen veya hatalı vadeler düzeltilir. Devam edilsin mi?');">
-                    <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contractId) ?>">
-                    <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40">
-                        <i class="bi bi-calendar-range"></i> Vade tarihlerini yeniden yapılandır
-                    </button>
-                </form>
+                <button type="button"
+                        onclick="openRestructureDueDatesModal()"
+                        class="no-print inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                    <i class="bi bi-calendar-range"></i> Vade tarihlerini yeniden yapılandır
+                </button>
             </div>
-            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz. Giriş günü vadeleri hatalıysa yukarıdaki düğmeyi kullanın.</p>
+            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz. Giriş/çıkış tarihlerine göre vadeleri yeniden oluşturmak için yukarıdaki düğmeyi kullanın.</p>
             <?php if (empty($payments)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu sözleşmeye ait ödeme kaydı yok.</div>
             <?php else: ?>
@@ -878,6 +879,81 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
         });
     });
 })();
+</script>
+
+<!-- Vade tarihlerini yeniden yapılandır -->
+<div id="restructureDueDatesModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto no-print" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeRestructureDueDatesModal()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Vade Tarihlerini Yeniden Yapılandır</h3>
+                <button type="button" onclick="closeRestructureDueDatesModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Depoya giriş ve çıkış tarihlerine göre aylık vade takvimi yeniden oluşturulur. Yinelenen veya hatalı vadeler düzeltilir; ödenmiş aylar korunur.
+            </p>
+            <form method="post" action="/girisler/vade-yeniden-yapilandir" id="restructureDueDatesForm" onsubmit="return validateRestructureDueDatesForm();">
+                <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contractId) ?>">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="restructure_start_date">Depoya Giriş Tarihi <span class="text-red-500">*</span></label>
+                        <input type="date" name="start_date" id="restructure_start_date" required value="<?= htmlspecialchars($contractStartDateInput) ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">İlk vade bu günün yıl dönümüne göre hesaplanır (gün ve ay).</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="restructure_end_date">Depodan Çıkış Tarihi <span class="text-red-500">*</span></label>
+                        <input type="date" name="end_date" id="restructure_end_date" required value="<?= htmlspecialchars($contractEndDateInput) ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                </div>
+                <p id="restructureDueDatesError" class="hidden mt-3 text-sm text-red-600 dark:text-red-400"></p>
+                <div class="flex justify-end gap-2 mt-5">
+                    <button type="button" onclick="closeRestructureDueDatesModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-amber-600 text-white font-medium hover:bg-amber-700">Yapılandır</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function openRestructureDueDatesModal() {
+    var modal = document.getElementById('restructureDueDatesModal');
+    var err = document.getElementById('restructureDueDatesError');
+    if (err) {
+        err.classList.add('hidden');
+        err.textContent = '';
+    }
+    if (modal) modal.classList.remove('hidden');
+}
+function closeRestructureDueDatesModal() {
+    var modal = document.getElementById('restructureDueDatesModal');
+    if (modal) modal.classList.add('hidden');
+}
+function validateRestructureDueDatesForm() {
+    var startEl = document.getElementById('restructure_start_date');
+    var endEl = document.getElementById('restructure_end_date');
+    var err = document.getElementById('restructureDueDatesError');
+    var start = startEl ? startEl.value : '';
+    var end = endEl ? endEl.value : '';
+    if (!start || !end) {
+        if (err) {
+            err.textContent = 'Giriş ve çıkış tarihlerini seçin.';
+            err.classList.remove('hidden');
+        }
+        return false;
+    }
+    if (end < start) {
+        if (err) {
+            err.textContent = 'Çıkış tarihi giriş tarihinden önce olamaz.';
+            err.classList.remove('hidden');
+        }
+        return false;
+    }
+    return confirm('Ödeme vadeleri seçilen giriş/çıkış tarihlerine göre yeniden oluşturulacak. Devam edilsin mi?');
+}
+document.getElementById('restructureDueDatesModal')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeRestructureDueDatesModal();
+});
 </script>
 
 <!-- Sözleşme sil -->
