@@ -30,9 +30,11 @@ class Expense
         }
         $search = trim((string) $search);
         if ($search !== '') {
-            $sql .= ' AND (e.description LIKE ? OR e.notes LIKE ? OR ec.name LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params = array_merge($params, [$q, $q, $q]);
+            appendTurkishLikeClause($sql, $params, [
+                'e.description',
+                'e.notes',
+                'ec.name',
+            ], $search);
         }
         $sql .= ' ORDER BY e.expense_date DESC, e.created_at DESC ';
         $stmt = $pdo->prepare($sql);

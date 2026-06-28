@@ -165,9 +165,15 @@ class Room
         }
         $search = trim((string) $search);
         if ($search !== '') {
-            $sql .= ' AND (r.room_number LIKE ? OR r.floor LIKE ? OR r.block LIKE ? OR r.corridor LIKE ? OR r.description LIKE ? OR r.notes LIKE ? OR w.name LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params = array_merge($params, array_fill(0, 7, $q));
+            appendTurkishLikeClause($sql, $params, [
+                'r.room_number',
+                'r.floor',
+                'r.block',
+                'r.corridor',
+                'r.description',
+                'r.notes',
+                'w.name',
+            ], $search);
         }
         if ($hasContract === 'yes') {
             $sql .= ' AND EXISTS (SELECT 1 FROM contracts c INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL WHERE c.room_id = r.id AND c.deleted_at IS NULL AND c.is_active = 1) ';

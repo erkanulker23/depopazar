@@ -227,21 +227,7 @@ class ContractsController
                 }
             }
         }
-        $contractPdfUrl = null;
-        if (!empty($_FILES['contract_pdf']['name']) && ($_FILES['contract_pdf']['error'] ?? 0) === UPLOAD_ERR_OK) {
-            $ext = strtolower(pathinfo($_FILES['contract_pdf']['name'], PATHINFO_EXTENSION));
-            if ($ext === 'pdf') {
-                $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/contracts' : __DIR__ . '/../../public/uploads/contracts';
-                if (!is_dir($uploadDir)) {
-                    @mkdir($uploadDir, 0755, true);
-                }
-                $filename = 'contract_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.pdf';
-                $path = $uploadDir . '/' . $filename;
-                if (move_uploaded_file($_FILES['contract_pdf']['tmp_name'], $path)) {
-                    $contractPdfUrl = '/uploads/contracts/' . $filename;
-                }
-            }
-        }
+        $contractPdfUrl = storeContractPdfUpload($_FILES['contract_pdf'] ?? null);
         $pickupLocation = $this->resolvePickupLocation($_POST);
         $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
         $sharedContractFields = [
@@ -605,6 +591,84 @@ class ContractsController
         } catch (Exception $e) {
             Auth::setSession('flash_error', 'Güncellenemedi: ' . $e->getMessage());
         }
+        header('Location: /girisler/' . $id);
+        exit;
+    }
+
+    /** İmzalı sözleşme PDF yükle */
+    public function uploadContractPdf(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /girisler');
+            exit;
+        }
+        $id = trim($_POST['contract_id'] ?? '');
+        if (!$id) {
+            Auth::setSession('flash_error', 'Sözleşme belirtilmedi.');
+            header('Location: /girisler');
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
+            header('Location: /girisler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
+            header('Location: /girisler');
+            exit;
+        }
+        $uploadError = validateContractPdfUpload($_FILES['contract_pdf'] ?? null);
+        if ($uploadError !== null) {
+            Auth::setSession('flash_error', $uploadError);
+            header('Location: /girisler/' . $id);
+            exit;
+        }
+        $url = storeContractPdfUpload($_FILES['contract_pdf']);
+        if (!$url) {
+            Auth::setSession('flash_error', 'PDF kaydedilemedi.');
+            header('Location: /girisler/' . $id);
+            exit;
+        }
+        Contract::setContractPdfUrl($this->pdo, $id, $url);
+        Auth::setSession('flash_success', 'Sözleşme PDF yüklendi.');
+        header('Location: /girisler/' . $id);
+        exit;
+    }
+
+    /** Yüklenmiş imzalı sözleşme PDF sil (sistem PDF’i kullanılır) */
+    public function deleteContractPdf(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /girisler');
+            exit;
+        }
+        $id = trim($_POST['contract_id'] ?? '');
+        if (!$id) {
+            Auth::setSession('flash_error', 'Sözleşme belirtilmedi.');
+            header('Location: /girisler');
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
+            header('Location: /girisler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
+            header('Location: /girisler');
+            exit;
+        }
+        Contract::setContractPdfUrl($this->pdo, $id, null);
+        Auth::setSession('flash_success', 'Yüklenen sözleşme PDF kaldırıldı.');
         header('Location: /girisler/' . $id);
         exit;
     }

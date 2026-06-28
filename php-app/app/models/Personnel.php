@@ -52,9 +52,13 @@ class Personnel
             $sql .= ' AND is_active = 0 ';
         }
         if ($search !== null && $search !== '') {
-            $like = '%' . $search . '%';
-            $sql .= ' AND (first_name LIKE ? OR last_name LIKE ? OR phone LIKE ? OR notes LIKE ? OR CONCAT(first_name, \' \', last_name) LIKE ?) ';
-            array_push($params, $like, $like, $like, $like, $like);
+            appendTurkishLikeClause($sql, $params, [
+                'first_name',
+                'last_name',
+                'phone',
+                'notes',
+                "CONCAT(first_name, ' ', last_name)",
+            ], $search);
         }
         $sql .= ' ORDER BY first_name ASC, last_name ASC ';
         $stmt = $pdo->prepare($sql);

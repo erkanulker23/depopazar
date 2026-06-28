@@ -423,6 +423,125 @@ class CustomersController
         exit;
     }
 
+    /** Belge parça yükle – nginx 413 önlemi (JSON yanıt) */
+    public function documentUploadChunk(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['ok' => false, 'error' => 'Geçersiz istek.']);
+            exit;
+        }
+        $uploadId = sanitizeUploadSessionId($_POST['upload_id'] ?? null);
+        $chunkIndex = (int) ($_POST['chunk_index'] ?? -1);
+        $totalChunks = (int) ($_POST['total_chunks'] ?? 0);
+        $customerId = trim($_POST['customer_id'] ?? '');
+        $originalName = trim($_POST['original_name'] ?? '');
+        if (!$uploadId || $chunkIndex < 0 || $totalChunks < 1 || $chunkIndex >= $totalChunks || !$customerId || $originalName === '') {
+            echo json_encode(['ok' => false, 'error' => 'Eksik yükleme bilgisi.']);
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $customerId);
+        if (!$customer) {
+            echo json_encode(['ok' => false, 'error' => 'Müşteri bulunamadı.']);
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            echo json_encode(['ok' => false, 'error' => 'Bu müşteriye erişim yetkiniz yok.']);
+            exit;
+        }
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx'];
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if (!in_array($ext, $allowedExt, true)) {
+            echo json_encode(['ok' => false, 'error' => 'İzin verilen formatlar: ' . implode(', ', $allowedExt)]);
+            exit;
+        }
+        $chunk = $_FILES['chunk'] ?? null;
+        if (!$chunk || ($chunk['error'] ?? 0) !== UPLOAD_ERR_OK || empty($chunk['tmp_name'])) {
+            echo json_encode(['ok' => false, 'error' => 'Parça yüklenemedi.']);
+            exit;
+        }
+        $chunkSize = (int) ($chunk['size'] ?? 0);
+        if ($chunkSize <= 0 || $chunkSize > uploadChunkByteSize() + 65536) {
+            echo json_encode(['ok' => false, 'error' => 'Geçersiz parça boyutu.']);
+            exit;
+        }
+        if ($chunkIndex === 0) {
+            $_SESSION['upload_meta'][$uploadId] = [
+                'customer_id' => $customerId,
+                'name' => trim($_POST['name'] ?? ''),
+                'notes' => trim($_POST['notes'] ?? ''),
+                'original_name' => $originalName,
+                'total_chunks' => $totalChunks,
+                'user_id' => $user['id'] ?? '',
+                'started_at' => time(),
+            ];
+        }
+        $meta = $_SESSION['upload_meta'][$uploadId] ?? null;
+        if (!$meta || ($meta['customer_id'] ?? '') !== $customerId || ($meta['user_id'] ?? '') !== ($user['id'] ?? '')) {
+            echo json_encode(['ok' => false, 'error' => 'Yükleme oturumu geçersiz. Sayfayı yenileyip tekrar deneyin.']);
+            exit;
+        }
+        if ((int) ($meta['total_chunks'] ?? 0) !== $totalChunks) {
+            echo json_encode(['ok' => false, 'error' => 'Parça sayısı uyuşmuyor.']);
+            exit;
+        }
+        if (!saveUploadChunkPart($uploadId, $chunkIndex, $chunk['tmp_name'])) {
+            echo json_encode(['ok' => false, 'error' => 'Parça kaydedilemedi.']);
+            exit;
+        }
+        if ($chunkIndex < $totalChunks - 1) {
+            echo json_encode(['ok' => true, 'done' => false, 'chunk' => $chunkIndex + 1, 'total' => $totalChunks]);
+            exit;
+        }
+        $mergedPath = mergeUploadChunkParts($uploadId, $totalChunks);
+        if (!$mergedPath || !is_file($mergedPath)) {
+            removeUploadChunkDir($uploadId);
+            unset($_SESSION['upload_meta'][$uploadId]);
+            echo json_encode(['ok' => false, 'error' => 'Dosya birleştirilemedi.']);
+            exit;
+        }
+        $fileSize = (int) filesize($mergedPath);
+        if ($fileSize <= 0 || $fileSize > uploadMaxBytes()) {
+            @unlink($mergedPath);
+            removeUploadChunkDir($uploadId);
+            unset($_SESSION['upload_meta'][$uploadId]);
+            echo json_encode(['ok' => false, 'error' => 'Dosya boyutu ' . uploadMaxBytesLabel() . ' sınırını aşıyor.']);
+            exit;
+        }
+        $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/customer_documents' : __DIR__ . '/../../public/uploads/customer_documents';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        $filename = $customerId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+        $filePath = $uploadDir . '/' . $filename;
+        if (!@rename($mergedPath, $filePath)) {
+            @unlink($mergedPath);
+            removeUploadChunkDir($uploadId);
+            unset($_SESSION['upload_meta'][$uploadId]);
+            echo json_encode(['ok' => false, 'error' => 'Dosya kaydedilemedi.']);
+            exit;
+        }
+        removeUploadChunkDir($uploadId);
+        unset($_SESSION['upload_meta'][$uploadId]);
+        $relativePath = '/uploads/customer_documents/' . $filename;
+        $displayName = trim($meta['name'] ?? '') ?: pathinfo($originalName, PATHINFO_FILENAME);
+        CustomerDocument::create($this->pdo, [
+            'customer_id' => $customerId,
+            'company_id' => $customer['company_id'],
+            'name' => $displayName,
+            'file_path' => $relativePath,
+            'file_size' => $fileSize,
+            'mime_type' => documentMimeFromExtension($ext),
+            'notes' => trim($meta['notes'] ?? '') ?: null,
+        ]);
+        Auth::setSession('flash_success', 'Belge eklendi.');
+        echo json_encode(['ok' => true, 'done' => true, 'redirect' => '/musteriler/' . $customerId]);
+        exit;
+    }
+
     /** Belge sil */
     public function documentDelete(): void
     {

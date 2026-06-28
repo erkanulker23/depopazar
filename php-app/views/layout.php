@@ -823,6 +823,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         });
     })();
     </script>
+    <script src="/turkish-search.js"></script>
     <script src="/phone-mask.js" defer></script>
     <script src="/delete-confirm.js"></script>
     <script src="/form-guard.js" defer></script>

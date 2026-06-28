@@ -358,14 +358,15 @@ class Payment
             $sql .= " AND p.status = 'paid' AND p.paid_at IS NOT NULL AND p.due_date IS NOT NULL AND DATE(p.paid_at) < DATE(p.due_date) ";
         }
         if ($search !== null && $search !== '') {
-            $like = '%' . $search . '%';
-            $sql .= ' AND (
-                p.payment_number LIKE ? OR c.contract_number LIKE ? OR
-                cu.first_name LIKE ? OR cu.last_name LIKE ? OR
-                CONCAT(cu.first_name, \' \', cu.last_name) LIKE ? OR
-                cu.email LIKE ? OR CAST(p.amount AS CHAR) LIKE ?
-            ) ';
-            array_push($params, $like, $like, $like, $like, $like, $like, $like);
+            appendTurkishLikeClause($sql, $params, [
+                'p.payment_number',
+                'c.contract_number',
+                'cu.first_name',
+                'cu.last_name',
+                "CONCAT(cu.first_name, ' ', cu.last_name)",
+                'cu.email',
+                'CAST(p.amount AS CHAR)',
+            ], $search);
         }
         if ($dateFrom !== null && $dateFrom !== '') {
             $sql .= ' AND p.due_date IS NOT NULL AND DATE(p.due_date) >= ? ';
@@ -1011,9 +1012,16 @@ class Payment
         }
         $search = trim((string) $search);
         if ($search !== '') {
-            $sql .= ' AND (p.payment_number LIKE ? OR c.contract_number LIKE ? OR cu.first_name LIKE ? OR cu.last_name LIKE ? OR cu.phone LIKE ? OR w.name LIKE ? OR r.room_number LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params = array_merge($params, array_fill(0, 7, $q));
+            appendTurkishLikeClause($sql, $params, [
+                'p.payment_number',
+                'c.contract_number',
+                'cu.first_name',
+                'cu.last_name',
+                "CONCAT(cu.first_name, ' ', cu.last_name)",
+                'cu.phone',
+                'w.name',
+                'r.room_number',
+            ], $search);
         }
         $sql .= ' ORDER BY p.due_date ASC, p.status ASC, cu.last_name, cu.first_name LIMIT ' . (int) $limit;
         $stmt = $pdo->prepare($sql);

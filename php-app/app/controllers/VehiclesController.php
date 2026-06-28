@@ -69,11 +69,11 @@ class VehiclesController
 
         $searchQ = isset($_GET['q']) ? trim($_GET['q']) : '';
         if ($searchQ !== '') {
-            $q = mb_strtolower($searchQ);
+            $q = turkishSearchKey($searchQ);
             $reportRows = array_values(array_filter($reportRows, function ($r) use ($q) {
-                return str_contains(mb_strtolower($r['plate'] ?? ''), $q)
-                    || str_contains(mb_strtolower($r['notes'] ?? ''), $q)
-                    || str_contains((string) ($r['model_year'] ?? ''), $q);
+                return str_contains(turkishSearchKey($r['plate'] ?? ''), $q)
+                    || str_contains(turkishSearchKey($r['notes'] ?? ''), $q)
+                    || str_contains(turkishSearchKey((string) ($r['model_year'] ?? '')), $q);
             }));
         }
         $alertFilter = isset($_GET['alert']) && in_array($_GET['alert'], ['kasko', 'inspection'], true) ? $_GET['alert'] : null;

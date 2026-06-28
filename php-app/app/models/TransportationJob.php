@@ -18,12 +18,13 @@ class TransportationJob
             $params[] = $companyId;
         }
         if ($customerSearch !== null && $customerSearch !== '') {
-            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ?) ';
-            $q = '%' . $customerSearch . '%';
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
+            appendTurkishLikeClause($sql, $params, [
+                'c.first_name',
+                'c.last_name',
+                "CONCAT(c.first_name, ' ', c.last_name)",
+                'c.email',
+                'c.phone',
+            ], $customerSearch);
         }
         if ($year !== null) {
             $sql .= ' AND YEAR(tj.job_date) = ? ';

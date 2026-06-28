@@ -215,6 +215,48 @@ ob_start();
             </dl>
         </div>
 
+        <?php
+        $contractPdfHref = publicUploadHref($contract['contract_pdf_url'] ?? null);
+        $hasUploadedContractPdf = $contractPdfHref !== null;
+        $uploadMaxLabel = uploadMaxBytesLabel();
+        ?>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                <i class="bi bi-file-earmark-pdf text-emerald-600"></i> İmzalı Sözleşme Belgesi
+            </h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Şirket ile müşteri arasında imzalanan sözleşme PDF’ini yükleyin. Yüklü belge varsa PDF indir ve WhatsApp gönder işlemleri bu dosyayı kullanır.</p>
+            <?php if ($hasUploadedContractPdf): ?>
+                <div class="flex flex-wrap items-center gap-2 mb-4">
+                    <a href="<?= htmlspecialchars($contractPdfHref) ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50">
+                        <i class="bi bi-eye"></i> Görüntüle
+                    </a>
+                    <a href="/girisler/<?= htmlspecialchars($contractId) ?>/pdf-indir" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <i class="bi bi-download"></i> İndir
+                    </a>
+                    <form method="post" action="/girisler/sozlesme-pdf-sil" class="inline" onsubmit="return confirm('Yüklenen sözleşme PDF silinsin mi? Sistem otomatik PDF kullanılır.');">
+                        <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contractId) ?>">
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40">
+                            <i class="bi bi-trash"></i> Kaldır
+                        </button>
+                    </form>
+                </div>
+                <p class="text-xs text-emerald-700 dark:text-emerald-400 mb-3"><i class="bi bi-check-circle mr-1"></i> İmzalı sözleşme yüklü.</p>
+            <?php else: ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Henüz imzalı sözleşme yüklenmemiş. PDF İndir ile sistem belgesi alınabilir; imzalı nüshayı aşağıdan ekleyin.</p>
+            <?php endif; ?>
+            <form method="post" action="/girisler/sozlesme-pdf-yukle" enctype="multipart/form-data" class="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-3">
+                <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contractId) ?>">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><?= $hasUploadedContractPdf ? 'Sözleşmeyi değiştir' : 'Sözleşme PDF yükle' ?> <span class="text-red-500">*</span></label>
+                    <input type="file" name="contract_pdf" required accept=".pdf,application/pdf" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 dark:file:bg-emerald-900/30 dark:file:text-emerald-300">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF · En fazla <?= htmlspecialchars($uploadMaxLabel) ?></p>
+                </div>
+                <button type="submit" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">
+                    <i class="bi bi-upload"></i> <?= $hasUploadedContractPdf ? 'PDF Değiştir' : 'PDF Yükle' ?>
+                </button>
+            </form>
+        </div>
+
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
             <div class="flex items-center justify-between gap-3 mb-4">
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">

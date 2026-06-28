@@ -67,18 +67,18 @@ class Contract
 
     private static function appendSearchFilter(string &$sql, array &$params, ?string $search): void
     {
-        $search = trim((string) $search);
-        if ($search === '') {
-            return;
-        }
-        $sql .= ' AND (
-            c.contract_number LIKE ? OR cu.first_name LIKE ? OR cu.last_name LIKE ?
-            OR cu.email LIKE ? OR cu.phone LIKE ? OR r.room_number LIKE ?
-            OR w.name LIKE ? OR COALESCE(c.vehicle_plate, \'\') LIKE ?
-            OR COALESCE(c.driver_name, \'\') LIKE ?
-        ) ';
-        $q = '%' . $search . '%';
-        $params = array_merge($params, array_fill(0, 9, $q));
+        appendTurkishLikeClause($sql, $params, [
+            'c.contract_number',
+            'cu.first_name',
+            'cu.last_name',
+            "CONCAT(cu.first_name, ' ', cu.last_name)",
+            'cu.email',
+            'cu.phone',
+            'r.room_number',
+            'w.name',
+            "COALESCE(c.vehicle_plate, '')",
+            "COALESCE(c.driver_name, '')",
+        ], $search);
     }
 
     private static ?bool $hasStoredItemsColumnsCache = null;
@@ -230,6 +230,16 @@ class Contract
             $data['notes'] ?? null,
             $id,
         ]);
+    }
+
+    public static function setContractPdfUrl(PDO $pdo, string $id, ?string $url): void
+    {
+        $contract = self::findOne($pdo, $id);
+        if ($contract && !empty($contract['contract_pdf_url']) && $contract['contract_pdf_url'] !== $url) {
+            unlinkPublicFile($contract['contract_pdf_url']);
+        }
+        $stmt = $pdo->prepare('UPDATE contracts SET contract_pdf_url = ? WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$url, $id]);
     }
 
     /**

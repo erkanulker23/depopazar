@@ -28,14 +28,15 @@ class Customer
             $params[] = $companyId;
         }
         if ($search !== null && $search !== '') {
-            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.phone_2 LIKE ? OR c.notes LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
+            appendTurkishLikeClause($sql, $params, [
+                'c.first_name',
+                'c.last_name',
+                "CONCAT(c.first_name, ' ', c.last_name)",
+                'c.email',
+                'c.phone',
+                'c.phone_2',
+                'c.notes',
+            ], $search);
         }
         $depoClause = self::depoFilterSql($companyId, $inDepo, $warehouseId, $params);
         if ($depoClause !== '') {
@@ -73,14 +74,15 @@ class Customer
             $params[] = $companyId;
         }
         if ($search !== null && $search !== '') {
-            $sql .= ' AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.phone_2 LIKE ? OR c.notes LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
-            $params[] = $q;
+            appendTurkishLikeClause($sql, $params, [
+                'c.first_name',
+                'c.last_name',
+                "CONCAT(c.first_name, ' ', c.last_name)",
+                'c.email',
+                'c.phone',
+                'c.phone_2',
+                'c.notes',
+            ], $search);
         }
         $depoClause = self::depoFilterSql($companyId, $inDepo, $warehouseId, $params);
         if ($depoClause !== '') {

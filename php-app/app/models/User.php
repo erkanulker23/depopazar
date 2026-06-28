@@ -60,9 +60,13 @@ class User
         }
         $search = trim((string) $search);
         if ($search !== '') {
-            $sql .= ' AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params = array_merge($params, array_fill(0, 4, $q));
+            appendTurkishLikeClause($sql, $params, [
+                'first_name',
+                'last_name',
+                "CONCAT(first_name, ' ', last_name)",
+                'email',
+                'phone',
+            ], $search);
         }
         $sql .= ' ORDER BY first_name, last_name ';
         $stmt = $pdo->prepare($sql);

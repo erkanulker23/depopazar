@@ -385,9 +385,11 @@ class ReportsController
         }
         $search = trim((string) $search);
         if ($search !== '') {
-            $sql .= ' AND (e.description LIKE ? OR e.notes LIKE ? OR ec.name LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params = array_merge($params, [$q, $q, $q]);
+            appendTurkishLikeClause($sql, $params, [
+                'e.description',
+                'e.notes',
+                'ec.name',
+            ], $search);
         }
         $sql .= ' ORDER BY e.expense_date DESC ';
         $stmt = $this->pdo->prepare($sql);
@@ -510,9 +512,15 @@ class ReportsController
         }
         $search = trim((string) $search);
         if ($search !== '') {
-            $sql .= ' AND (p.payment_number LIKE ? OR c.contract_number LIKE ? OR cu.first_name LIKE ? OR cu.last_name LIKE ? OR p.transaction_id LIKE ? OR p.notes LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params = array_merge($params, array_fill(0, 6, $q));
+            appendTurkishLikeClause($sql, $params, [
+                'p.payment_number',
+                'c.contract_number',
+                'cu.first_name',
+                'cu.last_name',
+                "CONCAT(cu.first_name, ' ', cu.last_name)",
+                'p.transaction_id',
+                'p.notes',
+            ], $search);
         }
         $sql .= ' ORDER BY p.paid_at DESC, ba.bank_name, p.payment_number ';
         $stmt = $this->pdo->prepare($sql);

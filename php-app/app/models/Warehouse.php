@@ -46,9 +46,13 @@ class Warehouse
         }
         $search = trim((string) $search);
         if ($search !== '') {
-            $sql .= ' AND (w.name LIKE ? OR w.city LIKE ? OR w.district LIKE ? OR w.address LIKE ? OR w.description LIKE ?) ';
-            $q = '%' . $search . '%';
-            $params = array_merge($params, array_fill(0, 5, $q));
+            appendTurkishLikeClause($sql, $params, [
+                'w.name',
+                'w.city',
+                'w.district',
+                'w.address',
+                'w.description',
+            ], $search);
         }
         $sql .= ' ORDER BY w.name ';
         $stmt = $pdo->prepare($sql);

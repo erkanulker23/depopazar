@@ -494,6 +494,75 @@ if (!function_exists('storedItemsConditionLabel')) {
     }
 }
 
+/** Arama metnini Türkçe duyarsız anahtara çevirir (Sami Yiğit → sami yigit) */
+if (!function_exists('turkishSearchKey')) {
+    function turkishSearchKey(?string $text): string
+    {
+        $text = trim((string) $text);
+        if ($text === '') {
+            return '';
+        }
+        $text = str_replace(['İ', 'I'], ['i', 'i'], $text);
+        $text = mb_strtolower($text, 'UTF-8');
+        return strtr($text, [
+            'ı' => 'i',
+            'ğ' => 'g',
+            'ü' => 'u',
+            'ş' => 's',
+            'ö' => 'o',
+            'ç' => 'c',
+        ]);
+    }
+}
+
+if (!function_exists('turkishLikePattern')) {
+    function turkishLikePattern(?string $search): ?string
+    {
+        $key = turkishSearchKey($search);
+        return $key === '' ? null : '%' . $key . '%';
+    }
+}
+
+/** SQL: sütun değerini Türkçe duyarsız arama anahtarına çevirir */
+if (!function_exists('sqlTurkishSearchKey')) {
+    function sqlTurkishSearchKey(string $columnExpr): string
+    {
+        static $pairs = [
+            ['İ', 'i'], ['I', 'i'], ['ı', 'i'],
+            ['Ş', 's'], ['ş', 's'],
+            ['Ğ', 'g'], ['ğ', 'g'],
+            ['Ü', 'u'], ['ü', 'u'],
+            ['Ö', 'o'], ['ö', 'o'],
+            ['Ç', 'c'], ['ç', 'c'],
+        ];
+        $expr = 'LOWER(COALESCE(' . $columnExpr . ", ''))";
+        foreach ($pairs as [$from, $to]) {
+            $fromEsc = str_replace("'", "''", $from);
+            $expr = "REPLACE($expr, '$fromEsc', '$to')";
+        }
+        return $expr;
+    }
+}
+
+/**
+ * @param list<string> $columnExprs
+ */
+if (!function_exists('appendTurkishLikeClause')) {
+    function appendTurkishLikeClause(string &$sql, array &$params, array $columnExprs, ?string $search, string $prefix = ' AND '): void
+    {
+        $pattern = turkishLikePattern($search);
+        if ($pattern === null) {
+            return;
+        }
+        $parts = [];
+        foreach ($columnExprs as $col) {
+            $parts[] = sqlTurkishSearchKey($col) . ' LIKE ?';
+            $params[] = $pattern;
+        }
+        $sql .= $prefix . '(' . implode(' OR ', $parts) . ') ';
+    }
+}
+
 /** Maksimum dosya yükleme boyutu (bayt) — nginx client_max_body_size ile uyumlu tutun */
 if (!function_exists('uploadMaxBytes')) {
     function uploadMaxBytes(): int
@@ -546,6 +615,164 @@ if (!function_exists('validateUploadedDocument')) {
             return 'İzin verilen formatlar: ' . implode(', ', $allowedExt);
         }
         return null;
+    }
+}
+
+if (!function_exists('validateContractPdfUpload')) {
+    function validateContractPdfUpload(?array $file): ?string
+    {
+        if (!$file || empty($file['name'])) {
+            return 'Lütfen bir PDF dosyası seçin.';
+        }
+        $err = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($err !== UPLOAD_ERR_OK) {
+            return uploadErrorMessage($err);
+        }
+        if (($file['size'] ?? 0) > uploadMaxBytes()) {
+            return 'Dosya boyutu ' . uploadMaxBytesLabel() . ' sınırını aşıyor.';
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'pdf') {
+            return 'Sadece PDF dosyası yüklenebilir.';
+        }
+        return null;
+    }
+}
+
+/** İmzalı sözleşme PDF yükle; başarılıysa /uploads/contracts/... yolu */
+if (!function_exists('storeContractPdfUpload')) {
+    function storeContractPdfUpload(?array $file): ?string
+    {
+        if (!$file || empty($file['name']) || validateContractPdfUpload($file) !== null) {
+            return null;
+        }
+        $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/contracts' : dirname(__DIR__) . '/public/uploads/contracts';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        $filename = 'contract_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.pdf';
+        $path = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $path)) {
+            return null;
+        }
+        return '/uploads/contracts/' . $filename;
+    }
+}
+
+/** Parçalı yükleme — nginx client_max_body_size sınırını aşmamak için (512 KB parça) */
+if (!function_exists('uploadChunkByteSize')) {
+    function uploadChunkByteSize(): int
+    {
+        return 512 * 1024;
+    }
+}
+
+if (!function_exists('uploadChunksStorageDir')) {
+    function uploadChunksStorageDir(): string
+    {
+        $dir = defined('APP_ROOT') ? APP_ROOT . '/storage/upload_chunks' : dirname(__DIR__) . '/storage/upload_chunks';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        return $dir;
+    }
+}
+
+if (!function_exists('sanitizeUploadSessionId')) {
+    function sanitizeUploadSessionId(?string $id): ?string
+    {
+        $id = trim((string) $id);
+        if ($id === '' || !preg_match('/^[a-zA-Z0-9\-]{16,64}$/', $id)) {
+            return null;
+        }
+        return $id;
+    }
+}
+
+if (!function_exists('uploadChunkDir')) {
+    function uploadChunkDir(string $uploadId): string
+    {
+        $dir = uploadChunksStorageDir() . '/' . $uploadId;
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        return $dir;
+    }
+}
+
+if (!function_exists('saveUploadChunkPart')) {
+    function saveUploadChunkPart(string $uploadId, int $index, string $tmpPath): bool
+    {
+        $dest = uploadChunkDir($uploadId) . '/' . sprintf('%05d.part', $index);
+        if (@move_uploaded_file($tmpPath, $dest)) {
+            return true;
+        }
+        return @copy($tmpPath, $dest);
+    }
+}
+
+if (!function_exists('mergeUploadChunkParts')) {
+    function mergeUploadChunkParts(string $uploadId, int $totalChunks): ?string
+    {
+        if ($totalChunks < 1) {
+            return null;
+        }
+        $dir = uploadChunkDir($uploadId);
+        $merged = $dir . '/merged.bin';
+        $out = fopen($merged, 'wb');
+        if (!$out) {
+            return null;
+        }
+        for ($i = 0; $i < $totalChunks; $i++) {
+            $part = $dir . '/' . sprintf('%05d.part', $i);
+            if (!is_file($part)) {
+                fclose($out);
+                @unlink($merged);
+                return null;
+            }
+            $in = fopen($part, 'rb');
+            if (!$in) {
+                fclose($out);
+                @unlink($merged);
+                return null;
+            }
+            stream_copy_to_stream($in, $out);
+            fclose($in);
+        }
+        fclose($out);
+        return $merged;
+    }
+}
+
+if (!function_exists('removeUploadChunkDir')) {
+    function removeUploadChunkDir(string $uploadId): void
+    {
+        $dir = uploadChunksStorageDir() . '/' . $uploadId;
+        if (!is_dir($dir)) {
+            return;
+        }
+        foreach (glob($dir . '/*') ?: [] as $file) {
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
+        @rmdir($dir);
+    }
+}
+
+if (!function_exists('documentMimeFromExtension')) {
+    function documentMimeFromExtension(string $ext): ?string
+    {
+        return match ($ext) {
+            'pdf' => 'application/pdf',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            default => null,
+        };
     }
 }
 

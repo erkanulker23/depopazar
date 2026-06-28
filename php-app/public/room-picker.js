@@ -35,7 +35,7 @@
             if (!wh) {
                 return [];
             }
-            var q = (query || '').trim().toLowerCase();
+            var q = (query || '').trim();
             var exclude = typeof options.getExcludeIds === 'function' ? options.getExcludeIds() : [];
             return rooms.filter(function (r) {
                 if ((r.warehouse_id || '') !== wh) {
@@ -47,8 +47,11 @@
                 if (!q) {
                     return true;
                 }
-                var num = String(r.room_number || '').toLowerCase();
-                return num.indexOf(q) !== -1;
+                var num = String(r.room_number || '');
+                var matchFn = typeof window.turkishSearchMatch === 'function'
+                    ? window.turkishSearchMatch
+                    : function (h, n) { return String(h).toLowerCase().indexOf(String(n).toLowerCase()) !== -1; };
+                return matchFn(num, q);
             });
         }
 
