@@ -474,6 +474,30 @@ class ContractsController
                 $monthlyPricesByKey[$monthKey] = $amount;
             }
         }
+        $warehouses = [];
+        $contractRoomsJson = [];
+        $contractCompanyId = $contract['company_id'] ?? $companyId;
+        if ($contractCompanyId) {
+            $warehouses = Warehouse::findAll($this->pdo, $contractCompanyId);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $warehouses = Warehouse::findAll($this->pdo, null);
+        }
+        $rooms = Room::findAll($this->pdo, null);
+        if ($contractCompanyId) {
+            $rooms = array_values(array_filter($rooms, fn($r) => ($r['company_id'] ?? '') === $contractCompanyId));
+        }
+        foreach ($rooms as $r) {
+            $roomNum = preg_replace('/\s*\([^)]*\)\s*$/', '', (string) ($r['room_number'] ?? ''));
+            $roomPrice = isset($r['monthly_price']) && $r['monthly_price'] !== null && $r['monthly_price'] !== ''
+                ? (float) $r['monthly_price'] : null;
+            $contractRoomsJson[] = [
+                'id' => $r['id'] ?? '',
+                'warehouse_id' => $r['warehouse_id'] ?? '',
+                'room_number' => $roomNum,
+                'monthly_price' => $roomPrice,
+                'status' => $r['status'] ?? '',
+            ];
+        }
         require __DIR__ . '/../../views/contracts/edit.php';
     }
 
@@ -516,6 +540,18 @@ class ContractsController
         $monthlyPrice = isset($_POST['monthly_price']) && $_POST['monthly_price'] !== ''
             ? (float) str_replace(',', '.', $_POST['monthly_price'])
             : (float) ($contract['monthly_price'] ?? 0);
+        $newRoomId = trim($_POST['room_id'] ?? '') ?: ($contract['room_id'] ?? '');
+        if ($newRoomId === '') {
+            Auth::setSession('flash_error', 'Oda seçimi zorunludur.');
+            header('Location: /girisler/' . $id . '/duzenle');
+            exit;
+        }
+        $roomChangeError = $this->validateContractRoomChange($contract, $newRoomId, $companyId, $user);
+        if ($roomChangeError !== null) {
+            Auth::setSession('flash_error', $roomChangeError);
+            header('Location: /girisler/' . $id . '/duzenle');
+            exit;
+        }
         try {
             Contract::update($this->pdo, $id, [
                 'start_date' => $startDate ?? $contract['start_date'],
@@ -567,7 +603,13 @@ class ContractsController
                 $monthlyPrice,
                 $monthlyPricesPost
             );
-            $roomId = $contract['room_id'] ?? '';
+            $oldRoomId = $contract['room_id'] ?? '';
+            if ($newRoomId !== $oldRoomId) {
+                Contract::updateRoomId($this->pdo, $id, $newRoomId);
+                Item::updateRoomForContract($this->pdo, $id, $newRoomId);
+                $this->syncRoomOccupancyAfterContractMove($oldRoomId, $newRoomId, !empty($contract['is_active']));
+            }
+            $roomId = $newRoomId;
             if ($roomId) {
                 $storedAt = ($startDate ?? $contract['start_date'] ?? null) ?: date('Y-m-d H:i:s');
                 Item::syncForContract($this->pdo, $id, $roomId, parseContractItemsFromRequest($_POST), $storedAt);
@@ -1092,6 +1134,38 @@ class ContractsController
                     );
                 }
             }
+        }
+    }
+
+    private function validateContractRoomChange(array $contract, string $newRoomId, ?string $companyId, array $user): ?string
+    {
+        $oldRoomId = $contract['room_id'] ?? '';
+        if ($newRoomId === $oldRoomId) {
+            return null;
+        }
+        $room = Room::findOne($this->pdo, $newRoomId);
+        if (!$room) {
+            return 'Geçersiz oda seçimi.';
+        }
+        if (($user['role'] ?? '') !== 'super_admin' && $companyId && ($room['company_id'] ?? '') !== $companyId) {
+            return 'Bu odaya erişim yetkiniz yok.';
+        }
+        $contractId = $contract['id'] ?? '';
+        if ($contractId !== '' && Room::hasActiveContractExcept($this->pdo, $newRoomId, $contractId)) {
+            return 'Seçilen oda başka bir aktif sözleşmede kullanılıyor.';
+        }
+        return null;
+    }
+
+    private function syncRoomOccupancyAfterContractMove(string $oldRoomId, string $newRoomId, bool $contractActive): void
+    {
+        if ($oldRoomId !== '' && $oldRoomId !== $newRoomId) {
+            Room::update($this->pdo, $oldRoomId, [
+                'status' => Room::hasActiveContract($this->pdo, $oldRoomId) ? 'occupied' : 'empty',
+            ]);
+        }
+        if ($newRoomId !== '' && $contractActive) {
+            Room::update($this->pdo, $newRoomId, ['status' => 'occupied']);
         }
     }
 

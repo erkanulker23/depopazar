@@ -60,6 +60,13 @@ class Item
         ]);
     }
 
+    /** Sözleşme odası değişince eşyaların room_id alanını güncelle */
+    public static function updateRoomForContract(PDO $pdo, string $contractId, string $roomId): void
+    {
+        $stmt = $pdo->prepare('UPDATE items SET room_id = ? WHERE contract_id = ? AND deleted_at IS NULL');
+        $stmt->execute([$roomId, $contractId]);
+    }
+
     /** Sözleşme eşya listesini form verisine göre yeniden yazar */
     public static function syncForContract(PDO $pdo, string $contractId, string $roomId, array $items, ?string $storedAt = null): void
     {

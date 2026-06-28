@@ -191,6 +191,12 @@ class Contract
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    public static function updateRoomId(PDO $pdo, string $contractId, string $roomId): void
+    {
+        $stmt = $pdo->prepare('UPDATE contracts SET room_id = ? WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$roomId, $contractId]);
+    }
+
     public static function update(PDO $pdo, string $id, array $data): void
     {
         if (self::hasStoredItemsColumns($pdo)) {

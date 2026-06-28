@@ -3,6 +3,8 @@ $currentPage = 'girisler';
 $contract = $contract ?? [];
 $monthlyPricesByKey = $monthlyPricesByKey ?? [];
 $paidMonths = $paidMonths ?? [];
+$warehouses = $warehouses ?? [];
+$contractRoomsJson = $contractRoomsJson ?? [];
 $monthlyPriceDisplay = number_format((float) ($contract['monthly_price'] ?? 0), 2, ',', '.');
 ob_start();
 ?>
@@ -36,8 +38,26 @@ ob_start();
         </div>
         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 space-y-4">
             <div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Depo / Oda</p>
-                <p class="text-sm font-medium text-gray-900 dark:text-white"><?= htmlspecialchars(trim(($contract['warehouse_name'] ?? '') . ' — Oda ' . ($contract['room_number'] ?? ''))) ?></p>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo <span class="text-red-500">*</span></label>
+                <select name="warehouse_id" id="edit_contract_warehouse" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    <option value="">Depo seçin</option>
+                    <?php foreach ($warehouses as $w): ?>
+                        <?php
+                        $whFee = isset($w['monthly_base_fee']) && $w['monthly_base_fee'] !== null && $w['monthly_base_fee'] !== '' ? (float) $w['monthly_base_fee'] : null;
+                        $selected = ($contract['warehouse_id'] ?? '') === ($w['id'] ?? '');
+                        ?>
+                        <option value="<?= htmlspecialchars($w['id']) ?>" <?= $selected ? 'selected' : '' ?> data-monthly-base-fee="<?= $whFee !== null ? htmlspecialchars(number_format((float) $whFee, 2, '.', '')) : '' ?>"><?= htmlspecialchars($w['name'] ?? '') ?><?= $whFee !== null ? ' (' . fmtPrice($whFee) . ')' : '' ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="edit_contract_room_search">Oda <span class="text-red-500">*</span></label>
+                <input type="hidden" name="room_id" id="edit_contract_room_id" value="<?= htmlspecialchars($contract['room_id'] ?? '') ?>">
+                <div class="relative">
+                    <input type="search" id="edit_contract_room_search" value="<?= htmlspecialchars($contract['room_number'] ?? '') ?>" placeholder="Önce depo seçin" autocomplete="off" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    <div id="edit_contract_room_results" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-52 overflow-y-auto"></div>
+                </div>
+                <p id="edit_contract_room_hint" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Oda numarası yazarak arayın</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Varsayılan Aylık Ücret (₺)</label>
@@ -106,7 +126,42 @@ ob_start();
     </div>
 </form>
 
+<script src="/turkish-search.js"></script>
+<script src="/room-picker.js"></script>
 <script src="/contract-billing.js"></script>
+<script>
+(function() {
+    var editContractRoomsData = <?= json_encode($contractRoomsJson, JSON_UNESCAPED_UNICODE) ?>;
+    var currentRoom = <?= json_encode([
+        'id' => $contract['room_id'] ?? '',
+        'room_number' => $contract['room_number'] ?? '',
+        'warehouse_id' => $contract['warehouse_id'] ?? '',
+        'monthly_price' => isset($contract['room_monthly_price']) ? (float) $contract['room_monthly_price'] : null,
+    ], JSON_UNESCAPED_UNICODE) ?>;
+    var whSelect = document.getElementById('edit_contract_warehouse');
+    if (typeof initRoomPicker === 'function') {
+        var picker = initRoomPicker({
+            hiddenInputId: 'edit_contract_room_id',
+            searchInputId: 'edit_contract_room_search',
+            resultsId: 'edit_contract_room_results',
+            warehouseSelectId: 'edit_contract_warehouse',
+            hintId: 'edit_contract_room_hint',
+            rooms: editContractRoomsData,
+            onSelect: function(room) {
+                var priceEl = document.getElementById('edit_monthly_price');
+                if (priceEl && room && room.monthly_price !== null && room.monthly_price !== undefined && room.monthly_price !== '') {
+                    priceEl.value = String(room.monthly_price).replace('.', ',');
+                }
+            }
+        });
+        if (picker && currentRoom.id) {
+            picker.setSelected(currentRoom);
+        }
+    } else if (whSelect && !whSelect.value) {
+        whSelect.disabled = true;
+    }
+})();
+</script>
 <script>
 function toggleEditStoredItemsConditionNote(value) {
     var block = document.getElementById('edit_stored_items_condition_note_block');
