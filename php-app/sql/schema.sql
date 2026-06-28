@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS `contract_monthly_prices` (
   `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted_at` DATETIME DEFAULT NULL,
   `contract_id` CHAR(36) NOT NULL,
-  `month` VARCHAR(7) NOT NULL,
+  `month` VARCHAR(10) NOT NULL,
   `price` DECIMAL(10,2) NOT NULL,
   `notes` TEXT DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -231,11 +231,14 @@ CREATE TABLE IF NOT EXISTS `payments` (
   `notes` TEXT DEFAULT NULL,
   `days_overdue` INT DEFAULT 0,
   `bank_account_id` CHAR(36) DEFAULT NULL,
+  `paid_by_user_id` CHAR(36) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_payments_contract_id` (`contract_id`),
   KEY `idx_payments_bank_account_id` (`bank_account_id`),
+  KEY `idx_payments_paid_by_user_id` (`paid_by_user_id`),
   CONSTRAINT `fk_payments_contract` FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_payments_bank_account` FOREIGN KEY (`bank_account_id`) REFERENCES `bank_accounts` (`id`) ON DELETE SET NULL
+  CONSTRAINT `fk_payments_bank_account` FOREIGN KEY (`bank_account_id`) REFERENCES `bank_accounts` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_payments_paid_by_user` FOREIGN KEY (`paid_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- items

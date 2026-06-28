@@ -410,7 +410,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                     </div>
                     <div id="newSale_monthly_prices_section" class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 hidden">
                         <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-calendar-month"></i> Aylık Fiyatlar</h4>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Başlangıç–bitiş tarihlerine göre aylar listelenir. Her ay için fiyatı düzenleyebilirsiniz.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Giriş tarihinden itibaren her ayın vade gününe göre listelenir (ör. giriş 28.06 → vadeler 28.06, 28.07 …).</p>
                         <div id="newSale_monthly_prices_list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
@@ -537,6 +537,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
 
 <script src="/customer-picker.js"></script>
 <script src="/room-picker.js"></script>
+<script src="/contract-billing.js"></script>
 <?php
 $newSaleRoomsJson = [];
 foreach ($rooms as $r) {
@@ -858,25 +859,16 @@ function closeNewSaleModal() {
         var list = document.getElementById('newSale_monthly_prices_list');
         var defaultPriceEl = document.getElementById('newSale_monthly_price');
         var defaultVal = (defaultPriceEl && defaultPriceEl.value) ? defaultPriceEl.value.replace(',', '.') : '';
-        if (!startEl || !endEl || !section || !list) return;
+        if (!startEl || !endEl || !section || !list || typeof ContractBilling === 'undefined') return;
         var startStr = startEl.value, endStr = endEl.value;
         if (!startStr || !endStr) { section.classList.add('hidden'); list.innerHTML = ''; return; }
-        var start = new Date(startStr + 'T00:00:00');
-        var end = new Date(endStr + 'T00:00:00');
-        if (end < start) { section.classList.add('hidden'); list.innerHTML = ''; return; }
-        var months = [];
-        var d = new Date(start.getFullYear(), start.getMonth(), 1);
-        var endFirst = new Date(end.getFullYear(), end.getMonth(), 1);
-        while (d <= endFirst) {
-            months.push({ y: d.getFullYear(), m: d.getMonth(), key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') });
-            d.setMonth(d.getMonth() + 1);
-        }
+        if (endStr < startStr) { section.classList.add('hidden'); list.innerHTML = ''; return; }
+        var periods = ContractBilling.billingPeriods(startStr, endStr);
         list.innerHTML = '';
-        months.forEach(function(item) {
-            var label = monthNames[item.m] + ' ' + item.y;
+        periods.forEach(function(item) {
             var row = document.createElement('div');
             row.className = 'flex items-center gap-3';
-            row.innerHTML = '<label class="w-28 text-sm text-gray-700 shrink-0">' + label + '</label>' +
+            row.innerHTML = '<label class="w-28 text-sm text-gray-700 shrink-0" title="Vade tarihi">' + item.label + '</label>' +
                 '<input type="text" name="monthly_prices[' + item.key + ']" value="' + (defaultVal ? defaultVal.replace('.', ',') : '') + '" placeholder="0,00" class="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm">' +
                 '<span class="text-gray-500 text-sm shrink-0">₺</span>';
             list.appendChild(row);

@@ -133,8 +133,10 @@ class CustomersController
         $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
         $debtOverdue = Payment::sumUnpaidOverdueByCustomerId($this->pdo, $id, $companyId);
         $debtDueThisMonth = Payment::sumUnpaidDueThisMonthByCustomerId($this->pdo, $id, $companyId);
+        $totalCollected = Payment::sumPaidByCustomerId($this->pdo, $id, $companyId);
         try {
             $debt += CustomerCharge::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
+            $totalCollected += CustomerCharge::sumPaidByCustomerId($this->pdo, $id, $companyId);
         } catch (Throwable $e) {
             // customer_charges tablosu yoksa yoksay
         }
@@ -212,7 +214,46 @@ class CustomersController
             ];
         }
         $pageTitle = 'Müşteri: ' . trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
+        $bulkPaidIssues = Payment::findSuspiciousBulkPaidGroups($this->pdo, $id, $companyId);
+        $bulkPaidExtraCount = array_sum(array_map(fn($g) => (int) ($g['excess'] ?? 0), $bulkPaidIssues));
         require __DIR__ . '/../../views/customers/detail.php';
+    }
+
+    /** Aynı anda yanlışlıkla ödendi işaretlenmiş taksitleri düzelt (yalnızca ilk vade kalır). */
+    public function fixBulkPaid(array $params): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /musteriler');
+            exit;
+        }
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
+            header('Location: /musteriler');
+            exit;
+        }
+        $keepCount = max(1, (int) ($_POST['keep_count'] ?? 1));
+        $reverted = Payment::revertBulkPaidKeepingEarliest($this->pdo, $id, $companyId, $keepCount);
+        if ($reverted > 0) {
+            Auth::setSession('flash_success', $reverted . ' taksit geri alındı. Yalnızca tahsil edilen ' . $keepCount . ' vade ödendi olarak kaldı.');
+        } else {
+            Auth::setSession('flash_error', 'Düzeltilecek toplu tahsilat kaydı bulunamadı.');
+        }
+        header('Location: /musteriler/' . $id);
+        exit;
     }
 
     /** Müşteriye SMS gönder (Ayarlar > SMS ayarlarına göre). */

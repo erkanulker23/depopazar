@@ -244,110 +244,119 @@ class Contract
 
     /**
      * Sözleşme dönemindeki aylık fiyatları günceller; bekleyen ödeme tutarlarını eşitler.
+     * Vadeler giriş tarihinin yıl dönümüne göre hesaplanır (ContractBilling).
      *
-     * @param array<string, string|float> $monthlyPricesPost Anahtar: Y-m (ör. 2026-03)
+     * @param array<string, string|float> $monthlyPricesPost Anahtar: Y-m-d (ör. 2026-06-28)
      */
     public static function syncMonthlyPrices(PDO $pdo, string $contractId, ?string $startDate, ?string $endDate, float $defaultPrice, array $monthlyPricesPost): void
     {
         if ($startDate === null || $startDate === '' || $endDate === null || $endDate === '') {
             return;
         }
-        $start = new DateTime(substr($startDate, 0, 10));
-        $end = new DateTime(substr($endDate, 0, 10));
-        $end->modify('last day of this month');
 
         $existing = self::getMonthlyPricesByContractId($pdo, $contractId);
         $existingByMonth = [];
         foreach ($existing as $row) {
             $existingByMonth[$row['month']] = $row;
         }
-        $paidMonths = array_flip(Payment::getPaidMonthsByContractId($pdo, $contractId));
-        $paidAmountsByMonth = Payment::getPaidAmountsByMonthForContract($pdo, $contractId);
+        $paidPeriodKeys = Payment::getPaidPeriodKeysByContractId($pdo, $contractId);
+        $paidAmountsByPeriod = Payment::getPaidAmountsByPeriodForContract($pdo, $contractId);
 
-        $validMonths = [];
-        $cursor = new DateTime($start->format('Y-m-01'));
-        $endFirst = new DateTime($end->format('Y-m-01'));
-        while ($cursor <= $endFirst) {
-            $monthStr = $cursor->format('Y-m');
-            if (isset($paidMonths[$monthStr])) {
-                if (isset($existingByMonth[$monthStr])) {
-                    $validMonths[$monthStr] = (float) $existingByMonth[$monthStr]['price'];
-                } elseif (isset($paidAmountsByMonth[$monthStr])) {
-                    $validMonths[$monthStr] = $paidAmountsByMonth[$monthStr];
+        $validPeriods = [];
+        foreach (ContractBilling::periods($startDate, $endDate) as $period) {
+            $periodKey = $period['key'];
+            if (ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys)) {
+                if (isset($existingByMonth[$periodKey])) {
+                    $validPeriods[$periodKey] = [
+                        'price' => (float) $existingByMonth[$periodKey]['price'],
+                        'due_date' => $period['due_date'],
+                    ];
+                } elseif (isset($paidAmountsByPeriod[$periodKey])) {
+                    $validPeriods[$periodKey] = [
+                        'price' => $paidAmountsByPeriod[$periodKey],
+                        'due_date' => $period['due_date'],
+                    ];
                 } else {
-                    $validMonths[$monthStr] = $defaultPrice;
+                    $validPeriods[$periodKey] = [
+                        'price' => $defaultPrice,
+                        'due_date' => $period['due_date'],
+                    ];
                 }
             } else {
-                $price = $defaultPrice;
-                if (isset($monthlyPricesPost[$monthStr]) && $monthlyPricesPost[$monthStr] !== '') {
-                    $price = (float) str_replace(',', '.', (string) $monthlyPricesPost[$monthStr]);
+                $price = ContractBilling::resolvePriceForPeriod($periodKey, $defaultPrice, $monthlyPricesPost);
+                if ($price <= 0 && isset($existingByMonth[$periodKey])) {
+                    $price = (float) ($existingByMonth[$periodKey]['price'] ?? $defaultPrice);
+                } elseif ($price <= 0) {
+                    $price = ContractBilling::priceFromExistingRows($periodKey, $existingByMonth, $defaultPrice);
                 }
-                $validMonths[$monthStr] = $price;
+                $validPeriods[$periodKey] = [
+                    'price' => $price,
+                    'due_date' => $period['due_date'],
+                ];
             }
-            $cursor->modify('+1 month');
         }
 
         $stmtUpdate = $pdo->prepare('UPDATE contract_monthly_prices SET price = ?, deleted_at = NULL WHERE id = ?');
         $stmtInsert = $pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)');
 
-        foreach ($validMonths as $monthStr => $price) {
-            if (isset($paidMonths[$monthStr])) {
+        foreach ($validPeriods as $periodKey => $info) {
+            if (ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys)) {
                 continue;
             }
-            if (isset($existingByMonth[$monthStr])) {
-                $stmtUpdate->execute([$price, $existingByMonth[$monthStr]['id']]);
+            if (isset($existingByMonth[$periodKey])) {
+                $stmtUpdate->execute([$info['price'], $existingByMonth[$periodKey]['id']]);
             } else {
-                $stmtInsert->execute([self::uuid(), $contractId, $monthStr, $price]);
+                $stmtInsert->execute([self::uuid(), $contractId, $periodKey, $info['price']]);
             }
         }
 
-        foreach ($existingByMonth as $monthStr => $row) {
-            if (!isset($validMonths[$monthStr])) {
-                if (isset($paidMonths[$monthStr])) {
+        foreach ($existingByMonth as $monthKey => $row) {
+            if (!isset($validPeriods[$monthKey])) {
+                if (ContractBilling::isPaidPeriodKey($monthKey, $paidPeriodKeys)) {
                     continue;
                 }
                 $pdo->prepare('UPDATE contract_monthly_prices SET deleted_at = NOW() WHERE id = ?')->execute([$row['id']]);
             }
         }
 
-        $stmtPayMonths = $pdo->prepare(
-            "SELECT id, status, DATE_FORMAT(due_date, '%Y-%m') AS month_key
-             FROM payments WHERE contract_id = ? AND deleted_at IS NULL AND due_date IS NOT NULL"
+        $stmtPayPeriods = $pdo->prepare(
+            'SELECT id, status, DATE(due_date) AS period_key
+             FROM payments WHERE contract_id = ? AND deleted_at IS NULL AND due_date IS NOT NULL'
         );
-        $stmtPayMonths->execute([$contractId]);
-        $paymentsByMonth = [];
-        while ($row = $stmtPayMonths->fetch(PDO::FETCH_ASSOC)) {
-            $monthKey = $row['month_key'] ?? '';
-            if ($monthKey !== '' && !isset($paymentsByMonth[$monthKey])) {
-                $paymentsByMonth[$monthKey] = $row;
+        $stmtPayPeriods->execute([$contractId]);
+        $paymentsByPeriod = [];
+        while ($row = $stmtPayPeriods->fetch(PDO::FETCH_ASSOC)) {
+            $periodKey = $row['period_key'] ?? '';
+            if ($periodKey !== '' && !isset($paymentsByPeriod[$periodKey])) {
+                $paymentsByPeriod[$periodKey] = $row;
             }
         }
 
         $stmtPayUpdate = $pdo->prepare(
-            "UPDATE payments SET amount = ? WHERE contract_id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue') AND DATE_FORMAT(due_date, '%Y-%m') = ?"
+            'UPDATE payments SET amount = ? WHERE contract_id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\') AND DATE(due_date) = ?'
         );
         $stmtPayDelete = $pdo->prepare(
-            "UPDATE payments SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
+            'UPDATE payments SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
         );
 
-        foreach ($validMonths as $monthStr => $price) {
-            if (isset($paidMonths[$monthStr])) {
+        foreach ($validPeriods as $periodKey => $info) {
+            if (ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys)) {
                 continue;
             }
-            if (!isset($paymentsByMonth[$monthStr])) {
+            if (!isset($paymentsByPeriod[$periodKey])) {
                 Payment::create($pdo, [
                     'contract_id' => $contractId,
-                    'amount' => $price,
+                    'amount' => $info['price'],
                     'status' => 'pending',
-                    'due_date' => $monthStr . '-01 00:00:00',
+                    'due_date' => $info['due_date'],
                 ]);
             } else {
-                $stmtPayUpdate->execute([$price, $contractId, $monthStr]);
+                $stmtPayUpdate->execute([$info['price'], $contractId, $periodKey]);
             }
         }
 
-        foreach ($paymentsByMonth as $monthStr => $row) {
-            if (isset($validMonths[$monthStr]) || ($row['status'] ?? '') === 'paid') {
+        foreach ($paymentsByPeriod as $periodKey => $row) {
+            if (isset($validPeriods[$periodKey]) || ($row['status'] ?? '') === 'paid') {
                 continue;
             }
             $stmtPayDelete->execute([$row['id']]);

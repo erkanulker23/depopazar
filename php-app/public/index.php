@@ -70,6 +70,7 @@ $router->post('/musteriler/belge-sil', fn() => (new CustomersController($pdo))->
 $router->post('/musteriler/{id}/not-guncelle', fn(array $p) => (new CustomersController($pdo))->noteUpdate($p));
 $router->get('/musteriler/{id}/cikis-belgesi', fn(array $p) => (new CustomersController($pdo))->cikisBelgesiList($p));
 $router->post('/musteriler/{id}/sms-gonder', fn(array $p) => (new CustomersController($pdo))->sendSms($p));
+$router->post('/musteriler/{id}/toplu-tahsilat-duzelt', fn(array $p) => (new CustomersController($pdo))->fixBulkPaid($p));
 $router->get('/musteriler/{id}', fn(array $p) => (new CustomersController($pdo))->show($p));
 $router->get('/girisler', fn() => (new ContractsController($pdo))->index());
 $router->get('/girisler/yeni', function () { Auth::requireStaff(); header('Location: /girisler?newSale=1'); exit; });

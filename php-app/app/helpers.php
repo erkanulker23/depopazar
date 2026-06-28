@@ -391,8 +391,16 @@ if (!function_exists('paymentDaysEarly')) {
     }
 }
 
-/**
- * Ödeme durumu etiketi ve rozet sınıfı (vade tarihine göre; DB overdue status kullanılmaz).
+/** Tahsilatı işleyen kullanıcı adı */
+if (!function_exists('paymentCollectorName')) {
+    function paymentCollectorName(array $payment): string
+    {
+        $name = trim(($payment['paid_by_first_name'] ?? '') . ' ' . ($payment['paid_by_last_name'] ?? ''));
+        return $name;
+    }
+}
+
+/** Ödeme durumu etiketi ve rozet sınıfı (vade tarihine göre; DB overdue status kullanılmaz).
  * @return array{label: string, badge: string, collectible: bool, early?: bool, days_early?: int}
  */
 if (!function_exists('paymentStatusDisplay')) {

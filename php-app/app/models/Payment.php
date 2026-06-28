@@ -285,12 +285,14 @@ class Payment
         $stmt = $pdo->prepare(
             'SELECT p.*, c.contract_number, c.id AS contract_id, c.customer_id,
              cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.email AS customer_email, cu.phone AS customer_phone,
-             r.room_number, w.name AS warehouse_name, w.company_id
+             r.room_number, w.name AS warehouse_name, w.company_id,
+             pu.first_name AS paid_by_first_name, pu.last_name AS paid_by_last_name
              FROM payments p
              INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
              INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
              INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
              INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+             LEFT JOIN users pu ON pu.id = p.paid_by_user_id AND pu.deleted_at IS NULL
              WHERE p.id = ? AND p.deleted_at IS NULL LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -389,7 +391,9 @@ class Payment
     public static function findByContractId(PDO $pdo, string $contractId): array
     {
         $stmt = $pdo->prepare(
-            'SELECT p.* FROM payments p
+            'SELECT p.*, pu.first_name AS paid_by_first_name, pu.last_name AS paid_by_last_name
+             FROM payments p
+             LEFT JOIN users pu ON pu.id = p.paid_by_user_id AND pu.deleted_at IS NULL
              WHERE p.contract_id = ? AND p.deleted_at IS NULL
              ORDER BY p.due_date ASC'
         );
@@ -397,24 +401,30 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** Ödemesi alınmış aylar (Y-m); sözleşme düzenlemede fiyat kilidi için */
-    public static function getPaidMonthsByContractId(PDO $pdo, string $contractId): array
+    /** Ödemesi alınmış dönemler (Y-m-d vade anahtarı); sözleşme düzenlemede fiyat kilidi için */
+    public static function getPaidPeriodKeysByContractId(PDO $pdo, string $contractId): array
     {
         $stmt = $pdo->prepare(
-            "SELECT DISTINCT DATE_FORMAT(due_date, '%Y-%m') AS month_key
+            "SELECT DISTINCT DATE(due_date) AS period_key
              FROM payments
              WHERE contract_id = ? AND deleted_at IS NULL AND status = 'paid' AND due_date IS NOT NULL
-             ORDER BY month_key ASC"
+             ORDER BY period_key ASC"
         );
         $stmt->execute([$contractId]);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    /** Ödemesi alınmış ayların tahsil edilen tutarları (Y-m => amount) */
-    public static function getPaidAmountsByMonthForContract(PDO $pdo, string $contractId): array
+    /** @deprecated getPaidPeriodKeysByContractId kullanın */
+    public static function getPaidMonthsByContractId(PDO $pdo, string $contractId): array
+    {
+        return self::getPaidPeriodKeysByContractId($pdo, $contractId);
+    }
+
+    /** Ödemesi alınmış dönemlerin tahsil edilen tutarları (Y-m-d => amount) */
+    public static function getPaidAmountsByPeriodForContract(PDO $pdo, string $contractId): array
     {
         $stmt = $pdo->prepare(
-            "SELECT DATE_FORMAT(due_date, '%Y-%m') AS month_key, amount
+            "SELECT DATE(due_date) AS period_key, amount
              FROM payments
              WHERE contract_id = ? AND deleted_at IS NULL AND status = 'paid' AND due_date IS NOT NULL
              ORDER BY paid_at DESC"
@@ -422,12 +432,18 @@ class Payment
         $stmt->execute([$contractId]);
         $out = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $key = $row['month_key'] ?? '';
+            $key = $row['period_key'] ?? '';
             if ($key !== '' && !isset($out[$key])) {
                 $out[$key] = (float) ($row['amount'] ?? 0);
             }
         }
         return $out;
+    }
+
+    /** @deprecated getPaidAmountsByPeriodForContract kullanın */
+    public static function getPaidAmountsByMonthForContract(PDO $pdo, string $contractId): array
+    {
+        return self::getPaidAmountsByPeriodForContract($pdo, $contractId);
     }
 
     /** Bekleyen/gecikmiş ödeme tutarını güncelle (ödenmiş aylar kilitli) */
@@ -712,11 +728,12 @@ class Payment
 
     public static function findByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): array
     {
-        $sql = 'SELECT p.*, c.contract_number
+        $sql = 'SELECT p.*, c.contract_number, pu.first_name AS paid_by_first_name, pu.last_name AS paid_by_last_name
                 FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                LEFT JOIN users pu ON pu.id = p.paid_by_user_id AND pu.deleted_at IS NULL
                 WHERE c.customer_id = ? AND p.deleted_at IS NULL ';
         $params = [$customerId];
         if ($companyId) {
@@ -757,6 +774,24 @@ class Payment
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 WHERE c.customer_id = ? AND p.deleted_at IS NULL AND p.status IN (\'pending\', \'overdue\') ';
+        $params = [$customerId];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    /** Müşteri: toplam tahsil edilmiş (ödenmiş) kira tutarı */
+    public static function sumPaidByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): float
+    {
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE c.customer_id = ? AND p.deleted_at IS NULL AND p.status = \'paid\' ';
         $params = [$customerId];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
@@ -809,10 +844,108 @@ class Payment
     public static function cancel(PDO $pdo, string $paymentId): bool
     {
         $stmt = $pdo->prepare(
-            'UPDATE payments SET status = \'pending\', paid_at = NULL, payment_method = NULL, transaction_id = NULL, bank_account_id = NULL WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE payments SET status = \'pending\', paid_at = NULL, payment_method = NULL, transaction_id = NULL, bank_account_id = NULL, paid_by_user_id = NULL WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([$paymentId]);
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Aynı sözleşmede aynı paid_at ile işaretlenmiş birden fazla taksit (toplu yanlış tahsilat).
+     *
+     * @return list<array{contract_id: string, contract_number: string, paid_at: string, count: int, excess: int}>
+     */
+    public static function findSuspiciousBulkPaidGroups(PDO $pdo, ?string $customerId = null, ?string $companyId = null): array
+    {
+        $sql = 'SELECT p.id, p.contract_id, p.paid_at, p.due_date, c.contract_number, c.customer_id
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\' AND p.paid_at IS NOT NULL ';
+        $params = [];
+        if ($customerId) {
+            $sql .= ' AND c.customer_id = ? ';
+            $params[] = $customerId;
+        }
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.contract_id, p.paid_at, p.due_date ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $groups = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $key = ($row['contract_id'] ?? '') . '|' . ($row['paid_at'] ?? '');
+            if ($key === '|') {
+                continue;
+            }
+            if (!isset($groups[$key])) {
+                $groups[$key] = [
+                    'contract_id' => $row['contract_id'],
+                    'contract_number' => $row['contract_number'] ?? '',
+                    'paid_at' => $row['paid_at'],
+                    'count' => 0,
+                    'items' => [],
+                ];
+            }
+            $groups[$key]['count']++;
+            $groups[$key]['items'][] = $row;
+        }
+        $out = [];
+        foreach ($groups as $g) {
+            if ($g['count'] <= 1) {
+                continue;
+            }
+            $g['excess'] = $g['count'] - 1;
+            unset($g['items']);
+            $out[] = $g;
+        }
+        return $out;
+    }
+
+    /** Toplu yanlış tahsilatta yalnızca en erken vadeli $keepPerGroup taksiti bırakır, diğerlerini geri alır. */
+    public static function revertBulkPaidKeepingEarliest(PDO $pdo, ?string $customerId, ?string $companyId, int $keepPerGroup = 1): int
+    {
+        $sql = 'SELECT p.id, p.contract_id, p.paid_at, p.due_date
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\' AND p.paid_at IS NOT NULL ';
+        $params = [];
+        if ($customerId) {
+            $sql .= ' AND c.customer_id = ? ';
+            $params[] = $customerId;
+        }
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.contract_id, p.paid_at, p.due_date ASC ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $groups = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $key = ($row['contract_id'] ?? '') . '|' . ($row['paid_at'] ?? '');
+            if ($key === '|') {
+                continue;
+            }
+            $groups[$key][] = $row;
+        }
+        $reverted = 0;
+        foreach ($groups as $items) {
+            if (count($items) <= $keepPerGroup) {
+                continue;
+            }
+            for ($i = $keepPerGroup; $i < count($items); $i++) {
+                if (self::cancel($pdo, $items[$i]['id'])) {
+                    $reverted++;
+                }
+            }
+        }
+        return $reverted;
     }
 
     /** Ödenmiş kaydın tahsilat tarihini güncelle */
@@ -826,11 +959,11 @@ class Payment
         return $stmt->rowCount() > 0;
     }
 
-    public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null): void
+    public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null, ?string $paidByUserId = null): void
     {
         $paidAtValue = normalizePaidAt($paidAt);
         $stmt = $pdo->prepare(
-            'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([
             $paidAtValue,
@@ -838,18 +971,19 @@ class Payment
             $transactionId,
             $notes,
             $bankAccountId,
+            $paidByUserId,
             $paymentId,
         ]);
     }
 
-    public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null): void
+    public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null, ?string $paidByUserId = null): void
     {
         $method = $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti';
         $paidAtValue = normalizePaidAt($paidAt);
         $placeholders = implode(',', array_fill(0, count($paymentIds), '?'));
-        $params = array_merge([$paidAtValue, $method, $transactionId, $notes, $bankAccountId], $paymentIds);
+        $params = array_merge([$paidAtValue, $method, $transactionId, $notes, $bankAccountId, $paidByUserId], $paymentIds);
         $stmt = $pdo->prepare(
-            "UPDATE payments SET status = 'paid', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ? WHERE id IN ($placeholders) AND deleted_at IS NULL"
+            "UPDATE payments SET status = 'paid', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id IN ($placeholders) AND deleted_at IS NULL"
         );
         $stmt->execute($params);
     }

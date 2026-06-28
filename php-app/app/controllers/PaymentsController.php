@@ -167,9 +167,30 @@ class PaymentsController
                 exit;
             }
         }
+        if (count($paymentIds) > 1 && empty($_POST['confirm_multi_period'])) {
+            $dueDays = [];
+            foreach ($paymentIds as $pid) {
+                $p = Payment::findOne($this->pdo, $pid);
+                if ($p && !empty($p['due_date'])) {
+                    $dueDays[] = substr((string) $p['due_date'], 0, 10);
+                }
+            }
+            if (count($dueDays) > 1) {
+                $minDue = min($dueDays);
+                $maxDue = max($dueDays);
+                $spanDays = (int) ((strtotime($maxDue) - strtotime($minDue)) / 86400);
+                if ($spanDays >= 28 && $maxDue > date('Y-m-d')) {
+                    Auth::setSession('flash_error', count($paymentIds) . ' farklı vadeli taksit aynı anda ödendi işaretlenecek. Yalnızca gerçekten tahsil ettiğiniz taksit(ler)i seçin.');
+                    $redirect = trim($_POST['redirect'] ?? '');
+                    header('Location: ' . ($redirect !== '' && preg_match('#^/[a-z0-9/\-]+$#i', $redirect) ? $redirect : '/odemeler'));
+                    exit;
+                }
+            }
+        }
         try {
+            $paidByUserId = !empty($user['id']) ? (string) $user['id'] : null;
             if (count($paymentIds) === 1 && empty($chargeIds)) {
-                Payment::markAsPaid($this->pdo, $paymentIds[0], $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt);
+                Payment::markAsPaid($this->pdo, $paymentIds[0], $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt, $paidByUserId);
                 $firstPayment = Payment::findOne($this->pdo, $paymentIds[0]);
                 if ($firstPayment && !empty($firstPayment['contract_id'])) {
                     $contract = Contract::findOne($this->pdo, $firstPayment['contract_id']);
@@ -180,7 +201,7 @@ class PaymentsController
                     }
                 }
             } elseif (!empty($paymentIds)) {
-                Payment::markManyAsPaid($this->pdo, $paymentIds, $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt);
+                Payment::markManyAsPaid($this->pdo, $paymentIds, $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt, $paidByUserId);
                 $notifiedWarehouses = [];
                 foreach ($paymentIds as $pid) {
                     $p = Payment::findOne($this->pdo, $pid);
@@ -326,7 +347,7 @@ class PaymentsController
             Auth::setSession('flash_error', 'İptal işlemi yapılamadı.');
         }
         $redirect = isset($_POST['redirect']) ? trim($_POST['redirect']) : '';
-        if ($redirect !== '' && (str_starts_with($redirect, '/raporlar/') || str_starts_with($redirect, '/odemeler'))) {
+        if ($redirect !== '' && preg_match('#^/[a-z0-9/\-]+$#i', $redirect)) {
             header('Location: ' . $redirect);
         } else {
             header('Location: /odemeler/' . $id);

@@ -46,7 +46,7 @@ ob_start();
             </div>
             <div id="edit_monthly_prices_section">
                 <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar</h4>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Başlangıç–bitiş tarihlerine göre her ay için kira tutarını düzenleyin. Ödemesi alınmış ayların fiyatı değiştirilemez.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Giriş tarihinden itibaren her ayın vade gününe göre listelenir. Ödemesi alınmış vadelerin fiyatı değiştirilemez.</p>
                 <div id="edit_monthly_prices_list" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
             </div>
         </div>
@@ -106,6 +106,7 @@ ob_start();
     </div>
 </form>
 
+<script src="/contract-billing.js"></script>
 <script>
 function toggleEditStoredItemsConditionNote(value) {
     var block = document.getElementById('edit_stored_items_condition_note_block');
@@ -135,7 +136,7 @@ function toggleEditStoredItemsConditionNote(value) {
         var endEl = document.getElementById('edit_end_date');
         var list = document.getElementById('edit_monthly_prices_list');
         var defaultPriceEl = document.getElementById('edit_monthly_price');
-        if (!startEl || !endEl || !list) return;
+        if (!startEl || !endEl || !list || typeof ContractBilling === 'undefined') return;
 
         var startStr = startEl.value;
         var endStr = endEl.value;
@@ -143,10 +144,7 @@ function toggleEditStoredItemsConditionNote(value) {
             list.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400">Başlangıç ve bitiş tarihlerini seçin.</p>';
             return;
         }
-
-        var start = new Date(startStr + 'T00:00:00');
-        var end = new Date(endStr + 'T00:00:00');
-        if (end < start) {
+        if (endStr < startStr) {
             list.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400">Bitiş tarihi başlangıçtan önce olamaz.</p>';
             return;
         }
@@ -154,23 +152,13 @@ function toggleEditStoredItemsConditionNote(value) {
         var defaultVal = defaultPriceEl && defaultPriceEl.value ? defaultPriceEl.value.replace(',', '.') : '';
         var currentValues = {};
         list.querySelectorAll('input[name^="monthly_prices"]').forEach(function(inp) {
-            var match = inp.name.match(/monthly_prices\[(\d{4}-\d{2})\]/);
+            var match = inp.name.match(/monthly_prices\[(\d{4}-\d{2}-\d{2})\]/);
             if (match) currentValues[match[1]] = inp.value;
         });
-        var months = [];
-        var d = new Date(start.getFullYear(), start.getMonth(), 1);
-        var endFirst = new Date(end.getFullYear(), end.getMonth(), 1);
-        while (d <= endFirst) {
-            months.push({
-                y: d.getFullYear(),
-                m: d.getMonth(),
-                key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
-            });
-            d.setMonth(d.getMonth() + 1);
-        }
 
+        var periods = ContractBilling.billingPeriods(startStr, endStr);
         list.innerHTML = '';
-        months.forEach(function(item) {
+        periods.forEach(function(item) {
             var existing = currentValues[item.key] !== undefined
                 ? currentValues[item.key]
                 : (existingMonthlyPrices[item.key] !== undefined && existingMonthlyPrices[item.key] !== null
@@ -183,7 +171,7 @@ function toggleEditStoredItemsConditionNote(value) {
                 (isPaid
                     ? 'bg-gray-100 dark:bg-gray-600/50 text-gray-600 dark:text-gray-300 cursor-not-allowed'
                     : 'focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white');
-            row.innerHTML = '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0">' + monthNames[item.m] + ' ' + item.y + '</label>' +
+            row.innerHTML = '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0" title="Vade">' + item.label + '</label>' +
                 '<input type="text" name="monthly_prices[' + item.key + ']" value="' + existing + '" placeholder="0,00"' +
                 (isPaid ? ' readonly' : '') + ' class="' + inputClass + '">' +
                 '<span class="text-gray-500 dark:text-gray-400 text-sm shrink-0">₺</span>' +

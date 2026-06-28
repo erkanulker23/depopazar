@@ -1,6 +1,36 @@
 <?php
 $currentPage = 'musteriler';
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
+$debtOverdue = $debtOverdue ?? 0;
+$debtDueThisMonth = $debtDueThisMonth ?? 0;
+$debtAmount = (float) ($debt ?? 0);
+$hasOverdueDebt = $debtOverdue > 0.009;
+$hasAnyDebt = $debtAmount > 0.009;
+if ($hasOverdueDebt) {
+    $balanceHeaderClass = 'bg-rose-500/10 dark:bg-rose-500/20 border-b border-rose-200/50 dark:border-rose-800/50';
+    $balanceIconClass = 'text-rose-600 dark:text-rose-400';
+    $balanceAmountClass = 'text-red-700 dark:text-red-300';
+    $warehouseBadgeClass = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
+    $debtSummaryBoxClass = 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800';
+    $debtSummaryLabelClass = 'text-red-700 dark:text-red-400';
+    $debtSummaryAmountClass = 'text-red-800 dark:text-red-300';
+} elseif ($hasAnyDebt) {
+    $balanceHeaderClass = 'bg-amber-500/10 dark:bg-amber-500/20 border-b border-amber-200/50 dark:border-amber-800/50';
+    $balanceIconClass = 'text-amber-600 dark:text-amber-400';
+    $balanceAmountClass = 'text-amber-800 dark:text-amber-300';
+    $warehouseBadgeClass = 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300';
+    $debtSummaryBoxClass = 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800';
+    $debtSummaryLabelClass = 'text-amber-700 dark:text-amber-400';
+    $debtSummaryAmountClass = 'text-amber-800 dark:text-amber-300';
+} else {
+    $balanceHeaderClass = 'bg-emerald-500/10 dark:bg-emerald-500/20 border-b border-emerald-200/50 dark:border-emerald-800/50';
+    $balanceIconClass = 'text-emerald-600 dark:text-emerald-400';
+    $balanceAmountClass = 'text-emerald-700 dark:text-emerald-300';
+    $warehouseBadgeClass = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300';
+    $debtSummaryBoxClass = 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800';
+    $debtSummaryLabelClass = 'text-emerald-700 dark:text-emerald-400';
+    $debtSummaryAmountClass = 'text-emerald-800 dark:text-emerald-300';
+}
 ob_start();
 ?>
 <div class="page-header mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -12,9 +42,13 @@ ob_start();
         </div>
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Müşteri Detayı</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($customerName) ?></p>
-        <?php $debtOverdue = $debtOverdue ?? 0; if ($debtOverdue > 0): ?>
+        <?php if ($hasOverdueDebt): ?>
         <p class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
             <i class="bi bi-exclamation-triangle-fill"></i> Gecikmede olan borçları var
+        </p>
+        <?php elseif (!$hasAnyDebt): ?>
+        <p class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            <i class="bi bi-check-circle-fill"></i> Borcu yok
         </p>
         <?php endif; ?>
     </div>
@@ -38,12 +72,33 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($_SESSION['flash_error']) ?></div>
     <?php unset($_SESSION['flash_error']); ?>
 <?php endif; ?>
+<?php
+$bulkPaidIssues = $bulkPaidIssues ?? [];
+$bulkPaidExtraCount = $bulkPaidExtraCount ?? 0;
+if ($bulkPaidExtraCount > 0):
+?>
+<div class="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+    <p class="text-sm font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+        <i class="bi bi-exclamation-triangle-fill"></i> Toplu yanlış tahsilat tespit edildi
+    </p>
+    <p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
+        Aynı anda <?= (int) $bulkPaidExtraCount ?> taksit daha ödendi işaretlenmiş görünüyor (toplam <?= array_sum(array_map(fn($g) => (int)($g['count'] ?? 0), $bulkPaidIssues)) ?> kayıt, aynı tahsilat saati).
+        Muhtemelen yalnızca 1 taksit tahsil edilmiştir.
+    </p>
+    <form method="post" action="/musteriler/<?= htmlspecialchars($customer['id']) ?>/toplu-tahsilat-duzelt" class="mt-3" onsubmit="return confirm('<?= (int) $bulkPaidExtraCount ?> taksit geri alınacak; yalnızca en erken vadeli taksit ödendi kalacak. Devam edilsin mi?');">
+        <input type="hidden" name="keep_count" value="1">
+        <button type="submit" class="inline-flex items-center px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700">
+            <i class="bi bi-arrow-counterclockwise mr-2"></i> Düzelt — yalnızca 1. vade ödendi kalsın
+        </button>
+    </form>
+</div>
+<?php endif; ?>
 
 <!-- BAKİYE DURUM kartı -->
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-6">
-    <div class="bg-rose-500/10 dark:bg-rose-500/20 border-b border-rose-200/50 dark:border-rose-800/50 px-4 py-3">
+    <div class="<?= $balanceHeaderClass ?> px-4 py-3">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <i class="bi bi-bar-chart-fill text-rose-600 dark:text-rose-400"></i> BAKİYE DURUM
+            <i class="bi bi-bar-chart-fill <?= $balanceIconClass ?>"></i> BAKİYE DURUM
         </h2>
     </div>
     <div class="p-4 space-y-4">
@@ -53,19 +108,21 @@ ob_start();
         </div>
         <div>
             <p class="text-sm text-gray-600 dark:text-gray-300">
-                <span class="font-semibold text-gray-900 dark:text-white"><?= number_format((float)$debt, 2, ',', '.') ?> ₺</span>
-                <?php if ($debtOverdue > 0): ?>
+                <span class="font-semibold text-xl <?= $balanceAmountClass ?>"><?= number_format($debtAmount, 2, ',', '.') ?> ₺</span>
+                <?php if ($hasOverdueDebt): ?>
                     <span class="text-red-600 dark:text-red-400 font-medium">(Gecikmede olan borçları var)</span>
-                <?php elseif ($debt > 0): ?>
-                    <span class="text-red-600 dark:text-red-400">(Müşteri Borçlu)</span>
+                <?php elseif ($hasAnyDebt): ?>
+                    <span class="text-amber-700 dark:text-amber-300 font-medium">(Müşteri borçlu)</span>
+                <?php else: ?>
+                    <span class="text-emerald-700 dark:text-emerald-300 font-medium">(Borcu yok)</span>
                 <?php endif; ?>
             </p>
-            <?php if ($debtOverdue > 0): ?>
+            <?php if ($hasOverdueDebt): ?>
             <p class="text-xs mt-1 text-red-700 dark:text-red-400 font-semibold flex items-center gap-1">
                 <i class="bi bi-exclamation-circle"></i> Vadesi geçmiş borç: <?= number_format((float)$debtOverdue, 2, ',', '.') ?> ₺
             </p>
             <?php endif; ?>
-            <?php $debtDueThisMonth = $debtDueThisMonth ?? 0; if ($debtDueThisMonth > 0): ?>
+            <?php $debtDueThisMonth = $debtDueThisMonth ?? 0; if ($debtDueThisMonth > 0 && $hasAnyDebt): ?>
             <p class="text-xs mt-1 text-amber-700 dark:text-amber-400 font-medium">Vadesi gelmiş borç (bu ay): <?= number_format((float)$debtDueThisMonth, 2, ',', '.') ?> ₺</p>
             <?php endif; ?>
         </div>
@@ -81,12 +138,17 @@ ob_start();
             <?php endif; ?>
         </div>
         <div>
+            <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Toplam Tahsilat</p>
+            <p class="text-sm font-semibold text-emerald-700 dark:text-emerald-300"><?= fmtPrice($totalCollected ?? 0) ?></p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Müşteriden toplam alınan tutar</p>
+        </div>
+        <div>
             <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Kira Tutarı</p>
             <p class="text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)$monthlyRent, 2, ',', '.') ?> ₺</p>
         </div>
         <?php if ($primaryWarehouse !== null): ?>
         <div class="flex flex-wrap items-center gap-2">
-            <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"><?= htmlspecialchars($primaryWarehouse) ?></span>
+            <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium <?= $warehouseBadgeClass ?>"><?= htmlspecialchars($primaryWarehouse) ?></span>
             <?php if ($exitDone): ?>
             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">Çıkış İşlemi Yapıldı</span>
             <?php endif; ?>
@@ -348,6 +410,7 @@ ob_start();
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödenme</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşleyen</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest"></th>
                             </tr>
                         </thead>
@@ -362,9 +425,23 @@ ob_start();
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($p['paid_at'] ?? null) ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                        <?php if (($p['status'] ?? '') === 'paid'): ?>
+                                            <?php $collectorName = paymentCollectorName($p); ?>
+                                            <?= $collectorName !== '' ? htmlspecialchars($collectorName) : '–' ?>
+                                        <?php else: ?>
+                                            –
+                                        <?php endif; ?>
+                                    </td>
                                     <td class="px-4 py-3">
                                         <?php if (paymentIsCollectible($p)): ?>
                                             <a href="/odemeler?payment=<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</a>
+                                        <?php elseif (($p['status'] ?? '') === 'paid'): ?>
+                                            <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm mr-2">Detay</a>
+                                            <form method="post" action="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>/iptal" class="inline" onsubmit="return confirm('Bu tahsilat iptal edilsin mi? Taksit tekrar borç olarak görünür.');">
+                                                <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
+                                                <button type="submit" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm font-medium">Geri al</button>
+                                            </form>
                                         <?php else: ?>
                                             <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm">Detay</a>
                                         <?php endif; ?>
@@ -384,11 +461,19 @@ ob_start();
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <i class="bi bi-cash-stack text-emerald-600"></i> Borç Özeti
             </h3>
-            <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-4 mb-4">
-                <p class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest">Toplam Borç</p>
-                <p class="text-2xl font-bold text-amber-800 dark:text-amber-300"><?= number_format($debt, 2, ',', '.') ?> ₺</p>
+            <div class="rounded-xl <?= $debtSummaryBoxClass ?> px-4 py-4 mb-4">
+                <p class="text-xs font-bold <?= $debtSummaryLabelClass ?> uppercase tracking-widest">Toplam Borç</p>
+                <p class="text-2xl font-bold <?= $debtSummaryAmountClass ?>"><?= number_format($debtAmount, 2, ',', '.') ?> ₺</p>
+                <?php if (!$hasAnyDebt): ?>
+                <p class="text-xs mt-1 text-emerald-700 dark:text-emerald-400 font-medium">Tüm ödemeler güncel</p>
+                <?php endif; ?>
             </div>
-            <?php if ($debtOverdue > 0): ?>
+            <div class="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-4 mb-4">
+                <p class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Toplam Tahsilat</p>
+                <p class="text-2xl font-bold text-emerald-800 dark:text-emerald-300"><?= fmtPrice($totalCollected ?? 0) ?></p>
+                <p class="text-xs mt-1 text-emerald-700 dark:text-emerald-400">Müşteriden toplam alınan</p>
+            </div>
+            <?php if ($hasOverdueDebt): ?>
             <div class="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 mb-4">
                 <p class="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-widest flex items-center gap-1">
                     <i class="bi bi-exclamation-triangle-fill"></i> Gecikmede olan borç
@@ -635,11 +720,25 @@ $bankAccounts = $bankAccounts ?? [];
                         toggleBank();
                     }
                     if (form) {
+                        var paymentCbs = form.querySelectorAll('input[name="payment_ids[]"]');
+                        if (paymentCbs.length > 0 && !form.querySelector('input[name="payment_ids[]"]:checked')) {
+                            paymentCbs[0].checked = true;
+                        }
                         form.addEventListener('submit', function(e) {
                             var checked = form.querySelectorAll('input[name="payment_ids[]"]:checked');
                             if (checked.length === 0) {
                                 e.preventDefault();
                                 alert('En az bir ödeme kalemi seçin.');
+                                return;
+                            }
+                            var futureCount = 0;
+                            checked.forEach(function(cb) {
+                                var label = cb.closest('label');
+                                var badge = label && label.querySelector('.inline-flex');
+                                if (badge && badge.textContent.indexOf('Vadesi gelmemiş') >= 0) futureCount++;
+                            });
+                            if (futureCount > 0 && !confirm(futureCount + ' adet vadesi gelmemiş taksit de ödendi olarak işaretlenecek. Devam edilsin mi?')) {
+                                e.preventDefault();
                             }
                         });
                     }

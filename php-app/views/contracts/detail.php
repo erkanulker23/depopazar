@@ -6,7 +6,7 @@ $contractId = $contract['id'] ?? '';
 $renderPaymentAmountCell = function (array $p) use ($contractId): void {
     $status = $p['status'] ?? 'pending';
     $editable = !in_array($status, ['paid', 'cancelled'], true);
-    $monthKey = !empty($p['due_date']) ? date('Y-m', strtotime($p['due_date'])) : '';
+    $monthKey = ContractBilling::periodKeyFromDueDate($p['due_date'] ?? null);
     $amount = (float) ($p['amount'] ?? 0);
     if ($editable): ?>
         <button type="button"
@@ -335,6 +335,9 @@ ob_start();
                                     <?php if (!empty($p['paid_at'])): ?>
                                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ödendi: <?= fmtDateTime($p['paid_at']) ?></p>
                                     <?php endif; ?>
+                                    <?php if (($p['status'] ?? '') === 'paid' && ($cn = paymentCollectorName($p)) !== ''): ?>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">İşleyen: <?= htmlspecialchars($cn) ?></p>
+                                    <?php endif; ?>
                                 </div>
                                 <?php $renderPaymentAmountCell($p); ?>
                             </div>
@@ -359,6 +362,7 @@ ob_start();
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödenme</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşleyen</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
                             </tr>
                         </thead>
@@ -372,6 +376,14 @@ ob_start();
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($p['paid_at'] ?? null) ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                        <?php if (($p['status'] ?? '') === 'paid'): ?>
+                                            <?php $collectorName = paymentCollectorName($p); ?>
+                                            <?= $collectorName !== '' ? htmlspecialchars($collectorName) : '–' ?>
+                                        <?php else: ?>
+                                            –
+                                        <?php endif; ?>
+                                    </td>
                                     <td class="px-4 py-3">
                                         <?php if (paymentIsCollectible($p)): ?>
                                             <button type="button"
@@ -474,16 +486,17 @@ document.addEventListener('DOMContentLoaded', function() { openContractItemsModa
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Ödeme Al</h3>
                 <button type="button" onclick="closeCollectModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
             </div>
-            <div id="collectError" class="hidden mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 text-sm"></div>
-            <div id="collectStepMethod">
-                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Ödeme banka havalesi / EFT ile alınır.</p>
-                <button type="button" onclick="setCollectMethod('bank_transfer')" class="w-full p-4 border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl flex items-center gap-3 text-left mb-4">
-                    <i class="bi bi-bank text-2xl text-blue-600"></i>
-                    <div><p class="font-semibold text-gray-900 dark:text-white">Havale / EFT</p><p class="text-xs text-gray-500">Banka havalesi ile ödeme al</p></div>
-                </button>
+            <div id="collectStepSelect">
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">Tahsil edilecek ayları seçin. Varsayılan olarak yalnızca ilk vade işaretlidir.</p>
+                <div id="contractCollectPaymentList" class="max-h-52 overflow-y-auto space-y-2 mb-4"></div>
+                <p id="contractCollectSelectedTotal" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4"></p>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeCollectModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="button" id="contractCollectProceedBtn" onclick="proceedContractCollect()" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Devam et</button>
+                </div>
             </div>
             <div id="collectStepBank" class="hidden">
-                <form method="post" action="/odemeler/odeme-al">
+                <form method="post" action="/odemeler/odeme-al" id="contractCollectForm">
                     <input type="hidden" name="payment_method" value="bank_transfer">
                     <input type="hidden" name="redirect" value="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>">
                     <div id="collectFormIds"></div>
@@ -509,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function() { openContractItemsModa
                         <textarea name="notes" rows="2" placeholder="Not (opsiyonel)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                     <div class="flex gap-2">
-                        <button type="button" onclick="backCollectMethod()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700">← Geri</button>
+                        <button type="button" onclick="backContractCollectSelect()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700">← Geri</button>
                         <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white">Ödemeyi Kaydet</button>
                     </div>
                 </form>
@@ -518,25 +531,107 @@ document.addEventListener('DOMContentLoaded', function() { openContractItemsModa
     </div>
 </div>
 <script>
-var collectPayments = <?= json_encode(array_map(fn($p) => ['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? ''], $collectPayments)) ?>;
+var allCollectPayments = <?= json_encode(array_map(fn($p) => ['id' => $p['id'], 'payment_number' => $p['payment_number'] ?? '', 'amount' => $p['amount'] ?? 0, 'due_date' => $p['due_date'] ?? ''], $collectPayments)) ?>;
+var contractCollectPayments = allCollectPayments.slice();
+
+function formatCollectDueDate(due) {
+    if (!due) return '-';
+    var d = due.split(' ')[0].split('-');
+    if (d.length !== 3) return due.split(' ')[0];
+    return d[2] + '.' + d[1] + '.' + d[0];
+}
+
+function renderContractCollectList() {
+    var list = document.getElementById('contractCollectPaymentList');
+    if (!list) return;
+    list.innerHTML = '';
+    contractCollectPayments.forEach(function(p) {
+        var label = document.createElement('label');
+        label.className = 'flex items-center justify-between gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer';
+        label.innerHTML =
+            '<span class="flex items-center gap-2 min-w-0">' +
+                '<input type="checkbox" class="contract-collect-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0" value="' + (p.id || '') + '">' +
+                '<span class="text-sm text-gray-900 dark:text-white">Vade: ' + formatCollectDueDate(p.due_date) + '</span>' +
+            '</span>' +
+            '<span class="font-semibold text-gray-900 dark:text-white shrink-0">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
+        var cb = label.querySelector('.contract-collect-cb');
+        if (cb) cb.addEventListener('change', updateContractCollectUi);
+        list.appendChild(label);
+    });
+    updateContractCollectUi();
+}
+
+function getCheckedContractCollectIds() {
+    return Array.from(document.querySelectorAll('.contract-collect-cb:checked')).map(function(cb) { return cb.value; });
+}
+
+function updateContractCollectUi() {
+    var ids = getCheckedContractCollectIds();
+    var selected = contractCollectPayments.filter(function(p) { return ids.indexOf(String(p.id)) >= 0; });
+    var total = selected.reduce(function(s, p) { return s + parseFloat(p.amount || 0); }, 0);
+    var totalEl = document.getElementById('contractCollectSelectedTotal');
+    var btn = document.getElementById('contractCollectProceedBtn');
+    if (totalEl) {
+        totalEl.textContent = selected.length > 0
+            ? selected.length + ' taksit · ' + total.toFixed(2).replace('.', ',') + ' ₺'
+            : 'En az bir taksit seçin';
+    }
+    if (btn) btn.disabled = selected.length === 0;
+}
+
+function syncContractCollectFormIds() {
+    var container = document.getElementById('collectFormIds');
+    if (!container) return;
+    container.innerHTML = '';
+    getCheckedContractCollectIds().forEach(function(id) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'payment_ids[]';
+        inp.value = id;
+        container.appendChild(inp);
+    });
+}
+
 function openCollectModal(payments) {
-    collectPayments = Array.isArray(payments) && payments.length ? payments : collectPayments;
+    contractCollectPayments = Array.isArray(payments) && payments.length ? payments.slice() : allCollectPayments.slice();
+    contractCollectPayments.sort(function(a, b) {
+        var da = (a.due_date || '').split(' ')[0];
+        var db = (b.due_date || '').split(' ')[0];
+        return da.localeCompare(db);
+    });
+    renderContractCollectList();
+    var preselect = Array.isArray(payments) && payments.length ? payments.map(function(p) { return String(p.id); }) : (contractCollectPayments[0] ? [String(contractCollectPayments[0].id)] : []);
+    var preSet = {};
+    preselect.forEach(function(id) { preSet[id] = true; });
+    document.querySelectorAll('.contract-collect-cb').forEach(function(cb) {
+        cb.checked = !!preSet[String(cb.value)];
+    });
+    updateContractCollectUi();
+    document.getElementById('collectStepSelect').classList.remove('hidden');
+    document.getElementById('collectStepBank').classList.add('hidden');
     document.getElementById('collectModal').classList.remove('hidden');
-    setCollectMethod('bank_transfer');
 }
 function closeCollectModal() { document.getElementById('collectModal').classList.add('hidden'); }
-function setCollectMethod(method) {
-    var ids = collectPayments.map(function(p) { return p.id; });
-    document.getElementById('collectStepMethod').classList.add('hidden');
+function proceedContractCollect() {
+    if (getCheckedContractCollectIds().length === 0) {
+        alert('En az bir taksit seçin.');
+        return;
+    }
+    syncContractCollectFormIds();
+    document.getElementById('collectStepSelect').classList.add('hidden');
     document.getElementById('collectStepBank').classList.remove('hidden');
-    var c = document.getElementById('collectFormIds'); c.innerHTML = '';
-    ids.forEach(function(id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'payment_ids[]'; i.value = id; c.appendChild(i); });
 }
-function backCollectMethod() {
-    document.getElementById('collectStepMethod').classList.remove('hidden');
+function backContractCollectSelect() {
+    document.getElementById('collectStepSelect').classList.remove('hidden');
     document.getElementById('collectStepBank').classList.add('hidden');
 }
 document.getElementById('collectModal').addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCollectModal(); });
+document.getElementById('contractCollectForm')?.addEventListener('submit', function(e) {
+    if (getCheckedContractCollectIds().length === 0) {
+        e.preventDefault();
+        alert('En az bir taksit seçin.');
+    }
+});
 document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         var raw = btn.getAttribute('data-payments');

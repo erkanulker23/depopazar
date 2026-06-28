@@ -420,27 +420,14 @@ class ContractsController
         }
         $startDate = substr((string) ($sharedFields['start_date'] ?? ''), 0, 10);
         $endDate = substr((string) ($sharedFields['end_date'] ?? ''), 0, 10);
-        $start = new DateTime($startDate);
-        $end = new DateTime($endDate);
-        $end->modify('last day of this month');
-        $stmtCmp = $this->pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)');
-        while ($start <= $end) {
-            $monthStr = $start->format('Y-m');
-            $priceForMonth = $monthlyPrice;
-            if (isset($monthlyPricesPost[$monthStr]) && $monthlyPricesPost[$monthStr] !== '') {
-                $priceForMonth = (float) str_replace(',', '.', (string) $monthlyPricesPost[$monthStr]);
-            }
-            $dueDate = $monthStr . '-01 00:00:00';
-            $cmpId = self::uuid();
-            $stmtCmp->execute([$cmpId, $contractId, $monthStr, $priceForMonth]);
-            Payment::create($this->pdo, [
-                'contract_id' => $contractId,
-                'amount' => $priceForMonth,
-                'status' => 'pending',
-                'due_date' => $dueDate,
-            ]);
-            $start->modify('+1 month');
-        }
+        Contract::syncMonthlyPrices(
+            $this->pdo,
+            $contractId,
+            $startDate,
+            $endDate,
+            $monthlyPrice,
+            $monthlyPricesPost
+        );
         Room::update($this->pdo, $roomId, ['status' => 'occupied']);
         if ($attachStoredItems) {
             $contractItems = parseContractItemsFromRequest($post);
@@ -480,8 +467,8 @@ class ContractsController
                 $monthlyPricesByKey[$mp['month']] = (float) ($mp['price'] ?? 0);
             }
         }
-        $paidMonths = Payment::getPaidMonthsByContractId($this->pdo, $id);
-        $paidAmountsByMonth = Payment::getPaidAmountsByMonthForContract($this->pdo, $id);
+        $paidMonths = Payment::getPaidPeriodKeysByContractId($this->pdo, $id);
+        $paidAmountsByMonth = Payment::getPaidAmountsByPeriodForContract($this->pdo, $id);
         foreach ($paidAmountsByMonth as $monthKey => $amount) {
             if (!isset($monthlyPricesByKey[$monthKey])) {
                 $monthlyPricesByKey[$monthKey] = $amount;
@@ -545,31 +532,29 @@ class ContractsController
                 'stored_items_condition_note' => $storedConditionNote,
             ]);
             $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
-            $paidMonths = Payment::getPaidMonthsByContractId($this->pdo, $id);
-            $paidAmountsByMonth = Payment::getPaidAmountsByMonthForContract($this->pdo, $id);
+            $paidMonths = Payment::getPaidPeriodKeysByContractId($this->pdo, $id);
+            $paidAmountsByMonth = Payment::getPaidAmountsByPeriodForContract($this->pdo, $id);
             $existingMonthlyByKey = [];
             foreach (Contract::getMonthlyPricesByContractId($this->pdo, $id) as $mp) {
                 if (!empty($mp['month'])) {
                     $existingMonthlyByKey[$mp['month']] = (float) ($mp['price'] ?? 0);
                 }
             }
-            $monthLabels = ['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
-            foreach ($paidMonths as $monthStr) {
-                if (!array_key_exists($monthStr, $monthlyPricesPost)) {
+            foreach ($paidMonths as $periodKey) {
+                if (!array_key_exists($periodKey, $monthlyPricesPost)) {
                     continue;
                 }
-                $posted = trim((string) $monthlyPricesPost[$monthStr]);
+                $posted = trim((string) $monthlyPricesPost[$periodKey]);
                 if ($posted === '') {
                     continue;
                 }
                 $newPrice = (float) str_replace(',', '.', $posted);
-                $oldPrice = $existingMonthlyByKey[$monthStr]
-                    ?? $paidAmountsByMonth[$monthStr]
+                $oldPrice = $existingMonthlyByKey[$periodKey]
+                    ?? $paidAmountsByMonth[$periodKey]
                     ?? (float) ($contract['monthly_price'] ?? 0);
                 if (abs($newPrice - $oldPrice) > 0.009) {
-                    $parts = explode('-', $monthStr);
-                    $label = (isset($parts[1], $monthLabels[$parts[1]]) ? $monthLabels[$parts[1]] . ' ' . ($parts[0] ?? '') : $monthStr);
-                    Auth::setSession('flash_error', $label . ' ayı için ödeme alındığından oda fiyatı değiştirilemez.');
+                    $label = ContractBilling::formatPeriodLabel($periodKey);
+                    Auth::setSession('flash_error', $label . ' vadesi için ödeme alındığından oda fiyatı değiştirilemez.');
                     header('Location: /girisler/' . $id . '/duzenle');
                     exit;
                 }
@@ -776,7 +761,7 @@ class ContractsController
             echo json_encode(['ok' => false, 'error' => 'Tutar güncellenemedi.']);
             exit;
         }
-        $monthYm = !empty($payment['due_date']) ? date('Y-m', strtotime($payment['due_date'])) : '';
+        $monthYm = ContractBilling::periodKeyFromDueDate($payment['due_date'] ?? null);
         if ($monthYm !== '') {
             Contract::setMonthlyPriceForMonth($this->pdo, $contractId, $monthYm, $amount);
         }
@@ -820,16 +805,22 @@ class ContractsController
             foreach ($payments as $p) {
                 $due = $p['due_date'] ?? '';
                 if ($due) {
-                    $m = date('m', strtotime($due));
-                    $y = date('Y', strtotime($due));
-                    $monthlyPrices[] = ['month' => ($monthNames[$m] ?? $m) . ' ' . $y, 'price' => $p['amount'] ?? $contract['monthly_price'] ?? 0];
+                    $periodKey = ContractBilling::periodKeyFromDueDate($due);
+                    $monthlyPrices[] = [
+                        'month' => ContractBilling::formatPeriodLabel($periodKey) . ' vadesi',
+                        'month_key' => $periodKey,
+                        'price' => $p['amount'] ?? $contract['monthly_price'] ?? 0,
+                    ];
                 }
             }
         } else {
             foreach ($monthlyPrices as &$mp) {
-                $ym = $mp['month'] ?? '';
-                if (preg_match('/^(\d{4})-(\d{2})$/', $ym, $m)) {
-                    $mp['month_key'] = $ym;
+                $key = $mp['month'] ?? '';
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $key)) {
+                    $mp['month_key'] = $key;
+                    $mp['month'] = ContractBilling::formatPeriodLabel($key) . ' vadesi';
+                } elseif (preg_match('/^(\d{4})-(\d{2})$/', $key, $m)) {
+                    $mp['month_key'] = $key;
                     $mp['month'] = ($monthNames[$m[2]] ?? $m[2]) . ' ' . $m[1];
                 }
             }

@@ -36,6 +36,19 @@ class CustomerCharge
         return (float) $stmt->fetchColumn();
     }
 
+    public static function sumPaidByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): float
+    {
+        $sql = 'SELECT COALESCE(SUM(amount), 0) FROM customer_charges WHERE customer_id = ? AND deleted_at IS NULL AND status = \'paid\' ';
+        $params = [$customerId];
+        if ($companyId) {
+            $sql .= ' AND company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
     public static function sumUnpaidByCompany(PDO $pdo, string $companyId): float
     {
         $stmt = $pdo->prepare(
