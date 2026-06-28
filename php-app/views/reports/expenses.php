@@ -11,6 +11,7 @@ $startDate = $startDate ?? date('Y-m-01');
 $endDate = $endDate ?? date('Y-m-t');
 $paymentSourceType = $paymentSourceType ?? '';
 $paymentSourceId = $paymentSourceId ?? '';
+$companyName = $companyName ?? null;
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
@@ -38,7 +39,7 @@ if ($categoryId !== '') {
 if ($paymentSourceType === 'bank_account') $activeFilterTags[] = 'Kaynak: Banka';
 elseif ($paymentSourceType === 'credit_card') $activeFilterTags[] = 'Kaynak: Kredi kartı';
 ?>
-<div class="mb-6">
+<div class="mb-6 screen-only">
     <nav class="text-sm text-gray-500 dark:text-gray-400 mb-2">
         <a href="/raporlar" class="text-emerald-600 dark:text-emerald-400 hover:underline">Raporlar</a>
         <span class="mx-1">/</span>
@@ -48,7 +49,7 @@ elseif ($paymentSourceType === 'credit_card') $activeFilterTags[] = 'Kaynak: Kre
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Tarih aralığına ve kategoriye göre masraf listesi</p>
 </div>
 
-<div class="page-toolbar mb-6">
+<div class="page-toolbar mb-6 screen-only">
     <?php
     $filterModalId = 'expenseReportFilterModal';
     $filterClearUrl = '/raporlar/masraflar';
@@ -106,6 +107,7 @@ $filterFormId = 'expenseReportFilterForm';
 $filterFormAction = '/raporlar/masraflar';
 $filterSubmitLabel = 'Göster';
 $filterModalTitle = 'Masraf Raporu — Filtreler';
+$filterModalClass = 'screen-only';
 require __DIR__ . '/../partials/page_filter_modal.php';
 ?>
 
@@ -120,8 +122,55 @@ $csvUrl = reportExportUrl('/raporlar/masraflar', array_filter([
 ?>
 <div id="report-content">
 <?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
+
+<?php
+$printTitle = 'Masraf Raporu';
+$printMeta = [
+    ['label' => 'Dönem', 'value' => $periodLabel],
+];
+if ($categoryId !== '') {
+    foreach ($categories as $c) {
+        if (($c['id'] ?? '') === $categoryId) {
+            $printMeta[] = ['label' => 'Kategori', 'value' => $c['name'] ?? ''];
+            break;
+        }
+    }
+}
+if ($paymentSourceType === 'bank_account') {
+    $printMeta[] = ['label' => 'Kaynak', 'value' => 'Banka Hesabı'];
+} elseif ($paymentSourceType === 'credit_card') {
+    $printMeta[] = ['label' => 'Kaynak', 'value' => 'Kredi Kartı'];
+}
+$printSummary = [
+    'headers' => ['Toplam masraf', 'Toplam tutar', 'Kategori sayısı'],
+    'values' => [count($rows), fmtMoney($totalAmount) . ' ₺', count($byCategory)],
+];
+require __DIR__ . '/../partials/report_print_header.php';
+?>
+
 <?php if (!empty($byCategory)): ?>
-<div class="mb-6 card-modern p-6">
+<div class="print-only report-print-section">
+    <h2>Kategoriye Göre Özet</h2>
+    <table class="report-data-table">
+        <thead>
+            <tr>
+                <th>Kategori</th>
+                <th>Adet</th>
+                <th>Tutar</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($byCategory as $catName => $data): ?>
+            <tr>
+                <td><?= htmlspecialchars($catName) ?></td>
+                <td><?= (int) $data['count'] ?></td>
+                <td><?= fmtMoney($data['total']) ?> ₺</td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<div class="mb-6 card-modern p-6 screen-only">
     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Kategoriye Göre Özet</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <?php foreach ($byCategory as $catName => $data): ?>
@@ -135,16 +184,20 @@ $csvUrl = reportExportUrl('/raporlar/masraflar', array_filter([
 </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden report-print-table-wrap">
     <?php if (empty($rows)): ?>
-        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Seçilen kriterlere uygun masraf kaydı yok.</div>
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400 screen-only">Seçilen kriterlere uygun masraf kaydı yok.</div>
+        <div class="print-only p-4 text-gray-600">Seçilen kriterlere uygun masraf kaydı yok.</div>
     <?php else: ?>
-        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center">
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center screen-only">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Toplam <?= count($rows) ?> masraf</span>
             <span class="text-lg font-bold text-red-600 dark:text-red-400"><?= fmtMoney($totalAmount) ?> ₺</span>
         </div>
+        <div class="print-only report-print-section">
+            <h2>Masraf Listesi</h2>
+        </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 report-data-table">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
@@ -165,6 +218,12 @@ $csvUrl = reportExportUrl('/raporlar/masraflar', array_filter([
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
+                <tfoot class="print-only">
+                    <tr>
+                        <td colspan="4" class="px-4 py-3 text-right font-bold">Toplam</td>
+                        <td class="px-4 py-3 text-right font-bold"><?= fmtMoney($totalAmount) ?> ₺</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     <?php endif; ?>

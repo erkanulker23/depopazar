@@ -106,10 +106,49 @@ class Contract
         self::$monthlyPricesMonthColumnReadyCache = true;
     }
 
+    public static function ensureStoredItemsConditionSchema(PDO $pdo): void
+    {
+        static $schemaReady = false;
+        if ($schemaReady) {
+            return;
+        }
+        try {
+            $stmt = $pdo->query(
+                "SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contracts' AND COLUMN_NAME = 'stored_items_condition'
+                 LIMIT 1"
+            );
+            $columnType = $stmt->fetchColumn();
+            if ($columnType === false) {
+                $pdo->exec(
+                    "ALTER TABLE `contracts`
+                     ADD COLUMN `stored_items_condition` ENUM('sifir','paketlenmis','ikinci_el','hasarli') DEFAULT NULL
+                     COMMENT 'Giriş yapılan ürün durumu' AFTER `notes`,
+                     ADD COLUMN `stored_items_condition_note` TEXT DEFAULT NULL
+                     COMMENT 'Hasarlı seçildiğinde hasar açıklaması' AFTER `stored_items_condition`"
+                );
+            } elseif (stripos((string) $columnType, 'ikinci_el') === false) {
+                $pdo->exec(
+                    "ALTER TABLE `contracts`
+                     MODIFY COLUMN `stored_items_condition` ENUM('sifir','paketlenmis','ikinci_el','hasarli') DEFAULT NULL
+                     COMMENT 'Giriş yapılan ürün durumu'"
+                );
+            }
+            self::$hasStoredItemsColumnsCache = true;
+            $schemaReady = true;
+        } catch (Throwable $e) {
+            error_log('ensureStoredItemsConditionSchema: ' . $e->getMessage());
+        }
+    }
+
     public static function hasStoredItemsColumns(PDO $pdo): bool
     {
         if (self::$hasStoredItemsColumnsCache !== null) {
             return self::$hasStoredItemsColumnsCache;
+        }
+        self::ensureStoredItemsConditionSchema($pdo);
+        if (self::$hasStoredItemsColumnsCache === true) {
+            return true;
         }
         try {
             $pdo->query('SELECT stored_items_condition, stored_items_condition_note FROM contracts LIMIT 0');

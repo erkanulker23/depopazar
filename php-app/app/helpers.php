@@ -1425,7 +1425,7 @@ if (!function_exists('itemConditionOptions')) {
         return [
             'sifir' => 'Sıfır',
             'koli' => 'Koli',
-            'kullanilmis' => 'Kullanılmış',
+            'ikinci_el' => 'İkinci el',
             'hasarli' => 'Hasarlı',
         ];
     }
@@ -1438,7 +1438,7 @@ if (!function_exists('normalizeItemCondition')) {
         $legacy = [
             'new' => 'sifir',
             'paketlenmis' => 'koli',
-            'ikinci_el' => 'kullanilmis',
+            'kullanilmis' => 'ikinci_el',
         ];
         if (isset($legacy[$code])) {
             return $legacy[$code];

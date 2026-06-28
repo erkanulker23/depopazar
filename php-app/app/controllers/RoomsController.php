@@ -60,6 +60,20 @@ class RoomsController
             }
             $seenRoomKeys[$roomKey] = true;
         }
+
+        $perPage = 50;
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $roomsTotal = count($rooms);
+        $totalPages = $roomsTotal > 0 ? (int) ceil($roomsTotal / $perPage) : 1;
+        if ($page > $totalPages && $roomsTotal > 0) {
+            $params = $_GET;
+            $params['page'] = $totalPages;
+            header('Location: /odalar?' . http_build_query($params));
+            exit;
+        }
+        $offset = ($page - 1) * $perPage;
+        $rooms = array_slice($rooms, $offset, $perPage);
+
         // Oda başına aktif sözleşme sayısı (silinmemiş müşteriye ait, detay sayfasıyla aynı mantık)
         $activeContractCountByRoom = [];
         if (!empty($rooms)) {
@@ -293,7 +307,8 @@ class RoomsController
             'q' => $_POST['_return_q'] ?? '',
             'status' => $_POST['_return_status'] ?? '',
             'has_contract' => $_POST['_return_has_contract'] ?? '',
-        ], static fn($v) => $v !== '');
+            'page' => $_POST['_return_page'] ?? '',
+        ], static fn($v) => $v !== '' && $v !== '0' && $v !== 0);
         return $keep ? ('?' . http_build_query($keep)) : '';
     }
 

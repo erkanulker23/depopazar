@@ -101,8 +101,24 @@ class PaymentsController
         });
         $paymentsByCustomer = array_values($paymentsByCustomer);
         $totalPayments = count($payments);
-        $totalPages = 1;
-        $page = 1;
+
+        $perPage = 30;
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $listTotal = $collectMode ? count($customersWithDebt) : count($paymentsByCustomer);
+        $totalPages = $listTotal > 0 ? (int) ceil($listTotal / $perPage) : 1;
+        if ($page > $totalPages && $listTotal > 0) {
+            $params = $_GET;
+            $params['page'] = $totalPages;
+            header('Location: /odemeler?' . http_build_query($params));
+            exit;
+        }
+        $offset = ($page - 1) * $perPage;
+        if ($collectMode) {
+            $customersWithDebt = array_slice($customersWithDebt, $offset, $perPage);
+        } else {
+            $paymentsByCustomer = array_slice($paymentsByCustomer, $offset, $perPage);
+        }
+
         $hasActiveFilters = $statusFilter !== '' || $searchQ !== '' || $dateFrom !== '' || $dateTo !== '';
         $payStatus = $statusFilter;
         $payQ = $searchQ;
@@ -119,6 +135,10 @@ class PaymentsController
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $paymentsByCustomer = $paymentsByCustomer ?? [];
         $totalPayments = $totalPayments ?? 0;
+        $listTotal = $listTotal ?? 0;
+        $perPage = $perPage ?? 30;
+        $totalPages = $totalPages ?? 1;
+        $page = $page ?? 1;
         $preselectedCustomerId = $preselectedCustomerId ?? '';
         require __DIR__ . '/../../views/payments/index.php';
     }

@@ -23,10 +23,23 @@ if ($bankAccountId !== '') {
 if ($paymentMethodGet === 'havale') $activeFilterTags[] = 'Yöntem: Havale';
 elseif ($paymentMethodGet === 'kredi_karti') $activeFilterTags[] = 'Yöntem: Kredi Kartı';
 if ($qGet !== '') $activeFilterTags[] = 'Arama: ' . $qGet;
+$companyName = $companyName ?? null;
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
+$paymentTotal = !empty($rows) ? array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $rows)) : 0;
+$expenseTotal = !empty($expenseRows) ? array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $expenseRows)) : 0;
+$selectedBankLabel = 'Tümü';
+if ($bankAccountId !== '') {
+    foreach ($bankAccounts as $ba) {
+        if (($ba['id'] ?? '') === $bankAccountId) {
+            $selectedBankLabel = ($ba['bank_name'] ?? '') . ' - ' . ($ba['account_holder_name'] ?? '');
+            break;
+        }
+    }
+}
+$paymentMethodLabel = $paymentMethodGet === 'havale' ? 'Havale' : ($paymentMethodGet === 'kredi_karti' ? 'Kredi Kartı' : 'Tümü');
 ?>
-<div class="mb-6">
+<div class="mb-6 screen-only">
     <nav class="text-sm text-gray-500 dark:text-gray-400 mb-2">
         <a href="/raporlar" class="text-emerald-600 dark:text-emerald-400 hover:underline">Raporlar</a>
         <span class="mx-1">/</span>
@@ -36,7 +49,7 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Tarih aralığına ve banka hesabına göre tahsilat listesi</p>
 </div>
 
-<div class="page-toolbar mb-6">
+<div class="page-toolbar mb-6 screen-only">
     <?php
     $filterModalId = 'bankReportFilterModal';
     $filterClearUrl = '/raporlar/banka-hesaplari?start_date=' . urlencode($startDate) . '&end_date=' . urlencode($endDate);
@@ -98,6 +111,7 @@ $filterFormId = 'bankReportFilterForm';
 $filterFormAction = '/raporlar/banka-hesaplari';
 $filterSubmitLabel = 'Göster';
 $filterModalTitle = 'Banka Raporu — Filtreler';
+$filterModalClass = 'screen-only';
 require __DIR__ . '/../partials/page_filter_modal.php';
 ?>
 
@@ -112,8 +126,49 @@ $csvUrl = reportExportUrl('/raporlar/banka-hesaplari', array_filter([
 ?>
 <div id="report-content">
 <?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
+
+<?php
+$printTitle = 'Banka Hesaplarına Göre Ödemeler Raporu';
+$printMeta = [
+    ['label' => 'Dönem', 'value' => $periodLabel],
+    ['label' => 'Banka', 'value' => $selectedBankLabel],
+    ['label' => 'Ödeme yöntemi', 'value' => $paymentMethodLabel],
+];
+if ($qGet !== '') {
+    $printMeta[] = ['label' => 'Arama', 'value' => $qGet];
+}
+$printSummary = [
+    'headers' => ['Tahsilat adedi', 'Tahsilat toplamı', 'Masraf adedi', 'Masraf toplamı'],
+    'values' => [count($rows), fmtMoney($paymentTotal) . ' ₺', count($expenseRows), fmtMoney($expenseTotal) . ' ₺'],
+];
+require __DIR__ . '/../partials/report_print_header.php';
+?>
+
 <?php if (!empty($bankAccounts)): ?>
-<div class="mb-6 card-modern p-6">
+<div class="print-only report-print-section">
+    <h2>Hesap Bakiyeleri (<?= date('d.m.Y', strtotime($endDate)) ?> itibarıyla)</h2>
+    <table class="report-data-table">
+        <thead>
+            <tr>
+                <th>Banka</th>
+                <th>Hesap sahibi</th>
+                <th>Bakiye</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($bankAccounts as $ba):
+                $bal = $bankBalances[$ba['id'] ?? ''] ?? 0;
+            ?>
+            <tr>
+                <td><?= htmlspecialchars($ba['bank_name'] ?? '') ?></td>
+                <td><?= htmlspecialchars($ba['account_holder_name'] ?? '') ?></td>
+                <td><?= fmtMoney($bal) ?> ₺</td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<div class="mb-6 card-modern p-6 screen-only">
     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Hesap Bakiyeleri (<?= date('d.m.Y', strtotime($endDate)) ?> itibarıyla)</h3>
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Açılış bakiyesi + Tahsilat - Masraflar</p>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -130,19 +185,20 @@ $csvUrl = reportExportUrl('/raporlar/banka-hesaplari', array_filter([
 </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden report-print-table-wrap">
     <?php if (empty($rows)): ?>
-        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Seçilen kriterlere uygun ödeme kaydı yok.</div>
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400 screen-only">Seçilen kriterlere uygun ödeme kaydı yok.</div>
+        <div class="print-only p-4 text-gray-600">Seçilen kriterlere uygun ödeme kaydı yok.</div>
     <?php else: ?>
-        <?php
-        $total = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $rows));
-        ?>
-        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center">
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center screen-only">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Toplam <?= count($rows) ?> ödeme</span>
-            <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400"><?= fmtMoney($total) ?> ₺</span>
+            <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400"><?= fmtMoney($paymentTotal) ?> ₺</span>
+        </div>
+        <div class="print-only report-print-section">
+            <h2>Tahsilatlar</h2>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 report-data-table">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Ödeme No</th>
@@ -150,23 +206,29 @@ $csvUrl = reportExportUrl('/raporlar/banka-hesaplari', array_filter([
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Banka</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Sözleşme / Müşteri</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">İşlem</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase screen-only">İşlem</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                     <?php
                     $reportUrl = '/raporlar/banka-hesaplari?' . http_build_query(array_filter(['bank_account_id' => $bankAccountId ?: null, 'start_date' => $startDate, 'end_date' => $endDate]));
                     foreach ($rows as $r):
+                        $customerName = trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? ''));
+                        $contractCustomer = ($r['contract_number'] ?? '') . ' / ' . $customerName;
                     ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3">
-                                <a href="/odemeler/<?= htmlspecialchars($r['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></a>
+                                <a href="/odemeler/<?= htmlspecialchars($r['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium screen-only"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></a>
+                                <span class="print-only"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></span>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($r['paid_at'] ?? null) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['bank_name'] ?? '-') ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['contract_number'] ?? '') ?> / <?= htmlspecialchars(trim(($r['customer_first_name'] ?? '') . ' ' . ($r['customer_last_name'] ?? ''))) ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                <span class="screen-only"><?= htmlspecialchars($contractCustomer) ?></span>
+                                <span class="print-only"><?= htmlspecialchars($contractCustomer) ?></span>
+                            </td>
                             <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white"><?= fmtMoney($r['amount'] ?? 0) ?> ₺</td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-4 py-3 text-right screen-only">
                                 <form method="post" action="/odemeler/<?= htmlspecialchars($r['id']) ?>/iptal" class="inline" onsubmit="return confirm('Bu ödemeyi iptal etmek istediğinize emin misiniz?');">
                                     <input type="hidden" name="redirect" value="<?= htmlspecialchars($reportUrl) ?>">
                                     <button type="submit" class="btn-touch text-red-600 dark:text-red-400 hover:underline text-sm font-medium">Ödemeyi iptal et</button>
@@ -175,20 +237,28 @@ $csvUrl = reportExportUrl('/raporlar/banka-hesaplari', array_filter([
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
+                <tfoot class="print-only">
+                    <tr>
+                        <td colspan="4" class="px-4 py-3 text-right font-bold">Toplam</td>
+                        <td class="px-4 py-3 text-right font-bold"><?= fmtMoney($paymentTotal) ?> ₺</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     <?php endif; ?>
 </div>
 
 <?php if (!empty($expenseRows)): ?>
-<div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
-    <?php $expTotal = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $expenseRows)); ?>
-    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center">
+<div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden report-print-table-wrap">
+    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center screen-only">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Banka hesabından yapılan masraflar (<?= count($expenseRows) ?> adet)</span>
-        <span class="text-lg font-bold text-red-600 dark:text-red-400"><?= fmtMoney($expTotal) ?> ₺</span>
+        <span class="text-lg font-bold text-red-600 dark:text-red-400"><?= fmtMoney($expenseTotal) ?> ₺</span>
+    </div>
+    <div class="print-only report-print-section">
+        <h2>Banka Masrafları</h2>
     </div>
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 report-data-table">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
@@ -207,6 +277,12 @@ $csvUrl = reportExportUrl('/raporlar/banka-hesaplari', array_filter([
                     </tr>
                 <?php endforeach; ?>
             </tbody>
+            <tfoot class="print-only">
+                <tr>
+                    <td colspan="3" class="px-4 py-3 text-right font-bold">Toplam</td>
+                    <td class="px-4 py-3 text-right font-bold"><?= fmtMoney($expenseTotal) ?> ₺</td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 </div>

@@ -219,6 +219,7 @@ class ReportsController
         $rows = $this->fetchBankAccountPaymentRows($companyId, $bankAccountId ?: null, $startDate, $endDate, $search, $paymentMethod);
         $expenseRows = $this->safeFetchBankAccountExpenseRows($companyId, $bankAccountId ?: null, $startDate, $endDate, $search);
         $bankBalances = $this->safeComputeBankBalances($companyId, $bankAccounts, $endDate);
+        $companyName = $this->resolveCompanyName($companyId);
         $pageTitle = 'Banka Hesaplarına Göre Ödemeler';
         require __DIR__ . '/../../views/reports/bank_accounts.php';
     }
@@ -261,11 +262,7 @@ class ReportsController
                 }
             }
         }
-        $companyName = null;
-        if ($companyId) {
-            $company = Company::findOne($this->pdo, $companyId);
-            $companyName = $company['name'] ?? null;
-        }
+        $companyName = $this->resolveCompanyName($companyId);
         $statusLabel = duePaymentStatusFilterLabel($status);
         $pageTitle = 'Vadesi Gelen Ödemeler';
         require __DIR__ . '/../../views/reports/due_payments.php';
@@ -286,6 +283,7 @@ class ReportsController
         $prepaidContracts = Payment::findFullyPrepaidContracts($this->pdo, $companyId, 100);
         $totalCount = Payment::countEarlyPayments($this->pdo, $companyId, $startDate, $endDate);
         $totalSum = Payment::sumEarlyPayments($this->pdo, $companyId, $startDate, $endDate);
+        $companyName = $this->resolveCompanyName($companyId);
         $pageTitle = 'Erken ve Peşin Ödemeler';
         require __DIR__ . '/../../views/reports/early_payments.php';
     }
@@ -315,8 +313,18 @@ class ReportsController
         $rows = $this->safeFetchExpenseReportRows($companyId, $categoryId ?: null, $startDate, $endDate, $paymentSourceType ?: null, $paymentSourceId ?: null);
         $totalAmount = array_sum(array_map(fn($r) => (float) ($r['amount'] ?? 0), $rows));
         $byCategory = $this->groupExpensesByCategory($rows);
+        $companyName = $this->resolveCompanyName($companyId);
         $pageTitle = 'Masraf Raporu';
         require __DIR__ . '/../../views/reports/expenses.php';
+    }
+
+    private function resolveCompanyName(?string $companyId): ?string
+    {
+        if (!$companyId) {
+            return null;
+        }
+        $company = Company::findOne($this->pdo, $companyId);
+        return $company['name'] ?? null;
     }
 
     private function groupExpensesByCategory(array $rows): array

@@ -129,34 +129,21 @@ $csvLabel = 'Excel Raporu İndir';
 <div id="report-content">
 <?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
 
-<div class="print-only report-print-header mb-6">
-    <div class="report-print-brand">
-        <h1>Vadesi Gelen Ödemeler Raporu</h1>
-        <?php if ($companyName): ?><p class="report-print-company"><?= htmlspecialchars($companyName) ?></p><?php endif; ?>
-    </div>
-    <div class="report-print-meta">
-        <p><strong>Dönem:</strong> <?= htmlspecialchars($periodLabel) ?></p>
-        <p><strong>Durum:</strong> <?= htmlspecialchars($statusLabel) ?></p>
-        <?php if ($search): ?><p><strong>Arama:</strong> <?= htmlspecialchars($search) ?></p><?php endif; ?>
-        <p><strong>Oluşturulma:</strong> <?= date('d.m.Y H:i') ?></p>
-    </div>
-    <table class="report-print-summary">
-        <tr>
-            <th>Toplam kayıt</th>
-            <th>Toplam tutar</th>
-            <th>Bekleyen</th>
-            <th>Vadesi geçmiş</th>
-            <th>Ödenmiş</th>
-        </tr>
-        <tr>
-            <td><?= (int) $totalCount ?></td>
-            <td><?= fmtMoney($totalSum) ?> ₺</td>
-            <td><?= (int) $pendingCount ?></td>
-            <td><?= (int) $overdueCount ?></td>
-            <td><?= (int) $paidCount ?></td>
-        </tr>
-    </table>
-</div>
+<?php
+$printTitle = 'Vadesi Gelen Ödemeler Raporu';
+$printMeta = [
+    ['label' => 'Dönem', 'value' => $periodLabel],
+    ['label' => 'Durum', 'value' => $statusLabel],
+];
+if ($search) {
+    $printMeta[] = ['label' => 'Arama', 'value' => $search];
+}
+$printSummary = [
+    'headers' => ['Toplam kayıt', 'Toplam tutar', 'Bekleyen', 'Vadesi geçmiş', 'Ödenmiş'],
+    'values' => [(int) $totalCount, fmtMoney($totalSum) . ' ₺', (int) $pendingCount, (int) $overdueCount, (int) $paidCount],
+];
+require __DIR__ . '/../partials/report_print_header.php';
+?>
 
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 screen-only">
     <div class="stat-card">
@@ -253,89 +240,6 @@ $csvLabel = 'Excel Raporu İndir';
 </div>
 </div>
 
-<style>
-.print-only { display: none; }
-@media print {
-    .screen-only, .no-print, aside, nav, header, footer, .page-toolbar { display: none !important; }
-    .print-only { display: block !important; }
-    .print-only span { display: inline !important; }
-    body { background: #fff !important; color: #111 !important; }
-    #report-content { padding: 0; }
-    .report-print-header {
-        border-bottom: 2px solid #047857;
-        padding-bottom: 16px;
-        margin-bottom: 20px;
-    }
-    .report-print-brand h1 {
-        font-size: 22pt;
-        color: #047857;
-        margin: 0 0 4px;
-    }
-    .report-print-company {
-        font-size: 12pt;
-        color: #374151;
-        margin: 0;
-    }
-    .report-print-meta {
-        margin-top: 12px;
-        font-size: 10pt;
-        color: #4b5563;
-        line-height: 1.5;
-    }
-    .report-print-meta p { margin: 0; }
-    .report-print-summary {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 14px;
-        font-size: 10pt;
-    }
-    .report-print-summary th,
-    .report-print-summary td {
-        border: 1px solid #d1d5db;
-        padding: 8px 10px;
-        text-align: center;
-    }
-    .report-print-summary th {
-        background: #ecfdf5;
-        color: #047857;
-        font-weight: bold;
-    }
-    .report-print-table-wrap {
-        box-shadow: none !important;
-        border: none !important;
-    }
-    .report-data-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 9pt;
-    }
-    .report-data-table th {
-        background: #047857 !important;
-        color: #fff !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        padding: 8px 6px;
-        border: 1px solid #065f46;
-    }
-    .report-data-table td {
-        border: 1px solid #d1d5db;
-        padding: 6px;
-        vertical-align: top;
-    }
-    .report-data-table tbody tr:nth-child(even) td {
-        background: #f9fafb;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    .report-data-table tfoot td {
-        border-top: 2px solid #047857;
-        background: #ecfdf5;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    .report-data-table .rounded-full { border-radius: 0 !important; padding: 2px 4px !important; }
-}
-</style>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/../layout.php';

@@ -131,6 +131,48 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         .btn-filter:hover { background-color: #1d4ed8; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4); }
         .dark .btn-filter { background-color: #3b82f6; box-shadow: 0 1px 3px rgba(59, 130, 246, 0.45); }
         .dark .btn-filter:hover { background-color: #2563eb; }
+        /* Kompakt sayfa aksiyon butonları (Düzenle, Yazdır, PDF, Sil vb.) */
+        .page-header-actions {
+            gap: 0.375rem;
+        }
+        .page-header-actions > a,
+        .page-header-actions > button,
+        .page-header-actions > form,
+        .page-header-actions > form > button,
+        .page-header-actions > form > a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.75rem !important;
+            font-size: 0.8125rem !important;
+            line-height: 1.25rem !important;
+            font-weight: 500 !important;
+            border-radius: 0.625rem !important;
+            white-space: nowrap;
+        }
+        .page-header-actions i[class*="bi-"] {
+            font-size: 0.875rem;
+            line-height: 1;
+        }
+        .page-header-actions .mr-2 {
+            margin-right: 0 !important;
+        }
+        @media (min-width: 768px) {
+            main .btn-touch {
+                min-height: 36px !important;
+                min-width: auto !important;
+                padding: 0.375rem 0.875rem !important;
+                font-size: 0.8125rem !important;
+                border-radius: 0.625rem !important;
+            }
+            main .page-toolbar .btn-touch,
+            main .page-toolbar a.inline-flex[class*="px-"],
+            main .page-toolbar button.inline-flex[class*="px-"] {
+                padding: 0.375rem 0.875rem !important;
+                font-size: 0.8125rem !important;
+                min-height: 36px !important;
+            }
+        }
         .filter-field > label,
         .filter-modal-body .filter-label {
             display: block;
@@ -340,6 +382,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 flex: 0 0 auto;
                 min-width: auto;
                 white-space: nowrap;
+                min-height: 40px;
             }
             /* Form kaydet / gönder — alt menünün üstünde yapışkan */
             .form-submit-bar {
@@ -723,7 +766,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             </div>
         </aside>
         <main class="main-shell flex-1 min-w-0 flex flex-col md:min-h-screen">
-            <div class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-4 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-[#3d342e] bg-white/95 dark:bg-[#241e1b]/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
+            <div id="appTopBar" class="flex-shrink-0 flex items-center justify-between md:justify-end gap-2 pl-4 pr-3 py-3 md:pl-6 md:px-6 lg:px-8 border-b border-gray-200 dark:border-[#3d342e] bg-white/95 dark:bg-[#241e1b]/95 backdrop-blur sticky top-0 z-20 min-h-[3.5rem]" style="padding-top: max(0.75rem, var(--safe-top));">
                 <div class="flex items-center gap-2 min-w-0 md:mr-auto">
                     <?php if (!empty($companyLogoUrl)): ?>
                         <img src="<?= htmlspecialchars($companyLogoUrl) ?>" alt="" class="h-8 w-auto object-contain flex-shrink-0 md:h-9" aria-hidden="true">

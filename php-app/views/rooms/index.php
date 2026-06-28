@@ -19,7 +19,10 @@ ob_start();
     $warehouseRoomStats = $warehouseRoomStats ?? null;
     $filterWarehouseMeta = $filterWarehouseMeta ?? null;
     $warehouseRoomTotal = (int) ($warehouseRoomStats['total'] ?? 0);
-    $listedRoomCount = count($rooms);
+    $roomsTotal = $roomsTotal ?? count($rooms);
+    $listedRoomCount = (int) $roomsTotal;
+    $perPage = $perPage ?? 50;
+    $page = $page ?? max(1, (int) ($_GET['page'] ?? 1));
     $exportParams = array_filter([
         'warehouse_id' => $warehouseIdGet,
         'q' => $qGet,
@@ -98,6 +101,12 @@ ob_start();
             </div>
             <?php if ($hasSubFilters && $listedRoomCount !== $warehouseRoomTotal): ?>
                 <span class="text-sm text-gray-600 dark:text-gray-400"><?= number_format($listedRoomCount, 0, ',', '.') ?> / <?= number_format($warehouseRoomTotal, 0, ',', '.') ?> oda listeleniyor</span>
+            <?php elseif ($listedRoomCount > $perPage): ?>
+                <?php
+                $from = ($page - 1) * $perPage + 1;
+                $to = min($page * $perPage, $listedRoomCount);
+                ?>
+                <span class="text-sm text-gray-600 dark:text-gray-400"><?= number_format($from, 0, ',', '.') ?>–<?= number_format($to, 0, ',', '.') ?> / <?= number_format($listedRoomCount, 0, ',', '.') ?> oda</span>
             <?php endif; ?>
         </div>
     </div>
@@ -206,6 +215,18 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+if (($roomsTotal ?? 0) > $perPage):
+    $paginationParams = array_filter([
+        'warehouse_id' => $warehouseIdGet !== '' ? $warehouseIdGet : null,
+        'q' => $qGet !== '' ? $qGet : null,
+        'status' => $statusGet !== '' ? $statusGet : null,
+        'has_contract' => $hasContractGet !== '' ? $hasContractGet : null,
+    ]);
+    echo renderPagination((int) $roomsTotal, $perPage, $page, '/odalar', $paginationParams);
+endif;
+?>
 
 <?php
 ob_start();
@@ -339,6 +360,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                 <input type="hidden" name="_return_q" value="<?= htmlspecialchars($qGet) ?>">
                 <input type="hidden" name="_return_status" value="<?= htmlspecialchars($statusGet) ?>">
                 <input type="hidden" name="_return_has_contract" value="<?= htmlspecialchars($hasContractGet) ?>">
+                <input type="hidden" name="_return_page" value="<?= (int) $page ?>">
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Depo <span class="text-red-500">*</span></label>

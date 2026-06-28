@@ -1,6 +1,7 @@
 <?php
 $csvUrl = $csvUrl ?? null;
 $csvLabel = $csvLabel ?? 'Excel Dışa Aktar';
+require __DIR__ . '/report_print_styles.php';
 ?>
 <div class="no-print flex flex-wrap items-center gap-2 mb-4">
     <?php if (!empty($csvUrl)): ?>
@@ -12,11 +13,3 @@ $csvLabel = $csvLabel ?? 'Excel Dışa Aktar';
         <i class="bi bi-printer"></i> Yazdır / PDF
     </button>
 </div>
-<style>
-@media print {
-    .no-print { display: none !important; }
-    aside, nav, header, footer, .page-toolbar, .page-filter-modal, .filter-modal-overlay { display: none !important; }
-    body { background: #fff !important; }
-    .card-modern, .stat-card { break-inside: avoid; }
-}
-</style>

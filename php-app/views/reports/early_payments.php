@@ -9,10 +9,11 @@ $totalSum = $totalSum ?? 0;
 $periodLabel = date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate));
 $hasActiveFilters = $startDate !== date('Y-m-01') || $endDate !== date('Y-m-t');
 $activeFilterTags = ['Dönem: ' . $periodLabel];
+$companyName = $companyName ?? null;
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
 ?>
-<div class="mb-6">
+<div class="mb-6 screen-only">
     <nav class="text-sm text-gray-500 dark:text-gray-400 mb-2">
         <a href="/raporlar" class="text-emerald-600 dark:text-emerald-400 hover:underline">Raporlar</a>
         <span class="mx-1">/</span>
@@ -22,12 +23,12 @@ function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Vadesi gelmeden tahsil edilen ödemeler ve tüm taksitlerini peşin ödeyen müşteriler</p>
 </div>
 
-<div class="mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-sm text-blue-900 dark:text-blue-200">
+<div class="mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-sm text-blue-900 dark:text-blue-200 screen-only">
     <strong>Erken ödeme:</strong> Tahsilat tarihi (<code class="px-1 rounded bg-blue-100 dark:bg-blue-800">paid_at</code>) vade tarihinden (<code class="px-1 rounded bg-blue-100 dark:bg-blue-800">due_date</code>) önce olan ödemeler.
     <strong class="ml-1">Peşin sözleşme:</strong> Aktif sözleşmenin tüm taksitleri ödenmiş ve en az bir taksit vadesinden önce tahsil edilmiş.
 </div>
 
-<div class="page-toolbar flex flex-wrap items-center gap-3 mb-6">
+<div class="page-toolbar flex flex-wrap items-center gap-3 mb-6 screen-only">
     <?php
     $filterModalId = 'earlyPaymentsFilterModal';
     $filterClearUrl = '/raporlar/erken-odemeler';
@@ -69,6 +70,7 @@ $filterFormId = 'earlyPaymentsFilterForm';
 $filterFormAction = '/raporlar/erken-odemeler';
 $filterSubmitLabel = 'Göster';
 $filterModalTitle = 'Erken Ödemeler — Filtreler';
+$filterModalClass = 'screen-only';
 require __DIR__ . '/../partials/page_filter_modal.php';
 ?>
 
@@ -89,7 +91,19 @@ $csvUrl = reportExportUrl('/raporlar/erken-odemeler', ['start_date' => $startDat
 <div id="report-content">
 <?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+<?php
+$printTitle = 'Erken ve Peşin Ödemeler Raporu';
+$printMeta = [
+    ['label' => 'Dönem', 'value' => $periodLabel],
+];
+$printSummary = [
+    'headers' => ['Erken ödeme adedi', 'Erken ödeme tutarı', 'Peşin sözleşme'],
+    'values' => [(int) $totalCount, fmtMoney($totalSum) . ' ₺', count($prepaidContracts)],
+];
+require __DIR__ . '/../partials/report_print_header.php';
+?>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 screen-only">
     <div class="stat-card">
         <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Seçilen dönemde erken ödeme</p>
         <p class="text-2xl font-bold text-blue-700 dark:text-blue-300"><?= (int) $totalCount ?> adet</p>
@@ -103,16 +117,19 @@ $csvUrl = reportExportUrl('/raporlar/erken-odemeler', ['start_date' => $startDat
 </div>
 
 <?php if (!empty($prepaidContracts)): ?>
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-8">
-    <div class="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden mb-8 report-print-table-wrap">
+    <div class="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800 screen-only">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <i class="bi bi-lightning-charge text-indigo-600 dark:text-indigo-400"></i>
             Peşin ödeyen müşteriler (aktif sözleşmeler)
         </h2>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">6 aylık kiralama gibi tüm vadeleri önceden kapatmış sözleşmeler</p>
     </div>
+    <div class="print-only report-print-section">
+        <h2>Peşin ödeyen müşteriler</h2>
+    </div>
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm report-data-table">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
@@ -131,10 +148,12 @@ $csvUrl = reportExportUrl('/raporlar/erken-odemeler', ['start_date' => $startDat
                 ?>
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td class="px-4 py-3">
-                        <a href="/musteriler/<?= htmlspecialchars($c['customer_id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($name) ?></a>
+                        <a href="/musteriler/<?= htmlspecialchars($c['customer_id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:underline screen-only"><?= htmlspecialchars($name) ?></a>
+                        <span class="print-only"><?= htmlspecialchars($name) ?></span>
                     </td>
                     <td class="px-4 py-3">
-                        <a href="/girisler/<?= htmlspecialchars($c['contract_id'] ?? '') ?>" class="text-gray-700 dark:text-gray-300 hover:text-emerald-600"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a>
+                        <a href="/girisler/<?= htmlspecialchars($c['contract_id'] ?? '') ?>" class="text-gray-700 dark:text-gray-300 hover:text-emerald-600 screen-only"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a>
+                        <span class="print-only"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></span>
                     </td>
                     <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(($c['warehouse_name'] ?? '') . ' / ' . ($c['room_number'] ?? '')) ?></td>
                     <td class="px-4 py-3"><?= (int) ($c['payment_count'] ?? 0) ?></td>
@@ -155,16 +174,20 @@ $csvUrl = reportExportUrl('/raporlar/erken-odemeler', ['start_date' => $startDat
 </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
-    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center flex-wrap gap-2">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden report-print-table-wrap">
+    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center flex-wrap gap-2 screen-only">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Erken tahsil edilen ödemeler</h2>
         <span class="text-sm text-gray-500 dark:text-gray-400"><?= count($rows) ?> kayıt gösteriliyor</span>
     </div>
+    <div class="print-only report-print-section">
+        <h2>Erken tahsil edilen ödemeler</h2>
+    </div>
     <?php if (empty($rows)): ?>
-        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Seçilen tarih aralığında erken ödeme kaydı yok.</div>
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400 screen-only">Seçilen tarih aralığında erken ödeme kaydı yok.</div>
+        <div class="print-only p-4 text-gray-600">Seçilen tarih aralığında erken ödeme kaydı yok.</div>
     <?php else: ?>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm report-data-table">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Ödeme No</th>
@@ -183,10 +206,12 @@ $csvUrl = reportExportUrl('/raporlar/erken-odemeler', ['start_date' => $startDat
                     ?>
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td class="px-4 py-3">
-                            <a href="/odemeler/<?= htmlspecialchars($r['id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></a>
+                            <a href="/odemeler/<?= htmlspecialchars($r['id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:underline screen-only"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></a>
+                            <span class="print-only"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></span>
                         </td>
                         <td class="px-4 py-3">
-                            <a href="/musteriler/<?= htmlspecialchars($r['customer_id'] ?? '') ?>" class="text-gray-700 dark:text-gray-300 hover:text-emerald-600"><?= htmlspecialchars($name) ?></a>
+                            <a href="/musteriler/<?= htmlspecialchars($r['customer_id'] ?? '') ?>" class="text-gray-700 dark:text-gray-300 hover:text-emerald-600 screen-only"><?= htmlspecialchars($name) ?></a>
+                            <span class="print-only"><?= htmlspecialchars($name) ?></span>
                         </td>
                         <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($r['contract_number'] ?? '-') ?></td>
                         <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white"><?= fmtMoney($r['amount'] ?? 0) ?> ₺</td>
@@ -198,6 +223,13 @@ $csvUrl = reportExportUrl('/raporlar/erken-odemeler', ['start_date' => $startDat
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
+                <tfoot class="print-only">
+                    <tr>
+                        <td colspan="3" class="px-4 py-3 text-right font-bold">Toplam</td>
+                        <td class="px-4 py-3 font-bold"><?= fmtMoney($totalSum) ?> ₺</td>
+                        <td colspan="3"></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     <?php endif; ?>

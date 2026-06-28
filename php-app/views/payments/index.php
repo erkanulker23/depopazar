@@ -45,12 +45,12 @@ if ($dateTo !== '') $activeFilterTags[] = 'Bitiş: ' . $dateTo;
     </button>
 </div>
 
-<?php if ($hasActiveFilters && ($collectMode ? count($customersWithDebt) : count($paymentsByCustomer))): ?>
+<?php if ($hasActiveFilters && ($collectMode ? ($listTotal ?? 0) : ($listTotal ?? 0))): ?>
     <div class="mb-4 text-sm text-gray-600 dark:text-gray-400 screen-only">
         <?php if ($collectMode): ?>
-            <?= count($customersWithDebt) ?> müşteri listeleniyor
+            <?= (int) ($listTotal ?? 0) ?> müşteri listeleniyor
         <?php else: ?>
-            <?= count($paymentsByCustomer) ?> müşteri · <?= (int) $totalPayments ?> ödeme listeleniyor
+            <?= (int) ($listTotal ?? 0) ?> müşteri · <?= (int) $totalPayments ?> ödeme listeleniyor
         <?php endif; ?>
     </div>
 <?php endif; ?>
@@ -66,7 +66,7 @@ if ($dateTo !== '') $activeFilterTags[] = 'Bitiş: ' . $dateTo;
     <?php if ($collectMode && !empty($customersWithDebt)): ?>
         <!-- Ödeme Tahsil modu: Sadece borçlu müşteriler listesi -->
         <div class="p-4 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between flex-wrap gap-2">
-            <p class="text-sm text-gray-600 dark:text-gray-400">Borcu olan <?= count($customersWithDebt) ?> müşteri. Ödeme almak için ilgili müşterinin "Ödeme Al" butonuna tıklayın.</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Borcu olan <?= (int) ($listTotal ?? count($customersWithDebt)) ?> müşteri. Ödeme almak için ilgili müşterinin "Ödeme Al" butonuna tıklayın.</p>
             <a href="/odemeler" class="text-sm text-emerald-600 dark:text-emerald-400 hover:underline">Tüm ödemelere git →</a>
         </div>
         <div class="divide-y divide-gray-200 dark:divide-gray-600">
@@ -85,6 +85,17 @@ if ($dateTo !== '') $activeFilterTags[] = 'Bitiş: ' . $dateTo;
             </div>
             <?php endforeach; ?>
         </div>
+        <?php if (($listTotal ?? 0) > ($perPage ?? 30)):
+            $paginationParams = array_filter([
+                'q' => $payQ !== '' ? $payQ : null,
+                'status' => $payStatus !== '' ? $payStatus : null,
+                'date_from' => $dateFrom !== '' ? $dateFrom : null,
+                'date_to' => $dateTo !== '' ? $dateTo : null,
+                'collect' => '1',
+                'customer' => ($preselectedCustomerId ?? '') !== '' ? $preselectedCustomerId : null,
+            ]);
+            echo renderPagination($listTotal, $perPage, $page, '/odemeler', $paginationParams);
+        endif; ?>
     <?php elseif ($collectMode && empty($customersWithDebt)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Borcu olan müşteri yok.</div>
     <?php elseif (empty($paymentsByCustomer)): ?>
@@ -179,10 +190,35 @@ if ($dateTo !== '') $activeFilterTags[] = 'Bitiş: ' . $dateTo;
             <?php endforeach; ?>
         </div>
         <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400">
-            <?= count($paymentsByCustomer) ?> müşteri · Toplam <?= $totalPayments ?> ödeme
+            <?php
+            $shownCustomers = count($paymentsByCustomer);
+            $from = $listTotal > 0 ? (($page - 1) * $perPage + 1) : 0;
+            $to = min($page * $perPage, $listTotal);
+            if ($listTotal > $perPage): ?>
+                <?= $from ?>–<?= $to ?> / <?= $listTotal ?> müşteri · Toplam <?= (int) $totalPayments ?> ödeme
+            <?php else: ?>
+                <?= $shownCustomers ?> müşteri · Toplam <?= (int) $totalPayments ?> ödeme
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+$listTotal = $listTotal ?? 0;
+$perPage = $perPage ?? 30;
+$page = $page ?? 1;
+if ($listTotal > $perPage):
+    $paginationParams = array_filter([
+        'q' => $payQ !== '' ? $payQ : null,
+        'status' => $payStatus !== '' ? $payStatus : null,
+        'date_from' => $dateFrom !== '' ? $dateFrom : null,
+        'date_to' => $dateTo !== '' ? $dateTo : null,
+        'collect' => $collectMode ? '1' : null,
+        'customer' => ($collectMode && ($preselectedCustomerId ?? '') !== '') ? $preselectedCustomerId : null,
+    ]);
+    echo renderPagination($listTotal, $perPage, $page, '/odemeler', $paginationParams);
+endif;
+?>
 
 <?php
 ob_start();
