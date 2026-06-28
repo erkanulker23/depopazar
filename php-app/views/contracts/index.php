@@ -197,7 +197,6 @@ endif; ?>
 <?php
 ob_start();
 ?>
-    <input type="hidden" name="newSale" value="">
     <div class="filter-field">
         <label class="filter-label" for="contract_filter_q">Ara</label>
         <input type="search" name="q" id="contract_filter_q" value="<?= htmlspecialchars($qGet) ?>" placeholder="Sözleşme no, müşteri, oda, depo, plaka..." class="filter-input">

@@ -67,7 +67,7 @@ class ContractsController
             $stmt->execute([$companyId]);
             $owners = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
-        $openNewSale = isset($_GET['newSale']) && $_GET['newSale'] !== '0';
+        $openNewSale = ($_GET['newSale'] ?? '') === '1';
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
         $contractDebt = $this->getContractDebtCounts($contracts);
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
