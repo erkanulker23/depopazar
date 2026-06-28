@@ -845,6 +845,7 @@ class ContractsController
             exit;
         }
         if (empty($contract['terminated_at'])) {
+            Contract::normalizeContractPayments($this->pdo, $id);
             Contract::ensurePaymentsForContract($this->pdo, $id);
         }
         $payments = Payment::findByContractId($this->pdo, $id);

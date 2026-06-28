@@ -240,6 +240,9 @@ class PaymentsController
             if (!empty($chargeIds)) {
                 CustomerCharge::markManyAsPaid($this->pdo, $chargeIds, $notes, $paidAt);
             }
+            if (!empty($paymentIds)) {
+                $this->normalizeContractPaymentsAfterCollection($paymentIds);
+            }
             Auth::setSession('flash_success', count($paymentIds) > 1
                 ? count($paymentIds) . ' ödeme kaydedildi.'
                 : 'Ödeme kaydedildi.');
@@ -504,5 +507,21 @@ class PaymentsController
             $count = 0;
         }
         echo json_encode(['count' => $count]);
+    }
+
+    /** Tahsilat sonrası vade gününü giriş tarihine hizala; yinelenen bekleyen taksitleri kaldır */
+    private function normalizeContractPaymentsAfterCollection(array $paymentIds): void
+    {
+        $contractIds = [];
+        foreach ($paymentIds as $paymentId) {
+            $payment = Payment::findOne($this->pdo, (string) $paymentId);
+            $contractId = $payment['contract_id'] ?? '';
+            if ($contractId !== '') {
+                $contractIds[$contractId] = true;
+            }
+        }
+        foreach (array_keys($contractIds) as $contractId) {
+            Contract::normalizeContractPayments($this->pdo, $contractId);
+        }
     }
 }
