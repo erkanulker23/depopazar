@@ -112,6 +112,44 @@ class ContractBilling
             return true;
         }
         $legacyYm = substr($periodKey, 0, 7);
-        return in_array($legacyYm, $paidPeriodKeys, true);
+        if ($legacyYm === '' || strlen($legacyYm) < 7) {
+            return false;
+        }
+        if (in_array($legacyYm, $paidPeriodKeys, true)) {
+            return true;
+        }
+        foreach ($paidPeriodKeys as $paidKey) {
+            $paidKey = self::normalizeDate((string) $paidKey);
+            if ($paidKey === '') {
+                continue;
+            }
+            if (substr($paidKey, 0, 7) === $legacyYm) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Ödenmiş dönem tutarı (Y-m-d vade ile eşleşme; eski Y-m veya aynı takvim ayı) */
+    public static function paidAmountForPeriodKey(string $periodKey, array $paidAmountsByPeriod): ?float
+    {
+        $periodKey = self::normalizeDate($periodKey);
+        if ($periodKey === '') {
+            return null;
+        }
+        if (isset($paidAmountsByPeriod[$periodKey])) {
+            return (float) $paidAmountsByPeriod[$periodKey];
+        }
+        $legacyYm = substr($periodKey, 0, 7);
+        if (isset($paidAmountsByPeriod[$legacyYm])) {
+            return (float) $paidAmountsByPeriod[$legacyYm];
+        }
+        foreach ($paidAmountsByPeriod as $paidKey => $amount) {
+            $paidKey = self::normalizeDate((string) $paidKey);
+            if ($paidKey !== '' && substr($paidKey, 0, 7) === $legacyYm) {
+                return (float) $amount;
+            }
+        }
+        return null;
     }
 }

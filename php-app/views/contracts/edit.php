@@ -177,7 +177,8 @@ function toggleEditStoredItemsConditionNote(value) {
 (function() {
     var monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
     var existingMonthlyPrices = <?= json_encode($monthlyPricesByKey, JSON_UNESCAPED_UNICODE) ?>;
-    var paidMonthSet = new Set(<?= json_encode(array_values($paidMonths), JSON_UNESCAPED_UNICODE) ?>);
+    var paidPeriodKeys = <?= json_encode(array_values($paidMonths), JSON_UNESCAPED_UNICODE) ?>;
+    var paidAmountsByPeriod = <?= json_encode($paidAmountsByMonth, JSON_UNESCAPED_UNICODE) ?>;
 
     function formatPriceInput(num) {
         if (num === null || num === undefined || num === '') return '';
@@ -219,7 +220,13 @@ function toggleEditStoredItemsConditionNote(value) {
                 : (existingMonthlyPrices[item.key] !== undefined && existingMonthlyPrices[item.key] !== null
                     ? formatPriceInput(existingMonthlyPrices[item.key])
                     : (defaultVal ? formatPriceInput(defaultVal) : ''));
-            var isPaid = paidMonthSet.has(item.key);
+            var isPaid = ContractBilling.isPaidPeriodKey(item.key, paidPeriodKeys);
+            if (isPaid) {
+                var paidAmt = ContractBilling.paidAmountForPeriodKey(item.key, paidAmountsByPeriod);
+                if (paidAmt != null) {
+                    existing = formatPriceInput(paidAmt);
+                }
+            }
             var row = document.createElement('div');
             row.className = 'flex items-center gap-3' + (isPaid ? ' opacity-90' : '');
             var inputClass = 'flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm ' +

@@ -469,9 +469,16 @@ class ContractsController
         }
         $paidMonths = Payment::getPaidPeriodKeysByContractId($this->pdo, $id);
         $paidAmountsByMonth = Payment::getPaidAmountsByPeriodForContract($this->pdo, $id);
-        foreach ($paidAmountsByMonth as $monthKey => $amount) {
-            if (!isset($monthlyPricesByKey[$monthKey])) {
-                $monthlyPricesByKey[$monthKey] = $amount;
+        $contractStart = substr((string) ($contract['start_date'] ?? ''), 0, 10);
+        $contractEnd = substr((string) ($contract['end_date'] ?? ''), 0, 10);
+        foreach (ContractBilling::periods($contractStart, $contractEnd) as $period) {
+            $periodKey = $period['key'];
+            if (isset($monthlyPricesByKey[$periodKey])) {
+                continue;
+            }
+            $paidAmount = ContractBilling::paidAmountForPeriodKey($periodKey, $paidAmountsByMonth);
+            if ($paidAmount !== null) {
+                $monthlyPricesByKey[$periodKey] = $paidAmount;
             }
         }
         $warehouses = [];
@@ -576,20 +583,20 @@ class ContractsController
                     $existingMonthlyByKey[$mp['month']] = (float) ($mp['price'] ?? 0);
                 }
             }
-            foreach ($paidMonths as $periodKey) {
-                if (!array_key_exists($periodKey, $monthlyPricesPost)) {
+            foreach ($monthlyPricesPost as $postKey => $postedRaw) {
+                if (!ContractBilling::isPaidPeriodKey((string) $postKey, $paidMonths)) {
                     continue;
                 }
-                $posted = trim((string) $monthlyPricesPost[$periodKey]);
+                $posted = trim((string) $postedRaw);
                 if ($posted === '') {
                     continue;
                 }
                 $newPrice = (float) str_replace(',', '.', $posted);
-                $oldPrice = $existingMonthlyByKey[$periodKey]
-                    ?? $paidAmountsByMonth[$periodKey]
+                $oldPrice = $existingMonthlyByKey[$postKey]
+                    ?? ContractBilling::paidAmountForPeriodKey((string) $postKey, $paidAmountsByMonth)
                     ?? (float) ($contract['monthly_price'] ?? 0);
                 if (abs($newPrice - $oldPrice) > 0.009) {
-                    $label = ContractBilling::formatPeriodLabel($periodKey);
+                    $label = ContractBilling::formatPeriodLabel((string) $postKey);
                     Auth::setSession('flash_error', $label . ' vadesi için ödeme alındığından oda fiyatı değiştirilemez.');
                     header('Location: /girisler/' . $id . '/duzenle');
                     exit;

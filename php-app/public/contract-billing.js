@@ -52,10 +52,39 @@
         return periods;
     }
 
+    function isPaidPeriodKey(periodKey, paidPeriodKeys) {
+        periodKey = normalizeDateStr(periodKey);
+        if (!periodKey || !paidPeriodKeys || !paidPeriodKeys.length) return false;
+        if (paidPeriodKeys.indexOf(periodKey) >= 0) return true;
+        var legacyYm = periodKey.slice(0, 7);
+        if (paidPeriodKeys.indexOf(legacyYm) >= 0) return true;
+        for (var i = 0; i < paidPeriodKeys.length; i++) {
+            var paid = normalizeDateStr(paidPeriodKeys[i]);
+            if (paid && paid.slice(0, 7) === legacyYm) return true;
+        }
+        return false;
+    }
+
+    function paidAmountForPeriodKey(periodKey, paidAmountsByPeriod) {
+        periodKey = normalizeDateStr(periodKey);
+        if (!periodKey || !paidAmountsByPeriod) return null;
+        if (paidAmountsByPeriod[periodKey] != null) return paidAmountsByPeriod[periodKey];
+        var legacyYm = periodKey.slice(0, 7);
+        if (paidAmountsByPeriod[legacyYm] != null) return paidAmountsByPeriod[legacyYm];
+        var keys = Object.keys(paidAmountsByPeriod);
+        for (var i = 0; i < keys.length; i++) {
+            var paid = normalizeDateStr(keys[i]);
+            if (paid && paid.slice(0, 7) === legacyYm) return paidAmountsByPeriod[keys[i]];
+        }
+        return null;
+    }
+
     global.ContractBilling = {
         addMonthsSameDay: addMonthsSameDay,
         billingPeriods: billingPeriods,
         formatPeriodLabel: formatPeriodLabel,
-        normalizeDateStr: normalizeDateStr
+        normalizeDateStr: normalizeDateStr,
+        isPaidPeriodKey: isPaidPeriodKey,
+        paidAmountForPeriodKey: paidAmountForPeriodKey
     };
 })(typeof window !== 'undefined' ? window : this);
