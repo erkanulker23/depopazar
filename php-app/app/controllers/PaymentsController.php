@@ -169,22 +169,40 @@ class PaymentsController
         }
         if (count($paymentIds) > 1 && empty($_POST['confirm_multi_period'])) {
             $dueDays = [];
+            $byContract = [];
             foreach ($paymentIds as $pid) {
                 $p = Payment::findOne($this->pdo, $pid);
-                if ($p && !empty($p['due_date'])) {
+                if (!$p) {
+                    continue;
+                }
+                if (!empty($p['due_date'])) {
                     $dueDays[] = substr((string) $p['due_date'], 0, 10);
                 }
+                $cid = $p['contract_id'] ?? '';
+                if ($cid !== '') {
+                    $byContract[$cid][] = $pid;
+                }
             }
-            if (count($dueDays) > 1) {
+            $needsConfirm = false;
+            foreach ($byContract as $ids) {
+                if (count($ids) > 1) {
+                    $needsConfirm = true;
+                    break;
+                }
+            }
+            if (!$needsConfirm && count($dueDays) > 1) {
                 $minDue = min($dueDays);
                 $maxDue = max($dueDays);
                 $spanDays = (int) ((strtotime($maxDue) - strtotime($minDue)) / 86400);
-                if ($spanDays >= 28 && $maxDue > date('Y-m-d')) {
-                    Auth::setSession('flash_error', count($paymentIds) . ' farklı vadeli taksit aynı anda ödendi işaretlenecek. Yalnızca gerçekten tahsil ettiğiniz taksit(ler)i seçin.');
-                    $redirect = trim($_POST['redirect'] ?? '');
-                    header('Location: ' . ($redirect !== '' && preg_match('#^/[a-z0-9/\-]+$#i', $redirect) ? $redirect : '/odemeler'));
-                    exit;
+                if ($spanDays >= 28) {
+                    $needsConfirm = true;
                 }
+            }
+            if ($needsConfirm) {
+                Auth::setSession('flash_error', count($paymentIds) . ' farklı taksit aynı anda ödendi işaretlenecek. Yalnızca gerçekten tahsil ettiğiniz taksit(ler)i seçin ve onaylayın.');
+                $redirect = trim($_POST['redirect'] ?? '');
+                header('Location: ' . ($redirect !== '' && preg_match('#^/[a-z0-9/\-]+$#i', $redirect) ? $redirect : '/odemeler'));
+                exit;
             }
         }
         try {

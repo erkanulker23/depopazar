@@ -167,6 +167,48 @@ class Personnel
         return $stmt->rowCount() > 0;
     }
 
+    /** @param string[] $ids */
+    public static function findByIds(PDO $pdo, array $ids): array
+    {
+        $ids = array_values(array_filter(array_map('trim', $ids)));
+        if ($ids === [] || !self::tableExists($pdo)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM personnel WHERE id IN ($placeholders) AND deleted_at IS NULL ORDER BY first_name ASC, last_name ASC");
+        $stmt->execute($ids);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** @param string[] $jobIds @return array<string, array<int, array>> */
+    public static function findGroupedForTransportationJobs(PDO $pdo, array $jobIds): array
+    {
+        $jobIds = array_values(array_filter(array_map('trim', $jobIds)));
+        if ($jobIds === [] || !self::tableExists($pdo)) {
+            return [];
+        }
+        try {
+            $pdo->query('SELECT 1 FROM transportation_job_personnel LIMIT 1');
+        } catch (Throwable $e) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($jobIds), '?'));
+        $sql = "SELECT tjp.transportation_job_id AS job_id, p.id, p.first_name, p.last_name, p.job_type, p.photo_url
+                FROM transportation_job_personnel tjp
+                INNER JOIN personnel p ON p.id = tjp.personnel_id AND p.deleted_at IS NULL
+                WHERE tjp.deleted_at IS NULL AND tjp.transportation_job_id IN ($placeholders)
+                ORDER BY p.first_name ASC, p.last_name ASC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($jobIds);
+        $grouped = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $jobId = $row['job_id'];
+            unset($row['job_id']);
+            $grouped[$jobId][] = $row;
+        }
+        return $grouped;
+    }
+
     /** Bu dönemde en çok nakliye işine giden personel */
     public static function findTopByJobCount(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 5): array
     {

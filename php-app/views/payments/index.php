@@ -688,6 +688,26 @@ document.querySelectorAll('.open-collect-payment-btn').forEach(function(btn) {
         }
     });
 });
+document.getElementById('collectForm')?.addEventListener('submit', function(e) {
+    if (collectSelectedPayments.length === 0) {
+        e.preventDefault();
+        alert('En az bir taksit seçin.');
+        return;
+    }
+    var form = e.target;
+    form.querySelectorAll('input[name="confirm_multi_period"]').forEach(function(el) { el.remove(); });
+    if (collectSelectedPayments.length > 1) {
+        if (!confirm(collectSelectedPayments.length + ' taksit aynı anda tahsil edilecek. Devam edilsin mi?')) {
+            e.preventDefault();
+            return;
+        }
+        var confirmInput = document.createElement('input');
+        confirmInput.type = 'hidden';
+        confirmInput.name = 'confirm_multi_period';
+        confirmInput.value = '1';
+        form.appendChild(confirmInput);
+    }
+});
 var preselectedCustomerId = <?= json_encode($preselectedCustomerId) ?>;
 <?php if ($collectMode): ?>document.addEventListener('DOMContentLoaded', function() {
     if (preselectedCustomerId && customersWithDebt && customersWithDebt.length) {

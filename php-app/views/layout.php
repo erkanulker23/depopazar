@@ -581,7 +581,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                     <?php endif; ?>
                     <span class="md:hidden text-sm font-semibold text-gray-500 dark:text-gray-400 truncate"><?= htmlspecialchars($projectName) ?></span>
                 </div>
-                <div class="flex items-center gap-1">
+                <div class="flex items-center gap-2">
                     <?php if ($user && !empty($user['id'])): ?>
                     <div class="relative" id="notificationWrap">
                         <button type="button" id="notificationBell" class="relative p-3 md:p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center" title="Bildirimler" aria-expanded="false" aria-haspopup="true">
@@ -606,6 +606,13 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                             </div>
                         </div>
                     </div>
+                    <?php
+                    $headerUserName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+                    $headerUserLink = '/kullanicilar/' . ($user['id'] ?? '');
+                    ?>
+                    <a href="<?= htmlspecialchars($headerUserLink) ?>" class="flex items-center justify-center p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 shrink-0" title="<?= htmlspecialchars($headerUserName) ?>" aria-label="Profilim">
+                        <?php $userRow = $user; $size = 'sm'; require __DIR__ . '/partials/user_avatar.php'; ?>
+                    </a>
                     <?php endif; ?>
                     <button type="button" id="themeToggle" class="p-3 md:p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center" title="Koyu / Açık mod">
                         <i class="bi bi-moon-stars text-xl md:text-lg dark:hidden" aria-hidden="true"></i>

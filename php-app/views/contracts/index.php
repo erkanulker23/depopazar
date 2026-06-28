@@ -437,13 +437,11 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                             <?php
                             $personnelList = $personnel ?? [];
                             $jobTypeLabels = $jobTypeLabels ?? Personnel::jobTypeLabels();
-                            foreach ($personnelList as $s): ?>
-                                <label class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600">
-                                    <input type="checkbox" name="personnel_ids[]" value="<?= htmlspecialchars($s['id']) ?>" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                                    <span class="ml-2 text-sm"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></span>
-                                    <span class="ml-1 text-xs text-gray-500">(<?= htmlspecialchars($jobTypeLabels[$s['job_type'] ?? 'diger'] ?? 'Diğer') ?>)</span>
-                                </label>
-                            <?php endforeach; ?>
+                            foreach ($personnelList as $s):
+                                $person = $s;
+                                $style = 'pill';
+                                require __DIR__ . '/../partials/personnel_checkbox_row.php';
+                            endforeach; ?>
                         </div>
                     </div>
                     <?php endif; ?>

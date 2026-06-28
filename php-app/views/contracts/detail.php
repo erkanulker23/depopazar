@@ -332,7 +332,7 @@ ob_start();
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></p>
-                                    <?php if (!empty($p['paid_at'])): ?>
+                                    <?php if (paymentIsPaid($p) && !empty($p['paid_at'])): ?>
                                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ödendi: <?= fmtDateTime($p['paid_at']) ?></p>
                                     <?php endif; ?>
                                     <?php if (($p['status'] ?? '') === 'paid' && ($cn = paymentCollectorName($p)) !== ''): ?>
@@ -627,9 +627,24 @@ function backContractCollectSelect() {
 }
 document.getElementById('collectModal').addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCollectModal(); });
 document.getElementById('contractCollectForm')?.addEventListener('submit', function(e) {
-    if (getCheckedContractCollectIds().length === 0) {
+    var ids = getCheckedContractCollectIds();
+    if (ids.length === 0) {
         e.preventDefault();
         alert('En az bir taksit seçin.');
+        return;
+    }
+    var form = e.target;
+    form.querySelectorAll('input[name="confirm_multi_period"]').forEach(function(el) { el.remove(); });
+    if (ids.length > 1) {
+        if (!confirm(ids.length + ' taksit aynı anda tahsil edilecek. Devam edilsin mi?')) {
+            e.preventDefault();
+            return;
+        }
+        var confirmInput = document.createElement('input');
+        confirmInput.type = 'hidden';
+        confirmInput.name = 'confirm_multi_period';
+        confirmInput.value = '1';
+        form.appendChild(confirmInput);
     }
 });
 document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {

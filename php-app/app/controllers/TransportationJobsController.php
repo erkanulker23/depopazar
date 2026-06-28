@@ -77,6 +77,10 @@ class TransportationJobsController
         } catch (Throwable $e) {
             // masraflar tablosu veya transportation_job_id kolonu yoksa modal gösterilmez
         }
+        $jobPersonnelMap = [];
+        if ($personnelTableExists && !empty($jobs)) {
+            $jobPersonnelMap = Personnel::findGroupedForTransportationJobs($this->pdo, array_column($jobs, 'id'));
+        }
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $newCustomerId = isset($_GET['newCustomerId']) ? trim($_GET['newCustomerId']) : '';
         require __DIR__ . '/../../views/transportation_jobs/index.php';
@@ -104,13 +108,11 @@ class TransportationJobsController
             exit;
         }
         $company = !empty($job['company_id']) ? Company::findOne($this->pdo, $job['company_id']) : null;
-        $staffNames = [];
+        $staffPersonnel = [];
         if (!empty($job['personnel_ids']) && Personnel::tableExists($this->pdo)) {
-            $placeholders = implode(',', array_fill(0, count($job['personnel_ids']), '?'));
-            $stmt = $this->pdo->prepare("SELECT CONCAT(first_name, ' ', last_name) AS name FROM personnel WHERE id IN ($placeholders) AND deleted_at IS NULL");
-            $stmt->execute($job['personnel_ids']);
-            $staffNames = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            $staffPersonnel = Personnel::findByIds($this->pdo, $job['personnel_ids']);
         }
+        $staffNames = array_map(static fn(array $p): string => trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')), $staffPersonnel);
         $jobExpenses = [];
         $totalExpenses = 0;
         $jobRevenue = isset($job['price']) ? (float) $job['price'] : 0;

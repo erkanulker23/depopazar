@@ -278,42 +278,10 @@ if ($bulkPaidExtraCount > 0):
         <!-- Aylar takvimi: Ocak, Şubat, Mart... hangi ay ödendi / ödenmedi (ay bazında tüm ödemeler birleştirilir, Ödeme Takvimi ile tutarlı) -->
         <?php
         $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-        $monthsStatus = [];
-        foreach ($payments as $p) {
-            $due = $p['due_date'] ?? '';
-            if ($due === '') continue;
-            $key = date('Y-m', strtotime($due));
-            $status = $p['status'] ?? 'pending';
-            if (!isset($monthsStatus[$key])) {
-                $monthsStatus[$key] = ['statuses' => [], 'amount' => 0, 'contract_number' => $p['contract_number'] ?? ''];
-            }
-            $monthsStatus[$key]['statuses'][] = $status;
-            $monthsStatus[$key]['amount'] += (float)($p['amount'] ?? 0);
-        }
-        foreach ($monthsStatus as $k => $v) {
-            $labels = [];
-            $idx = 0;
-            foreach ($payments as $p) {
-                $due = $p['due_date'] ?? '';
-                if ($due === '' || date('Y-m', strtotime($due)) !== $k) continue;
-                $labels[] = paymentStatusDisplay($p)['label'];
-            }
-            $allPaid = !empty($labels) && count(array_filter($labels, fn($l) => $l === 'Ödendi')) === count($labels);
-            $anyOverdue = in_array('Vadesi geçmiş', $labels, true);
-            $monthsStatus[$k]['status'] = $allPaid ? 'paid' : ($anyOverdue ? 'overdue' : 'pending');
-            $monthsStatus[$k]['label'] = $monthsStatus[$k]['status'] === 'paid' ? 'Ödendi' : ($monthsStatus[$k]['status'] === 'overdue' ? 'Gecikmede' : 'Ödenmedi');
-        }
-        $minYear = date('Y');
-        $maxYear = date('Y');
-        foreach (array_keys($monthsStatus) as $ym) {
-            $y = (int) substr($ym, 0, 4);
-            if ($y < $minYear) $minYear = $y;
-            if ($y > $maxYear) $maxYear = $y;
-        }
-        foreach ($contracts as $c) {
-            if (!empty($c['start_date'])) { $y = (int) date('Y', strtotime($c['start_date'])); if ($y < $minYear) $minYear = $y; }
-            if (!empty($c['end_date'])) { $y = (int) date('Y', strtotime($c['end_date'])); if ($y > $maxYear) $maxYear = $y; }
-        }
+        $monthsCalendar = buildPaymentMonthsCalendar($payments, $contracts);
+        $monthsStatus = $monthsCalendar['months'];
+        $minYear = $monthsCalendar['minYear'];
+        $maxYear = $monthsCalendar['maxYear'];
         ?>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
@@ -341,7 +309,13 @@ if ($bulkPaidExtraCount > 0):
                                 $info = $monthsStatus[$key] ?? null;
                                 $status = $info['status'] ?? null;
                                 $label = $info ? $info['label'] : '–';
-                                $bg = $status === 'paid' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : ($status === 'overdue' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : ($status === 'pending' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' : 'bg-gray-50 dark:bg-gray-700/30 text-gray-500 dark:text-gray-400'));
+                                $bg = match ($status) {
+                                    'paid' => 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+                                    'partial' => 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+                                    'overdue' => 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+                                    'pending' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
+                                    default => 'bg-gray-50 dark:bg-gray-700/30 text-gray-500 dark:text-gray-400',
+                                };
                                 $title = $info ? (($info['contract_number'] ?? '') . ' – ' . fmtPrice($info['amount'] ?? 0)) : '';
                                 ?>
                                 <td class="border border-gray-200 dark:border-gray-600 px-2 py-1.5 text-center <?= $bg ?>" title="<?= htmlspecialchars($title) ?>"><?= htmlspecialchars($label) ?></td>
@@ -730,6 +704,18 @@ $bankAccounts = $bankAccounts ?? [];
                                 e.preventDefault();
                                 alert('En az bir ödeme kalemi seçin.');
                                 return;
+                            }
+                            form.querySelectorAll('input[name="confirm_multi_period"]').forEach(function(el) { el.remove(); });
+                            if (checked.length > 1) {
+                                if (!confirm(checked.length + ' taksit aynı anda tahsil edilecek. Devam edilsin mi?')) {
+                                    e.preventDefault();
+                                    return;
+                                }
+                                var confirmInput = document.createElement('input');
+                                confirmInput.type = 'hidden';
+                                confirmInput.name = 'confirm_multi_period';
+                                confirmInput.value = '1';
+                                form.appendChild(confirmInput);
                             }
                             var futureCount = 0;
                             checked.forEach(function(cb) {

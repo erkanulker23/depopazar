@@ -5,26 +5,10 @@ $contracts = $contracts ?? [];
 $payments = $payments ?? [];
 $debt = $debt ?? 0;
 $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-$monthsStatus = [];
-foreach ($payments as $p) {
-    $due = $p['due_date'] ?? '';
-    if ($due === '') continue;
-    $key = date('Y-m', strtotime($due));
-    $status = $p['status'] ?? 'pending';
-    $label = $status === 'paid' ? 'Ödendi' : ($status === 'overdue' ? 'Gecikmede' : 'Ödenmedi');
-    $monthsStatus[$key] = ['status' => $status, 'label' => $label, 'amount' => $p['amount'] ?? 0, 'contract_number' => $p['contract_number'] ?? ''];
-}
-$minYear = date('Y');
-$maxYear = date('Y');
-foreach (array_keys($monthsStatus) as $ym) {
-    $y = (int) substr($ym, 0, 4);
-    if ($y < $minYear) $minYear = $y;
-    if ($y > $maxYear) $maxYear = $y;
-}
-foreach ($contracts as $c) {
-    if (!empty($c['start_date'])) { $y = (int) date('Y', strtotime($c['start_date'])); if ($y < $minYear) $minYear = $y; }
-    if (!empty($c['end_date'])) { $y = (int) date('Y', strtotime($c['end_date'])); if ($y > $maxYear) $maxYear = $y; }
-}
+$monthsCalendar = buildPaymentMonthsCalendar($payments, $contracts);
+$monthsStatus = $monthsCalendar['months'];
+$minYear = $monthsCalendar['minYear'];
+$maxYear = $monthsCalendar['maxYear'];
 if (!function_exists('fmtPrice')) {
     function fmtPrice($n) {
         if ($n === null || $n === '') return '-';
@@ -160,7 +144,13 @@ if (!function_exists('fmtPrice')) {
                     $key = $year . '-' . str_pad((string)$m, 2, '0', STR_PAD_LEFT);
                     $info = $monthsStatus[$key] ?? null;
                     $label = $info ? $info['label'] : '–';
-                    $bg = ($info['status'] ?? '') === 'paid' ? 'bg-green-100' : (($info['status'] ?? '') === 'overdue' ? 'bg-red-100' : (($info['status'] ?? '') === 'pending' ? 'bg-amber-100' : ''));
+                    $bg = match ($info['status'] ?? '') {
+                        'paid' => 'bg-green-100',
+                        'partial' => 'bg-blue-100',
+                        'overdue' => 'bg-red-100',
+                        'pending' => 'bg-amber-100',
+                        default => '',
+                    };
                     ?>
                     <td class="border border-gray-300 px-1 py-1 text-center text-xs <?= $bg ?>"><?= htmlspecialchars($label) ?></td>
                     <?php endfor; ?>

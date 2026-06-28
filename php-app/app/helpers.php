@@ -400,6 +400,105 @@ if (!function_exists('paymentCollectorName')) {
     }
 }
 
+/** Ödeme tahsil edilmiş mi (tek kaynak: status) */
+if (!function_exists('paymentIsPaid')) {
+    function paymentIsPaid(array $payment): bool
+    {
+        return ($payment['status'] ?? '') === 'paid';
+    }
+}
+
+/** Ödeme henüz tahsil edilmemiş mi */
+if (!function_exists('paymentIsUnpaid')) {
+    function paymentIsUnpaid(array $payment): bool
+    {
+        $status = $payment['status'] ?? 'pending';
+        return in_array($status, ['pending', 'overdue'], true);
+    }
+}
+
+/**
+ * Aylar takvimi: vade ayına (Y-m) göre ödeme durumu özeti.
+ *
+ * @return array{months: array<string, array{status: string, label: string, amount: float, contract_number: string}>, minYear: int, maxYear: int}
+ */
+if (!function_exists('buildPaymentMonthsCalendar')) {
+    function buildPaymentMonthsCalendar(array $payments, array $contracts = []): array
+    {
+        $months = [];
+        foreach ($payments as $p) {
+            $due = $p['due_date'] ?? '';
+            if ($due === '' || ($p['status'] ?? '') === 'cancelled') {
+                continue;
+            }
+            $key = date('Y-m', strtotime($due));
+            if (!isset($months[$key])) {
+                $months[$key] = ['items' => [], 'amount' => 0.0, 'contract_number' => $p['contract_number'] ?? ''];
+            }
+            $months[$key]['items'][] = $p;
+            $months[$key]['amount'] += (float) ($p['amount'] ?? 0);
+        }
+
+        foreach ($months as $key => $info) {
+            $items = $info['items'];
+            $paidCount = count(array_filter($items, 'paymentIsPaid'));
+            $total = count($items);
+            $anyOverdue = false;
+            $anyEarly = false;
+            foreach ($items as $p) {
+                if (!paymentIsPaid($p) && paymentStatusDisplay($p)['label'] === 'Vadesi geçmiş') {
+                    $anyOverdue = true;
+                }
+                if (paymentIsPaid($p) && paymentIsEarly($p)) {
+                    $anyEarly = true;
+                }
+            }
+            if ($paidCount === $total && $total > 0) {
+                $months[$key]['status'] = 'paid';
+                $months[$key]['label'] = $anyEarly ? 'Erken ödendi' : 'Ödendi';
+            } elseif ($paidCount > 0) {
+                $months[$key]['status'] = 'partial';
+                $months[$key]['label'] = 'Kısmi (' . $paidCount . '/' . $total . ')';
+            } elseif ($anyOverdue) {
+                $months[$key]['status'] = 'overdue';
+                $months[$key]['label'] = 'Gecikmede';
+            } else {
+                $months[$key]['status'] = 'pending';
+                $months[$key]['label'] = 'Ödenmedi';
+            }
+            unset($months[$key]['items']);
+        }
+
+        $minYear = (int) date('Y');
+        $maxYear = (int) date('Y');
+        foreach (array_keys($months) as $ym) {
+            $y = (int) substr($ym, 0, 4);
+            if ($y < $minYear) {
+                $minYear = $y;
+            }
+            if ($y > $maxYear) {
+                $maxYear = $y;
+            }
+        }
+        foreach ($contracts as $c) {
+            if (!empty($c['start_date'])) {
+                $y = (int) date('Y', strtotime($c['start_date']));
+                if ($y < $minYear) {
+                    $minYear = $y;
+                }
+            }
+            if (!empty($c['end_date'])) {
+                $y = (int) date('Y', strtotime($c['end_date']));
+                if ($y > $maxYear) {
+                    $maxYear = $y;
+                }
+            }
+        }
+
+        return ['months' => $months, 'minYear' => $minYear, 'maxYear' => $maxYear];
+    }
+}
+
 /** Ödeme durumu etiketi ve rozet sınıfı (vade tarihine göre; DB overdue status kullanılmaz).
  * @return array{label: string, badge: string, collectible: bool, early?: bool, days_early?: int}
  */

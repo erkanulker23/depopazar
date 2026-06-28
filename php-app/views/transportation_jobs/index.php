@@ -5,6 +5,7 @@ $years = $years ?? [];
 $customers = $customers ?? [];
 $services = $services ?? [];
 $personnel = $personnel ?? [];
+$jobPersonnelMap = $jobPersonnelMap ?? [];
 $jobTypeLabels = $jobTypeLabels ?? Personnel::jobTypeLabels();
 $vehicles = $vehicles ?? [];
 $warehouses = $warehouses ?? [];
@@ -104,7 +105,20 @@ ob_start();
                                     <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($j['vehicle_plate']) ?></span>
                                 <?php else: ?>–<?php endif; ?>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= !empty($j['staff_names']) ? htmlspecialchars($j['staff_names']) : '–' ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                <?php
+                                $jobStaff = $jobPersonnelMap[$j['id']] ?? [];
+                                if ($jobStaff === [] && !empty($j['staff_names'])) {
+                                    echo htmlspecialchars($j['staff_names']);
+                                } elseif ($jobStaff === []) {
+                                    echo '–';
+                                } else {
+                                    $personnelList = $jobStaff;
+                                    $showNames = true;
+                                    require __DIR__ . '/../partials/personnel_inline_list.php';
+                                }
+                                ?>
+                            </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= ($j['price'] !== null && $j['price'] !== '') ? fmtPrice($j['price']) : '-' ?></td>
                             <td class="px-4 py-3">
                                 <?php $st = $j['status'] ?? 'pending'; $stClass = $statusClasses[$st] ?? $statusClasses['pending']; $stLabel = $statusLabels[$st] ?? $st; ?>
@@ -326,13 +340,11 @@ ob_start();
                                         <p class="text-sm text-gray-500 dark:text-gray-400">Personel bulunamadı. <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline">Personel</a> sayfasından şoför, taşımacı vb. ekleyin.</p>
                                     <?php else: ?>
                                         <div class="space-y-2">
-                                            <?php foreach ($personnel as $s): ?>
-                                                <label class="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
-                                                    <input type="checkbox" name="personnel_ids[]" value="<?= htmlspecialchars($s['id']) ?>" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                                                    <span class="ml-3 text-sm text-gray-900 dark:text-white"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></span>
-                                                    <span class="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"><?= htmlspecialchars($jobTypeLabels[$s['job_type'] ?? 'diger'] ?? 'Diğer') ?></span>
-                                                </label>
-                                            <?php endforeach; ?>
+                                            <?php foreach ($personnel as $s):
+                                                $person = $s;
+                                                $style = 'row';
+                                                require __DIR__ . '/../partials/personnel_checkbox_row.php';
+                                            endforeach; ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>

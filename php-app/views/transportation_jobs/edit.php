@@ -165,14 +165,13 @@ ob_start();
                         <?php if (empty($personnel)): ?>
                             <p class="text-sm text-gray-500 dark:text-gray-400">Personel bulunamadı. <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline">Personel</a> sayfasından ekleyin.</p>
                         <?php else: ?>
-                            <?php foreach ($personnel as $s): ?>
-                                <label class="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
-                                    <input type="checkbox" name="personnel_ids[]" value="<?= htmlspecialchars($s['id']) ?>" <?= in_array($s['id'], $personnelIds, true) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                                    <span class="ml-3 text-sm text-gray-900 dark:text-white"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></span>
-                                    <span class="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"><?= htmlspecialchars($jobTypeLabels[$s['job_type'] ?? 'diger'] ?? 'Diğer') ?></span>
-                                    <?php if (in_array($s['id'], $personnelIds, true)): ?><span class="ml-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">(seçili)</span><?php endif; ?>
-                                </label>
-                            <?php endforeach; ?>
+                            <?php foreach ($personnel as $s):
+                                $person = $s;
+                                $style = 'row';
+                                $checked = in_array($s['id'], $personnelIds, true);
+                                $showSelectedBadge = true;
+                                require __DIR__ . '/../partials/personnel_checkbox_row.php';
+                            endforeach; ?>
                         <?php endif; ?>
                     </div>
                 </div>

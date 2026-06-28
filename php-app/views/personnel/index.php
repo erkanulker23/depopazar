@@ -88,9 +88,9 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
                             <?php if ($canManage): ?>
                             <td class="px-4 py-3 text-right">
                                 <button type="button" onclick='openEditPersonnelModal(<?= json_encode(array_merge($p, ['photo_href' => personnelPhotoHref($p) ?? '']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
-                                <form method="post" action="/personel/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('personel')) ?>);">
+                                <form method="post" action="/personel/sil" class="inline">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($p['id']) ?>">
-                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
+                                    <button type="button" onclick="confirmDeletePersonnel(this)" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                             <?php endif; ?>
@@ -273,6 +273,19 @@ require __DIR__ . '/../partials/page_filter_modal.php';
     </div>
 </div>
 <script>
+function confirmDeletePersonnel(btn) {
+    if (!confirm('Silmek istediğinizden emin misiniz?')) {
+        return;
+    }
+    var form = btn && btn.closest ? btn.closest('form') : null;
+    if (form) {
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+        } else {
+            form.submit();
+        }
+    }
+}
 function personnelPreviewFromFile(input, previewEl, fallbackInitials) {
     if (!previewEl) return;
     previewEl.innerHTML = '';

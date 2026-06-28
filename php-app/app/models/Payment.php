@@ -963,7 +963,7 @@ class Payment
     {
         $paidAtValue = normalizePaidAt($paidAt);
         $stmt = $pdo->prepare(
-            'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
         );
         $stmt->execute([
             $paidAtValue,
@@ -983,7 +983,7 @@ class Payment
         $placeholders = implode(',', array_fill(0, count($paymentIds), '?'));
         $params = array_merge([$paidAtValue, $method, $transactionId, $notes, $bankAccountId, $paidByUserId], $paymentIds);
         $stmt = $pdo->prepare(
-            "UPDATE payments SET status = 'paid', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id IN ($placeholders) AND deleted_at IS NULL"
+            "UPDATE payments SET status = 'paid', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id IN ($placeholders) AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
         );
         $stmt->execute($params);
     }

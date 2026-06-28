@@ -97,7 +97,18 @@ $seoDescription = ($seoCn !== '' && $seoAppName !== '') ? ($seoCn . ' - ' . $seo
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Alış Adresi</td><td class="border border-gray-300 px-3 py-2"><?= nl2br(htmlspecialchars($job['pickup_address'] ?? '–')) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Teslim Adresi</td><td class="border border-gray-300 px-3 py-2"><?= nl2br(htmlspecialchars($job['delivery_address'] ?? '–')) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Araç Plakası</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($job['vehicle_plate'] ?? '–') ?></td></tr>
-            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">İşe Giden Personel</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(implode(', ', $staffNames) ?: '–') ?></td></tr>
+            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">İşe Giden Personel</td><td class="border border-gray-300 px-3 py-2">
+                <?php
+                $staffPersonnel = $staffPersonnel ?? [];
+                if ($staffPersonnel === []) {
+                    echo '–';
+                } else {
+                    $personnelList = $staffPersonnel;
+                    $showNames = true;
+                    require __DIR__ . '/../partials/personnel_inline_list.php';
+                }
+                ?>
+            </td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Tutar</td><td class="border border-gray-300 px-3 py-2 font-bold"><?= fmtPrice($job['price'] ?? null) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Durum</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($statusLabel) ?></td></tr>
             <tr class="no-print" id="masraf-gir"><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 align-top">Nakliye masrafları</td><td class="border border-gray-300 px-3 py-2">

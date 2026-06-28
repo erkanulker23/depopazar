@@ -361,6 +361,20 @@ class Contract
             }
             $stmtPayDelete->execute([$row['id']]);
         }
+
+        // Aynı takvim ayında eski (ör. ayın 1'i) ile yeni vade günü çakışan yinelenen bekleyen kayıtları temizle
+        foreach ($validPeriods as $periodKey => $info) {
+            if (strlen($periodKey) < 7) {
+                continue;
+            }
+            $ym = substr($periodKey, 0, 7);
+            $stmtCleanDup = $pdo->prepare(
+                'UPDATE payments SET deleted_at = NOW()
+                 WHERE contract_id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')
+                 AND DATE(due_date) != ? AND DATE_FORMAT(due_date, \'%Y-%m\') = ?'
+            );
+            $stmtCleanDup->execute([$contractId, $periodKey, $ym]);
+        }
     }
 
     /** Sözleşme dönemine göre eksik ödeme kayıtlarını oluşturur (bitiş uzatma sonrası vb.) */
