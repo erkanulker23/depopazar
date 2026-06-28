@@ -327,6 +327,63 @@ if (!function_exists('formatPhoneDisplay')) {
     }
 }
 
+/** WhatsApp wa.me için uluslararası numara (905xxxxxxxxx) */
+if (!function_exists('whatsappIntlPhone')) {
+    function whatsappIntlPhone(?string $phone): string
+    {
+        if ($phone === null || trim($phone) === '') {
+            return '';
+        }
+        $digits = preg_replace('/\D/', '', $phone);
+        if ($digits === '') {
+            return '';
+        }
+        if (strlen($digits) === 10 && $digits[0] === '5') {
+            return '90' . $digits;
+        }
+        if (strlen($digits) === 11 && str_starts_with($digits, '0')) {
+            return '9' . substr($digits, 1);
+        }
+        if (strlen($digits) === 12 && str_starts_with($digits, '90')) {
+            return $digits;
+        }
+        if (strlen($digits) >= 10) {
+            return '90' . ltrim($digits, '0');
+        }
+        return '';
+    }
+}
+
+/** Müşteri telefonu (birincil veya ikincil) → WhatsApp uluslararası numara */
+if (!function_exists('whatsappIntlPhoneFromCustomerFields')) {
+    function whatsappIntlPhoneFromCustomerFields(?string $primary, ?string $secondary = null): string
+    {
+        foreach ([$primary, $secondary] as $phone) {
+            $intl = whatsappIntlPhone($phone);
+            if ($intl !== '') {
+                return $intl;
+            }
+        }
+        return '';
+    }
+}
+
+/** wa.me sohbet URL'si (müşteriye doğrudan mesaj) */
+if (!function_exists('whatsappMeUrl')) {
+    function whatsappMeUrl(?string $phone, string $message = '', ?string $fallbackPhone = null): string
+    {
+        $intl = whatsappIntlPhoneFromCustomerFields($phone, $fallbackPhone);
+        if ($intl === '') {
+            return '';
+        }
+        $url = 'https://wa.me/' . $intl;
+        if ($message !== '') {
+            $url .= '?text=' . rawurlencode($message);
+        }
+        return $url;
+    }
+}
+
 /** E-posta formatı */
 if (!function_exists('validateEmail')) {
     function validateEmail(?string $value): bool {

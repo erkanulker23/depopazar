@@ -62,23 +62,25 @@ ob_start();
         <?php
         $pdfDownloadUrl = '/girisler/' . ($contract['id'] ?? '') . '/pdf-indir';
         $pdfFilename = ContractPdf::filename($contract);
-        $waPhone = preg_replace('/[^0-9]/', '', $contract['customer_phone'] ?? '');
-        if (substr($waPhone, 0, 1) === '0') {
-            $waPhone = '90' . substr($waPhone, 1);
-        } elseif (strlen($waPhone) === 10) {
-            $waPhone = '90' . $waPhone;
-        }
-        $waMessage = 'Merhaba, ' . ($contract['contract_number'] ?? 'sözleşme') . ' numaralı sözleşme belgeniz ektedir.';
-        $waBase = $waPhone !== '' ? ('https://wa.me/' . $waPhone) : 'https://wa.me/';
-        $waUrl = $waBase . '?text=' . rawurlencode($waMessage);
+        $waIntlPhone = whatsappIntlPhoneFromCustomerFields(
+            $contract['customer_phone'] ?? null,
+            $contract['customer_phone_2'] ?? null
+        );
+        $waMessage = 'Merhaba' . ($customerName !== '' ? ' ' . $customerName : '') . ', '
+            . ($contract['contract_number'] ?? 'sözleşme') . ' numaralı sözleşme belgeniz ektedir. İyi günler dileriz.';
+        $waUrl = $waIntlPhone !== '' ? ('https://wa.me/' . $waIntlPhone . '?text=' . rawurlencode($waMessage)) : '';
+        $waPhoneDisplay = $waIntlPhone !== '' ? formatPhoneDisplay($contract['customer_phone'] ?? $contract['customer_phone_2'] ?? '') : '';
         ?>
         <button type="button"
                 id="contractWhatsAppBtn"
                 class="inline-flex items-center px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-60"
-                title="PDF indir ve WhatsApp ile gönder"
+                title="<?= $waIntlPhone !== '' ? ('WhatsApp: ' . htmlspecialchars($waPhoneDisplay)) : 'Müşteri cep telefonu gerekli' ?>"
                 data-pdf-url="<?= htmlspecialchars($pdfDownloadUrl) ?>"
                 data-wa-url="<?= htmlspecialchars($waUrl) ?>"
-                data-filename="<?= htmlspecialchars($pdfFilename) ?>">
+                data-wa-phone="<?= htmlspecialchars($waIntlPhone) ?>"
+                data-wa-phone-display="<?= htmlspecialchars($waPhoneDisplay) ?>"
+                data-filename="<?= htmlspecialchars($pdfFilename) ?>"
+                <?= $waIntlPhone === '' ? 'data-no-phone="1"' : '' ?>>
             <i class="bi bi-whatsapp mr-2"></i> WhatsApp Gönder
         </button>
         <button type="button"
@@ -679,11 +681,41 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
 (function() {
     var btn = document.getElementById('contractWhatsAppBtn');
     if (!btn) return;
+
+    function isMobileDevice() {
+        return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
+    }
+
+    function downloadPdfBlob(blob, filename) {
+        var objectUrl = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function() { URL.revokeObjectURL(objectUrl); }, 2000);
+    }
+
+    function openWhatsAppChat(waUrl) {
+        if (!waUrl) {
+            alert('Müşteri WhatsApp numarası bulunamadı. Lütfen müşteri kaydına geçerli bir cep telefonu (05xx) ekleyin.');
+            return;
+        }
+        window.location.href = waUrl;
+    }
+
     btn.addEventListener('click', function() {
         var pdfUrl = btn.getAttribute('data-pdf-url');
-        var waUrl = btn.getAttribute('data-wa-url');
+        var waUrl = btn.getAttribute('data-wa-url') || '';
         var filename = btn.getAttribute('data-filename') || 'Sozlesme.pdf';
         if (!pdfUrl) return;
+        if (btn.getAttribute('data-no-phone') === '1') {
+            alert('Müşteri cep telefonu kayıtlı değil. WhatsApp ile göndermek için müşteri düzenleme ekranından telefon ekleyin.');
+            return;
+        }
         btn.disabled = true;
         var originalHtml = btn.innerHTML;
         btn.innerHTML = '<i class="bi bi-hourglass-split mr-2"></i> PDF hazırlanıyor…';
@@ -693,30 +725,18 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
                 return res.blob();
             })
             .then(function(blob) {
-                var file = new File([blob], filename, { type: 'application/pdf' });
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    return navigator.share({
-                        files: [file],
-                        title: filename.replace(/\.pdf$/i, ''),
-                        text: 'Sözleşme belgeniz ektedir.'
-                    });
-                }
-                var objectUrl = URL.createObjectURL(blob);
-                var link = document.createElement('a');
-                link.href = objectUrl;
-                link.download = filename;
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
+                downloadPdfBlob(blob, filename);
+                var delay = isMobileDevice() ? 450 : 700;
                 setTimeout(function() {
-                    URL.revokeObjectURL(objectUrl);
-                    if (waUrl) window.open(waUrl, '_blank', 'noopener');
-                }, 700);
+                    openWhatsAppChat(waUrl);
+                }, delay);
             })
             .catch(function() {
-                if (waUrl) window.open(waUrl, '_blank', 'noopener');
-                else alert('PDF indirilemedi. Lütfen PDF İndir butonunu deneyin.');
+                if (waUrl) {
+                    openWhatsAppChat(waUrl);
+                } else {
+                    alert('PDF indirilemedi. Lütfen PDF İndir butonunu deneyin.');
+                }
             })
             .finally(function() {
                 btn.disabled = false;

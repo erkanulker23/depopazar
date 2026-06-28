@@ -4,6 +4,9 @@ class Personnel
     public static function jobTypeLabels(): array
     {
         return [
+            'personeller' => 'Personeller',
+            'ekip_yetkilisi' => 'Ekip Yetkilisi',
+            'mobilyaci' => 'Mobilyacı',
             'sofor' => 'Şoför',
             'tasimaci' => 'Taşımacı',
             'yukleyici' => 'Yükleyici',

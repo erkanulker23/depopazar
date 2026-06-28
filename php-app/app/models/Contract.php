@@ -199,7 +199,7 @@ class Contract
     public static function findOne(PDO $pdo, string $id): ?array
     {
         $stmt = $pdo->prepare(
-            'SELECT c.*, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.id AS customer_id, cu.email AS customer_email, cu.phone AS customer_phone, cu.address AS customer_address,
+            'SELECT c.*, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.id AS customer_id, cu.email AS customer_email, cu.phone AS customer_phone, cu.phone_2 AS customer_phone_2, cu.address AS customer_address,
              r.room_number, r.id AS room_id, r.monthly_price AS room_monthly_price,
              w.name AS warehouse_name, w.id AS warehouse_id, w.company_id,
              sb.first_name AS sold_by_first_name, sb.last_name AS sold_by_last_name
