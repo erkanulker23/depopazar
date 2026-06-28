@@ -492,25 +492,89 @@ if (!function_exists('paymentIsUnpaid')) {
 }
 
 /**
- * Aylar takvimi: vade ayına (Y-m) göre ödeme durumu özeti.
+ * Aylar takvimi: sözleşme giriş/çıkış dönemlerine göre (ContractBilling::periods) ödeme durumu.
+ * Sözleşme dışı veya hatalı vade kayıtları takvime yansımaz.
  *
  * @return array{months: array<string, array{status: string, label: string, amount: float, contract_number: string}>, minYear: int, maxYear: int}
  */
 if (!function_exists('buildPaymentMonthsCalendar')) {
     function buildPaymentMonthsCalendar(array $payments, array $contracts = []): array
     {
-        $months = [];
+        $paymentsByContractPeriod = [];
         foreach ($payments as $p) {
-            $due = $p['due_date'] ?? '';
-            if ($due === '' || ($p['status'] ?? '') === 'cancelled') {
+            if (($p['status'] ?? '') === 'cancelled') {
                 continue;
             }
-            $key = date('Y-m', strtotime($due));
-            if (!isset($months[$key])) {
-                $months[$key] = ['items' => [], 'amount' => 0.0, 'contract_number' => $p['contract_number'] ?? ''];
+            $cid = $p['contract_id'] ?? '';
+            $due = $p['due_date'] ?? '';
+            if ($cid === '' || $due === '') {
+                continue;
             }
-            $months[$key]['items'][] = $p;
-            $months[$key]['amount'] += (float) ($p['amount'] ?? 0);
+            $periodKey = ContractBilling::periodKeyFromDueDate($due);
+            if ($periodKey === '') {
+                continue;
+            }
+            $paymentsByContractPeriod[$cid][$periodKey][] = $p;
+        }
+
+        $months = [];
+        $minYear = null;
+        $maxYear = null;
+        $hasPeriods = false;
+
+        foreach ($contracts as $c) {
+            $start = ContractBilling::normalizeDate($c['start_date'] ?? null);
+            $end = ContractBilling::normalizeDate($c['end_date'] ?? null);
+            if ($start === '' || $end === '') {
+                continue;
+            }
+            $cid = $c['id'] ?? '';
+            $contractNumber = $c['contract_number'] ?? '';
+            $defaultPrice = (float) ($c['monthly_price'] ?? 0);
+
+            foreach (ContractBilling::periods($start, $end) as $period) {
+                $hasPeriods = true;
+                $periodKey = $period['key'];
+                $ym = substr($periodKey, 0, 7);
+                $year = (int) substr($ym, 0, 4);
+                $minYear = $minYear === null ? $year : min($minYear, $year);
+                $maxYear = $maxYear === null ? $year : max($maxYear, $year);
+
+                $matched = ($cid !== '' && isset($paymentsByContractPeriod[$cid][$periodKey]))
+                    ? $paymentsByContractPeriod[$cid][$periodKey]
+                    : [[
+                        'status' => 'pending',
+                        'amount' => $defaultPrice,
+                        'due_date' => $period['due_date'],
+                        'contract_number' => $contractNumber,
+                    ]];
+
+                if (!isset($months[$ym])) {
+                    $months[$ym] = ['items' => [], 'amount' => 0.0, 'contract_number' => $contractNumber];
+                }
+                foreach ($matched as $p) {
+                    $months[$ym]['items'][] = $p;
+                    $months[$ym]['amount'] += (float) ($p['amount'] ?? 0);
+                }
+                if ($contractNumber !== '' && ($months[$ym]['contract_number'] ?? '') === '') {
+                    $months[$ym]['contract_number'] = $contractNumber;
+                }
+            }
+        }
+
+        if (!$hasPeriods) {
+            foreach ($payments as $p) {
+                $due = $p['due_date'] ?? '';
+                if ($due === '' || ($p['status'] ?? '') === 'cancelled') {
+                    continue;
+                }
+                $key = date('Y-m', strtotime($due));
+                if (!isset($months[$key])) {
+                    $months[$key] = ['items' => [], 'amount' => 0.0, 'contract_number' => $p['contract_number'] ?? ''];
+                }
+                $months[$key]['items'][] = $p;
+                $months[$key]['amount'] += (float) ($p['amount'] ?? 0);
+            }
         }
 
         foreach ($months as $key => $info) {
@@ -543,33 +607,54 @@ if (!function_exists('buildPaymentMonthsCalendar')) {
             unset($months[$key]['items']);
         }
 
-        $minYear = (int) date('Y');
-        $maxYear = (int) date('Y');
-        foreach (array_keys($months) as $ym) {
-            $y = (int) substr($ym, 0, 4);
-            if ($y < $minYear) {
-                $minYear = $y;
-            }
-            if ($y > $maxYear) {
-                $maxYear = $y;
-            }
-        }
-        foreach ($contracts as $c) {
-            if (!empty($c['start_date'])) {
-                $y = (int) date('Y', strtotime($c['start_date']));
-                if ($y < $minYear) {
-                    $minYear = $y;
-                }
-            }
-            if (!empty($c['end_date'])) {
-                $y = (int) date('Y', strtotime($c['end_date']));
-                if ($y > $maxYear) {
-                    $maxYear = $y;
-                }
+        if ($minYear === null) {
+            $minYear = (int) date('Y');
+            $maxYear = (int) date('Y');
+            foreach (array_keys($months) as $ym) {
+                $y = (int) substr($ym, 0, 4);
+                $minYear = min($minYear, $y);
+                $maxYear = max($maxYear, $y);
             }
         }
 
         return ['months' => $months, 'minYear' => $minYear, 'maxYear' => $maxYear];
+    }
+}
+
+/**
+ * Ödeme listesini sözleşme giriş/çıkış dönemlerindeki vadelerle sınırlar (hatalı/eski kayıtları gizler).
+ *
+ * @param list<array<string, mixed>> $payments
+ * @param list<array<string, mixed>> $contracts
+ * @return list<array<string, mixed>>
+ */
+if (!function_exists('filterPaymentsToValidContractPeriods')) {
+    function filterPaymentsToValidContractPeriods(array $payments, array $contracts): array
+    {
+        $validKeys = [];
+        foreach ($contracts as $c) {
+            $cid = $c['id'] ?? '';
+            $start = ContractBilling::normalizeDate($c['start_date'] ?? null);
+            $end = ContractBilling::normalizeDate($c['end_date'] ?? null);
+            if ($cid === '' || $start === '' || $end === '') {
+                continue;
+            }
+            foreach (ContractBilling::periods($start, $end) as $period) {
+                $validKeys[$cid][$period['key']] = true;
+            }
+        }
+        if ($validKeys === []) {
+            return $payments;
+        }
+
+        return array_values(array_filter($payments, static function (array $p) use ($validKeys): bool {
+            $cid = $p['contract_id'] ?? '';
+            $periodKey = ContractBilling::periodKeyFromDueDate($p['due_date'] ?? null);
+            if ($cid === '' || $periodKey === '') {
+                return false;
+            }
+            return isset($validKeys[$cid][$periodKey]);
+        }));
     }
 }
 

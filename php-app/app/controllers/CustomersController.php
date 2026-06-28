@@ -126,6 +126,7 @@ class CustomersController
         foreach ($contracts as $c) {
             if (!empty($c['id']) && empty($c['terminated_at'])) {
                 try {
+                    Contract::normalizeContractPayments($this->pdo, $c['id']);
                     Contract::ensurePaymentsForContract($this->pdo, $c['id']);
                 } catch (Throwable $e) {
                     error_log('ensurePaymentsForContract on customer show failed for ' . ($c['id'] ?? '') . ': ' . $e->getMessage());
@@ -133,7 +134,9 @@ class CustomersController
             }
         }
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
+        $payments = filterPaymentsToValidContractPeriods($payments, $contracts);
         $collectiblePayments = Payment::findCollectibleByCustomerId($this->pdo, $id, $companyId);
+        $collectiblePayments = filterPaymentsToValidContractPeriods($collectiblePayments, $contracts);
         $debt = Payment::sumUnpaidByCustomerId($this->pdo, $id, $companyId);
         $debtOverdue = Payment::sumUnpaidOverdueByCustomerId($this->pdo, $id, $companyId);
         $debtDueThisMonth = Payment::sumUnpaidDueThisMonthByCustomerId($this->pdo, $id, $companyId);

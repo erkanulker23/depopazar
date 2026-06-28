@@ -245,31 +245,54 @@ class Payment
 
     public static function create(PDO $pdo, array $data): string
     {
-        $id = self::uuid();
-        $paymentNumber = $data['payment_number'] ?? self::generatePaymentNumber($pdo);
-        $stmt = $pdo->prepare(
-            'INSERT INTO payments (id, payment_number, contract_id, amount, status, type, due_date) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            $id,
-            $paymentNumber,
-            $data['contract_id'],
-            $data['amount'],
-            $data['status'] ?? 'pending',
-            $data['type'] ?? 'warehouse',
-            $data['due_date'],
-        ]);
-        return $id;
+        $maxAttempts = 5;
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $id = self::uuid();
+            $paymentNumber = $data['payment_number'] ?? self::generatePaymentNumber($pdo);
+            try {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO payments (id, payment_number, contract_id, amount, status, type, due_date) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?)'
+                );
+                $stmt->execute([
+                    $id,
+                    $paymentNumber,
+                    $data['contract_id'],
+                    $data['amount'],
+                    $data['status'] ?? 'pending',
+                    $data['type'] ?? 'warehouse',
+                    $data['due_date'],
+                ]);
+                return $id;
+            } catch (PDOException $e) {
+                if (isset($data['payment_number']) || $attempt === $maxAttempts - 1) {
+                    throw $e;
+                }
+                $code = $e->getCode();
+                $msg = $e->getMessage();
+                if ($code === '23000' || (int) $code === 23000 || strpos($msg, '1062') !== false || strpos($msg, 'Duplicate entry') !== false) {
+                    continue;
+                }
+                throw $e;
+            }
+        }
+
+        throw new RuntimeException('Ödeme numarası oluşturulamadı.');
     }
 
     private static function generatePaymentNumber(PDO $pdo): string
     {
         $y = date('Y');
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM payments WHERE payment_number LIKE ? AND deleted_at IS NULL");
-        $stmt->execute(["PAY-{$y}-%"]);
+        $prefix = "PAY-{$y}-";
+        // Tüm kayıtlar (silinmiş dahil); sayısal kısımdan MAX alınır
+        $numStart = strlen($prefix) + 1;
+        $stmt = $pdo->prepare(
+            'SELECT MAX(CAST(SUBSTRING(payment_number, ?) AS UNSIGNED))
+             FROM payments WHERE payment_number LIKE ?'
+        );
+        $stmt->execute([$numStart, $prefix . '%']);
         $n = (int) $stmt->fetchColumn() + 1;
-        return sprintf('PAY-%s-%06d', $y, $n);
+        return sprintf('PAY-%s-%06d', $y, max(1, $n));
     }
 
     private static function uuid(): string
@@ -399,6 +422,40 @@ class Payment
         );
         $stmt->execute([$contractId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Sözleşme: ödenmemiş toplam borç (vadesi gelmemiş taksitler dahil) */
+    public static function sumUnpaidByContractId(PDO $pdo, string $contractId): float
+    {
+        $stmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(amount), 0) FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
+        );
+        $stmt->execute([$contractId]);
+        return (float) $stmt->fetchColumn();
+    }
+
+    /** Sözleşme: vadesi geçmiş ödenmemiş tutar */
+    public static function sumUnpaidOverdueByContractId(PDO $pdo, string $contractId): float
+    {
+        $stmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(amount), 0) FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')
+             AND due_date IS NOT NULL AND DATE(due_date) < CURDATE()"
+        );
+        $stmt->execute([$contractId]);
+        return (float) $stmt->fetchColumn();
+    }
+
+    /** Sözleşme: tahsil edilmiş toplam */
+    public static function sumPaidByContractId(PDO $pdo, string $contractId): float
+    {
+        $stmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(amount), 0) FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL AND status = 'paid'"
+        );
+        $stmt->execute([$contractId]);
+        return (float) $stmt->fetchColumn();
     }
 
     /** Ödemesi alınmış dönemler (Y-m-d vade anahtarı); sözleşme düzenlemede fiyat kilidi için */

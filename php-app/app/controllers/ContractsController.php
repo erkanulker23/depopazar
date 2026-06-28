@@ -855,6 +855,7 @@ class ContractsController
             }
         }
         $payments = Payment::findByContractId($this->pdo, $id);
+        $payments = filterPaymentsToValidContractPeriods($payments, [$contract]);
         $monthlyPrices = Contract::getMonthlyPricesByContractId($this->pdo, $id);
         $monthNames = ['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
         if (empty($monthlyPrices)) {
@@ -897,6 +898,19 @@ class ContractsController
         $pageTitle = 'Sözleşme: ' . ($contract['contract_number'] ?? $id);
         $items = Item::findByContractId($this->pdo, $id);
         $fromCustomer = ($_GET['fromCustomer'] ?? '') === '1';
+        $contractDebtTotal = Payment::sumUnpaidByContractId($this->pdo, $id);
+        $contractDebtOverdue = Payment::sumUnpaidOverdueByContractId($this->pdo, $id);
+        $contractPaidTotal = Payment::sumPaidByContractId($this->pdo, $id);
+        $contractTotalValue = $contractDebtTotal + $contractPaidTotal;
+        if ($contractTotalValue <= 0 && !empty($monthlyPrices)) {
+            foreach ($monthlyPrices as $mp) {
+                $contractTotalValue += (float) ($mp['price'] ?? 0);
+            }
+        }
+        $contractDebtFuture = max(0.0, $contractDebtTotal - $contractDebtOverdue);
+        $contractStartYmd = substr((string) ($contract['start_date'] ?? ''), 0, 10);
+        $contractEndYmd = substr((string) ($contract['end_date'] ?? ''), 0, 10);
+        $contractPeriodCount = count(ContractBilling::periods($contractStartYmd, $contractEndYmd));
         require __DIR__ . '/../../views/contracts/detail.php';
     }
 
@@ -1137,14 +1151,17 @@ class ContractsController
         $startDate = $startDateRaw . ' 00:00:00';
         $endDate = $endDateRaw . ' 23:59:59';
         $successRedirect = $this->restructureDueDatesSuccessRedirect($id, $contract, $_POST);
+        $failRedirect = '/girisler/' . $id;
+        if (($contract['customer_id'] ?? '') !== '' && ($_POST['return_to_customer'] ?? '') === '1') {
+            $failRedirect .= '?fromCustomer=1';
+        }
         try {
             Contract::updateContractDates($this->pdo, $id, $startDate, $endDate);
-            Contract::normalizeContractPayments($this->pdo, $id);
             Contract::ensurePaymentsForContract($this->pdo, $id);
         } catch (Throwable $e) {
-            error_log('restructurePaymentDueDates failed for contract ' . $id . ': ' . $e->getMessage());
+            error_log('restructurePaymentDueDates failed for contract ' . $id . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             Auth::setSession('flash_error', 'Vade yapılandırması sırasında bir hata oluştu. Lütfen tekrar deneyin veya destek ile iletişime geçin.');
-            header('Location: /girisler/' . $id);
+            header('Location: ' . $failRedirect);
             exit;
         }
         Auth::setSession('flash_success', 'Ödeme vadeleri giriş/çıkış tarihlerine göre yeniden yapılandırıldı.');

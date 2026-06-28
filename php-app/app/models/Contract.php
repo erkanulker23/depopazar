@@ -409,6 +409,173 @@ class Contract
         }
 
         self::removePendingPaymentsInPaidMonths($pdo, $contractId);
+        self::purgeOutOfRangePendingPayments($pdo, $contractId, $start, $end);
+    }
+
+    /** Sözleşme dönemi dışındaki bekleyen/gecikmiş ödemeleri kaldırır */
+    public static function purgeOutOfRangePendingPayments(PDO $pdo, string $contractId, ?string $startDate, ?string $endDate): void
+    {
+        $start = ContractBilling::normalizeDate($startDate);
+        $end = ContractBilling::normalizeDate($endDate);
+        if ($start === '' || $end === '') {
+            return;
+        }
+
+        $validKeys = [];
+        foreach (ContractBilling::periods($start, $end) as $period) {
+            $validKeys[] = $period['key'];
+        }
+        if ($validKeys === []) {
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($validKeys), '?'));
+        $stmt = $pdo->prepare(
+            "UPDATE payments SET deleted_at = NOW()
+             WHERE contract_id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')
+             AND due_date IS NOT NULL AND DATE(due_date) NOT IN ($placeholders)"
+        );
+        $stmt->execute(array_merge([$contractId], $validKeys));
+    }
+
+    /**
+     * @param array<string, array{price: float, due_date: string}> $validPeriods
+     * @param list<string> $paidPeriodKeys
+     */
+    public static function ensurePendingPaymentsForValidPeriods(
+        PDO $pdo,
+        string $contractId,
+        array $validPeriods,
+        array $paidPeriodKeys
+    ): void {
+        $stmtExists = $pdo->prepare(
+            "SELECT id FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL
+             AND status IN ('paid', 'pending', 'overdue') AND DATE(due_date) = ?
+             LIMIT 1"
+        );
+
+        foreach ($validPeriods as $periodKey => $info) {
+            if (ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys)) {
+                continue;
+            }
+            $stmtExists->execute([$contractId, $periodKey]);
+            if ($stmtExists->fetchColumn()) {
+                continue;
+            }
+            Payment::create($pdo, [
+                'contract_id' => $contractId,
+                'amount' => $info['price'],
+                'status' => 'pending',
+                'due_date' => $info['due_date'],
+            ]);
+        }
+    }
+
+    /** @param array<string, array{price: float, due_date: string}> $validPeriods */
+    private static function periodMonthKeyInValidPeriods(string $monthKey, array $validPeriods): bool
+    {
+        if (isset($validPeriods[$monthKey])) {
+            return true;
+        }
+        if (preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            foreach ($validPeriods as $periodKey => $_) {
+                if (substr($periodKey, 0, 7) === $monthKey) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sözleşme dönemlerine göre ödeme satırlarını oluşturur / hizalar.
+     *
+     * @param array<string, array{price: float, due_date: string}> $validPeriods
+     * @param list<string> $paidPeriodKeys
+     */
+    private static function syncPaymentsForPeriods(
+        PDO $pdo,
+        string $contractId,
+        array $validPeriods,
+        array $paidPeriodKeys,
+        ?string $startDate,
+        ?string $endDate
+    ): void {
+        self::purgeOutOfRangePendingPayments($pdo, $contractId, $startDate, $endDate);
+
+        $stmtFindExact = $pdo->prepare(
+            "SELECT id, status FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL AND DATE(due_date) = ?
+             LIMIT 1"
+        );
+        $stmtFindYmPending = $pdo->prepare(
+            "SELECT id, DATE(due_date) AS period_key FROM payments
+             WHERE contract_id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')
+             AND DATE_FORMAT(due_date, '%Y-%m') = ?
+             ORDER BY due_date ASC LIMIT 1"
+        );
+        $stmtUpdateAmount = $pdo->prepare(
+            "UPDATE payments SET amount = ? WHERE id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
+        );
+        $stmtUpdateDueAmount = $pdo->prepare(
+            "UPDATE payments SET amount = ?, due_date = ? WHERE id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
+        );
+        $stmtDelPendingPaidMonth = $pdo->prepare(
+            'UPDATE payments SET deleted_at = NOW()
+             WHERE contract_id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')
+             AND DATE_FORMAT(due_date, \'%Y-%m\') = ?'
+        );
+        $stmtCleanDup = $pdo->prepare(
+            'UPDATE payments SET deleted_at = NOW()
+             WHERE contract_id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')
+             AND DATE(due_date) != ? AND DATE_FORMAT(due_date, \'%Y-%m\') = ?'
+        );
+
+        foreach ($validPeriods as $periodKey => $info) {
+            if (ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys)) {
+                $ym = substr($periodKey, 0, 7);
+                if ($ym !== '') {
+                    $stmtDelPendingPaidMonth->execute([$contractId, $ym]);
+                }
+                continue;
+            }
+
+            $stmtFindExact->execute([$contractId, $periodKey]);
+            $exact = $stmtFindExact->fetch(PDO::FETCH_ASSOC);
+            if ($exact) {
+                if (in_array($exact['status'] ?? '', ['pending', 'overdue'], true)) {
+                    $stmtUpdateAmount->execute([$info['price'], $exact['id']]);
+                }
+                continue;
+            }
+
+            $ym = substr($periodKey, 0, 7);
+            $stmtFindYmPending->execute([$contractId, $ym]);
+            $ymRow = $stmtFindYmPending->fetch(PDO::FETCH_ASSOC);
+            if ($ymRow && ($ymRow['period_key'] ?? '') !== $periodKey) {
+                $stmtUpdateDueAmount->execute([$info['price'], $info['due_date'], $ymRow['id']]);
+                continue;
+            }
+
+            Payment::create($pdo, [
+                'contract_id' => $contractId,
+                'amount' => $info['price'],
+                'status' => 'pending',
+                'due_date' => $info['due_date'],
+            ]);
+        }
+
+        foreach ($validPeriods as $periodKey => $_) {
+            if (strlen($periodKey) < 7) {
+                continue;
+            }
+            $ym = substr($periodKey, 0, 7);
+            $stmtCleanDup->execute([$contractId, $periodKey, $ym]);
+        }
+
+        self::ensurePendingPaymentsForValidPeriods($pdo, $contractId, $validPeriods, $paidPeriodKeys);
+        self::purgeOutOfRangePendingPayments($pdo, $contractId, $startDate, $endDate);
     }
 
     /** Ödemesi alınmış aylardaki yinelenen bekleyen/gecikmiş taksitleri kaldırır */
@@ -447,6 +614,25 @@ class Contract
             return;
         }
 
+        $ownTransaction = !$pdo->inTransaction();
+        if ($ownTransaction) {
+            $pdo->beginTransaction();
+        }
+        try {
+            self::syncMonthlyPricesInner($pdo, $contractId, $startDate, $endDate, $defaultPrice, $monthlyPricesPost);
+            if ($ownTransaction) {
+                $pdo->commit();
+            }
+        } catch (Throwable $e) {
+            if ($ownTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private static function syncMonthlyPricesInner(PDO $pdo, string $contractId, ?string $startDate, ?string $endDate, float $defaultPrice, array $monthlyPricesPost): void
+    {
         self::ensureMonthlyPricesMonthColumn($pdo);
         self::reconcilePaymentDueDates($pdo, $contractId, $startDate, $endDate);
 
@@ -494,113 +680,40 @@ class Contract
 
         $stmtUpdate = $pdo->prepare('UPDATE contract_monthly_prices SET price = ?, deleted_at = NULL WHERE id = ?');
         $stmtInsert = $pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)');
+        $stmtMigrateMonth = $pdo->prepare('UPDATE contract_monthly_prices SET month = ?, deleted_at = NULL WHERE id = ?');
 
         foreach ($validPeriods as $periodKey => $info) {
-            if (ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys)) {
-                continue;
-            }
+            $isPaid = ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys);
+            $existingId = null;
             if (isset($existingByMonth[$periodKey])) {
-                $stmtUpdate->execute([$info['price'], $existingByMonth[$periodKey]['id']]);
+                $existingId = $existingByMonth[$periodKey]['id'];
+            } else {
+                $legacyYm = substr($periodKey, 0, 7);
+                if (isset($existingByMonth[$legacyYm])) {
+                    $existingId = $existingByMonth[$legacyYm]['id'];
+                    $stmtMigrateMonth->execute([$periodKey, $existingId]);
+                }
+            }
+            if ($existingId) {
+                if (!$isPaid) {
+                    $stmtUpdate->execute([$info['price'], $existingId]);
+                }
             } else {
                 $stmtInsert->execute([self::uuid(), $contractId, $periodKey, $info['price']]);
             }
         }
 
         foreach ($existingByMonth as $monthKey => $row) {
-            if (!isset($validPeriods[$monthKey])) {
-                if (ContractBilling::isPaidPeriodKey($monthKey, $paidPeriodKeys)) {
-                    continue;
-                }
-                $pdo->prepare('UPDATE contract_monthly_prices SET deleted_at = NOW() WHERE id = ?')->execute([$row['id']]);
-            }
-        }
-
-        $stmtPayPeriods = $pdo->prepare(
-            'SELECT id, status, DATE(due_date) AS period_key
-             FROM payments WHERE contract_id = ? AND deleted_at IS NULL AND due_date IS NOT NULL'
-        );
-        $stmtPayPeriods->execute([$contractId]);
-        $paymentsByPeriod = [];
-        $paymentsByYm = [];
-        while ($row = $stmtPayPeriods->fetch(PDO::FETCH_ASSOC)) {
-            $periodKey = $row['period_key'] ?? '';
-            if ($periodKey === '') {
+            if (self::periodMonthKeyInValidPeriods($monthKey, $validPeriods)) {
                 continue;
             }
-            if (!isset($paymentsByPeriod[$periodKey])) {
-                $paymentsByPeriod[$periodKey] = $row;
-            }
-            $ym = substr($periodKey, 0, 7);
-            if (!isset($paymentsByYm[$ym])) {
-                $paymentsByYm[$ym] = $row;
-            } elseif (($row['status'] ?? '') === 'paid' && ($paymentsByYm[$ym]['status'] ?? '') !== 'paid') {
-                $paymentsByYm[$ym] = $row;
-            }
-        }
-
-        $stmtPayUpdate = $pdo->prepare(
-            'UPDATE payments SET amount = ? WHERE contract_id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\') AND DATE(due_date) = ?'
-        );
-        $stmtPayUpdateDueAndAmount = $pdo->prepare(
-            'UPDATE payments SET amount = ?, due_date = ? WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
-        );
-        $stmtPayDelete = $pdo->prepare(
-            'UPDATE payments SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
-        );
-        $stmtDelPendingPaidMonth = $pdo->prepare(
-            'UPDATE payments SET deleted_at = NOW()
-             WHERE contract_id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')
-             AND DATE_FORMAT(due_date, \'%Y-%m\') = ?'
-        );
-
-        foreach ($validPeriods as $periodKey => $info) {
-            if (ContractBilling::isPaidPeriodKey($periodKey, $paidPeriodKeys)) {
-                $ym = substr($periodKey, 0, 7);
-                if ($ym !== '') {
-                    $stmtDelPendingPaidMonth->execute([$contractId, $ym]);
-                }
+            if (ContractBilling::isPaidPeriodKey($monthKey, $paidPeriodKeys)) {
                 continue;
             }
-            $ym = substr($periodKey, 0, 7);
-            if (isset($paymentsByPeriod[$periodKey])) {
-                $stmtPayUpdate->execute([$info['price'], $contractId, $periodKey]);
-            } elseif (isset($paymentsByYm[$ym])) {
-                $row = $paymentsByYm[$ym];
-                if (in_array($row['status'] ?? '', ['pending', 'overdue'], true)) {
-                    $stmtPayUpdateDueAndAmount->execute([$info['price'], $info['due_date'], $row['id']]);
-                    $paymentsByPeriod[$periodKey] = array_merge($row, ['period_key' => $periodKey]);
-                }
-                // Aynı ay zaten ödendiyse yeni bekleyen kayıt oluşturma
-            } else {
-                Payment::create($pdo, [
-                    'contract_id' => $contractId,
-                    'amount' => $info['price'],
-                    'status' => 'pending',
-                    'due_date' => $info['due_date'],
-                ]);
-            }
+            $pdo->prepare('UPDATE contract_monthly_prices SET deleted_at = NOW() WHERE id = ?')->execute([$row['id']]);
         }
 
-        foreach ($paymentsByPeriod as $periodKey => $row) {
-            if (isset($validPeriods[$periodKey]) || ($row['status'] ?? '') === 'paid') {
-                continue;
-            }
-            $stmtPayDelete->execute([$row['id']]);
-        }
-
-        // Aynı takvim ayında eski (ör. ayın 1'i) ile yeni vade günü çakışan yinelenen bekleyen kayıtları temizle
-        foreach ($validPeriods as $periodKey => $info) {
-            if (strlen($periodKey) < 7) {
-                continue;
-            }
-            $ym = substr($periodKey, 0, 7);
-            $stmtCleanDup = $pdo->prepare(
-                'UPDATE payments SET deleted_at = NOW()
-                 WHERE contract_id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')
-                 AND DATE(due_date) != ? AND DATE_FORMAT(due_date, \'%Y-%m\') = ?'
-            );
-            $stmtCleanDup->execute([$contractId, $periodKey, $ym]);
-        }
+        self::syncPaymentsForPeriods($pdo, $contractId, $validPeriods, $paidPeriodKeys, $startDate, $endDate);
     }
 
     /** Sözleşme dönemine göre eksik ödeme kayıtlarını oluşturur (bitiş uzatma sonrası vb.) */

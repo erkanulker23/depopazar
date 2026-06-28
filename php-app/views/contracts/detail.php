@@ -39,12 +39,34 @@ ob_start();
 <div class="page-header mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
     <div>
         <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <?php if (!empty($fromCustomer) && !empty($contract['customer_id'])): ?>
+            <a href="/musteriler" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium">Müşteriler</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/musteriler/<?= htmlspecialchars($contract['customer_id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"><?= htmlspecialchars($customerName ?: 'Müşteri') ?></a>
+            <?php else: ?>
             <a href="/girisler" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium">Tüm Girişler</a>
+            <?php endif; ?>
             <i class="bi bi-chevron-right"></i>
             <span class="text-gray-700 dark:text-gray-300 font-medium"><?= htmlspecialchars($contract['contract_number'] ?? '') ?></span>
         </div>
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Sözleşme Detayı</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($contract['contract_number'] ?? '') ?></p>
+        <?php
+        $contractDebtTotal = (float) ($contractDebtTotal ?? 0);
+        $contractDebtOverdue = (float) ($contractDebtOverdue ?? 0);
+        if ($contractDebtOverdue > 0.009): ?>
+        <p class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
+            <i class="bi bi-exclamation-triangle-fill"></i> Toplam borç: <?= fmtPrice($contractDebtTotal) ?> (<?= fmtPrice($contractDebtOverdue) ?> gecikmiş)
+        </p>
+        <?php elseif ($contractDebtTotal > 0.009): ?>
+        <p class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            <i class="bi bi-cash-stack"></i> Toplam borç: <?= fmtPrice($contractDebtTotal) ?> <span class="font-normal opacity-90">(vadesi gelmemiş dahil)</span>
+        </p>
+        <?php else: ?>
+        <p class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            <i class="bi bi-check-circle-fill"></i> Bu sözleşmede borç yok
+        </p>
+        <?php endif; ?>
     </div>
     <div class="page-header-actions flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto">
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/duzenle" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -418,8 +440,60 @@ ob_start();
         </div>
     </div>
 
-    <!-- Sağ sütun: Aylık fiyatlar -->
+    <!-- Sağ sütun: Borç özeti + Aylık fiyatlar -->
     <div class="space-y-4">
+        <?php
+        $contractDebtFuture = (float) ($contractDebtFuture ?? max(0, $contractDebtTotal - $contractDebtOverdue));
+        $contractPaidTotal = (float) ($contractPaidTotal ?? 0);
+        $contractTotalValue = (float) ($contractTotalValue ?? 0);
+        $contractPeriodCount = (int) ($contractPeriodCount ?? 0);
+        $debtBoxClass = $contractDebtOverdue > 0.009
+            ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'
+            : ($contractDebtTotal > 0.009
+                ? 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'
+                : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20');
+        $debtAmountClass = $contractDebtOverdue > 0.009
+            ? 'text-red-800 dark:text-red-300'
+            : ($contractDebtTotal > 0.009
+                ? 'text-amber-900 dark:text-amber-200'
+                : 'text-emerald-800 dark:text-emerald-300');
+        ?>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+                <i class="bi bi-cash-coin text-emerald-600"></i> Borç Özeti
+            </h2>
+            <div class="p-4 space-y-3">
+                <?php if ($contractPeriodCount > 0): ?>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600 dark:text-gray-400">Sözleşme dönemi</span>
+                    <span class="font-medium text-gray-900 dark:text-white"><?= (int) $contractPeriodCount ?> ay</span>
+                </div>
+                <?php endif; ?>
+                <?php if ($contractTotalValue > 0.009): ?>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600 dark:text-gray-400">Sözleşme toplam tutarı</span>
+                    <span class="font-medium text-gray-900 dark:text-white"><?= fmtPrice($contractTotalValue) ?></span>
+                </div>
+                <?php endif; ?>
+                <?php if ($contractPaidTotal > 0.009): ?>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600 dark:text-gray-400">Tahsil edilen</span>
+                    <span class="font-medium text-emerald-700 dark:text-emerald-400"><?= fmtPrice($contractPaidTotal) ?></span>
+                </div>
+                <?php endif; ?>
+                <div class="rounded-xl border px-4 py-3 <?= $debtBoxClass ?>">
+                    <p class="text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-1">Toplam borç</p>
+                    <p class="text-2xl font-bold <?= $debtAmountClass ?>"><?= fmtPrice($contractDebtTotal) ?></p>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Vadesi gelmemiş taksitler dahil</p>
+                    <?php if ($contractDebtOverdue > 0.009): ?>
+                    <p class="text-sm mt-2 text-red-700 dark:text-red-400 font-medium">Gecikmiş: <?= fmtPrice($contractDebtOverdue) ?></p>
+                    <?php endif; ?>
+                    <?php if ($contractDebtFuture > 0.009): ?>
+                    <p class="text-sm mt-1 text-gray-700 dark:text-gray-300">Vadesi gelmemiş: <?= fmtPrice($contractDebtFuture) ?></p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar
