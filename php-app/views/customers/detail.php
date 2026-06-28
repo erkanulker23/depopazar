@@ -261,12 +261,12 @@ if ($bulkPaidExtraCount > 0):
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                             <?php foreach ($contracts as $c): ?>
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a></td>
+                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?fromCustomer=1" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a></td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></td>
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($c['start_date'] ?? '')) ?></td>
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($c['end_date'] ?? '')) ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($c['start_date'] ?? null) ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($c['end_date'] ?? null) ?></td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= number_format((float)($c['monthly_price'] ?? 0), 2, ',', '.') ?> ₺</td>
-                                    <td class="px-4 py-3"><a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">Detay</a></td>
+                                    <td class="px-4 py-3"><a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?fromCustomer=1" class="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">Detay</a></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -392,7 +392,7 @@ if ($bulkPaidExtraCount > 0):
                             <?php foreach ($payments as $p): ?>
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></td>
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($p['due_date'] ?? null) ?></td>
                                     <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</td>
                                     <td class="px-4 py-3">
                                         <?php $ps = paymentStatusDisplay($p); ?>

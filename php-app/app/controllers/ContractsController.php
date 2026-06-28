@@ -847,8 +847,12 @@ class ContractsController
             exit;
         }
         if (empty($contract['terminated_at'])) {
-            Contract::normalizeContractPayments($this->pdo, $id);
-            Contract::ensurePaymentsForContract($this->pdo, $id);
+            try {
+                Contract::normalizeContractPayments($this->pdo, $id);
+                Contract::ensurePaymentsForContract($this->pdo, $id);
+            } catch (Throwable $e) {
+                error_log('Contract show payment sync failed for ' . $id . ': ' . $e->getMessage());
+            }
         }
         $payments = Payment::findByContractId($this->pdo, $id);
         $monthlyPrices = Contract::getMonthlyPricesByContractId($this->pdo, $id);
@@ -892,6 +896,7 @@ class ContractsController
         }
         $pageTitle = 'Sözleşme: ' . ($contract['contract_number'] ?? $id);
         $items = Item::findByContractId($this->pdo, $id);
+        $fromCustomer = ($_GET['fromCustomer'] ?? '') === '1';
         require __DIR__ . '/../../views/contracts/detail.php';
     }
 
@@ -1131,25 +1136,19 @@ class ContractsController
         }
         $startDate = $startDateRaw . ' 00:00:00';
         $endDate = $endDateRaw . ' 23:59:59';
-        Contract::update($this->pdo, $id, [
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'monthly_price' => (float) ($contract['monthly_price'] ?? 0),
-            'transportation_fee' => (float) ($contract['transportation_fee'] ?? 0),
-            'pickup_location' => $contract['pickup_location'] ?? null,
-            'discount' => (float) ($contract['discount'] ?? 0),
-            'driver_name' => $contract['driver_name'] ?? null,
-            'driver_phone' => $contract['driver_phone'] ?? null,
-            'vehicle_plate' => $contract['vehicle_plate'] ?? null,
-            'notes' => $contract['notes'] ?? null,
-            'stored_items_condition' => $contract['stored_items_condition'] ?? null,
-            'stored_items_condition_note' => $contract['stored_items_condition_note'] ?? null,
-            'sold_by_user_id' => $contract['sold_by_user_id'] ?? null,
-        ]);
-        Contract::normalizeContractPayments($this->pdo, $id);
-        Contract::ensurePaymentsForContract($this->pdo, $id);
+        $successRedirect = $this->restructureDueDatesSuccessRedirect($id, $contract, $_POST);
+        try {
+            Contract::updateContractDates($this->pdo, $id, $startDate, $endDate);
+            Contract::normalizeContractPayments($this->pdo, $id);
+            Contract::ensurePaymentsForContract($this->pdo, $id);
+        } catch (Throwable $e) {
+            error_log('restructurePaymentDueDates failed for contract ' . $id . ': ' . $e->getMessage());
+            Auth::setSession('flash_error', 'Vade yapılandırması sırasında bir hata oluştu. Lütfen tekrar deneyin veya destek ile iletişime geçin.');
+            header('Location: /girisler/' . $id);
+            exit;
+        }
         Auth::setSession('flash_success', 'Ödeme vadeleri giriş/çıkış tarihlerine göre yeniden yapılandırıldı.');
-        header('Location: /girisler/' . $id);
+        header('Location: ' . $successRedirect);
         exit;
     }
 
@@ -1160,6 +1159,20 @@ class ContractsController
             return $redirect;
         }
         return '/girisler';
+    }
+
+    /** @param array<string, mixed> $contract */
+    private function restructureDueDatesSuccessRedirect(string $contractId, array $contract, array $post): string
+    {
+        $redirect = trim($post['redirect_on_success'] ?? '');
+        if ($redirect !== '' && preg_match('#^/musteriler/[a-f0-9\-]+$#i', $redirect)) {
+            return $redirect;
+        }
+        $customerId = trim($contract['customer_id'] ?? '');
+        if ($customerId !== '' && ($post['return_to_customer'] ?? '') === '1') {
+            return '/musteriler/' . $customerId;
+        }
+        return '/girisler/' . $contractId;
     }
 
     /**

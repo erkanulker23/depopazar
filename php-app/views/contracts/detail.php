@@ -895,6 +895,10 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
             </p>
             <form method="post" action="/girisler/vade-yeniden-yapilandir" id="restructureDueDatesForm" onsubmit="return validateRestructureDueDatesForm();">
                 <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contractId) ?>">
+                <?php if (!empty($fromCustomer) && !empty($contract['customer_id'])): ?>
+                <input type="hidden" name="return_to_customer" value="1">
+                <input type="hidden" name="redirect_on_success" value="/musteriler/<?= htmlspecialchars($contract['customer_id']) ?>">
+                <?php endif; ?>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="restructure_start_date">Depoya Giriş Tarihi <span class="text-red-500">*</span></label>

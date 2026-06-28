@@ -82,6 +82,29 @@ class Contract
     }
 
     private static ?bool $hasStoredItemsColumnsCache = null;
+    private static ?bool $monthlyPricesMonthColumnReadyCache = null;
+
+    /** Eski kurulumlarda month VARCHAR(7) (Y-m); Y-m-d anahtarları için genişlet */
+    public static function ensureMonthlyPricesMonthColumn(PDO $pdo): void
+    {
+        if (self::$monthlyPricesMonthColumnReadyCache === true) {
+            return;
+        }
+        try {
+            $stmt = $pdo->query(
+                "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contract_monthly_prices' AND COLUMN_NAME = 'month'
+                 LIMIT 1"
+            );
+            $maxLen = (int) $stmt->fetchColumn();
+            if ($maxLen > 0 && $maxLen < 10) {
+                $pdo->exec('ALTER TABLE `contract_monthly_prices` MODIFY COLUMN `month` VARCHAR(10) NOT NULL');
+            }
+        } catch (Throwable $e) {
+            // Tablo yoksa veya yetki yoksa syncMonthlyPrices yine de denenecek
+        }
+        self::$monthlyPricesMonthColumnReadyCache = true;
+    }
 
     public static function hasStoredItemsColumns(PDO $pdo): bool
     {
@@ -195,6 +218,14 @@ class Contract
     {
         $stmt = $pdo->prepare('UPDATE contracts SET room_id = ? WHERE id = ? AND deleted_at IS NULL');
         $stmt->execute([$roomId, $contractId]);
+    }
+
+    public static function updateContractDates(PDO $pdo, string $id, string $startDate, string $endDate): void
+    {
+        $stmt = $pdo->prepare(
+            'UPDATE contracts SET start_date = ?, end_date = ? WHERE id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([$startDate, $endDate, $id]);
     }
 
     public static function update(PDO $pdo, string $id, array $data): void
@@ -416,6 +447,7 @@ class Contract
             return;
         }
 
+        self::ensureMonthlyPricesMonthColumn($pdo);
         self::reconcilePaymentDueDates($pdo, $contractId, $startDate, $endDate);
 
         $existing = self::getMonthlyPricesByContractId($pdo, $contractId);
@@ -606,6 +638,7 @@ class Contract
     /** Tek ay için contract_monthly_prices kaydını güncelle veya oluştur */
     public static function setMonthlyPriceForMonth(PDO $pdo, string $contractId, string $monthYm, float $price): void
     {
+        self::ensureMonthlyPricesMonthColumn($pdo);
         $stmt = $pdo->prepare(
             'SELECT id FROM contract_monthly_prices WHERE contract_id = ? AND month = ? AND deleted_at IS NULL LIMIT 1'
         );

@@ -125,7 +125,11 @@ class CustomersController
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         foreach ($contracts as $c) {
             if (!empty($c['id']) && empty($c['terminated_at'])) {
-                Contract::ensurePaymentsForContract($this->pdo, $c['id']);
+                try {
+                    Contract::ensurePaymentsForContract($this->pdo, $c['id']);
+                } catch (Throwable $e) {
+                    error_log('ensurePaymentsForContract on customer show failed for ' . ($c['id'] ?? '') . ': ' . $e->getMessage());
+                }
             }
         }
         $payments = Payment::findByCustomerId($this->pdo, $id, $companyId);
