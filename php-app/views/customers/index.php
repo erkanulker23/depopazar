@@ -137,7 +137,7 @@ ob_start();
                                 <?php if ($debtFilter !== null): ?>
                                     <a href="/odemeler?collect=1&customer=<?= htmlspecialchars($c['id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 btn-touch">Ödeme Al</a>
                                 <?php endif; ?>
-                                <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>/barkod" target="_blank" rel="noopener" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 btn-touch">Barkod</a>
+                                <a href="/musteriler/<?= htmlspecialchars($c['id']) ?>/barkod" target="_blank" rel="noopener" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 btn-touch">QR Etiket</a>
                             </div>
                         </div>
                         <button type="button" class="expand-row-mobile flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-400" aria-label="Hızlı özet" aria-expanded="false"><i class="bi bi-chevron-down expand-icon-mobile text-lg"></i></button>

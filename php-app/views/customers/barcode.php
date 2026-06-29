@@ -1,157 +1,78 @@
 <?php
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
-$barcodeCode = strtoupper(substr($customer['id'], 0, 8));
-$items = $items ?? [];
-$contracts = $contracts ?? [];
 $company = $company ?? null;
+$qrDetailUrl = $qrDetailUrl ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müşteri Depo Etiketi - <?= htmlspecialchars($customerName) ?></title>
+    <title>QR Depo Etiketi - <?= htmlspecialchars($customerName) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
+            @page { margin: 12mm; }
         }
     </style>
 </head>
-<body class="bg-white text-gray-900 p-6 max-w-4xl mx-auto">
-    <div class="no-print mb-4 flex justify-between items-center">
-        <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>" class="text-emerald-600 hover:underline">&larr; Müşteriye dön</a>
-        <button type="button" onclick="window.print()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
-            <i class="bi bi-printer inline-block mr-2"></i>Yazdır / PDF olarak kaydet
+<body class="bg-gray-50 text-gray-900 p-4 sm:p-6">
+    <div class="no-print max-w-md mx-auto mb-4 flex justify-between items-center gap-2">
+        <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>" class="text-emerald-600 hover:underline text-sm">&larr; Müşteriye dön</a>
+        <button type="button" onclick="window.print()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">
+            <i class="bi bi-printer inline-block mr-1"></i>Yazdır
         </button>
     </div>
 
-    <div class="border-2 border-gray-200 rounded-xl p-6 print:border-gray-400">
+    <div class="max-w-md mx-auto border-2 border-gray-300 rounded-2xl bg-white p-6 print:border-gray-500 print:shadow-none shadow-sm">
         <?php if ($company && !empty($company['logo_url'])): ?>
-        <div class="mb-4 flex justify-center md:justify-start">
-            <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-14 object-contain">
+        <div class="mb-4 flex justify-center">
+            <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-12 object-contain">
         </div>
         <?php endif; ?>
-        <h1 class="text-xl font-bold text-center text-gray-900 mb-2">Müşteri Depo Etiketi</h1>
-        <div class="flex justify-center mb-4">
-            <svg id="barcode" class="block"></svg>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <h1 class="text-center text-base font-bold text-gray-900 uppercase tracking-wide mb-4">Depo QR Etiketi</h1>
+
+        <div class="flex justify-center mb-5">
+            <div id="qrcode" class="inline-block p-2 bg-white border border-gray-200 rounded-xl"></div>
+        </div>
+        <p class="text-center text-[10px] text-gray-400 mb-5 no-print">QR kodu okutunca eşya ve oda detayları açılır</p>
+
+        <div class="space-y-4 text-sm border-t border-gray-200 pt-4">
             <?php if ($company): ?>
             <div>
-                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Firma</h2>
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Firma</h2>
                 <p class="font-semibold text-gray-900"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
-                <?php if (!empty($company['project_name']) && ($company['project_name'] ?? '') !== ($company['name'] ?? '')): ?>
-                    <p class="text-sm text-gray-600"><?= htmlspecialchars($company['project_name']) ?></p>
-                <?php endif; ?>
-                <?php if (!empty($company['address'])): ?><p class="text-sm text-gray-600 mt-1"><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
-                <?php if (!empty($company['phone'])): ?><p class="text-sm text-gray-600">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
-                <?php if (!empty($company['whatsapp_number'])): ?><p class="text-sm text-gray-600">WhatsApp: <?= htmlspecialchars($company['whatsapp_number']) ?></p><?php endif; ?>
-                <?php if (!empty($company['email'])): ?><p class="text-sm text-gray-600"><?= htmlspecialchars($company['email']) ?></p><?php endif; ?>
-                <?php if (!empty($company['tax_office']) || !empty($company['mersis_number'])): ?>
-                    <p class="text-sm text-gray-600 mt-1">
-                        <?php if (!empty($company['tax_office'])): ?>V.D.: <?= htmlspecialchars($company['tax_office']) ?><?php endif; ?>
-                        <?php if (!empty($company['tax_office']) && !empty($company['mersis_number'])): ?> · <?php endif; ?>
-                        <?php if (!empty($company['mersis_number'])): ?>MERSİS: <?= htmlspecialchars($company['mersis_number']) ?><?php endif; ?>
-                    </p>
-                <?php endif; ?>
+                <?php if (!empty($company['phone'])): ?><p class="text-gray-600 text-xs mt-0.5">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
+                <?php if (!empty($company['address'])): ?><p class="text-gray-600 text-xs mt-0.5 line-clamp-3"><?= htmlspecialchars($company['address']) ?></p><?php endif; ?>
             </div>
             <?php endif; ?>
             <div>
-                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Müşteri Bilgileri</h2>
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Müşteri</h2>
                 <p class="font-semibold text-gray-900"><?= htmlspecialchars($customerName) ?></p>
-                <p class="text-sm text-gray-600 mt-1">
-                    <?php if (!empty($customer['phone'])): ?>Tel: <?= htmlspecialchars(formatPhoneDisplay($customer['phone'])) ?><?php endif; ?>
-                    <?php if (!empty($customer['phone']) && !empty($customer['email'])): ?> · <?php endif; ?>
-                    <?php if (!empty($customer['email'])): ?><?= htmlspecialchars($customer['email']) ?><?php endif; ?>
-                    <?php if (empty($customer['phone']) && empty($customer['email'])): ?>İletişim bilgisi girilmedi<?php endif; ?>
-                </p>
-                <?php if (!empty($customer['address'])): ?>
-                    <p class="text-sm text-gray-600 mt-1"><?= nl2br(htmlspecialchars($customer['address'])) ?></p>
-                <?php endif; ?>
+                <?php if (!empty($customer['phone'])): ?><p class="text-gray-600 text-xs mt-0.5">Tel: <?= htmlspecialchars(formatPhoneDisplay($customer['phone'])) ?></p><?php endif; ?>
+                <?php if (!empty($customer['email'])): ?><p class="text-gray-600 text-xs mt-0.5"><?= htmlspecialchars($customer['email']) ?></p><?php endif; ?>
             </div>
         </div>
-
-        <div class="mb-6">
-            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Eşya Listesi</h2>
-            <?php if (empty($items)): ?>
-                <p class="text-sm text-gray-500">Henüz eşya listesi girilmemiştir.</p>
-            <?php else: ?>
-                <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
-                <table class="min-w-full border border-gray-300 text-sm">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">#</th>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Eşya Adı</th>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Adet</th>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Birim</th>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Açıklama</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($items as $i => $item): ?>
-                            <tr>
-                                <td class="border border-gray-300 px-3 py-2"><?= $i + 1 ?></td>
-                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['name'] ?? '') ?></td>
-                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(itemConditionLabel($item['condition'] ?? null)) ?></td>
-                                <td class="border border-gray-300 px-3 py-2"><?= (int)($item['quantity'] ?? 1) ?></td>
-                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['unit'] ?? 'adet') ?></td>
-                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($item['description'] ?? '-') ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <div>
-            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Oda bilgileri</h2>
-            <?php if (empty($contracts)): ?>
-                <p class="text-sm text-gray-500">Bu müşteriye ait depo girişi / oda kaydı yok.</p>
-            <?php else: ?>
-                <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
-                <table class="min-w-full border border-gray-300 text-sm">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Sözleşme No</th>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Depo</th>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Oda No</th>
-                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Başlangıç – Bitiş</th>
-                            <th class="border border-gray-300 px-3 py-2 text-right font-bold">Aylık</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($contracts as $c): ?>
-                            <tr>
-                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></td>
-                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($c['warehouse_name'] ?? '-') ?></td>
-                                <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($c['room_number'] ?? '-') ?></td>
-                                <td class="border border-gray-300 px-3 py-2"><?= !empty($c['start_date']) ? date('d.m.Y', strtotime($c['start_date'])) : '-' ?> – <?= !empty($c['end_date']) ? date('d.m.Y', strtotime($c['end_date'])) : '-' ?></td>
-                                <td class="border border-gray-300 px-3 py-2 text-right"><?= number_format((float)($c['monthly_price'] ?? 0), 2, ',', '.') ?> ₺</td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= date('d.m.Y H:i') ?></p>
     </div>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
     <script>
-        JsBarcode("#barcode", "<?= htmlspecialchars($barcodeCode) ?>", {
-            format: "CODE128",
-            width: 2,
-            height: 40,
-            displayValue: true
+    (function() {
+        var url = <?= json_encode($qrDetailUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        var el = document.getElementById('qrcode');
+        if (!el || !url || typeof QRCode === 'undefined') return;
+        QRCode.toCanvas(url, { width: 168, margin: 1, errorCorrectionLevel: 'M' }, function(err, canvas) {
+            if (err) {
+                el.innerHTML = '<p class="text-xs text-red-600">QR oluşturulamadı</p>';
+                return;
+            }
+            el.appendChild(canvas);
         });
+    })();
     </script>
 </body>
 </html>

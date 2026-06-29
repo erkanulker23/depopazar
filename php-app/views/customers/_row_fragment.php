@@ -135,7 +135,7 @@ $statusStyles = [
                             </a>
                         <?php endif; ?>
                         <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/barkod" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium hover:bg-slate-200 dark:hover:bg-gray-500 focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors">
-                            <i class="bi bi-upc-scan"></i> Barkod Yazdır
+                            <i class="bi bi-qr-code"></i> QR Etiket Yazdır
                         </a>
                     </div>
                 </div>

@@ -69,7 +69,7 @@ ob_start();
             <i class="bi bi-printer mr-2"></i> Sayfayı Yazdır
         </a>
         <a href="/musteriler/<?= htmlspecialchars($customer['id']) ?>/barkod" target="_blank" class="inline-flex items-center px-4 py-2 rounded-xl bg-gray-700 text-white font-medium hover:bg-gray-800 transition-colors">
-            <i class="bi bi-upc-scan mr-2"></i> Barkod Yazdır
+            <i class="bi bi-qr-code mr-2"></i> QR Etiket Yazdır
         </a>
     </div>
 </div>

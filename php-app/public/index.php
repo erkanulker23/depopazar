@@ -61,6 +61,7 @@ $router->post('/musteriler/toplu-sil', fn() => (new CustomersController($pdo))->
 $router->get('/musteriler/{id}/satir-detay', fn(array $p) => (new CustomersController($pdo))->rowFragment($p));
 $router->get('/musteriler/{id}/yazdir', fn(array $p) => (new CustomersController($pdo))->printPage($p));
 $router->get('/musteriler/{id}/barkod', fn(array $p) => (new CustomersController($pdo))->barcode($p));
+$router->get('/musteriler/{id}/etiket', fn(array $p) => (new CustomersController($pdo))->labelDetail($p));
 $router->get('/musteriler/{id}/borclandir', fn(array $p) => (new CustomersController($pdo))->borclandirForm($p));
 $router->post('/musteriler/borclandir', fn() => (new CustomersController($pdo))->borclandir());
 $router->get('/musteriler/{id}/belge-ekle', fn(array $p) => (new CustomersController($pdo))->documentUploadForm($p));

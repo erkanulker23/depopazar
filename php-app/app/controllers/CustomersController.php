@@ -876,12 +876,12 @@ class CustomersController
         require __DIR__ . '/../../views/customers/_row_fragment.php';
     }
 
-    /** Müşteri depo etiketi (barkod) – yazdırılabilir sayfa */
+    /** Müşteri depo QR etiketi – yazdırılabilir (yalnızca firma + müşteri + QR) */
     public function barcode(array $params): void
     {
         Auth::requireStaff();
-        $id = $params['id'] ?? '';
-        if (!$id) {
+        $id = trim($params['id'] ?? '');
+        if ($id === '') {
             header('Location: /musteriler');
             exit;
         }
@@ -898,13 +898,38 @@ class CustomersController
             header('Location: /musteriler');
             exit;
         }
-        $items = Item::findByCustomerId($this->pdo, $id);
-        $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         $company = !empty($customer['company_id']) ? Company::findOne($this->pdo, $customer['company_id']) : null;
         if ($company && !empty($company['logo_url'])) {
             $company['logo_url'] = publicUploadHref($company['logo_url']);
         }
+        $qrDetailUrl = absoluteAppUrl('/musteriler/' . $id . '/etiket');
         require __DIR__ . '/../../views/customers/barcode.php';
+    }
+
+    /** QR okutulunca açılan müşteri depo detayı (giriş gerekmez) */
+    public function labelDetail(array $params): void
+    {
+        $id = trim($params['id'] ?? '');
+        if ($id === '') {
+            http_response_code(404);
+            echo 'Müşteri bulunamadı.';
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer || empty($customer['is_active'])) {
+            http_response_code(404);
+            echo 'Müşteri bulunamadı.';
+            exit;
+        }
+        $companyId = $customer['company_id'] ?? null;
+        $company = $companyId ? Company::findOne($this->pdo, $companyId) : null;
+        if ($company && !empty($company['logo_url'])) {
+            $company['logo_url'] = publicUploadHref($company['logo_url']);
+        }
+        $items = Item::findByCustomerId($this->pdo, $id);
+        $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
+        $isStaff = Auth::isAuthenticated() && !Auth::isCustomer();
+        require __DIR__ . '/../../views/customers/label_detail.php';
     }
 
     public function create(): void
