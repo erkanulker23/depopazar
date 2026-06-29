@@ -2,6 +2,14 @@
 LARAVEL FORGE – DEPLOY SCRIPT (celebi.awapanel.com ve diger siteler)
 ================================================================================
 
+!! ONEMLI – "add_....sql: command not found" (exit 127) !!
+Deploy script'e migration dosya adini TEK BASINA YAZMAYIN:
+
+  add_contract_linked_rooms.sql          <-- YANLIS (shell komut sanir)
+
+Migration'lar otomatik: forge-deploy.sh veya "php artisan migrate --force"
+Manuel (SSH): cd $FORGE_SITE_PATH/current && php artisan migrate --force
+
 !! ONEMLI – "not a git repository" HATASI !!
 Forge zero-downtime kullaniyorsaniz deploy script'inizde su satirlar
 OLMAMALI (site kokunde .git yoktur):
@@ -55,5 +63,21 @@ $FORGE_PHP artisan migrate --force
 $ACTIVATE_RELEASE()
 
 $RESTART_QUEUES()
+
+================================================================================
+KLASIK DEPLOY (git pull + tek dizin) – heredoc KULLANMAYIN (syntax error olur)
+Forge panel script'ine DBCONFIG / << yapismayin; forge-deploy.sh halleder:
+
+cd $FORGE_SITE_PATH
+
+git pull origin $FORGE_SITE_BRANCH
+
+bash $FORGE_SITE_PATH/forge-deploy.sh
+
+touch /tmp/fpmlock 2>/dev/null || true
+( flock -w 10 9 || exit 1
+    echo 'Reloading PHP FPM...'
+    sudo -S service $FORGE_PHP_FPM reload
+) 9</tmp/fpmlock
 
 ================================================================================

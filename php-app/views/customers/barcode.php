@@ -3,6 +3,7 @@ $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_na
 $barcodeCode = strtoupper(substr($customer['id'], 0, 8));
 $items = $items ?? [];
 $contracts = $contracts ?? [];
+$company = $company ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -28,16 +29,49 @@ $contracts = $contracts ?? [];
     </div>
 
     <div class="border-2 border-gray-200 rounded-xl p-6 print:border-gray-400">
+        <?php if ($company && !empty($company['logo_url'])): ?>
+        <div class="mb-4 flex justify-center md:justify-start">
+            <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-14 object-contain">
+        </div>
+        <?php endif; ?>
         <h1 class="text-xl font-bold text-center text-gray-900 mb-2">Müşteri Depo Etiketi</h1>
         <div class="flex justify-center mb-4">
             <svg id="barcode" class="block"></svg>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <?php if ($company): ?>
+            <div>
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Firma</h2>
+                <p class="font-semibold text-gray-900"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
+                <?php if (!empty($company['project_name']) && ($company['project_name'] ?? '') !== ($company['name'] ?? '')): ?>
+                    <p class="text-sm text-gray-600"><?= htmlspecialchars($company['project_name']) ?></p>
+                <?php endif; ?>
+                <?php if (!empty($company['address'])): ?><p class="text-sm text-gray-600 mt-1"><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
+                <?php if (!empty($company['phone'])): ?><p class="text-sm text-gray-600">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
+                <?php if (!empty($company['whatsapp_number'])): ?><p class="text-sm text-gray-600">WhatsApp: <?= htmlspecialchars($company['whatsapp_number']) ?></p><?php endif; ?>
+                <?php if (!empty($company['email'])): ?><p class="text-sm text-gray-600"><?= htmlspecialchars($company['email']) ?></p><?php endif; ?>
+                <?php if (!empty($company['tax_office']) || !empty($company['mersis_number'])): ?>
+                    <p class="text-sm text-gray-600 mt-1">
+                        <?php if (!empty($company['tax_office'])): ?>V.D.: <?= htmlspecialchars($company['tax_office']) ?><?php endif; ?>
+                        <?php if (!empty($company['tax_office']) && !empty($company['mersis_number'])): ?> · <?php endif; ?>
+                        <?php if (!empty($company['mersis_number'])): ?>MERSİS: <?= htmlspecialchars($company['mersis_number']) ?><?php endif; ?>
+                    </p>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
             <div>
                 <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Müşteri Bilgileri</h2>
-                <p class="text-sm"><strong>Depo kiralayan:</strong> <?= htmlspecialchars($customerName) ?></p>
-                <p class="text-sm"><strong>İletişim:</strong> <?= htmlspecialchars($customer['phone'] ?? 'Girilmedi') ?> / <?= htmlspecialchars($customer['email'] ?? 'Girilmedi') ?></p>
+                <p class="font-semibold text-gray-900"><?= htmlspecialchars($customerName) ?></p>
+                <p class="text-sm text-gray-600 mt-1">
+                    <?php if (!empty($customer['phone'])): ?>Tel: <?= htmlspecialchars(formatPhoneDisplay($customer['phone'])) ?><?php endif; ?>
+                    <?php if (!empty($customer['phone']) && !empty($customer['email'])): ?> · <?php endif; ?>
+                    <?php if (!empty($customer['email'])): ?><?= htmlspecialchars($customer['email']) ?><?php endif; ?>
+                    <?php if (empty($customer['phone']) && empty($customer['email'])): ?>İletişim bilgisi girilmedi<?php endif; ?>
+                </p>
+                <?php if (!empty($customer['address'])): ?>
+                    <p class="text-sm text-gray-600 mt-1"><?= nl2br(htmlspecialchars($customer['address'])) ?></p>
+                <?php endif; ?>
             </div>
         </div>
 

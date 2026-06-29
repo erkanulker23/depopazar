@@ -102,8 +102,8 @@ DBCONFIG
   echo "[forge-deploy] db.local.php olusturuldu (Forge Environment)."
 fi
 
-# Forge .env symlink (varsa)
-if [ -n "${FORGE_SITE_PATH:-}" ] && [ -f "${FORGE_SITE_PATH}/.env" ]; then
+# Forge .env symlink (yalnizca zero-downtime release; klasik deploy'da ayni dizin olur)
+if [ -n "${FORGE_RELEASE_DIRECTORY:-}" ] && [ -n "${FORGE_SITE_PATH:-}" ] && [ -f "${FORGE_SITE_PATH}/.env" ]; then
   ln -nfs "${FORGE_SITE_PATH}/.env" "$ROOT/.env"
 fi
 
