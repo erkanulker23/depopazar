@@ -29,6 +29,7 @@ class ContractPdf
         $id = $contract['id'] ?? '';
         $payments = Payment::findByContractId($pdo, $id);
         $company = !empty($contract['company_id']) ? Company::findOne($pdo, $contract['company_id']) : null;
+        $warehouse = !empty($contract['warehouse_id']) ? Warehouse::findOne($pdo, $contract['warehouse_id']) : null;
         $soldByName = trim(($contract['sold_by_first_name'] ?? '') . ' ' . ($contract['sold_by_last_name'] ?? '')) ?: '-';
         $items = Item::findByContractId($pdo, $id);
 

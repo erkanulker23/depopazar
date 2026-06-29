@@ -1,11 +1,13 @@
 <?php
 /** @var array $contract */
 /** @var array|null $company */
+/** @var array|null $warehouse */
 /** @var string $customerName */
 $contract = $contract ?? [];
 $company = $company ?? null;
+$warehouse = $warehouse ?? null;
 $customerName = $customerName ?? '';
-$terms = contractStorageTerms($contract, $company, $customerName);
+$terms = contractStorageTerms($contract, $company, $customerName, $warehouse);
 $customNotes = trim((string) ($contract['notes'] ?? ''));
 ?>
 <div class="contract-terms mt-8 pt-6 border-t border-gray-300 print:border-gray-400" id="contractTerms">

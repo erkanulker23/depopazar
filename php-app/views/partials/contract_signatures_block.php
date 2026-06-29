@@ -159,6 +159,9 @@ $hasCompanySig = !empty($companySignatureHref);
                     setPrintSig('companySigPrint', '', 'companySigDate', null);
                 }
                 toggleResignButtons();
+                if (typeof window.updateContractSendPanel === 'function') {
+                    window.updateContractSendPanel(existingCustomer, existingCompany);
+                }
                 if (status) {
                     status.textContent = 'İmza temizlendi. Yeniden imzalayabilirsiniz.';
                     status.className = 'text-sm text-emerald-600';
@@ -231,12 +234,19 @@ $hasCompanySig = !empty($companySignatureHref);
                     setPrintSig('companySigPrint', data.company_signature_url, 'companySigDate', data.company_signed_at);
                 }
                 toggleResignButtons();
+                if (typeof window.updateContractSendPanel === 'function') {
+                    window.updateContractSendPanel(existingCustomer, existingCompany);
+                }
             })
             .catch(function() {
                 btn.disabled = false;
                 status.textContent = 'Bağlantı hatası.';
             });
     });
+
+    if (typeof window.updateContractSendPanel === 'function') {
+        window.updateContractSendPanel(existingCustomer, existingCompany);
+    }
 
     <?php if ($signatureBeforePrint): ?>
     window.addEventListener('beforeprint', function() {

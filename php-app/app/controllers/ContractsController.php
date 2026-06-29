@@ -914,6 +914,75 @@ class ContractsController
         ]);
     }
 
+    /** İmzalı sözleşme PDF’ini müşteriye e-posta ile gönder */
+    public function sendSignedContractEmail(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /girisler');
+            exit;
+        }
+        $id = trim($_POST['contract_id'] ?? '');
+        if ($id === '') {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Sözleşme belirtilmedi.'], 400);
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Sözleşme bulunamadı.'], 404);
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Yetkisiz.'], 403);
+        }
+        if (empty($contract['customer_signature_url']) || empty($contract['company_signature_url'])) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Müşteri ve firma imzaları tamamlanmadan gönderilemez.'], 422);
+        }
+        $customerEmail = trim($contract['customer_email'] ?? '');
+        if ($customerEmail === '' || !filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Müşteri e-posta adresi geçerli değil.'], 422);
+        }
+        $companyId = $contract['company_id'] ?? $companyId;
+        $mail = $companyId ? Company::getMailSettings($this->pdo, $companyId) : null;
+        if (!$mail || empty($mail['smtp_host']) || empty($mail['is_active'])) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'E-posta ayarları yapılandırılmamış. Ayarlar > E-posta bölümünü kontrol edin.'], 422);
+        }
+        $pdfBinary = ContractPdf::generateBinary($this->pdo, $contract);
+        if ($pdfBinary === '') {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Sözleşme PDF oluşturulamadı.'], 500);
+        }
+        $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../../config/config.php';
+        $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
+        $company = $companyId ? Company::findOne($this->pdo, $companyId) : null;
+        $customerName = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
+        $sozlesmeNo = (string) ($contract['contract_number'] ?? '');
+        $companyName = trim((string) ($company['name'] ?? $appName));
+        $bodyPlain = "Sayın " . ($customerName !== '' ? $customerName : 'Müşterimiz') . ",\n\n"
+            . $sozlesmeNo . " numaralı depolama sözleşmeniz imzalanmıştır. Ekte imzalı PDF belgesini bulabilirsiniz.\n\n"
+            . "İyi günler dileriz.\n" . $companyName;
+        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        $prepared = MailService::prepareEmailBodies(
+            $appName,
+            'İmzalı Sözleşme',
+            $bodyPlain,
+            'Sözleşme No: ' . $sozlesmeNo,
+            ['actor_name' => $actorName, 'acted_at' => date('Y-m-d H:i:s'), 'action_title' => 'İmzalı sözleşme gönderildi']
+        );
+        $subject = $appName . ' – İmzalı Sözleşme (' . $sozlesmeNo . ')';
+        $result = MailService::sendSmtp(
+            $mail,
+            $customerEmail,
+            $subject,
+            $prepared['plain'],
+            $prepared['html'],
+            [['data' => $pdfBinary, 'name' => ContractPdf::filename($contract)]]
+        );
+        if (!$result['success']) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => $result['error'] ?? 'E-posta gönderilemedi.'], 500);
+        }
+        $this->jsonSignatureResponse(['ok' => true, 'message' => 'Sözleşme müşteriye e-posta ile gönderildi.']);
+    }
+
     /** @param array<string, mixed> $payload */
     private function jsonSignatureResponse(array $payload, int $status = 200): void
     {
@@ -1296,6 +1365,7 @@ class ContractsController
         if ($company && !empty($company['logo_url'])) {
             $company['logo_url'] = publicUploadHref($company['logo_url']);
         }
+        $warehouse = !empty($contract['warehouse_id']) ? Warehouse::findOne($this->pdo, $contract['warehouse_id']) : null;
         $soldByName = trim(($contract['sold_by_first_name'] ?? '') . ' ' . ($contract['sold_by_last_name'] ?? '')) ?: '-';
         $items = Item::findByContractId($this->pdo, $id);
         $customerSignatureHref = publicUploadHref($contract['customer_signature_url'] ?? null);

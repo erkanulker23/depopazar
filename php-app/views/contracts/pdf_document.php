@@ -1,17 +1,30 @@
 <?php
 $customerName = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
 $company = $company ?? null;
+$warehouse = $warehouse ?? null;
 $soldByName = $soldByName ?? '-';
 $payments = $payments ?? [];
 $items = $items ?? [];
 $logoSrc = '';
-if ($company && !empty($company['logo_url'])) {
+if ($warehouse && !empty($warehouse['logo_url'])) {
+    $logoSrc = publicFileDataUri($warehouse['logo_url']) ?? '';
+}
+if ($logoSrc === '' && $company && !empty($company['logo_url'])) {
     $logoPath = publicFilePath($company['logo_url']);
     if ($logoPath && is_file($logoPath)) {
         $mime = mime_content_type($logoPath) ?: 'image/png';
         $logoSrc = 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($logoPath));
     }
 }
+$depotName = trim((string) ($warehouse['name'] ?? $contract['warehouse_name'] ?? ''));
+$roomNumber = trim((string) ($contract['room_number'] ?? ''));
+$depotAddress = trim((string) ($warehouse['address'] ?? ''));
+$location = trim(implode(' / ', array_filter([
+    trim((string) ($warehouse['district'] ?? '')),
+    trim((string) ($warehouse['city'] ?? '')),
+], fn($p) => $p !== '')));
+$depotDescription = trim((string) ($warehouse['description'] ?? ''));
+$hasDepot = $depotName !== '' || $warehouse !== null;
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -37,12 +50,20 @@ if ($company && !empty($company['logo_url'])) {
     <?php if ($logoSrc !== ''): ?>
         <img src="<?= $logoSrc ?>" alt="" class="logo">
     <?php endif; ?>
-    <h1>Sözleşme</h1>
+    <h1>Depolama Sözleşmesi</h1>
     <table class="grid"><tr>
         <td>
-            <h2>Firma</h2>
-            <p class="box"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
-            <?php if (!empty($company['address'])): ?><p class="muted"><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
+            <h2><?= $hasDepot ? 'Depo' : 'Firma' ?></h2>
+            <?php if ($hasDepot): ?>
+                <p class="box"><?= htmlspecialchars($depotName !== '' ? $depotName : '-') ?></p>
+                <?php if ($roomNumber !== ''): ?><p class="muted">Oda: <?= htmlspecialchars($roomNumber) ?></p><?php endif; ?>
+                <?php if ($depotAddress !== ''): ?><p class="muted"><?= nl2br(htmlspecialchars($depotAddress)) ?></p><?php endif; ?>
+                <?php if ($location !== ''): ?><p class="muted"><?= htmlspecialchars($location) ?></p><?php endif; ?>
+                <?php if ($depotDescription !== ''): ?><p class="muted"><?= nl2br(htmlspecialchars($depotDescription)) ?></p><?php endif; ?>
+            <?php else: ?>
+                <p class="box"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
+                <?php if (!empty($company['address'])): ?><p class="muted"><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
+            <?php endif; ?>
             <?php if (!empty($company['phone'])): ?><p class="muted">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
             <?php if (!empty($company['email'])): ?><p class="muted"><?= htmlspecialchars($company['email']) ?></p><?php endif; ?>
         </td>
@@ -103,7 +124,7 @@ if ($company && !empty($company['logo_url'])) {
         </tbody>
     </table>
     <?php
-    $terms = contractStorageTerms($contract, $company, $customerName);
+    $terms = contractStorageTerms($contract, $company, $customerName, $warehouse);
     $customNotes = trim((string) ($contract['notes'] ?? ''));
     ?>
     <h2 style="margin-top: 18px;">Özel Şartlar</h2>

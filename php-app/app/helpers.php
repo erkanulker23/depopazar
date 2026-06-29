@@ -1425,7 +1425,7 @@ if (!function_exists('publicFileDataUri')) {
 
 /** Depolama sözleşmesi özel şartları (madde listesi) */
 if (!function_exists('contractStorageTerms')) {
-    function contractStorageTerms(array $contract, ?array $company, string $customerName): array
+    function contractStorageTerms(array $contract, ?array $company, string $customerName, ?array $warehouse = null): array
     {
         $custom = trim((string) ($contract['terms'] ?? ''));
         if ($custom !== '') {
@@ -1441,7 +1441,8 @@ if (!function_exists('contractStorageTerms')) {
                 return $out;
             }
         }
-        $companyName = trim((string) ($company['name'] ?? 'Firma'));
+        $depotName = trim((string) ($warehouse['name'] ?? $contract['warehouse_name'] ?? ''));
+        $partyName = $depotName !== '' ? $depotName : trim((string) ($company['name'] ?? 'Firma'));
         $customerDisplay = trim($customerName) !== '' ? trim($customerName) : 'Müşteri';
         return [
             'Fiyatlarımıza K.D.V. dahil değildir.',
@@ -1452,7 +1453,7 @@ if (!function_exists('contractStorageTerms')) {
             'Tüm depolama giriş ve çıkış nakliyesi firmamızca yapılması zorunludur. (Kabuldür.)',
             'Aylık ödemesi yapılmadan depo ücretleri 2 ay geçtiği taktirde firmamızca hukuki işlem başlatılacaktır.',
             '3 ay (90 gün) kira ödenmeyen eşyalardan müşteri hiçbir hak talep edemez; eşyalar kira borcu karşılığında satışı yapılacaktır.',
-            'Sayın ' . $customerDisplay . ' ile ' . $companyName . ' arasında yukarıdaki şartlar okunup anlaşılarak imza altına alınmıştır.',
+            'Sayın ' . $customerDisplay . ' ile ' . $partyName . ' arasında yukarıdaki şartlar okunup anlaşılarak imza altına alınmıştır.',
             'Taşıma günü iptali istenen rezervasyon için anlaşılan fiyatın firmamıza ödenmesi mecburidir. (Kabuldür.)',
         ];
     }

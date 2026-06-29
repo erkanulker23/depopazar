@@ -16,9 +16,10 @@ class MailService
      * @param string $subject Konu
      * @param string $bodyPlain Düz metin gövde (UTF-8)
      * @param string|null $bodyHtml Opsiyonel HTML gövde; verilirse e-posta HTML olarak gönderilir, bodyPlain alt metin olarak kullanılır
+     * @param list<array{data?: string, path?: string, name: string}> $attachments
      * @return array ['success' => bool, 'error' => string|null]
      */
-    public static function sendSmtp(array $mailSettings, string $to, string $subject, string $bodyPlain, ?string $bodyHtml = null): array
+    public static function sendSmtp(array $mailSettings, string $to, string $subject, string $bodyPlain, ?string $bodyHtml = null, array $attachments = []): array
     {
         $host = trim($mailSettings['smtp_host'] ?? '');
         $port = (int) ($mailSettings['smtp_port'] ?? 587);
@@ -57,6 +58,14 @@ class MailService
             } else {
                 $mail->isHTML(false);
                 $mail->Body = $bodyPlain;
+            }
+            foreach ($attachments as $attachment) {
+                $name = (string) ($attachment['name'] ?? 'dosya');
+                if (!empty($attachment['data'])) {
+                    $mail->addStringAttachment((string) $attachment['data'], $name);
+                } elseif (!empty($attachment['path']) && is_file($attachment['path'])) {
+                    $mail->addAttachment((string) $attachment['path'], $name);
+                }
             }
             $mail->send();
             self::logSend($to, $subject, true, null);

@@ -48,25 +48,7 @@ if (!function_exists('fmtPrice')) {
     </div>
 
     <div class="border-2 border-gray-200 rounded-xl p-6 print:border-gray-400">
-        <?php if ($company && !empty($company['logo_url'])): ?>
-        <div class="mb-4"><img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-14 object-contain"></div>
-        <?php endif; ?>
-        <h1 class="text-xl font-bold text-center text-gray-900 mb-6">Sözleşme</h1>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Firma</h2>
-                <p class="font-semibold text-gray-900"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
-                <?php if (!empty($company['address'])): ?><p class="text-sm text-gray-600"><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
-                <?php if (!empty($company['phone'])): ?><p class="text-sm text-gray-600">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
-                <?php if (!empty($company['email'])): ?><p class="text-sm text-gray-600"><?= htmlspecialchars($company['email']) ?></p><?php endif; ?>
-            </div>
-            <div>
-                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Müşteri</h2>
-                <p class="font-semibold text-gray-900"><?= htmlspecialchars($customerName ?: '-') ?></p>
-                <?php if (!empty($contract['customer_email'])): ?><p class="text-sm text-gray-600"><?= htmlspecialchars($contract['customer_email']) ?></p><?php endif; ?>
-                <?php if (!empty($contract['customer_phone'])): ?><p class="text-sm text-gray-600">Tel: <?= htmlspecialchars($contract['customer_phone']) ?></p><?php endif; ?>
-            </div>
-        </div>
+        <?php require __DIR__ . '/../partials/contract_document_header.php'; ?>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Sözleşme Bilgileri</h2>
         <table class="min-w-full border border-gray-300 text-sm mb-6">
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-48">Sözleşme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['contract_number'] ?? '-') ?></td></tr>
@@ -132,6 +114,9 @@ if (!function_exists('fmtPrice')) {
             $enableSignatureReset = $signMode;
             require __DIR__ . '/../partials/contract_signatures_block.php';
             ?>
+            <?php if ($signMode): ?>
+                <?php require __DIR__ . '/../partials/contract_send_to_customer.php'; ?>
+            <?php endif; ?>
         </div>
     </div>
 </body>
