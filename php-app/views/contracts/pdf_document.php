@@ -102,6 +102,41 @@ if ($company && !empty($company['logo_url'])) {
             <?php endforeach; ?>
         </tbody>
     </table>
+    <?php
+    $customerSigSrc = publicFileDataUri($contract['customer_signature_url'] ?? null);
+    $companySigSrc = publicFileDataUri($contract['company_signature_url'] ?? null);
+    if ($customerSigSrc || $companySigSrc):
+    ?>
+    <h2 style="margin-top: 18px;">İmzalar</h2>
+    <table class="grid" style="margin-top: 8px;">
+        <tr>
+            <td>
+                <h2>Müşteri</h2>
+                <p class="box"><?= htmlspecialchars($customerName ?: '-') ?></p>
+                <?php if ($customerSigSrc): ?>
+                    <img src="<?= $customerSigSrc ?>" alt="" style="max-height: 64px; margin-top: 6px;">
+                    <?php if (!empty($contract['customer_signed_at'])): ?>
+                        <p class="muted"><?= fmtDateTime($contract['customer_signed_at']) ?></p>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <p class="muted">—</p>
+                <?php endif; ?>
+            </td>
+            <td>
+                <h2>Firma</h2>
+                <p class="box"><?= htmlspecialchars($company['name'] ?? 'Firma') ?></p>
+                <?php if ($companySigSrc): ?>
+                    <img src="<?= $companySigSrc ?>" alt="" style="max-height: 64px; margin-top: 6px;">
+                    <?php if (!empty($contract['company_signed_at'])): ?>
+                        <p class="muted"><?= fmtDateTime($contract['company_signed_at']) ?></p>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <p class="muted">—</p>
+                <?php endif; ?>
+            </td>
+        </tr>
+    </table>
+    <?php endif; ?>
     <p class="footer">Oluşturulma: <?= fmtDateTime($contract['created_at'] ?? null) ?></p>
 </body>
 </html>

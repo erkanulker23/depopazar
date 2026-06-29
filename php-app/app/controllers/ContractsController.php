@@ -823,6 +823,65 @@ class ContractsController
         exit;
     }
 
+    /** Sözleşme yazdır sayfasından e-imza kaydet (müşteri + firma) */
+    public function saveSignatures(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /girisler');
+            exit;
+        }
+        $id = trim($_POST['contract_id'] ?? '');
+        if ($id === '') {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Sözleşme belirtilmedi.'], 400);
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Sözleşme bulunamadı.'], 404);
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Yetkisiz.'], 403);
+        }
+        $customerSig = trim($_POST['customer_signature'] ?? '');
+        $companySig = trim($_POST['company_signature'] ?? '');
+        if ($customerSig === '' && $companySig === '') {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'En az bir imza çizilmelidir.'], 422);
+        }
+        if ($customerSig !== '') {
+            $url = storeContractSignatureDataUri($customerSig, $id, 'customer');
+            if (!$url) {
+                $this->jsonSignatureResponse(['ok' => false, 'error' => 'Müşteri imzası kaydedilemedi.'], 422);
+            }
+            Contract::setCustomerSignature($this->pdo, $id, $url);
+        }
+        if ($companySig !== '') {
+            $url = storeContractSignatureDataUri($companySig, $id, 'company');
+            if (!$url) {
+                $this->jsonSignatureResponse(['ok' => false, 'error' => 'Firma imzası kaydedilemedi.'], 422);
+            }
+            Contract::setCompanySignature($this->pdo, $id, $url);
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        $this->jsonSignatureResponse([
+            'ok' => true,
+            'customer_signature_url' => publicUploadHref($contract['customer_signature_url'] ?? null),
+            'company_signature_url' => publicUploadHref($contract['company_signature_url'] ?? null),
+            'customer_signed_at' => $contract['customer_signed_at'] ?? null,
+            'company_signed_at' => $contract['company_signed_at'] ?? null,
+        ]);
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function jsonSignatureResponse(array $payload, int $status = 200): void
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     /** Sözleşme detayından eşya listesi güncelleme */
     public function updateItems(): void
     {
@@ -1182,8 +1241,13 @@ class ContractsController
         }
         $payments = Payment::findByContractId($this->pdo, $id);
         $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
+        if ($company && !empty($company['logo_url'])) {
+            $company['logo_url'] = publicUploadHref($company['logo_url']);
+        }
         $soldByName = trim(($contract['sold_by_first_name'] ?? '') . ' ' . ($contract['sold_by_last_name'] ?? '')) ?: '-';
         $items = Item::findByContractId($this->pdo, $id);
+        $customerSignatureHref = publicUploadHref($contract['customer_signature_url'] ?? null);
+        $companySignatureHref = publicUploadHref($contract['company_signature_url'] ?? null);
         require __DIR__ . '/../../views/contracts/print.php';
     }
 

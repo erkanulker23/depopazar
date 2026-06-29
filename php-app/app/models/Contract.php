@@ -465,6 +465,30 @@ class Contract
         $stmt->execute([$url, $id]);
     }
 
+    public static function setCustomerSignature(PDO $pdo, string $id, ?string $url): void
+    {
+        $contract = self::findOne($pdo, $id);
+        if ($contract && !empty($contract['customer_signature_url']) && $contract['customer_signature_url'] !== $url) {
+            unlinkPublicFile($contract['customer_signature_url']);
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE contracts SET customer_signature_url = ?, customer_signed_at = ? WHERE id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([$url, $url ? date('Y-m-d H:i:s') : null, $id]);
+    }
+
+    public static function setCompanySignature(PDO $pdo, string $id, ?string $url): void
+    {
+        $contract = self::findOne($pdo, $id);
+        if ($contract && !empty($contract['company_signature_url']) && $contract['company_signature_url'] !== $url) {
+            unlinkPublicFile($contract['company_signature_url']);
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE contracts SET company_signature_url = ?, company_signed_at = ? WHERE id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([$url, $url ? date('Y-m-d H:i:s') : null, $id]);
+    }
+
     /**
      * Sözleşme dönemindeki aylık fiyatları günceller; bekleyen ödeme tutarlarını eşitler.
      * Vadeler giriş tarihinin yıl dönümüne göre hesaplanır (ContractBilling).

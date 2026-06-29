@@ -1378,6 +1378,51 @@ if (!function_exists('storeContractPdfUpload')) {
     }
 }
 
+/** PNG data URI imzasını kaydet; başarılıysa /uploads/contracts/signatures/... yolu */
+if (!function_exists('storeContractSignatureDataUri')) {
+    function storeContractSignatureDataUri(string $dataUri, string $contractId, string $role): ?string
+    {
+        $dataUri = trim($dataUri);
+        if ($dataUri === '' || !preg_match('#^data:image/(png|jpeg|jpg);base64,#i', $dataUri, $m)) {
+            return null;
+        }
+        $ext = strtolower($m[1]) === 'jpeg' || strtolower($m[1]) === 'jpg' ? 'jpg' : 'png';
+        $raw = base64_decode(substr($dataUri, strpos($dataUri, ',') + 1), true);
+        if ($raw === false || strlen($raw) < 32 || strlen($raw) > 512000) {
+            return null;
+        }
+        $role = $role === 'company' ? 'company' : 'customer';
+        $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/contracts/signatures' : dirname(__DIR__) . '/public/uploads/contracts/signatures';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        $safeId = preg_replace('/[^a-zA-Z0-9\-]/', '', $contractId) ?: bin2hex(random_bytes(8));
+        $filename = 'sig_' . $role . '_' . $safeId . '_' . time() . '.' . $ext;
+        $path = $uploadDir . '/' . $filename;
+        if (file_put_contents($path, $raw) === false) {
+            return null;
+        }
+        return '/uploads/contracts/signatures/' . $filename;
+    }
+}
+
+/** public/uploads dosyasını PDF gömme için data URI döndürür */
+if (!function_exists('publicFileDataUri')) {
+    function publicFileDataUri(?string $relativePath): ?string
+    {
+        $path = publicFilePath($relativePath);
+        if (!$path || !is_file($path)) {
+            return null;
+        }
+        $mime = mime_content_type($path) ?: 'image/png';
+        $data = file_get_contents($path);
+        if ($data === false) {
+            return null;
+        }
+        return 'data:' . $mime . ';base64,' . base64_encode($data);
+    }
+}
+
 /** Parçalı yükleme — nginx client_max_body_size sınırını aşmamak için (512 KB parça) */
 if (!function_exists('uploadChunkByteSize')) {
     function uploadChunkByteSize(): int
