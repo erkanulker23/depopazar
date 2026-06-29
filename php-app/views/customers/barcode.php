@@ -2,6 +2,7 @@
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
 $company = $company ?? null;
 $qrDetailUrl = $qrDetailUrl ?? '';
+$qrCodeDataUri = $qrCodeDataUri ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -37,7 +38,13 @@ $qrDetailUrl = $qrDetailUrl ?? '';
         <h1 class="text-center text-base font-bold text-gray-900 uppercase tracking-wide mb-4">Depo QR Etiketi</h1>
 
         <div class="flex justify-center mb-5">
-            <div id="qrcode" class="inline-block p-2 bg-white border border-gray-200 rounded-xl"></div>
+            <?php if ($qrCodeDataUri): ?>
+                <img src="<?= htmlspecialchars($qrCodeDataUri) ?>" alt="QR Kod" width="168" height="168" class="block rounded-lg border border-gray-200">
+            <?php else: ?>
+                <div class="w-[168px] h-[168px] flex items-center justify-center rounded-xl border border-dashed border-red-300 bg-red-50 text-red-600 text-xs text-center p-3">
+                    QR oluşturulamadı.<br>Sunucuda <code class="text-[10px]">composer install</code> çalıştırın.
+                </div>
+            <?php endif; ?>
         </div>
         <p class="text-center text-[10px] text-gray-400 mb-5 no-print">QR kodu okutunca eşya ve oda detayları açılır</p>
 
@@ -58,21 +65,5 @@ $qrDetailUrl = $qrDetailUrl ?? '';
             </div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-    <script>
-    (function() {
-        var url = <?= json_encode($qrDetailUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-        var el = document.getElementById('qrcode');
-        if (!el || !url || typeof QRCode === 'undefined') return;
-        QRCode.toCanvas(url, { width: 168, margin: 1, errorCorrectionLevel: 'M' }, function(err, canvas) {
-            if (err) {
-                el.innerHTML = '<p class="text-xs text-red-600">QR oluşturulamadı</p>';
-                return;
-            }
-            el.appendChild(canvas);
-        });
-    })();
-    </script>
 </body>
 </html>

@@ -903,6 +903,7 @@ class CustomersController
             $company['logo_url'] = publicUploadHref($company['logo_url']);
         }
         $qrDetailUrl = absoluteAppUrl('/musteriler/' . $id . '/etiket');
+        $qrCodeDataUri = customerLabelQrDataUri($qrDetailUrl);
         require __DIR__ . '/../../views/customers/barcode.php';
     }
 

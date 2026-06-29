@@ -1826,6 +1826,31 @@ if (!function_exists('absoluteAppUrl')) {
     }
 }
 
+/** Depo etiketi QR görseli (data URI); sunucuda üretilir, harici CDN gerekmez */
+if (!function_exists('customerLabelQrDataUri')) {
+    function customerLabelQrDataUri(string $text): ?string
+    {
+        if ($text === '' || !class_exists(\chillerlan\QRCode\QRCode::class)) {
+            return null;
+        }
+        try {
+            $outputInterface = extension_loaded('gd')
+                ? \chillerlan\QRCode\Output\QRGdImagePNG::class
+                : \chillerlan\QRCode\Output\QRMarkupSVG::class;
+            $options = new \chillerlan\QRCode\QROptions([
+                'outputInterface' => $outputInterface,
+                'outputBase64' => true,
+                'scale' => 6,
+                'eccLevel' => \chillerlan\QRCode\Common\EccLevel::M,
+            ]);
+            $out = (new \chillerlan\QRCode\QRCode($options))->render($text);
+            return is_string($out) && $out !== '' ? $out : null;
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+}
+
 /** public/uploads altındaki dosyayı diskten kaldırır */
 if (!function_exists('unlinkPublicFile')) {
     function unlinkPublicFile(?string $relativePath): void
