@@ -274,29 +274,14 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 flex: none !important;
                 padding-bottom: var(--mobile-nav-height) !important;
             }
-            .mobile-card.overflow-visible {
-                overflow: hidden;
-            }
-            /* Alt menü yüksekliği kadar boşluk — fazla padding kaldırıldı */
-            .page-header-actions {
-                width: 100%;
-                max-width: 100%;
-                overflow-x: auto;
-                flex-wrap: nowrap;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-                gap: 0.5rem;
-                padding-bottom: 0.125rem;
-            }
-            .page-header-actions::-webkit-scrollbar { display: none; }
-            .page-header-actions > a,
-            .page-header-actions > button,
-            .page-header-actions > form {
-                flex-shrink: 0;
-            }
             .mobile-card {
                 border-radius: 1rem;
-                overflow: hidden;
+                overflow-x: clip;
+                overflow-y: visible;
+            }
+            .mobile-card.overflow-visible {
+                overflow-x: clip;
+                overflow-y: visible;
             }
             .mobile-card > .overflow-x-auto,
             .mobile-card .table-scroll {
@@ -329,9 +314,103 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 overflow-x: auto;
                 max-width: 100%;
             }
+            .page-header-actions {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                gap: 0.5rem;
+                padding-bottom: 0.125rem;
+            }
+            .page-header-actions::-webkit-scrollbar { display: none; }
+            .page-header-actions > a,
+            .page-header-actions > button,
+            .page-header-actions > form {
+                flex-shrink: 0;
+            }
             /* Sayfa üstü: filtre + aksiyon çubukları */
             .page-toolbar {
                 gap: 0.75rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .page-toolbar-actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.5rem;
+                width: 100%;
+            }
+            .page-toolbar-actions > a,
+            .page-toolbar-actions > button,
+            .page-toolbar-actions > form {
+                min-width: 0;
+            }
+            .page-toolbar-actions .btn-touch,
+            .page-toolbar-actions a,
+            .page-toolbar-actions button {
+                width: 100%;
+                justify-content: center;
+            }
+            .page-toolbar-actions .col-span-2 {
+                grid-column: span 2;
+            }
+            .page-toolbar-actions > *:only-child {
+                grid-column: 1 / -1;
+            }
+            .card-modern {
+                overflow: visible;
+                max-width: 100%;
+            }
+            .settings-tabs-wrap {
+                max-width: 100%;
+                scrollbar-width: none;
+            }
+            .settings-tabs-wrap::-webkit-scrollbar {
+                display: none;
+            }
+            /* Sayfa kartları — mobilde fixed modalları kırmasın */
+            main .card-modern,
+            main .user-profile-page .profile-card {
+                overflow: visible;
+                max-width: 100%;
+            }
+            /* Filtre modalı — mobil alt sayfa */
+            .page-filter-modal:not(.hidden) {
+                position: fixed !important;
+                inset: 0 !important;
+                width: 100%;
+                max-width: 100vw;
+                height: 100%;
+                max-height: 100dvh;
+            }
+            .page-filter-modal > div.flex {
+                min-height: 100%;
+                align-items: stretch;
+                padding: 0;
+            }
+            .page-filter-modal .filter-modal-backdrop {
+                position: absolute !important;
+                inset: 0 !important;
+            }
+            .page-filter-modal .filter-modal-panel {
+                max-height: 100dvh;
+                min-height: 100dvh;
+                width: 100%;
+                max-width: none;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+            .mobile-data-card {
+                padding: 1rem;
+            }
+            .mobile-data-card + .mobile-data-card {
+                border-top: 1px solid rgb(229 231 235);
+            }
+            .dark .mobile-data-card + .mobile-data-card {
+                border-top-color: rgb(55 65 81);
             }
             .page-toolbar > form,
             .page-toolbar > .page-toolbar-form {
@@ -386,18 +465,37 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             }
             /* Form kaydet / gönder — alt menünün üstünde yapışkan */
             .form-submit-bar {
+                position: static;
+                bottom: auto;
+                z-index: auto;
+                margin-top: 1rem;
+                margin-left: 0;
+                margin-right: 0;
+                padding: 0.75rem 0 0.25rem;
+                background: transparent;
+                backdrop-filter: none;
+            }
+            .dark .form-submit-bar {
+                background: transparent;
+            }
+            .card-modern .form-submit-bar {
+                padding-bottom: 0.5rem;
+            }
+            /* Uzun formlarda otomatik yapışkan alt çubuk (form-submit-bar olmayan formlar) */
+            main form:not(.modal-overlay form) > div:last-child:not(.form-submit-bar):has(> button[type="submit"]:only-child),
+            main form:not(.modal-overlay form) > div:last-child:not(.form-submit-bar):has(> button[type="submit"]:last-child:not(:first-child)) {
                 position: sticky;
                 bottom: var(--mobile-nav-height);
                 z-index: 35;
-                margin-top: 1rem;
-                margin-left: -0.25rem;
-                margin-right: -0.25rem;
-                padding: 0.75rem 0.25rem;
-                background: linear-gradient(to top, rgba(249,250,251,0.98) 70%, rgba(249,250,251,0));
-                backdrop-filter: blur(6px);
+                padding-top: 0.75rem;
+                padding-bottom: 0.25rem;
+                background: linear-gradient(to top, rgba(249,250,251,0.98) 75%, rgba(249,250,251,0));
             }
-            .dark .form-submit-bar {
-                background: linear-gradient(to top, rgba(26,22,20,0.98) 70%, rgba(26,22,20,0));
+            .dark main form:not(.modal-overlay form) > div:last-child:not(.form-submit-bar):has(button[type="submit"]) {
+                background: linear-gradient(to top, rgba(17,24,39,0.98) 75%, rgba(17,24,39,0));
+            }
+            main form:not(.modal-overlay form) > div:last-child:not(.form-submit-bar):has(button[type="submit"]) button[type="submit"] {
+                min-height: 48px;
             }
             .form-submit-bar button[type="submit"],
             .form-submit-bar .btn-submit,
@@ -413,26 +511,21 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 flex: 1 1 auto;
                 min-width: 44%;
             }
-            /* Uzun formlarda otomatik yapışkan alt çubuk (sınıf eklenmemiş sayfalar) */
-            main form:not(.modal-overlay form) > div:last-child:has(> button[type="submit"]:only-child),
-            main form:not(.modal-overlay form) > div:last-child:has(> button[type="submit"]:last-child:not(:first-child)) {
-                position: sticky;
-                bottom: var(--mobile-nav-height);
-                z-index: 35;
-                padding-top: 0.75rem;
-                padding-bottom: 0.25rem;
-                background: linear-gradient(to top, rgba(249,250,251,0.98) 75%, rgba(249,250,251,0));
-            }
-            .dark main form:not(.modal-overlay form) > div:last-child:has(button[type="submit"]) {
-                background: linear-gradient(to top, rgba(17,24,39,0.98) 75%, rgba(17,24,39,0));
-            }
-            main form:not(.modal-overlay form) > div:last-child:has(button[type="submit"]) button[type="submit"] {
-                min-height: 48px;
-            }
             /* Modallar — tam ekran, alt menünün üstünde */
+            .modal-overlay:not(.hidden) {
+                position: fixed !important;
+                inset: 0 !important;
+                width: 100%;
+                max-width: 100vw;
+                height: 100%;
+                max-height: 100dvh;
+            }
             .modal-overlay {
                 padding: 0;
-                z-index: 60 !important;
+                z-index: 70 !important;
+            }
+            .modal-overlay > div.flex > .fixed.inset-0 {
+                position: absolute !important;
             }
             .modal-overlay > div.flex {
                 min-height: 100%;
@@ -573,13 +666,16 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             #notificationBackdrop {
                 position: fixed;
                 inset: 0;
-                z-index: 54;
+                z-index: 110;
                 background: rgba(15, 23, 42, 0.45);
                 backdrop-filter: blur(2px);
                 -webkit-backdrop-filter: blur(2px);
             }
             body.notification-panel-open {
                 overflow: hidden;
+            }
+            body.notification-panel-open #appTopBar {
+                z-index: 111;
             }
             body.notification-panel-open #mobileBottomNav {
                 visibility: hidden;
@@ -594,7 +690,8 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 width: auto !important;
                 max-height: none !important;
                 margin: 0 !important;
-                z-index: 55 !important;
+                z-index: 112 !important;
+                display: flex !important;
                 border-radius: 1rem;
                 box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
             }
@@ -632,6 +729,9 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
+            }
+            #notificationBell {
+                touch-action: manipulation;
             }
         }
         @media (min-width: 768px) { #mobileBottomNav { display: none !important; } }
@@ -882,11 +982,40 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         document.querySelectorAll('.nav-link').forEach(function(el){ el.addEventListener('click', closeSidebar); });
     })();
     (function(){
-        function updateModalState() {
-            var any = document.querySelector('.modal-overlay:not(.hidden)');
-            document.body.classList.toggle('modal-open', !!any);
-            document.body.style.overflow = any ? 'hidden' : '';
+        function restoreModal(el) {
+            if (!el._mountedToBody || !el._modalHome) return;
+            if (el._modalNext && el._modalNext.parentNode === el._modalHome) {
+                el._modalHome.insertBefore(el, el._modalNext);
+            } else {
+                el._modalHome.appendChild(el);
+            }
+            el._mountedToBody = false;
         }
+        function mountModal(el) {
+            if (el._mountedToBody || el.classList.contains('hidden')) return;
+            if (!window.matchMedia('(max-width: 767px)').matches) return;
+            if (el.parentNode === document.body) {
+                el._mountedToBody = true;
+                return;
+            }
+            el._modalHome = el.parentNode;
+            el._modalNext = el.nextSibling;
+            document.body.appendChild(el);
+            el._mountedToBody = true;
+        }
+        function updateModalState() {
+            document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(mountModal);
+            document.querySelectorAll('.modal-overlay.hidden').forEach(restoreModal);
+            var any = document.querySelector('.modal-overlay:not(.hidden)');
+            var sidebarOpen = document.body.classList.contains('sidebar-open');
+            document.body.classList.toggle('modal-open', !!any);
+            if (any) {
+                document.body.style.overflow = 'hidden';
+            } else if (!sidebarOpen) {
+                document.body.style.overflow = '';
+            }
+        }
+        window.updateModalState = updateModalState;
         var obs = new MutationObserver(updateModalState);
         document.querySelectorAll('.modal-overlay').forEach(function(el) {
             obs.observe(el, { attributes: true, attributeFilter: ['class'] });
@@ -917,9 +1046,26 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         var closeMobileBtn = document.getElementById('notificationCloseMobile');
         var backdrop = document.getElementById('notificationBackdrop');
         var mobileMq = window.matchMedia('(max-width: 767px)');
+        var dropdownHome = wrap;
 
         function isMobilePanel() {
             return mobileMq.matches;
+        }
+
+        function mountMobilePanel() {
+            if (!isMobilePanel()) return;
+            if (dropdown.parentNode !== document.body) {
+                document.body.appendChild(dropdown);
+            }
+            if (backdrop && backdrop.parentNode !== document.body) {
+                document.body.appendChild(backdrop);
+            }
+        }
+
+        function unmountMobilePanel() {
+            if (dropdown.parentNode === document.body && dropdownHome) {
+                dropdownHome.appendChild(dropdown);
+            }
         }
 
         function escHtml(s) {
@@ -976,14 +1122,17 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         function followNotificationLink(li) {
             if (!li || !li.dataset.href) return;
             closeDropdown();
-            window.location.href = li.dataset.href;
+            window.location.assign(li.dataset.href);
         }
 
-        listEl.addEventListener('click', function(e) {
+        function onNotificationItemActivate(e) {
             var li = e.target.closest('li[data-href]');
             if (!li) return;
+            e.preventDefault();
             followNotificationLink(li);
-        });
+        }
+
+        listEl.addEventListener('click', onNotificationItemActivate);
         listEl.addEventListener('keydown', function(e) {
             if (e.key !== 'Enter' && e.key !== ' ') return;
             var li = e.target.closest('li[data-href]');
@@ -993,6 +1142,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         });
 
         function openDropdown() {
+            mountMobilePanel();
             dropdown.classList.remove('hidden');
             bell.setAttribute('aria-expanded', 'true');
             if (isMobilePanel()) {
@@ -1018,12 +1168,19 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 backdrop.setAttribute('aria-hidden', 'true');
             }
             bell.setAttribute('aria-expanded', 'false');
+            unmountMobilePanel();
         }
 
-        bell.addEventListener('click', function(e){
-            e.stopPropagation();
-            if (dropdown.classList.contains('hidden')) openDropdown(); else closeDropdown();
-        });
+        function toggleDropdown(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            if (dropdown.classList.contains('hidden')) openDropdown();
+            else closeDropdown();
+        }
+
+        bell.addEventListener('click', toggleDropdown);
 
         wrap.addEventListener('click', function(e){ e.stopPropagation(); });
         document.documentElement.addEventListener('click', function(){
@@ -1078,7 +1235,14 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             if (!el) return;
             el.classList.remove('hidden');
             el.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
             document.body.style.overflow = 'hidden';
+            if (window.matchMedia('(max-width: 767px)').matches && el.parentNode !== document.body && !el._mountedToBody) {
+                el._modalHome = el.parentNode;
+                el._modalNext = el.nextSibling;
+                document.body.appendChild(el);
+                el._mountedToBody = true;
+            }
             var first = el.querySelector('input:not([type="hidden"]), select, textarea');
             if (first) setTimeout(function(){ first.focus(); }, 80);
         };
@@ -1087,7 +1251,18 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             if (!el) return;
             el.classList.add('hidden');
             el.setAttribute('aria-hidden', 'true');
-            if (!document.querySelector('.filter-modal-overlay:not(.hidden), .modal-overlay:not(.hidden)')) {
+            if (el._mountedToBody && el._modalHome) {
+                if (el._modalNext && el._modalNext.parentNode === el._modalHome) {
+                    el._modalHome.insertBefore(el, el._modalNext);
+                } else {
+                    el._modalHome.appendChild(el);
+                }
+                el._mountedToBody = false;
+            }
+            if (window.updateModalState) {
+                window.updateModalState();
+            } else if (!document.querySelector('.filter-modal-overlay:not(.hidden), .modal-overlay:not(.hidden)') && !document.body.classList.contains('sidebar-open')) {
+                document.body.classList.remove('modal-open');
                 document.body.style.overflow = '';
             }
         };

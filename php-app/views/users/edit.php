@@ -9,12 +9,13 @@ $flashSuccess = $flashSuccess ?? null;
 $flashError = $flashError ?? null;
 ob_start();
 ?>
+<div class="user-profile-page max-w-full min-w-0">
 <div class="mb-6">
-    <nav class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+    <nav class="text-sm text-gray-500 dark:text-gray-400 mb-2 flex flex-wrap items-center gap-x-1 gap-y-0.5">
         <a href="/kullanicilar" class="text-emerald-600 dark:text-emerald-400 hover:underline">Kullanıcılar</a>
-        <span class="mx-1">/</span>
-        <a href="/kullanicilar/<?= htmlspecialchars($profile['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars(trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''))) ?></a>
-        <span class="mx-1">/</span>
+        <span>/</span>
+        <a href="/kullanicilar/<?= htmlspecialchars($profile['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline truncate max-w-[12rem] sm:max-w-none"><?= htmlspecialchars(trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''))) ?></a>
+        <span>/</span>
         <span class="text-gray-700 dark:text-gray-300">Düzenle</span>
     </nav>
     <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Kullanıcı Düzenle</h1>
@@ -24,7 +25,7 @@ ob_start();
     <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm"><?= htmlspecialchars($flashError) ?></div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 max-w-lg">
+<div class="profile-card card-modern overflow-visible p-6 max-w-lg">
     <form method="post" action="/kullanicilar/guncelle" enctype="multipart/form-data" class="space-y-4">
         <input type="hidden" name="id" value="<?= htmlspecialchars($profile['id'] ?? '') ?>">
         <div>
@@ -45,7 +46,7 @@ ob_start();
                 </div>
             </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad <span class="text-red-500">*</span></label>
                 <input type="text" name="first_name" value="<?= htmlspecialchars($profile['first_name'] ?? '') ?>" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
@@ -108,6 +109,7 @@ ob_start();
             <button type="submit" class="btn-touch px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Güncelle</button>
         </div>
     </form>
+</div>
 </div>
 <script>
 (function() {

@@ -73,6 +73,7 @@ class UsersController
             $managedWarehouseName = $wh['name'] ?? null;
         }
         $pageTitle = 'Kullanıcı: ' . trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/users/detail.php';
     }
 
@@ -386,7 +387,12 @@ class UsersController
         }
         User::update($this->pdo, $id, ['password' => $password]);
         Auth::setSession('flash_success', 'Şifre güncellendi.');
-        header('Location: /kullanicilar');
+        $redirect = trim($_POST['redirect'] ?? '');
+        if ($redirect !== '' && str_starts_with($redirect, '/') && !str_starts_with($redirect, '//')) {
+            header('Location: ' . $redirect);
+        } else {
+            header('Location: /kullanicilar');
+        }
         exit;
     }
 

@@ -40,26 +40,28 @@ function getPaymentSourceDisplay($e, $bankAccounts, $creditCards) {
 <?php endif; ?>
 
 <!-- Masraf kategorileri -->
-<div class="card-modern p-6 mb-6">
-    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-tags text-emerald-600"></i> Masraf Kategorileri</h2>
+<div class="card-modern p-4 md:p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2"><i class="bi bi-tags text-emerald-600"></i> Masraf Kategorileri</h2>
     <div class="mb-4">
-        <button type="button" onclick="document.getElementById('addCategoryModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+        <button type="button" onclick="document.getElementById('addCategoryModal').classList.remove('hidden')" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
             <i class="bi bi-plus-lg mr-2"></i> Kategori Ekle
         </button>
     </div>
     <?php if (empty($categories)): ?>
-        <p class="text-gray-500 dark:text-gray-400">Henüz masraf kategorisi yok. Masraf ekleyebilmek için önce kategori ekleyin.</p>
+        <p class="text-gray-500 dark:text-gray-400 text-sm">Henüz masraf kategorisi yok. Masraf ekleyebilmek için önce kategori ekleyin.</p>
     <?php else: ?>
-        <div class="flex flex-wrap gap-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2">
             <?php foreach ($categories as $c): ?>
-                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm">
-                    <?= htmlspecialchars($c['name']) ?>
-                    <button type="button" onclick='openEditCategory(<?= json_encode($c) ?>)' class="text-gray-500 hover:text-emerald-600" title="Düzenle"><i class="bi bi-pencil"></i></button>
-                    <form method="post" action="/masraflar/kategori-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('masraf kategorisi')) ?>);">
-                        <input type="hidden" name="id" value="<?= htmlspecialchars($c['id']) ?>">
-                        <button type="submit" class="text-gray-500 hover:text-red-600" title="Sil"><i class="bi bi-trash"></i></button>
-                    </form>
-                </span>
+                <div class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm min-w-0">
+                    <span class="truncate font-medium"><?= htmlspecialchars($c['name']) ?></span>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" onclick='openEditCategory(<?= json_encode($c) ?>)' class="p-2 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-white/60 dark:hover:bg-gray-600" title="Düzenle"><i class="bi bi-pencil"></i></button>
+                        <form method="post" action="/masraflar/kategori-sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('masraf kategorisi')) ?>);">
+                            <input type="hidden" name="id" value="<?= htmlspecialchars($c['id']) ?>">
+                            <button type="submit" class="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-white/60 dark:hover:bg-gray-600" title="Sil"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
@@ -89,9 +91,11 @@ if ($startDate !== date('Y-m-01') || $endDate !== date('Y-m-t')) {
     require __DIR__ . '/../partials/page_filter_trigger.php';
     ?>
     <?php if (!empty($categories)): ?>
-    <button type="button" onclick="document.getElementById('addExpenseModal').classList.remove('hidden')" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
-        <i class="bi bi-plus-lg mr-2"></i> Masraf Ekle
-    </button>
+    <div class="page-toolbar-actions">
+        <button type="button" onclick="document.getElementById('addExpenseModal').classList.remove('hidden')" class="col-span-2 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+            <i class="bi bi-plus-lg mr-2"></i> Masraf Ekle
+        </button>
+    </div>
     <?php endif; ?>
 </div>
 
@@ -159,11 +163,35 @@ require __DIR__ . '/../partials/page_filter_modal.php';
     <?php if (empty($expenses)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Seçilen kriterlere uygun masraf kaydı yok.</div>
     <?php else: ?>
-        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center flex-wrap gap-2">
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center gap-2">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><?= count($expenses) ?> masraf</span>
-            <span class="text-lg font-bold text-red-600 dark:text-red-400"><?= fmtMoney($totalAmount) ?> ₺</span>
+            <span class="text-base md:text-lg font-bold text-red-600 dark:text-red-400"><?= fmtMoney($totalAmount) ?> ₺</span>
         </div>
-        <div class="overflow-x-auto">
+        <!-- Mobil: kart listesi -->
+        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+            <?php foreach ($expenses as $e): ?>
+                <div class="mobile-data-card">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($e['description'] ?? $e['category_name'] ?? 'Masraf') ?></p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"><?= htmlspecialchars($e['category_name'] ?? '-') ?></p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1"><?= $e['expense_date'] ? date('d.m.Y', strtotime($e['expense_date'])) : '-' ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate"><?= htmlspecialchars(getPaymentSourceDisplay($e, $bankAccounts, $creditCards)) ?></p>
+                        </div>
+                        <p class="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap shrink-0"><?= fmtMoney($e['amount'] ?? 0) ?> ₺</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        <button type="button" onclick='openEditExpense(<?= json_encode($e) ?>)' class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">Düzenle</button>
+                        <form method="post" action="/masraflar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('masraf')) ?>);">
+                            <input type="hidden" name="id" value="<?= htmlspecialchars($e['id']) ?>">
+                            <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20">Sil</button>
+                        </form>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <!-- Masaüstü: tablo -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>

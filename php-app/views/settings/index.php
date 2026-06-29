@@ -31,8 +31,8 @@ ob_start();
     </div>
 <?php else: ?>
 <!-- Sekmeler - mobilde yatay scroll -->
-<div class="border-b border-gray-200 dark:border-gray-600 mb-6 -mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto">
-    <nav class="flex gap-1 -mb-px min-w-max md:min-w-0" aria-label="Ayarlar sekmeleri">
+<div class="settings-tabs-wrap mb-6 overflow-x-auto overscroll-x-contain max-w-full -webkit-overflow-scrolling-touch">
+    <nav class="flex gap-1 min-w-max border-b border-gray-200 dark:border-gray-600 pb-px" aria-label="Ayarlar sekmeleri">
         <?php foreach ($tabs as $key => $t): ?>
             <a href="/ayarlar?tab=<?= $key ?>" class="inline-flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors <?= $activeTab === $key ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500' ?>">
                 <i class="bi bi-<?= $t['icon'] ?>"></i>
@@ -42,7 +42,7 @@ ob_start();
     </nav>
 </div>
 
-<div class="card-modern">
+<div class="card-modern overflow-visible">
     <?php if ($activeTab === 'firma'): ?>
         <div class="p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-building text-emerald-600"></i> Firma Bilgileri</h2>

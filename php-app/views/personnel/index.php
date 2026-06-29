@@ -45,9 +45,11 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
     require __DIR__ . '/../partials/page_filter_trigger.php';
     ?>
     <?php if ($canManage): ?>
-    <button type="button" onclick="openAddPersonnelModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
-        <i class="bi bi-plus-lg mr-2"></i> Personel Ekle
-    </button>
+    <div class="page-toolbar-actions">
+        <button type="button" onclick="openAddPersonnelModal()" class="col-span-2 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+            <i class="bi bi-plus-lg mr-2"></i> Personel Ekle
+        </button>
+    </div>
     <?php endif; ?>
 </div>
 
@@ -55,7 +57,45 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
     <?php if (empty($personnel)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz personel kaydı yok. Şoför, taşımacı vb. saha personelini buradan ekleyin.</div>
     <?php else: ?>
-        <div class="overflow-x-auto">
+        <!-- Mobil: kart listesi -->
+        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+            <?php foreach ($personnel as $p): ?>
+                <?php
+                $personName = trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? ''));
+                $jobLabel = $jobTypeLabels[$p['job_type'] ?? 'diger'] ?? 'Diğer';
+                ?>
+                <div class="mobile-data-card">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            <?php $personnel = $p; $size = 'md'; require __DIR__ . '/../partials/personnel_avatar.php'; ?>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($personName) ?></p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"><?= htmlspecialchars($p['phone'] ?? '–') ?></p>
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"><?= htmlspecialchars($jobLabel) ?></span>
+                                <?php if (!empty($p['is_active'])): ?>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
+                                <?php else: ?>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">Pasif</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if ($canManage): ?>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <button type="button" onclick='openEditPersonnelModal(<?= json_encode(array_merge($p, ['photo_href' => personnelPhotoHref($p) ?? '']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>)' class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600">Düzenle</button>
+                                <form method="post" action="/personel/sil" class="inline">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars($p['id']) ?>">
+                                    <button type="button" onclick="confirmDeletePersonnel(this)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20">Sil</button>
+                                </form>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <!-- Masaüstü: tablo -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>

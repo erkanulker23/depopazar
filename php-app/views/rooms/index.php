@@ -50,14 +50,14 @@ ob_start();
     $filterClearUrl = '/odalar';
     require __DIR__ . '/../partials/page_filter_trigger.php';
     ?>
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="page-toolbar-actions">
         <a href="/odalar/excel-disari-aktar<?= htmlspecialchars($exportQuery) ?>" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <i class="bi bi-file-earmark-excel"></i> Excel Dışa Aktar
         </a>
         <a href="/odalar/excel-ice-aktar" class="btn-touch inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <i class="bi bi-file-earmark-arrow-down"></i> Excel İçe Aktar
         </a>
-        <button type="button" onclick="openModal('addRoomModal')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
+        <button type="button" onclick="openModal('addRoomModal')" class="col-span-2 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
             <i class="bi bi-plus-lg mr-2"></i> Yeni Oda
         </button>
     </div>
@@ -142,7 +142,76 @@ ob_start();
                 <button type="submit" class="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100">Toplu Sil</button>
             </form>
         </div>
-        <div class="overflow-x-auto">
+        <!-- Mobil: kart listesi -->
+        <?php $activeContractCountByRoom = $activeContractCountByRoom ?? []; $duplicateRoomKeys = $duplicateRoomKeys ?? []; ?>
+        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+            <?php foreach ($rooms as $r):
+                $status = $r['status'] ?? 'empty';
+                $roomDupKey = ($r['warehouse_id'] ?? '') . ':' . normalizeRoomNumberKey($r['room_number'] ?? '');
+                $isDuplicateRoom = isset($duplicateRoomKeys[$roomDupKey]);
+                $statusSelectClass = $status === 'empty' ? 'border-green-300 text-green-800 dark:border-green-700 dark:text-green-300' : ($status === 'occupied' ? 'border-red-300 text-red-800 dark:border-red-700 dark:text-red-300' : ($status === 'reserved' ? 'border-yellow-300 text-yellow-800 dark:border-yellow-700 dark:text-yellow-300' : 'border-gray-300 text-gray-800 dark:border-gray-600 dark:text-gray-200'));
+                $activeCount = (int)($activeContractCountByRoom[$r['id']] ?? 0);
+            ?>
+                <div class="mobile-data-card<?= $isDuplicateRoom ? ' bg-amber-50/80 dark:bg-amber-900/10' : '' ?>">
+                    <div class="flex items-start gap-3">
+                        <label class="flex-shrink-0 mt-1 cursor-pointer">
+                            <input type="checkbox" class="room-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($r['id']) ?>">
+                        </label>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="font-semibold text-gray-900 dark:text-white truncate">Oda <?= htmlspecialchars(fmtRoomNumber($r['room_number'] ?? '')) ?></p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5"><?= htmlspecialchars($r['warehouse_name'] ?? '-') ?></p>
+                                </div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0"><?= fmtPrice($r['monthly_price'] ?? 0) ?></p>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"><?= number_format((float)$r['area_m2'], 2, ',', '.') ?> m²</p>
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <select class="room-status-select text-xs font-semibold rounded-full px-2 py-1 border bg-white dark:bg-gray-800 <?= $statusSelectClass ?>"
+                                        data-room-id="<?= htmlspecialchars($r['id']) ?>"
+                                        aria-label="Oda durumu">
+                                    <?php foreach ($statusLabels as $val => $label): ?>
+                                        <option value="<?= htmlspecialchars($val) ?>" <?= $status === $val ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <?php if ($isDuplicateRoom): ?>
+                                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">Çift kayıt</span>
+                                <?php endif; ?>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                                <?php if ($activeCount > 0): ?>
+                                    <a href="/odalar/<?= htmlspecialchars($r['id']) ?>#sözleşmeler" class="text-emerald-600 dark:text-emerald-400 font-medium hover:underline"><?= $activeCount ?> aktif sözleşme</a>
+                                <?php else: ?>
+                                    <span class="text-gray-400 dark:text-gray-500">Aktif sözleşme yok</span>
+                                <?php endif; ?>
+                            </p>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Detay</a>
+                                <button type="button" onclick='openEditRoom(<?= json_encode([
+                                    'id' => $r['id'],
+                                    'room_number' => $r['room_number'],
+                                    'warehouse_id' => $r['warehouse_id'],
+                                    'area_m2' => $r['area_m2'],
+                                    'monthly_price' => $r['monthly_price'],
+                                    'status' => $r['status'] ?? 'empty',
+                                    'floor' => $r['floor'] ?? '',
+                                    'block' => $r['block'] ?? '',
+                                    'corridor' => $r['corridor'] ?? '',
+                                    'description' => $r['description'] ?? '',
+                                    'notes' => $r['notes'] ?? '',
+                                ]) ?>)' class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600">Düzenle</button>
+                                <form method="post" action="/odalar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('oda')) ?>);">
+                                    <input type="hidden" name="ids[]" value="<?= htmlspecialchars($r['id']) ?>">
+                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/25">Sil</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <!-- Masaüstü: tablo -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
