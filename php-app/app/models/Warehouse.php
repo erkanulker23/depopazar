@@ -5,8 +5,8 @@ class Warehouse
     {
         $id = self::uuid();
         $stmt = $pdo->prepare(
-            'INSERT INTO warehouses (id, name, logo_url, company_id, address, city, district, total_floors, description, is_active, monthly_base_fee) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO warehouses (id, name, logo_url, company_id, address, city, district, total_floors, description, phone, whatsapp_number, email, website, is_active, monthly_base_fee) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
@@ -18,6 +18,10 @@ class Warehouse
             $data['district'] ?? null,
             isset($data['total_floors']) ? (int) $data['total_floors'] : null,
             $data['description'] ?? null,
+            $data['phone'] ?? null,
+            $data['whatsapp_number'] ?? null,
+            $data['email'] ?? null,
+            $data['website'] ?? null,
             isset($data['is_active']) ? (int) (bool) $data['is_active'] : 1,
             isset($data['monthly_base_fee']) && $data['monthly_base_fee'] !== '' ? (float) $data['monthly_base_fee'] : null,
         ]);
@@ -53,6 +57,9 @@ class Warehouse
                 'w.district',
                 'w.address',
                 'w.description',
+                'w.phone',
+                'w.email',
+                'w.website',
             ], $search);
         }
         $sql .= ' ORDER BY w.name ';
@@ -77,7 +84,7 @@ class Warehouse
 
     public static function update(PDO $pdo, string $id, array $data): array
     {
-        $allowed = ['name', 'logo_url', 'address', 'city', 'district', 'total_floors', 'description', 'is_active', 'monthly_base_fee'];
+        $allowed = ['name', 'logo_url', 'address', 'city', 'district', 'total_floors', 'description', 'phone', 'whatsapp_number', 'email', 'website', 'is_active', 'monthly_base_fee'];
         $set = [];
         $params = [];
         foreach ($allowed as $k) {

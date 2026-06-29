@@ -25,6 +25,10 @@ $location = trim(implode(' / ', array_filter([
 ], fn($p) => $p !== '')));
 $depotDescription = trim((string) ($warehouse['description'] ?? ''));
 $hasDepot = $depotName !== '' || $warehouse !== null;
+$depotPhone = warehouseContact($warehouse, $company, 'phone');
+$depotWhatsapp = warehouseContact($warehouse, $company, 'whatsapp_number');
+$depotEmail = warehouseContact($warehouse, $company, 'email');
+$depotWebsite = trim((string) ($warehouse['website'] ?? ''));
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -64,8 +68,10 @@ $hasDepot = $depotName !== '' || $warehouse !== null;
                 <p class="box"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
                 <?php if (!empty($company['address'])): ?><p class="muted"><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
             <?php endif; ?>
-            <?php if (!empty($company['phone'])): ?><p class="muted">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
-            <?php if (!empty($company['email'])): ?><p class="muted"><?= htmlspecialchars($company['email']) ?></p><?php endif; ?>
+            <?php if ($depotPhone !== ''): ?><p class="muted">Tel: <?= htmlspecialchars($depotPhone) ?></p><?php endif; ?>
+            <?php if ($depotWhatsapp !== ''): ?><p class="muted">WhatsApp: <?= htmlspecialchars($depotWhatsapp) ?></p><?php endif; ?>
+            <?php if ($depotEmail !== ''): ?><p class="muted"><?= htmlspecialchars($depotEmail) ?></p><?php endif; ?>
+            <?php if ($depotWebsite !== ''): ?><p class="muted"><?= htmlspecialchars(websiteDisplayUrl($depotWebsite)) ?></p><?php endif; ?>
         </td>
         <td>
             <h2>Müşteri</h2>

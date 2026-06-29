@@ -138,6 +138,12 @@ class WarehousesController
             exit;
         }
         $monthlyFee = trim($_POST['monthly_base_fee'] ?? '');
+        $contact = $this->parseWarehouseContactFromPost();
+        if (!empty($contact['error'])) {
+            Auth::setSession('flash_error', $contact['error']);
+            header('Location: /depolar');
+            exit;
+        }
         $data = [
             'name'        => $name,
             'company_id'  => $companyId,
@@ -146,6 +152,10 @@ class WarehousesController
             'district'    => $district ?: null,
             'total_floors'=> isset($_POST['total_floors']) ? (int) $_POST['total_floors'] : null,
             'description'=> trim($_POST['description'] ?? '') ?: null,
+            'phone'       => $contact['phone'],
+            'whatsapp_number' => $contact['whatsapp_number'],
+            'email'       => $contact['email'],
+            'website'     => $contact['website'],
             'is_active'   => 1,
             'monthly_base_fee' => $monthlyFee !== '' ? (float) str_replace(',', '.', $monthlyFee) : null,
         ];
@@ -198,6 +208,12 @@ class WarehousesController
             }
         }
         $monthlyFee = trim($_POST['monthly_base_fee'] ?? '');
+        $contact = $this->parseWarehouseContactFromPost();
+        if (!empty($contact['error'])) {
+            Auth::setSession('flash_error', $contact['error']);
+            header('Location: /depolar');
+            exit;
+        }
         $data = [
             'name'        => trim($_POST['name'] ?? $warehouse['name']),
             'address'     => trim($_POST['address'] ?? '') ?: null,
@@ -205,6 +221,10 @@ class WarehousesController
             'district'    => trim($_POST['district'] ?? '') ?: null,
             'total_floors'=> isset($_POST['total_floors']) && $_POST['total_floors'] !== '' ? (int) $_POST['total_floors'] : null,
             'description' => trim($_POST['description'] ?? '') ?: null,
+            'phone'       => $contact['phone'],
+            'whatsapp_number' => $contact['whatsapp_number'],
+            'email'       => $contact['email'],
+            'website'     => $contact['website'],
             'is_active'   => isset($_POST['is_active']) ? 1 : 0,
             'monthly_base_fee' => $monthlyFee !== '' ? (float) str_replace(',', '.', $monthlyFee) : null,
         ];
@@ -293,7 +313,7 @@ class WarehousesController
         header('Cache-Control: no-cache, no-store, must-revalidate');
         $out = fopen('php://output', 'wb');
         fprintf($out, "\xEF\xBB\xBF");
-        $headers = ['Depo Adı', 'Adres', 'İl', 'İlçe', 'Kat Sayısı', 'Açıklama', 'Aktif', 'Aylık Baz Ücret'];
+        $headers = ['Depo Adı', 'Adres', 'İl', 'İlçe', 'Kat Sayısı', 'Açıklama', 'Telefon', 'WhatsApp', 'E-posta', 'Web Sitesi', 'Aktif', 'Aylık Baz Ücret'];
         fputcsv($out, $headers, ';');
         foreach ($warehouses as $w) {
             fputcsv($out, [
@@ -303,6 +323,10 @@ class WarehousesController
                 $w['district'] ?? '',
                 $w['total_floors'] ?? '',
                 $w['description'] ?? '',
+                $w['phone'] ?? '',
+                $w['whatsapp_number'] ?? '',
+                $w['email'] ?? '',
+                $w['website'] ?? '',
                 !empty($w['is_active']) ? 'Evet' : 'Hayır',
                 $w['monthly_base_fee'] !== null && $w['monthly_base_fee'] !== '' ? str_replace('.', ',', (string)$w['monthly_base_fee']) : '',
             ], ';');
@@ -319,8 +343,8 @@ class WarehousesController
         header('Content-Disposition: attachment; filename="depo_sablonu.csv"');
         $out = fopen('php://output', 'wb');
         fprintf($out, "\xEF\xBB\xBF");
-        fputcsv($out, ['Depo Adı', 'Adres', 'İl', 'İlçe', 'Kat Sayısı', 'Açıklama', 'Aktif', 'Aylık Baz Ücret'], ';');
-        fputcsv($out, ['KARTAL DEPO', 'Örnek Mah. Depo Sok. 1', 'İstanbul', 'Kartal', '2', '', 'Evet', '5000'], ';');
+        fputcsv($out, ['Depo Adı', 'Adres', 'İl', 'İlçe', 'Kat Sayısı', 'Açıklama', 'Telefon', 'WhatsApp', 'E-posta', 'Web Sitesi', 'Aktif', 'Aylık Baz Ücret'], ';');
+        fputcsv($out, ['KARTAL DEPO', 'Örnek Mah. Depo Sok. 1', 'İstanbul', 'Kartal', '2', '', '02161234567', '905551234567', 'kartal@ornek.com', 'www.ornek.com', 'Evet', '5000'], ';');
         fclose($out);
         exit;
     }
@@ -369,8 +393,10 @@ class WarehousesController
         if ($delimiter === ',') {
             rewind($handle);
             if ($bom !== "\xEF\xBB\xBF") rewind($handle);
-            fgetcsv($handle, 0, ',');
+            $first = fgetcsv($handle, 0, ',');
         }
+        $headerLine = implode(' ', array_map('mb_strtolower', $first ?? []));
+        $importHasContact = strpos($headerLine, 'telefon') !== false || strpos($headerLine, 'e-posta') !== false;
         $added = 0;
         $errors = [];
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
@@ -384,12 +410,33 @@ class WarehousesController
             $district = $row[3] ?? null;
             $totalFloors = isset($row[4]) && $row[4] !== '' ? (int)$row[4] : null;
             $description = $row[5] ?? null;
+            $phone = null;
+            $whatsapp = null;
+            $email = null;
+            $website = null;
             $isActive = 1;
-            if (isset($row[6]) && $row[6] !== '') {
-                $v = mb_strtolower($row[6]);
-                if (strpos($v, 'hayır') !== false || $v === '0' || $v === 'pasif') $isActive = 0;
+            $monthlyBaseFee = null;
+            if ($importHasContact) {
+                $phone = isset($row[6]) && $row[6] !== '' ? $row[6] : null;
+                $whatsapp = isset($row[7]) && $row[7] !== '' ? $row[7] : null;
+                $email = isset($row[8]) && $row[8] !== '' ? $row[8] : null;
+                $website = isset($row[9]) && $row[9] !== '' ? normalizeWebsiteUrl($row[9]) : null;
+                if (isset($row[10]) && $row[10] !== '') {
+                    $v = mb_strtolower($row[10]);
+                    if (strpos($v, 'hayır') !== false || $v === '0' || $v === 'pasif') $isActive = 0;
+                }
+                $monthlyBaseFee = isset($row[11]) && $row[11] !== '' ? (float) str_replace(',', '.', $row[11]) : null;
+            } else {
+                if (isset($row[6]) && $row[6] !== '') {
+                    $v = mb_strtolower($row[6]);
+                    if (strpos($v, 'hayır') !== false || $v === '0' || $v === 'pasif') $isActive = 0;
+                }
+                $monthlyBaseFee = isset($row[7]) && $row[7] !== '' ? (float) str_replace(',', '.', $row[7]) : null;
             }
-            $monthlyBaseFee = isset($row[7]) && $row[7] !== '' ? (float) str_replace(',', '.', $row[7]) : null;
+            if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = $name . ': geçersiz e-posta';
+                continue;
+            }
             try {
                 Warehouse::create($this->pdo, [
                     'name' => $name,
@@ -399,6 +446,10 @@ class WarehousesController
                     'district' => $district,
                     'total_floors' => $totalFloors,
                     'description' => $description,
+                    'phone' => $phone,
+                    'whatsapp_number' => $whatsapp,
+                    'email' => $email,
+                    'website' => $website,
                     'is_active' => $isActive,
                     'monthly_base_fee' => $monthlyBaseFee,
                 ]);
@@ -412,5 +463,22 @@ class WarehousesController
         if (!empty($errors)) Auth::setSession('flash_error', implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? ' …' : ''));
         header('Location: /depolar/excel-ice-aktar');
         exit;
+    }
+
+    /** @return array{phone: ?string, whatsapp_number: ?string, email: ?string, website: ?string, error?: string} */
+    private function parseWarehouseContactFromPost(): array
+    {
+        $phone = trim($_POST['phone'] ?? '') ?: null;
+        $whatsapp = trim($_POST['whatsapp_number'] ?? '') ?: null;
+        $email = trim($_POST['email'] ?? '') ?: null;
+        if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['phone' => null, 'whatsapp_number' => null, 'email' => null, 'website' => null, 'error' => 'Geçerli bir e-posta adresi girin.'];
+        }
+        return [
+            'phone' => $phone,
+            'whatsapp_number' => $whatsapp,
+            'email' => $email,
+            'website' => normalizeWebsiteUrl($_POST['website'] ?? null),
+        ];
     }
 }

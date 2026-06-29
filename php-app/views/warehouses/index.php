@@ -61,6 +61,7 @@ ob_start();
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-14">Logo</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Depo Adı</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Adres / Şehir</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İletişim</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Oda Sayısı</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
@@ -78,6 +79,21 @@ ob_start();
                                 <?= htmlspecialchars(trim($w['address'] ?? '') ?: '-') ?>
                                 <?php if (!empty($w['city'])): ?>
                                     <span class="text-gray-400 dark:text-gray-500"> / <?= htmlspecialchars($w['city']) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 max-w-[200px]">
+                                <?php
+                                $hasWhContact = trim((string) ($w['phone'] ?? '')) !== ''
+                                    || trim((string) ($w['whatsapp_number'] ?? '')) !== ''
+                                    || trim((string) ($w['email'] ?? '')) !== ''
+                                    || trim((string) ($w['website'] ?? '')) !== '';
+                                if ($hasWhContact):
+                                    $warehouse = $w;
+                                    $compact = true;
+                                    require __DIR__ . '/../partials/warehouse_contact_display.php';
+                                else:
+                                ?>
+                                    <span class="text-gray-400 dark:text-gray-500">—</span>
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= (int) ($w['room_count'] ?? 0) ?></td>
@@ -101,6 +117,10 @@ ob_start();
                                     'description' => $w['description'] ?? '',
                                     'is_active' => !empty($w['is_active']),
                                     'monthly_base_fee' => $w['monthly_base_fee'] ?? null,
+                                    'phone' => $w['phone'] ?? '',
+                                    'whatsapp_number' => $w['whatsapp_number'] ?? '',
+                                    'email' => $w['email'] ?? '',
+                                    'website' => $w['website'] ?? '',
                                     'logo_url' => warehouseLogoHref($w) ?: '',
                                 ]) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
                                 <form method="post" action="/depolar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('depo')) ?>);">
@@ -178,6 +198,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama</label>
                         <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
+                    <?php $prefix = ''; require __DIR__ . '/../partials/warehouse_contact_form_fields.php'; ?>
                 </div>
                 <div class="form-submit-bar mt-6 flex justify-end gap-2">
                     <button type="button" onclick="closeModal('addWarehouseModal')" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50">İptal</button>
@@ -239,6 +260,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama</label>
                         <textarea name="description" id="edit_desc" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
+                    <?php $prefix = 'edit_'; require __DIR__ . '/../partials/warehouse_contact_form_fields.php'; ?>
                     <div class="flex items-center">
                         <input type="checkbox" name="is_active" value="1" id="edit_active" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                         <label for="edit_active" class="ml-2 text-sm text-gray-700 dark:text-gray-300">Aktif</label>
@@ -265,6 +287,10 @@ function openEditWarehouse(d) {
     document.getElementById('edit_floors').value = d.total_floors || '';
     document.getElementById('edit_monthly_base_fee').value = d.monthly_base_fee != null && d.monthly_base_fee !== '' ? d.monthly_base_fee : '';
     document.getElementById('edit_desc').value = d.description || '';
+    document.getElementById('edit_phone').value = d.phone || '';
+    document.getElementById('edit_whatsapp_number').value = d.whatsapp_number || '';
+    document.getElementById('edit_email').value = d.email || '';
+    document.getElementById('edit_website').value = d.website ? String(d.website).replace(/^https?:\/\//i, '') : '';
     document.getElementById('edit_active').checked = !!d.is_active;
     var preview = document.getElementById('edit_logo_preview');
     var previewWrap = document.getElementById('edit_logo_preview_wrap');

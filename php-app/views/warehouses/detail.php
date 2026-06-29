@@ -43,6 +43,22 @@ ob_start();
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Depo Adı</dt><dd class="mt-1 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($warehouse['name'] ?? '-') ?></dd></div>
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Adres</dt><dd class="mt-1 text-gray-600 dark:text-gray-400"><?= nl2br(htmlspecialchars($warehouse['address'] ?? '-')) ?></dd></div>
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İl / İlçe</dt><dd class="mt-1 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(trim(($warehouse['city'] ?? '') . ' / ' . ($warehouse['district'] ?? '')) ?: '-') ?></dd></div>
+                <div class="sm:col-span-2">
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İletişim</dt>
+                    <dd class="mt-1">
+                        <?php
+                        $hasWhContact = trim((string) ($warehouse['phone'] ?? '')) !== ''
+                            || trim((string) ($warehouse['whatsapp_number'] ?? '')) !== ''
+                            || trim((string) ($warehouse['email'] ?? '')) !== ''
+                            || trim((string) ($warehouse['website'] ?? '')) !== '';
+                        if ($hasWhContact):
+                            require __DIR__ . '/../partials/warehouse_contact_display.php';
+                        else:
+                        ?>
+                            <span class="text-gray-500 dark:text-gray-400">—</span>
+                        <?php endif; ?>
+                    </dd>
+                </div>
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Oda Sayısı</dt><dd class="mt-1 text-gray-900 dark:text-white"><?= count($rooms) ?></dd></div>
                 <div><dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Müşteri Sayısı</dt><dd class="mt-1 text-gray-900 dark:text-white"><?= count($warehouseCustomers) ?></dd></div>
             </dl>

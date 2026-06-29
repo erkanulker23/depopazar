@@ -2261,6 +2261,45 @@ if (!function_exists('formatWarehouseAddress')) {
     }
 }
 
+/** Web sitesi URL’sini https ile normalize et */
+if (!function_exists('normalizeWebsiteUrl')) {
+    function normalizeWebsiteUrl(?string $url): ?string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return null;
+        }
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . $url;
+        }
+        return $url;
+    }
+}
+
+/** Depo iletişim alanı; boşsa firma kaydından yedek */
+if (!function_exists('warehouseContact')) {
+    function warehouseContact(?array $warehouse, ?array $company, string $field): string
+    {
+        $val = trim((string) ($warehouse[$field] ?? ''));
+        if ($val !== '') {
+            return $val;
+        }
+        return trim((string) ($company[$field] ?? ''));
+    }
+}
+
+/** Gösterim için web sitesi bağlantısı */
+if (!function_exists('websiteDisplayUrl')) {
+    function websiteDisplayUrl(?string $url): string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+        return (string) preg_replace('#^https?://#i', '', $url);
+    }
+}
+
 /**
  * Müşteri etiketi için depo bilgileri (sözleşmelerden; depo bazında oda numaraları).
  *
