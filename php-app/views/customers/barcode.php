@@ -1,7 +1,7 @@
 <?php
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
 $company = $company ?? null;
-$qrDetailUrl = $qrDetailUrl ?? '';
+$depots = $depots ?? [];
 $qrCodeDataUri = $qrCodeDataUri ?? null;
 ?>
 <!DOCTYPE html>
@@ -49,13 +49,15 @@ $qrCodeDataUri = $qrCodeDataUri ?? null;
         <p class="text-center text-[10px] text-gray-400 mb-5 no-print">QR kodu okutunca eşya ve oda detayları açılır</p>
 
         <div class="space-y-4 text-sm border-t border-gray-200 pt-4">
-            <?php if ($company): ?>
-            <div>
-                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Firma</h2>
-                <p class="font-semibold text-gray-900"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
-                <?php if (!empty($company['phone'])): ?><p class="text-gray-600 text-xs mt-0.5">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
-                <?php if (!empty($company['address'])): ?><p class="text-gray-600 text-xs mt-0.5 line-clamp-3"><?= htmlspecialchars($company['address']) ?></p><?php endif; ?>
-            </div>
+            <?php if ($depots !== []): ?>
+                <?php foreach ($depots as $depot): ?>
+                    <?php $compact = true; require __DIR__ . '/../partials/customer_label_depot_block.php'; ?>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div>
+                    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Depo</h2>
+                    <p class="text-gray-500 text-xs">Bu müşteriye bağlı depo / oda kaydı yok.</p>
+                </div>
             <?php endif; ?>
             <div>
                 <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Müşteri</h2>

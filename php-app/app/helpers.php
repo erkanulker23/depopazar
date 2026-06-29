@@ -2129,6 +2129,59 @@ if (!function_exists('formatWarehouseAddress')) {
 }
 
 /**
+ * Müşteri etiketi için depo bilgileri (sözleşmelerden; depo bazında oda numaraları).
+ *
+ * @return list<array{warehouse_id: string, name: string, address: string, city: string, district: string, description: string, room_numbers: list<string>, has_active: bool}>
+ */
+if (!function_exists('customerLabelDepots')) {
+    function customerLabelDepots(PDO $pdo, string $customerId, ?string $companyId = null): array
+    {
+        $sql = 'SELECT w.id AS warehouse_id, w.name, w.address, w.city, w.district, w.description,
+                       r.room_number, c.is_active, c.terminated_at, c.start_date
+                FROM contracts c
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE c.customer_id = ? AND c.deleted_at IS NULL ';
+        $params = [$customerId];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY (CASE WHEN c.is_active = 1 AND c.terminated_at IS NULL THEN 0 ELSE 1 END), c.start_date DESC ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $byId = [];
+        foreach ($rows as $row) {
+            $wid = (string) ($row['warehouse_id'] ?? '');
+            if ($wid === '') {
+                continue;
+            }
+            if (!isset($byId[$wid])) {
+                $byId[$wid] = [
+                    'warehouse_id' => $wid,
+                    'name' => (string) ($row['name'] ?? ''),
+                    'address' => (string) ($row['address'] ?? ''),
+                    'city' => (string) ($row['city'] ?? ''),
+                    'district' => (string) ($row['district'] ?? ''),
+                    'description' => (string) ($row['description'] ?? ''),
+                    'room_numbers' => [],
+                    'has_active' => false,
+                ];
+            }
+            $roomNumber = trim((string) ($row['room_number'] ?? ''));
+            if ($roomNumber !== '' && !in_array($roomNumber, $byId[$wid]['room_numbers'], true)) {
+                $byId[$wid]['room_numbers'][] = $roomNumber;
+            }
+            if (!empty($row['is_active']) && empty($row['terminated_at'])) {
+                $byId[$wid]['has_active'] = true;
+            }
+        }
+        return array_values($byId);
+    }
+}
+
+/**
  * Kayıtlı nakliye adresinden form alanlarını çıkarır.
  *
  * @param list<array<string, mixed>> $warehouses

@@ -876,7 +876,7 @@ class CustomersController
         require __DIR__ . '/../../views/customers/_row_fragment.php';
     }
 
-    /** Müşteri depo QR etiketi – yazdırılabilir (yalnızca firma + müşteri + QR) */
+    /** Müşteri depo QR etiketi – yazdırılabilir (depo + müşteri + QR) */
     public function barcode(array $params): void
     {
         Auth::requireStaff();
@@ -898,6 +898,7 @@ class CustomersController
             header('Location: /musteriler');
             exit;
         }
+        $depots = customerLabelDepots($this->pdo, $id, $companyId);
         $company = !empty($customer['company_id']) ? Company::findOne($this->pdo, $customer['company_id']) : null;
         if ($company && !empty($company['logo_url'])) {
             $company['logo_url'] = publicUploadHref($company['logo_url']);
@@ -929,6 +930,7 @@ class CustomersController
         }
         $items = Item::findByCustomerId($this->pdo, $id);
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
+        $depots = customerLabelDepots($this->pdo, $id, $companyId);
         $isStaff = Auth::isAuthenticated() && !Auth::isCustomer();
         require __DIR__ . '/../../views/customers/label_detail.php';
     }

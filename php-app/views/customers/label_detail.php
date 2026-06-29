@@ -1,6 +1,7 @@
 <?php
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
 $company = $company ?? null;
+$depots = $depots ?? [];
 $items = $items ?? [];
 $contracts = $contracts ?? [];
 $isStaff = !empty($isStaff);
@@ -38,25 +39,17 @@ $isStaff = !empty($isStaff);
             <p class="text-sm text-gray-500 mb-6">Müşteri depo kaydı</p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                <?php if ($company): ?>
-                <div class="rounded-xl bg-gray-50 border border-gray-100 p-4">
-                    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Firma</h2>
-                    <p class="font-semibold text-gray-900"><?= htmlspecialchars($company['name'] ?? 'Firma Adı') ?></p>
-                    <?php if (!empty($company['project_name']) && ($company['project_name'] ?? '') !== ($company['name'] ?? '')): ?>
-                        <p class="text-sm text-gray-600"><?= htmlspecialchars($company['project_name']) ?></p>
-                    <?php endif; ?>
-                    <?php if (!empty($company['address'])): ?><p class="text-sm text-gray-600 mt-1"><?= nl2br(htmlspecialchars($company['address'])) ?></p><?php endif; ?>
-                    <?php if (!empty($company['phone'])): ?><p class="text-sm text-gray-600">Tel: <?= htmlspecialchars($company['phone']) ?></p><?php endif; ?>
-                    <?php if (!empty($company['whatsapp_number'])): ?><p class="text-sm text-gray-600">WhatsApp: <?= htmlspecialchars($company['whatsapp_number']) ?></p><?php endif; ?>
-                    <?php if (!empty($company['email'])): ?><p class="text-sm text-gray-600"><?= htmlspecialchars($company['email']) ?></p><?php endif; ?>
-                    <?php if (!empty($company['tax_office']) || !empty($company['mersis_number'])): ?>
-                        <p class="text-sm text-gray-600 mt-1">
-                            <?php if (!empty($company['tax_office'])): ?>V.D.: <?= htmlspecialchars($company['tax_office']) ?><?php endif; ?>
-                            <?php if (!empty($company['tax_office']) && !empty($company['mersis_number'])): ?> · <?php endif; ?>
-                            <?php if (!empty($company['mersis_number'])): ?>MERSİS: <?= htmlspecialchars($company['mersis_number']) ?><?php endif; ?>
-                        </p>
-                    <?php endif; ?>
-                </div>
+                <?php if ($depots !== []): ?>
+                    <?php foreach ($depots as $depot): ?>
+                        <div class="rounded-xl bg-gray-50 border border-gray-100 p-4 sm:col-span-1">
+                            <?php $compact = false; require __DIR__ . '/../partials/customer_label_depot_block.php'; ?>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Depo</h2>
+                        <p class="text-sm text-gray-500">Kayıtlı depo / oda bulunamadı.</p>
+                    </div>
                 <?php endif; ?>
                 <div class="rounded-xl bg-emerald-50/50 border border-emerald-100 p-4">
                     <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Müşteri</h2>
