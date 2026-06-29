@@ -873,6 +873,47 @@ class ContractsController
         ]);
     }
 
+    /** Kayıtlı e-imzaları temizle (yeniden imzalama için) */
+    public function clearSignatures(): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /girisler');
+            exit;
+        }
+        $id = trim($_POST['contract_id'] ?? '');
+        if ($id === '') {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Sözleşme belirtilmedi.'], 400);
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Sözleşme bulunamadı.'], 404);
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Yetkisiz.'], 403);
+        }
+        $role = trim($_POST['role'] ?? 'both');
+        if (!in_array($role, ['customer', 'company', 'both'], true)) {
+            $role = 'both';
+        }
+        if ($role === 'customer' || $role === 'both') {
+            Contract::setCustomerSignature($this->pdo, $id, null);
+        }
+        if ($role === 'company' || $role === 'both') {
+            Contract::setCompanySignature($this->pdo, $id, null);
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        $this->jsonSignatureResponse([
+            'ok' => true,
+            'customer_signature_url' => publicUploadHref($contract['customer_signature_url'] ?? null),
+            'company_signature_url' => publicUploadHref($contract['company_signature_url'] ?? null),
+            'customer_signed_at' => $contract['customer_signed_at'] ?? null,
+            'company_signed_at' => $contract['company_signed_at'] ?? null,
+        ]);
+    }
+
     /** @param array<string, mixed> $payload */
     private function jsonSignatureResponse(array $payload, int $status = 200): void
     {

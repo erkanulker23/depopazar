@@ -34,6 +34,9 @@ if (!function_exists('fmtPrice')) {
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>" class="text-emerald-600 hover:underline">&larr; Sözleşmeye dön</a>
         <div class="flex flex-wrap items-center gap-2">
             <?php if ($signMode): ?>
+                <a href="#contractTerms" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50">
+                    <i class="bi bi-list-check inline-block mr-2"></i>Şartlara git
+                </a>
                 <a href="#contractSignatures" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
                     <i class="bi bi-pen inline-block mr-2"></i>İmzalara git
                 </a>
@@ -116,14 +119,17 @@ if (!function_exists('fmtPrice')) {
         </table>
         <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= fmtDateTime($contract['created_at'] ?? null) ?></p>
 
+        <?php require __DIR__ . '/../partials/contract_terms_block.php'; ?>
+
         <div id="contractSignatures" class="mt-8 pt-6 border-t-2 border-gray-300 print:border-gray-500<?= $signMode ? ' scroll-mt-4' : '' ?>">
             <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-4">İmzalar</h2>
             <?php if ($signMode): ?>
-                <p class="no-print text-sm text-gray-600 mb-4">Aşağıdaki sözleşme belgesini okuduktan sonra müşteri ve firma yetkilisi imza atmalıdır.</p>
+                <p class="no-print text-sm text-gray-600 mb-4">Özel şartları okuduktan sonra müşteri ve firma yetkilisi imza atmalıdır.</p>
             <?php endif; ?>
             <?php
             $signaturePadHeight = 'h-28';
             $signatureBeforePrint = true;
+            $enableSignatureReset = $signMode;
             require __DIR__ . '/../partials/contract_signatures_block.php';
             ?>
         </div>

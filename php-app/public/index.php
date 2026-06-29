@@ -85,6 +85,7 @@ $router->post('/girisler/guncelle', fn() => (new ContractsController($pdo))->upd
 $router->post('/girisler/sozlesme-pdf-yukle', fn() => (new ContractsController($pdo))->uploadContractPdf());
 $router->post('/girisler/sozlesme-pdf-sil', fn() => (new ContractsController($pdo))->deleteContractPdf());
 $router->post('/girisler/imza-kaydet', fn() => (new ContractsController($pdo))->saveSignatures());
+$router->post('/girisler/imza-temizle', fn() => (new ContractsController($pdo))->clearSignatures());
 $router->post('/girisler/esya-listesi-guncelle', fn() => (new ContractsController($pdo))->updateItems());
 $router->post('/girisler/odeme-tutar-guncelle', fn() => (new ContractsController($pdo))->updatePaymentAmount());
 $router->post('/girisler/fiyatlari-toplu-guncelle', fn() => (new ContractsController($pdo))->bulkUpdatePaymentAmounts());

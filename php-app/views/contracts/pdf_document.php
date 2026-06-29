@@ -103,9 +103,22 @@ if ($company && !empty($company['logo_url'])) {
         </tbody>
     </table>
     <?php
+    $terms = contractStorageTerms($contract, $company, $customerName);
+    $customNotes = trim((string) ($contract['notes'] ?? ''));
+    ?>
+    <h2 style="margin-top: 18px;">Özel Şartlar</h2>
+    <ol style="margin: 8px 0 14px 18px; padding: 0; font-size: 10px; line-height: 1.45;">
+        <?php foreach ($terms as $term): ?>
+            <li style="margin-bottom: 4px;"><?= htmlspecialchars($term) ?></li>
+        <?php endforeach; ?>
+    </ol>
+    <?php if ($customNotes !== ''): ?>
+        <h2>Özel İstek ve Şartlar</h2>
+        <p class="muted" style="white-space: pre-wrap; border: 1px solid #ddd; padding: 8px;"><?= htmlspecialchars($customNotes) ?></p>
+    <?php endif; ?>
+    <?php
     $customerSigSrc = publicFileDataUri($contract['customer_signature_url'] ?? null);
     $companySigSrc = publicFileDataUri($contract['company_signature_url'] ?? null);
-    if ($customerSigSrc || $companySigSrc):
     ?>
     <h2 style="margin-top: 18px;">İmzalar</h2>
     <table class="grid" style="margin-top: 8px;">
@@ -136,7 +149,6 @@ if ($company && !empty($company['logo_url'])) {
             </td>
         </tr>
     </table>
-    <?php endif; ?>
     <p class="footer">Oluşturulma: <?= fmtDateTime($contract['created_at'] ?? null) ?></p>
 </body>
 </html>

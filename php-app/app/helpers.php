@@ -1423,6 +1423,41 @@ if (!function_exists('publicFileDataUri')) {
     }
 }
 
+/** Depolama sözleşmesi özel şartları (madde listesi) */
+if (!function_exists('contractStorageTerms')) {
+    function contractStorageTerms(array $contract, ?array $company, string $customerName): array
+    {
+        $custom = trim((string) ($contract['terms'] ?? ''));
+        if ($custom !== '') {
+            $lines = preg_split('/\r\n|\r|\n/', $custom) ?: [];
+            $out = [];
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if ($line !== '') {
+                    $out[] = $line;
+                }
+            }
+            if ($out !== []) {
+                return $out;
+            }
+        }
+        $companyName = trim((string) ($company['name'] ?? 'Firma'));
+        $customerDisplay = trim($customerName) !== '' ? trim($customerName) : 'Müşteri';
+        return [
+            'Fiyatlarımıza K.D.V. dahil değildir.',
+            'Sözleşme yapıldıktan sonra iptal edilemez. Ertelenebilmesi için 24 saat önceden bilgi verilmeli.',
+            'Firmamızdan kaynaklanmayan iş gecikmelerinden iş veren herhangi bir hak iddia edemez.',
+            'Depolama esnasında para, ziynet v.s. sorumluluklardan firma sorumlu değildir.',
+            'Depolamada maddi değeri yüksek olan (tablo, biblo) v.s. eşyalar firmamıza bildirilmelidir.',
+            'Tüm depolama giriş ve çıkış nakliyesi firmamızca yapılması zorunludur. (Kabuldür.)',
+            'Aylık ödemesi yapılmadan depo ücretleri 2 ay geçtiği taktirde firmamızca hukuki işlem başlatılacaktır.',
+            '3 ay (90 gün) kira ödenmeyen eşyalardan müşteri hiçbir hak talep edemez; eşyalar kira borcu karşılığında satışı yapılacaktır.',
+            'Sayın ' . $customerDisplay . ' ile ' . $companyName . ' arasında yukarıdaki şartlar okunup anlaşılarak imza altına alınmıştır.',
+            'Taşıma günü iptali istenen rezervasyon için anlaşılan fiyatın firmamıza ödenmesi mecburidir. (Kabuldür.)',
+        ];
+    }
+}
+
 /** Parçalı yükleme — nginx client_max_body_size sınırını aşmamak için (512 KB parça) */
 if (!function_exists('uploadChunkByteSize')) {
     function uploadChunkByteSize(): int
