@@ -131,17 +131,16 @@ ob_start();
         </div>
         <?php endif; ?>
         <?php if (!empty($personnel)): ?>
-        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-people"></i> Saha Personeli</h4>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Hizmet veren saha personelini seçin (çoklu seçim).</p>
-            <div class="flex flex-wrap gap-2">
-                <?php foreach ($personnel as $s):
-                    $person = $s;
-                    $checked = in_array($s['id'] ?? '', $contractPersonnelIds, true);
-                    $style = 'pill';
-                    require __DIR__ . '/../partials/personnel_checkbox_row.php';
-                endforeach; ?>
-            </div>
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
+            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                <i class="bi bi-people-fill text-emerald-600"></i> Saha Personeli
+            </h4>
+            <?php
+            $personnelList = $personnel;
+            $selectedPersonnelIds = $contractPersonnelIds ?? [];
+            $pickerId = 'edit_contract_personnel_picker';
+            require __DIR__ . '/../partials/personnel_grouped_picker.php';
+            ?>
         </div>
         <?php endif; ?>
         <div>

@@ -178,7 +178,7 @@ if ($bulkPaidExtraCount > 0):
                 <i class="bi bi-currency-dollar"></i> Ödeme Gir
             </button>
             <a href="/girisler?newSale=1&newCustomerId=<?= htmlspecialchars($customer['id']) ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors">
-                <i class="bi bi-bag-plus"></i> Depo Girişi Ekle
+                <i class="bi bi-bag-plus"></i> Yeni Depo Sözleşmesi Ekle
             </a>
             <button type="button" onclick="openEditCustomerModal('contract')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-cyan-600 text-white hover:bg-cyan-700 transition-colors">
                 <i class="bi bi-file-earmark-plus"></i> Sözleşme Ekle

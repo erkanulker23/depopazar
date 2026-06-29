@@ -628,8 +628,9 @@ class Payment
     /** Bu haftanın Pazartesi–Pazar aralığı (Y-m-d) ve etiket */
     public static function currentWeekRange(): array
     {
-        $monday = new DateTime('monday this week');
-        $sunday = new DateTime('sunday this week');
+        $tz = new DateTimeZone(date_default_timezone_get() ?: 'Europe/Istanbul');
+        $monday = new DateTime('monday this week', $tz);
+        $sunday = new DateTime('sunday this week', $tz);
         $months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
         $m1 = $months[(int) $monday->format('n') - 1];
         $m2 = $months[(int) $sunday->format('n') - 1];
@@ -641,7 +642,15 @@ class Payment
         ];
     }
 
-    /** Tahsil edilmiş ödemeler toplamı (paid_at tarihi aralığı, dahil). */
+    /**
+     * Kasaya giriş tarihi: paid_at gelecekteyse (vade tarihi yazılmış olabilir) kayıt güncellenme gününü kullan.
+     */
+    private static function sqlCollectedOnDateExpr(string $alias = 'p'): string
+    {
+        return "DATE(IF(DATE({$alias}.paid_at) > CURDATE(), {$alias}.updated_at, {$alias}.paid_at))";
+    }
+
+    /** Tahsil edilmiş ödemeler toplamı (kasaya giriş tarihi aralığı, dahil). */
     public static function sumPaidByPaidAtDateRange(PDO $pdo, ?string $companyId, string $startDate, string $endDate): float
     {
         $start = substr(trim($startDate), 0, 10);
@@ -649,12 +658,13 @@ class Payment
         if ($start === '' || $end === '') {
             return 0.0;
         }
-        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+        $collectedOn = self::sqlCollectedOnDateExpr('p');
+        $sql = "SELECT COALESCE(SUM(p.amount), 0) FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
-                WHERE p.deleted_at IS NULL AND p.status = \'paid\' AND p.paid_at IS NOT NULL
-                AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
+                WHERE p.deleted_at IS NULL AND p.status = 'paid' AND p.paid_at IS NOT NULL
+                AND {$collectedOn} >= ? AND {$collectedOn} <= ? ";
         $params = [$start, $end];
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
@@ -675,6 +685,17 @@ class Payment
     {
         $week = self::currentWeekRange();
         return self::sumPaidByPaidAtDateRange($pdo, $companyId, $week['start'], $week['end']);
+    }
+
+    /** Tahsilat kaydı: kasaya giriş bugün veya geçmişte olmalı (erken ödemede vade tarihi yazılmasın). */
+    private static function normalizeCollectedPaidAt(?string $paidAt): string
+    {
+        $value = normalizePaidAt($paidAt);
+        $today = date('Y-m-d');
+        if (substr($value, 0, 10) > $today) {
+            return date('Y-m-d H:i:s');
+        }
+        return $value;
     }
 
     /** Vadesi geçmiş ödemeler (liste) */
@@ -1170,7 +1191,7 @@ class Payment
 
     public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null, ?string $paidByUserId = null): void
     {
-        $paidAtValue = normalizePaidAt($paidAt);
+        $paidAtValue = self::normalizeCollectedPaidAt($paidAt);
         $stmt = $pdo->prepare(
             'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
         );
@@ -1188,7 +1209,7 @@ class Payment
     public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null, ?string $paidByUserId = null): void
     {
         $method = $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti';
-        $paidAtValue = normalizePaidAt($paidAt);
+        $paidAtValue = self::normalizeCollectedPaidAt($paidAt);
         $placeholders = implode(',', array_fill(0, count($paymentIds), '?'));
         $params = array_merge([$paidAtValue, $method, $transactionId, $notes, $bankAccountId, $paidByUserId], $paymentIds);
         $stmt = $pdo->prepare(

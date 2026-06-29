@@ -34,6 +34,8 @@ $options = [
 
 try {
     $pdo = new PDO($dsn, $dbConfig['username'], $dbConfig['password'], $options);
+    // PHP (Europe/Istanbul) ile MySQL tarih fonksiyonlarını hizala
+    $pdo->exec("SET time_zone = '+03:00'");
 } catch (PDOException $e) {
     if (php_sapi_name() === 'cli') {
         fwrite(STDERR, 'Veritabanı bağlantı hatası: ' . $e->getMessage() . "\n");

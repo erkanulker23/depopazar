@@ -45,8 +45,8 @@ class DashboardController
             $customersCount = Customer::count($this->pdo, $companyId);
             $activeContracts = Contract::countActiveByCompany($this->pdo, $companyId);
             $monthlyRevenue = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
-            $paidTodaySum = Payment::sumPaidToday($this->pdo, $companyId);
-            $paidThisWeekSum = Payment::sumPaidThisWeek($this->pdo, $companyId);
+            $paidTodaySum = Payment::sumPaidToday($this->pdo, $companyId) + CustomerCharge::sumPaidToday($this->pdo, $companyId);
+            $paidThisWeekSum = Payment::sumPaidThisWeek($this->pdo, $companyId) + CustomerCharge::sumPaidThisWeek($this->pdo, $companyId);
             $pendingPayments = Payment::countByStatus($this->pdo, $companyId, 'pending');
             $overduePayments = Payment::countOverdueByDueDate($this->pdo, $companyId);
             $companyDebtSummary = computeCompanyDebtSummary($this->pdo, $companyId);
@@ -64,8 +64,8 @@ class DashboardController
             $customersCount = Customer::count($this->pdo, null);
             $activeContracts = Contract::countActiveGlobal($this->pdo);
             $monthlyRevenue = Payment::sumPaidThisMonthGlobal($this->pdo);
-            $paidTodaySum = Payment::sumPaidToday($this->pdo, null);
-            $paidThisWeekSum = Payment::sumPaidThisWeek($this->pdo, null);
+            $paidTodaySum = Payment::sumPaidToday($this->pdo, null) + CustomerCharge::sumPaidToday($this->pdo, null);
+            $paidThisWeekSum = Payment::sumPaidThisWeek($this->pdo, null) + CustomerCharge::sumPaidThisWeek($this->pdo, null);
             $pendingPayments = Payment::countByStatusGlobal($this->pdo, 'pending');
             $overduePayments = Payment::countOverdueByDueDateGlobal($this->pdo);
             $companyDebtSummary = computeCompanyDebtSummary($this->pdo, null);

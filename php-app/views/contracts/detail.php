@@ -264,7 +264,20 @@ if ($hasContractOverdue) {
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Depo / Oda</dt>
-                    <dd class="mt-1 text-gray-900 dark:text-white"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></dd>
+                    <dd class="mt-1 text-gray-900 dark:text-white">
+                        <?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?>
+                        <?php if (!empty($linkedContractRooms)): ?>
+                            <span class="block mt-1 text-sm text-gray-600 dark:text-gray-300">
+                                Bağlı odalar:
+                                <?php foreach ($linkedContractRooms as $i => $lr): ?>
+                                    <?= $i > 0 ? ', ' : '' ?><?= htmlspecialchars(trim(($lr['warehouse_name'] ?? '') . ' / ' . ($lr['room_number'] ?? ''))) ?>
+                                    <?php if (!empty($lr['monthly_price'])): ?>
+                                        <span class="text-gray-500 dark:text-gray-400">(<?= fmtPrice($lr['monthly_price']) ?>)</span>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </span>
+                        <?php endif; ?>
+                    </dd>
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kayıt Tarihi</dt>

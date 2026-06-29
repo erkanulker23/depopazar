@@ -187,7 +187,7 @@ $userDisplayName = trim(($authUser['first_name'] ?? '') . ' ' . ($authUser['last
             <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Bugün Alınan</p>
                 <p class="text-2xl font-bold text-teal-600 dark:text-teal-400 tabular-nums"><?= fmtMoney($paidTodaySum ?? 0) ?> ₺</p>
-                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-bold">Bugün tahsil edilen ödemeler</p>
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-bold">Bugün kasaya giren tahsilatlar (erken ödemeler dahil)</p>
             </div>
             <div class="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-105 transition-transform">
                 <i class="bi bi-cash-coin text-white text-xl"></i>

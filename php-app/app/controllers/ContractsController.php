@@ -222,9 +222,16 @@ class ContractsController
             header('Location: ' . $redirectTargets['error']);
             exit;
         }
+        $roomContractMode = trim($_POST['room_contract_mode'] ?? 'separate');
+        if (!in_array($roomContractMode, ['separate', 'combined'], true)) {
+            $roomContractMode = 'separate';
+        }
+        if (!$needsAdditionalRooms || $additionalRooms === []) {
+            $roomContractMode = 'separate';
+        }
         $roomKeyParts = array_merge([$roomId], array_column($additionalRooms, 'room_id'));
         sort($roomKeyParts, SORT_STRING);
-        $contractDedupeKey = hash('sha256', ($companyId ?? '') . '|' . $customerId . '|' . implode(',', $roomKeyParts) . '|' . $startDate . '|' . $endDate);
+        $contractDedupeKey = hash('sha256', ($companyId ?? '') . '|' . $customerId . '|' . implode(',', $roomKeyParts) . '|' . $startDate . '|' . $endDate . '|' . $roomContractMode);
         $contractLockName = 'contract_create:' . substr($contractDedupeKey, 0, 40);
         $contractLockAcquired = db_request_lock($this->pdo, $contractLockName, 10);
         $lastContractCreate = request_dedupe_hit('contract_create', $contractDedupeKey, 30);
@@ -236,6 +243,23 @@ class ContractsController
             exit;
         }
         request_dedupe_store('contract_create', $contractDedupeKey, ['pending' => true]);
+        $userNotes = trim($_POST['notes'] ?? '') ?: null;
+        if ($roomContractMode === 'combined') {
+            $linkedNoteParts = [];
+            foreach ($additionalRooms as $extra) {
+                $rn = preg_replace('/\s*\([^)]*\)\s*$/', '', (string) ($extra['room']['room_number'] ?? ''));
+                $linkedNoteParts[] = $rn !== '' ? $rn : ($extra['room_id'] ?? '');
+            }
+            if ($linkedNoteParts !== []) {
+                $suffix = 'Bağlı odalar (tek sözleşme): ' . implode(', ', $linkedNoteParts);
+                $userNotes = $userNotes ? ($userNotes . "\n" . $suffix) : $suffix;
+            }
+            $combinedMonthly = $monthlyPrice;
+            foreach ($additionalRooms as $extra) {
+                $combinedMonthly += (float) ($extra['monthly_price'] ?? 0);
+            }
+            $monthlyPrice = $combinedMonthly;
+        }
         $sharedContractFields = [
             'customer_id' => $customerId,
             'start_date' => $startDate . ' 00:00:00',
@@ -245,7 +269,7 @@ class ContractsController
             'driver_name' => trim($_POST['driver_name'] ?? '') ?: null,
             'driver_phone' => trim($_POST['driver_phone'] ?? '') ?: null,
             'vehicle_plate' => $vehiclePlate ?: null,
-            'notes' => trim($_POST['notes'] ?? '') ?: null,
+            'notes' => $userNotes,
             'stored_items_condition' => $storedCondition,
             'stored_items_condition_note' => $storedConditionNote,
             'campaign_code' => $campaignCode,
@@ -266,23 +290,39 @@ class ContractsController
                 $_POST
             );
             $createdAdditional = [];
-            foreach ($additionalRooms as $extra) {
-                $extraFields = $sharedContractFields;
-                $extraFields['campaign_code'] = null;
-                $createdAdditional[] = $this->createSingleSaleContract(
-                    $user,
-                    $companyId,
-                    $extra['room'],
-                    $extra['room_id'],
-                    $extra['monthly_price'],
-                    [],
-                    $extraFields,
-                    0,
-                    0,
-                    null,
-                    false,
-                    $_POST
-                );
+            if ($roomContractMode === 'combined') {
+                $contractId = $created['id'] ?? null;
+                if ($contractId) {
+                    $linkedRows = [];
+                    foreach ($additionalRooms as $extra) {
+                        $linkedRows[] = [
+                            'room_id' => $extra['room_id'],
+                            'monthly_price' => $extra['monthly_price'],
+                        ];
+                        Room::update($this->pdo, $extra['room_id'], ['status' => 'occupied']);
+                    }
+                    Contract::syncLinkedRooms($this->pdo, $contractId, $linkedRows);
+                }
+            } else {
+                foreach ($additionalRooms as $extra) {
+                    $extraFields = $sharedContractFields;
+                    $extraFields['campaign_code'] = null;
+                    $extraFields['notes'] = trim($_POST['notes'] ?? '') ?: null;
+                    $createdAdditional[] = $this->createSingleSaleContract(
+                        $user,
+                        $companyId,
+                        $extra['room'],
+                        $extra['room_id'],
+                        $extra['monthly_price'],
+                        [],
+                        $extraFields,
+                        0,
+                        0,
+                        null,
+                        false,
+                        $_POST
+                    );
+                }
             }
             $contractId = $created['id'] ?? null;
             $contractNumber = $created['contract_number'] ?? $contractId ?? '';
@@ -333,7 +373,9 @@ class ContractsController
             }
 
             $totalContracts = 1 + count($createdAdditional);
-            if ($totalContracts > 1) {
+            if ($roomContractMode === 'combined' && count($additionalRooms) > 0) {
+                Auth::setSession('flash_success', 'Tek sözleşme oluşturuldu (' . $contractNumber . ') — ' . (1 + count($additionalRooms)) . ' oda.');
+            } elseif ($totalContracts > 1) {
                 $numbers = [$contractNumber];
                 foreach ($createdAdditional as $extraCreated) {
                     $numbers[] = $extraCreated['contract_number'] ?? $extraCreated['id'] ?? '';
@@ -1112,6 +1154,7 @@ class ContractsController
         $contractPaidTotal = $contractDebtSummary['paid'];
         $contractTotalValue = $contractDebtSummary['contract_total'];
         $contractPeriodCount = $contractDebtSummary['period_count'];
+        $linkedContractRooms = Contract::findLinkedRoomsByContractId($this->pdo, $id);
         require __DIR__ . '/../../views/contracts/detail.php';
     }
 
@@ -1196,6 +1239,7 @@ class ContractsController
         if ($roomId) {
             Room::update($this->pdo, $roomId, ['status' => 'empty']);
         }
+        Contract::releaseLinkedRoomsForContract($this->pdo, $id);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         $contractNumber = $contract['contract_number'] ?? $id;
         $whId = $contract['warehouse_id'] ?? null;

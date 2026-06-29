@@ -51,7 +51,7 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
     require __DIR__ . '/../partials/page_filter_trigger.php';
     ?>
     <button type="button" onclick="openNewSaleModal()" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
-        <i class="bi bi-plus-circle mr-2"></i> Yeni Satış Gir
+        <i class="bi bi-plus-circle mr-2"></i> Yeni Depo Sözleşmesi Ekle
     </button>
 </div>
 
@@ -70,7 +70,7 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
 
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
     <?php if (empty($contracts)): ?>
-        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz sözleşme yok. "Yeni Satış Gir" ile ekleyebilirsiniz.</div>
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz sözleşme yok. "Yeni Depo Sözleşmesi Ekle" ile ekleyebilirsiniz.</div>
     <?php else: ?>
         <!-- Toplu işlem çubuğu -->
         <div id="bulkBar" class="hidden flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
@@ -226,7 +226,7 @@ $filterModalTitle = 'Giriş Filtreleri';
 require __DIR__ . '/../partials/page_filter_modal.php';
 ?>
 
-<!-- Modal: Yeni Satış Gir -->
+<!-- Modal: Yeni Depo Sözleşmesi Ekle -->
 <div id="newSaleModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto" aria-hidden="true">
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" onclick="closeNewSaleModal()"></div>
@@ -235,7 +235,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0"><i class="bi bi-plus-lg text-lg"></i></div>
                     <div class="min-w-0">
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Yeni Satış Gir</h3>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Yeni Depo Sözleşmesi Ekle</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Sözleşme bilgilerini doldurun</p>
                     </div>
                 </div>
@@ -295,6 +295,17 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                                 <button type="button" id="newSale_add_extra_room_btn" class="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
                                     <i class="bi bi-plus-circle"></i> Başka oda ekle
                                 </button>
+                                <div id="newSale_contract_mode_block" class="hidden mt-4 p-3 rounded-xl border border-cyan-200 dark:border-cyan-800 bg-cyan-50/50 dark:bg-cyan-900/10 space-y-2">
+                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Çoklu oda sözleşme düzeni</p>
+                                    <label class="flex items-start gap-2 cursor-pointer">
+                                        <input type="radio" name="room_contract_mode" value="separate" checked class="mt-1 text-emerald-600 focus:ring-emerald-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300"><strong>Her oda için ayrı sözleşme</strong> — her odanın kendi sözleşme numarası ve ödeme takvimi olur.</span>
+                                    </label>
+                                    <label class="flex items-start gap-2 cursor-pointer">
+                                        <input type="radio" name="room_contract_mode" value="combined" class="mt-1 text-emerald-600 focus:ring-emerald-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300"><strong>Tüm odalar tek sözleşmede</strong> — aylık ücretler toplanır, tek ödeme takvimi; ek odalar bağlı oda olarak işaretlenir.</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -445,19 +456,18 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($personnel)): ?>
-                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
-                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-people"></i> Saha Personeli</h4>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Hizmet veren saha personelini seçin (çoklu seçim). <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline">Personel yönetimi</a></p>
-                        <div class="flex flex-wrap gap-2">
-                            <?php
-                            $personnelList = $personnel ?? [];
-                            $jobTypeLabels = $jobTypeLabels ?? Personnel::jobTypeLabels();
-                            foreach ($personnelList as $s):
-                                $person = $s;
-                                $style = 'pill';
-                                require __DIR__ . '/../partials/personnel_checkbox_row.php';
-                            endforeach; ?>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                <i class="bi bi-people-fill text-emerald-600"></i> Saha Personeli
+                            </h4>
                         </div>
+                        <?php
+                        $personnelList = $personnel;
+                        $selectedPersonnelIds = [];
+                        $pickerId = 'newSale_personnel_picker';
+                        require __DIR__ . '/../partials/personnel_grouped_picker.php';
+                        ?>
                     </div>
                     <?php endif; ?>
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
@@ -492,7 +502,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
     </div>
 </div>
 
-<!-- Modal: Hızlı müşteri ekle (Yeni Satış içinden) -->
+<!-- Modal: Hızlı müşteri ekle (Yeni Depo Sözleşmesi formundan) -->
 <div id="quickAddCustomerModal" class="modal-overlay hidden fixed inset-0 z-[60] overflow-y-auto" aria-hidden="true">
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" onclick="closeQuickAddCustomer()"></div>
@@ -649,6 +659,23 @@ function toggleExtraRoomsBlock(show) {
     } else {
         clearExtraRoomRows();
     }
+    syncContractModeBlock();
+}
+function countSelectedSaleRooms() {
+    var count = 0;
+    var primary = document.getElementById('newSale_room_id');
+    if (primary && primary.value) count++;
+    document.querySelectorAll('#newSale_extra_rooms_list .extra-room-id').forEach(function (inp) {
+        if (inp.value) count++;
+    });
+    return count;
+}
+function syncContractModeBlock() {
+    var block = document.getElementById('newSale_contract_mode_block');
+    if (!block) return;
+    var needsExtra = document.getElementById('newSale_needs_extra_rooms');
+    var show = !!(needsExtra && needsExtra.checked && countSelectedSaleRooms() >= 2);
+    block.classList.toggle('hidden', !show);
 }
 function collectOtherRoomIds(currentHiddenId) {
     var ids = [];
@@ -685,6 +712,7 @@ function removeExtraRoomRow(rowEl) {
     });
     rowEl.remove();
     refreshExtraRoomLabels();
+    syncContractModeBlock();
     var list = document.getElementById('newSale_extra_rooms_list');
     if (list && !list.querySelector('.extra-room-row')) {
         var needsExtra = document.getElementById('newSale_needs_extra_rooms');
@@ -723,6 +751,7 @@ function addExtraRoomRow() {
     list.appendChild(row);
     row.querySelector('.extra-room-remove').addEventListener('click', function () {
         removeExtraRoomRow(row);
+        syncContractModeBlock();
     });
     refreshExtraRoomLabels();
     var roomsData = window.newSaleRoomsData || [];
@@ -745,6 +774,7 @@ function addExtraRoomRow() {
             if (priceEl && room && room.monthly_price !== null && room.monthly_price !== undefined && room.monthly_price !== '') {
                 priceEl.value = String(room.monthly_price).replace('.', ',');
             }
+            syncContractModeBlock();
         }
     });
     window.newSaleExtraRoomPickers = window.newSaleExtraRoomPickers || [];
@@ -859,9 +889,11 @@ function closeNewSaleModal() {
             },
             onSelect: function (room) {
                 applyRoomMonthlyPrice(room);
+                syncContractModeBlock();
             },
             onClear: function () {
                 applyWarehouseBaseFee();
+                syncContractModeBlock();
             }
         });
     }

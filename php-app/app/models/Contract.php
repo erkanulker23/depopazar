@@ -378,6 +378,83 @@ class Contract
         }
     }
 
+    private static ?bool $hasLinkedRoomsTableCache = null;
+
+    public static function hasLinkedRoomsTable(PDO $pdo): bool
+    {
+        if (self::$hasLinkedRoomsTableCache !== null) {
+            return self::$hasLinkedRoomsTableCache;
+        }
+        try {
+            $pdo->query('SELECT id FROM contract_linked_rooms LIMIT 0');
+            self::$hasLinkedRoomsTableCache = true;
+        } catch (Throwable $e) {
+            self::$hasLinkedRoomsTableCache = false;
+        }
+        return self::$hasLinkedRoomsTableCache;
+    }
+
+    /** @param list<array{room_id: string, monthly_price?: float|null}> $rooms */
+    public static function syncLinkedRooms(PDO $pdo, string $contractId, array $rooms): void
+    {
+        if (!self::hasLinkedRoomsTable($pdo) || $contractId === '') {
+            return;
+        }
+        $pdo->prepare('DELETE FROM contract_linked_rooms WHERE contract_id = ?')->execute([$contractId]);
+        if ($rooms === []) {
+            return;
+        }
+        $stmt = $pdo->prepare(
+            'INSERT INTO contract_linked_rooms (id, contract_id, room_id, monthly_price) VALUES (?, ?, ?, ?)'
+        );
+        foreach ($rooms as $row) {
+            $roomId = trim((string) ($row['room_id'] ?? ''));
+            if ($roomId === '') {
+                continue;
+            }
+            $price = array_key_exists('monthly_price', $row) && $row['monthly_price'] !== null
+                ? (float) $row['monthly_price']
+                : null;
+            $stmt->execute([self::uuid(), $contractId, $roomId, $price]);
+        }
+    }
+
+    public static function findLinkedRoomsByContractId(PDO $pdo, string $contractId): array
+    {
+        if (!self::hasLinkedRoomsTable($pdo) || $contractId === '') {
+            return [];
+        }
+        $stmt = $pdo->prepare(
+            'SELECT clr.*, r.room_number, w.name AS warehouse_name
+             FROM contract_linked_rooms clr
+             INNER JOIN rooms r ON r.id = clr.room_id AND r.deleted_at IS NULL
+             INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+             WHERE clr.contract_id = ?
+             ORDER BY r.room_number'
+        );
+        $stmt->execute([$contractId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function releaseLinkedRoomsForContract(PDO $pdo, string $contractId): void
+    {
+        if (!self::hasLinkedRoomsTable($pdo) || $contractId === '') {
+            return;
+        }
+        $stmt = $pdo->prepare('SELECT room_id FROM contract_linked_rooms WHERE contract_id = ?');
+        $stmt->execute([$contractId]);
+        $roomIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($roomIds as $roomId) {
+            $roomId = trim((string) $roomId);
+            if ($roomId === '') {
+                continue;
+            }
+            if (!Room::hasActiveContract($pdo, $roomId)) {
+                Room::update($pdo, $roomId, ['status' => 'empty']);
+            }
+        }
+    }
+
     public static function setContractPdfUrl(PDO $pdo, string $id, ?string $url): void
     {
         $contract = self::findOne($pdo, $id);
@@ -1041,6 +1118,7 @@ class Contract
         if ($roomId && !Room::hasActiveContractExcept($pdo, $roomId, $id)) {
             Room::update($pdo, $roomId, ['status' => 'empty']);
         }
+        self::releaseLinkedRoomsForContract($pdo, $id);
 
         return true;
     }

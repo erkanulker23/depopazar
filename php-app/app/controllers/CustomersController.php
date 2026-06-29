@@ -120,6 +120,7 @@ class CustomersController
             header('Location: /musteriler');
             exit;
         }
+        $customer = Customer::enrichCreatedByInfo($this->pdo, $customer);
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
@@ -1027,8 +1028,8 @@ class CustomersController
         }
         if ($redirectTo === 'new_sale') {
             Auth::setSession('flash_success', $reused
-                ? 'Müşteri zaten kayıtlı. Yeni satış formunda seçildi.'
-                : 'Müşteri eklendi. Yeni satış formunda seçebilirsiniz.');
+                ? 'Müşteri zaten kayıtlı. Yeni depo sözleşmesi formunda seçildi.'
+                : 'Müşteri eklendi. Yeni depo sözleşmesi formunda seçebilirsiniz.');
         } elseif ($redirectTo === 'new_job') {
             Auth::setSession('flash_success', $reused
                 ? 'Müşteri zaten kayıtlı. Nakliye formunda seçildi.'

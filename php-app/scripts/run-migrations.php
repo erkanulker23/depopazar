@@ -2,6 +2,8 @@
 <?php
 /**
  * Tüm migration'ları sırayla çalıştırır (php-app/config/db veya .env kullanır).
+ * Yalnızca şema güncellemeleri içermelidir (tablo/sütun/indeks); demo veri veya toplu UPDATE/INSERT olmamalı.
+ * Çoğu dosya idempotent'tir (sütun zaten varsa atlanır); yine de canlıda yedek alın.
  * Kullanım: php scripts/run-migrations.php   veya  cd php-app && php scripts/run-migrations.php
  */
 $root = dirname(__DIR__);

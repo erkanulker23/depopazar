@@ -95,7 +95,7 @@ class RolePermissions
     {
         return [
             ['id' => 'genel_bakis', 'label' => 'Genel Bakış', 'href' => '/genel-bakis', 'special' => 'Kurulum rehberi, haftalık özet panelleri'],
-            ['id' => 'girisler', 'label' => 'Tüm Girişler / Depo Girişi', 'href' => '/girisler', 'special' => 'Sözleşme sonlandırma, çıkış belgesi, toplu silme, yeni satış'],
+            ['id' => 'girisler', 'label' => 'Tüm Girişler / Depo Girişi', 'href' => '/girisler', 'special' => 'Sözleşme sonlandırma, çıkış belgesi, toplu silme, yeni depo sözleşmesi'],
             ['id' => 'odemeler', 'label' => 'Ödemeler / Tahsilat', 'href' => '/odemeler', 'special' => 'Tahsilat alma, ödenmiş ödemeyi iptal, makbuz yazdır'],
             ['id' => 'nakliye', 'label' => 'Nakliye İşler', 'href' => '/nakliye-isler', 'special' => 'İşe masraf ekleme'],
             ['id' => 'araclar', 'label' => 'Araçlar', 'href' => '/araclar', 'special' => 'Trafik sigortası, kasko, kaza kayıtları ve belge yükleme'],

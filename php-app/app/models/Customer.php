@@ -264,6 +264,150 @@ class Customer
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    /** Eksik created_by bilgisini bildirim veya ilk sözleşme satışçısından tamamla */
+    public static function enrichCreatedByInfo(PDO $pdo, array $customer): array
+    {
+        $first = trim((string) ($customer['created_by_first_name'] ?? ''));
+        $last = trim((string) ($customer['created_by_last_name'] ?? ''));
+        if ($first !== '' || $last !== '') {
+            return $customer;
+        }
+        $customerId = trim((string) ($customer['id'] ?? ''));
+        if ($customerId === '') {
+            return $customer;
+        }
+
+        $actorName = self::findCreatedByActorNameFromNotifications($pdo, $customerId);
+        if ($actorName !== '') {
+            $parts = self::splitFullName($actorName);
+            $customer['created_by_first_name'] = $parts[0];
+            $customer['created_by_last_name'] = $parts[1];
+            return $customer;
+        }
+
+        $fromContract = self::findCreatedByFromEarliestContract($pdo, $customerId);
+        if ($fromContract !== null) {
+            $customer['created_by_first_name'] = $fromContract['created_by_first_name'] ?? '';
+            $customer['created_by_last_name'] = $fromContract['created_by_last_name'] ?? '';
+            $userId = trim((string) ($fromContract['sold_by_user_id'] ?? ''));
+            if ($userId !== '' && self::hasCreatedByColumn($pdo) && empty($customer['created_by_user_id'])) {
+                self::setCreatedByUserIdIfEmpty($pdo, $customerId, $userId);
+                $customer['created_by_user_id'] = $userId;
+            }
+            return $customer;
+        }
+
+        $actorName = self::findCreatedByActorNameFromContractNotifications($pdo, $customerId);
+        if ($actorName !== '') {
+            $parts = self::splitFullName($actorName);
+            $customer['created_by_first_name'] = $parts[0];
+            $customer['created_by_last_name'] = $parts[1];
+        }
+        return $customer;
+    }
+
+    private static function splitFullName(string $fullName): array
+    {
+        $fullName = trim($fullName);
+        if ($fullName === '') {
+            return ['', ''];
+        }
+        $parts = preg_split('/\s+/u', $fullName, 2) ?: [];
+        return [$parts[0] ?? '', $parts[1] ?? ''];
+    }
+
+    private static function findCreatedByActorNameFromNotifications(PDO $pdo, string $customerId): string
+    {
+        try {
+            $like = '%"customer_id":"' . $customerId . '"%';
+            $stmt = $pdo->prepare(
+                "SELECT metadata FROM notifications
+                 WHERE deleted_at IS NULL AND type = 'customer' AND title = 'Müşteri eklendi'
+                 AND (
+                    JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.customer_id')) = ?
+                    OR metadata LIKE ?
+                 )
+                 ORDER BY created_at ASC
+                 LIMIT 1"
+            );
+            $stmt->execute([$customerId, $like]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row || empty($row['metadata'])) {
+                return '';
+            }
+            $meta = json_decode((string) $row['metadata'], true);
+            if (!is_array($meta)) {
+                return '';
+            }
+            return trim((string) ($meta['actor_name'] ?? ''));
+        } catch (Throwable $e) {
+            return '';
+        }
+    }
+
+    /** @return array{created_by_first_name?: string, created_by_last_name?: string, sold_by_user_id?: string}|null */
+    private static function findCreatedByFromEarliestContract(PDO $pdo, string $customerId): ?array
+    {
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT c.sold_by_user_id, u.first_name AS created_by_first_name, u.last_name AS created_by_last_name
+                 FROM contracts c
+                 INNER JOIN users u ON u.id = c.sold_by_user_id AND u.deleted_at IS NULL
+                 WHERE c.customer_id = ? AND c.deleted_at IS NULL AND c.sold_by_user_id IS NOT NULL
+                 ORDER BY c.created_at ASC
+                 LIMIT 1'
+            );
+            $stmt->execute([$customerId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    private static function findCreatedByActorNameFromContractNotifications(PDO $pdo, string $customerId): string
+    {
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT n.metadata
+                 FROM contracts c
+                 INNER JOIN notifications n ON n.deleted_at IS NULL
+                   AND n.type = \'contract\'
+                   AND n.title = \'Sözleşme oluşturuldu\'
+                   AND (
+                     JSON_UNQUOTE(JSON_EXTRACT(n.metadata, \'$.contract_id\')) = c.id
+                     OR n.metadata LIKE CONCAT(\'%"contract_id":"\', c.id, \'"%\')
+                   )
+                 WHERE c.customer_id = ? AND c.deleted_at IS NULL
+                 ORDER BY c.created_at ASC, n.created_at ASC
+                 LIMIT 1'
+            );
+            $stmt->execute([$customerId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row || empty($row['metadata'])) {
+                return '';
+            }
+            $meta = json_decode((string) $row['metadata'], true);
+            if (!is_array($meta)) {
+                return '';
+            }
+            return trim((string) ($meta['actor_name'] ?? ''));
+        } catch (Throwable $e) {
+            return '';
+        }
+    }
+
+    public static function setCreatedByUserIdIfEmpty(PDO $pdo, string $customerId, string $userId): void
+    {
+        if (!self::hasCreatedByColumn($pdo) || $customerId === '' || $userId === '') {
+            return;
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE customers SET created_by_user_id = ? WHERE id = ? AND deleted_at IS NULL AND created_by_user_id IS NULL'
+        );
+        $stmt->execute([$userId, $customerId]);
+    }
+
     public static function findOneForCompany(PDO $pdo, string $id, string $companyId): ?array
     {
         $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = ? AND company_id = ? AND deleted_at IS NULL LIMIT 1');

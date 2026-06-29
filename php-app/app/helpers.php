@@ -1870,6 +1870,96 @@ if (!function_exists('personnelInitials')) {
     }
 }
 
+/** Depo sözleşmesi / saha işleri için görev sırası */
+if (!function_exists('personnelJobTypeDisplayOrder')) {
+    function personnelJobTypeDisplayOrder(): array
+    {
+        return [
+            'ekip_yetkilisi',
+            'sofor',
+            'tasimaci',
+            'yukleyici',
+            'mobilyaci',
+            'paketleme',
+            'personeller',
+            'diger',
+        ];
+    }
+}
+
+if (!function_exists('personnelJobTypeIcon')) {
+    function personnelJobTypeIcon(string $jobType): string
+    {
+        return match (Personnel::normalizeJobType($jobType)) {
+            'ekip_yetkilisi' => 'bi-shield-check',
+            'sofor' => 'bi-truck',
+            'tasimaci' => 'bi-box-seam',
+            'yukleyici' => 'bi-arrow-up-circle',
+            'mobilyaci' => 'bi-hammer',
+            'paketleme' => 'bi-box2',
+            'personeller' => 'bi-person-badge',
+            default => 'bi-person',
+        };
+    }
+}
+
+if (!function_exists('personnelJobTypeBadgeClass')) {
+    function personnelJobTypeBadgeClass(string $jobType): string
+    {
+        return match (Personnel::normalizeJobType($jobType)) {
+            'ekip_yetkilisi' => 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
+            'sofor' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+            'tasimaci' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+            'yukleyici' => 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+            'mobilyaci' => 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
+            'paketleme' => 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+            'personeller' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+            default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+        };
+    }
+}
+
+/** @return list<array{job_type: string, label: string, icon: string, members: array<int, array<string, mixed>>}> */
+if (!function_exists('groupPersonnelByJobType')) {
+    function groupPersonnelByJobType(array $personnel, ?array $order = null): array
+    {
+        $labels = Personnel::jobTypeLabels();
+        $order = $order ?? personnelJobTypeDisplayOrder();
+        $buckets = [];
+        foreach ($order as $key) {
+            $buckets[$key] = [];
+        }
+        foreach ($personnel as $person) {
+            $key = Personnel::normalizeJobType($person['job_type'] ?? 'diger');
+            if (!isset($buckets[$key])) {
+                $buckets[$key] = [];
+                if (!in_array($key, $order, true)) {
+                    $order[] = $key;
+                }
+            }
+            $buckets[$key][] = $person;
+        }
+        $groups = [];
+        foreach ($order as $key) {
+            if (empty($buckets[$key])) {
+                continue;
+            }
+            usort($buckets[$key], static function (array $a, array $b): int {
+                $nameA = trim(($a['first_name'] ?? '') . ' ' . ($a['last_name'] ?? ''));
+                $nameB = trim(($b['first_name'] ?? '') . ' ' . ($b['last_name'] ?? ''));
+                return strcasecmp($nameA, $nameB);
+            });
+            $groups[] = [
+                'job_type' => $key,
+                'label' => $labels[$key] ?? $key,
+                'icon' => personnelJobTypeIcon($key),
+                'members' => $buckets[$key],
+            ];
+        }
+        return $groups;
+    }
+}
+
 /** Personel profil fotoğrafı yükle; başarılıysa /uploads/personnel/... yolu */
 if (!function_exists('storePersonnelPhotoUpload')) {
     function storePersonnelPhotoUpload(?array $file, string $personnelId): ?string

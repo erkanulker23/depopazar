@@ -243,6 +243,20 @@ class Room
              LIMIT 1'
         );
         $stmt->execute([$roomId, $exceptContractId]);
+        if ($stmt->fetch()) {
+            return true;
+        }
+        if (!Contract::hasLinkedRoomsTable($pdo)) {
+            return false;
+        }
+        $stmt = $pdo->prepare(
+            'SELECT 1 FROM contract_linked_rooms clr
+             INNER JOIN contracts c ON c.id = clr.contract_id AND c.deleted_at IS NULL AND c.is_active = 1 AND c.id != ?
+             INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+             WHERE clr.room_id = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$exceptContractId, $roomId]);
         return (bool) $stmt->fetch();
     }
 
@@ -253,6 +267,20 @@ class Room
             'SELECT 1 FROM contracts c
              INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
              WHERE c.room_id = ? AND c.deleted_at IS NULL AND c.is_active = 1 LIMIT 1'
+        );
+        $stmt->execute([$roomId]);
+        if ($stmt->fetch()) {
+            return true;
+        }
+        if (!Contract::hasLinkedRoomsTable($pdo)) {
+            return false;
+        }
+        $stmt = $pdo->prepare(
+            'SELECT 1 FROM contract_linked_rooms clr
+             INNER JOIN contracts c ON c.id = clr.contract_id AND c.deleted_at IS NULL AND c.is_active = 1
+             INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+             WHERE clr.room_id = ?
+             LIMIT 1'
         );
         $stmt->execute([$roomId]);
         return (bool) $stmt->fetch();

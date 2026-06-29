@@ -58,6 +58,39 @@ class CustomerCharge
         return (float) $stmt->fetchColumn();
     }
 
+    /** Manuel borç tahsilatları toplamı (kasaya giriş tarihi aralığı). */
+    public static function sumPaidByCollectedDateRange(PDO $pdo, ?string $companyId, string $startDate, string $endDate): float
+    {
+        $start = substr(trim($startDate), 0, 10);
+        $end = substr(trim($endDate), 0, 10);
+        if ($start === '' || $end === '') {
+            return 0.0;
+        }
+        $sql = "SELECT COALESCE(SUM(amount), 0) FROM customer_charges
+                WHERE deleted_at IS NULL AND status = 'paid' AND paid_at IS NOT NULL
+                AND DATE(IF(DATE(paid_at) > CURDATE(), updated_at, paid_at)) >= ? AND DATE(IF(DATE(paid_at) > CURDATE(), updated_at, paid_at)) <= ? ";
+        $params = [$start, $end];
+        if ($companyId) {
+            $sql .= ' AND company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    public static function sumPaidToday(PDO $pdo, ?string $companyId): float
+    {
+        $today = date('Y-m-d');
+        return self::sumPaidByCollectedDateRange($pdo, $companyId, $today, $today);
+    }
+
+    public static function sumPaidThisWeek(PDO $pdo, ?string $companyId): float
+    {
+        $week = Payment::currentWeekRange();
+        return self::sumPaidByCollectedDateRange($pdo, $companyId, $week['start'], $week['end']);
+    }
+
     public static function create(PDO $pdo, array $data): string
     {
         $id = self::uuid();
@@ -80,6 +113,10 @@ class CustomerCharge
     public static function markAsPaid(PDO $pdo, string $chargeId, ?string $notes = null, ?string $paidAt = null): void
     {
         $paidAtValue = normalizePaidAt($paidAt);
+        $today = date('Y-m-d');
+        if (substr($paidAtValue, 0, 10) > $today) {
+            $paidAtValue = date('Y-m-d H:i:s');
+        }
         $stmt = $pdo->prepare(
             'UPDATE customer_charges SET status = \'paid\', paid_at = ?, notes = COALESCE(?, notes) WHERE id = ? AND deleted_at IS NULL AND status = \'pending\''
         );
