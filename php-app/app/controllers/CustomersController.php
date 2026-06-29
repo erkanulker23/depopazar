@@ -899,10 +899,6 @@ class CustomersController
             exit;
         }
         $depots = customerLabelDepots($this->pdo, $id, $companyId);
-        $company = !empty($customer['company_id']) ? Company::findOne($this->pdo, $customer['company_id']) : null;
-        if ($company && !empty($company['logo_url'])) {
-            $company['logo_url'] = publicUploadHref($company['logo_url']);
-        }
         $qrDetailUrl = absoluteAppUrl('/musteriler/' . $id . '/etiket');
         $qrCodeDataUri = customerLabelQrDataUri($qrDetailUrl);
         require __DIR__ . '/../../views/customers/barcode.php';
@@ -924,10 +920,6 @@ class CustomersController
             exit;
         }
         $companyId = $customer['company_id'] ?? null;
-        $company = $companyId ? Company::findOne($this->pdo, $companyId) : null;
-        if ($company && !empty($company['logo_url'])) {
-            $company['logo_url'] = publicUploadHref($company['logo_url']);
-        }
         $items = Item::findByCustomerId($this->pdo, $id);
         $contracts = Contract::findByCustomerId($this->pdo, $id, $companyId);
         $depots = customerLabelDepots($this->pdo, $id, $companyId);

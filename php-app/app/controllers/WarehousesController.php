@@ -151,6 +151,13 @@ class WarehousesController
         ];
         try {
             $created = Warehouse::create($this->pdo, $data);
+            $whId = $created['id'] ?? null;
+            if ($whId && !empty($_FILES['logo']['name']) && ($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                $logoUrl = storeWarehouseLogoUpload($_FILES['logo'], $whId);
+                if ($logoUrl) {
+                    Warehouse::update($this->pdo, $whId, ['logo_url' => $logoUrl]);
+                }
+            }
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             $whId = $created['id'] ?? null;
             Notification::createForCompanyAndWarehouse($this->pdo, $companyId, $whId, 'warehouse', 'Depo eklendi', $name . ' depo olarak eklendi.', ['actor_name' => $actorName, 'warehouse_id' => $whId]);
@@ -201,6 +208,15 @@ class WarehousesController
             'is_active'   => isset($_POST['is_active']) ? 1 : 0,
             'monthly_base_fee' => $monthlyFee !== '' ? (float) str_replace(',', '.', $monthlyFee) : null,
         ];
+        if (!empty($_FILES['logo']['name']) && ($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+            $logoUrl = storeWarehouseLogoUpload($_FILES['logo'], $id);
+            if ($logoUrl) {
+                if (!empty($warehouse['logo_url'])) {
+                    unlinkPublicFile($warehouse['logo_url']);
+                }
+                $data['logo_url'] = $logoUrl;
+            }
+        }
         Warehouse::update($this->pdo, $id, $data);
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompanyAndWarehouse($this->pdo, $warehouse['company_id'] ?? null, $id, 'warehouse', 'Depo güncellendi', ($data['name'] ?? $warehouse['name']) . ' depo bilgileri güncellendi.', ['actor_name' => $actorName, 'warehouse_id' => $id]);
@@ -237,6 +253,9 @@ class WarehousesController
             if (Warehouse::hasActiveContracts($this->pdo, $id)) {
                 $errors[] = $warehouse['name'] ?? $id;
                 continue;
+            }
+            if (!empty($warehouse['logo_url'])) {
+                unlinkPublicFile($warehouse['logo_url']);
             }
             Warehouse::remove($this->pdo, $id);
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));

@@ -5,12 +5,13 @@ class Warehouse
     {
         $id = self::uuid();
         $stmt = $pdo->prepare(
-            'INSERT INTO warehouses (id, name, company_id, address, city, district, total_floors, description, is_active, monthly_base_fee) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO warehouses (id, name, logo_url, company_id, address, city, district, total_floors, description, is_active, monthly_base_fee) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $id,
             $data['name'],
+            $data['logo_url'] ?? null,
             $data['company_id'],
             $data['address'] ?? null,
             $data['city'] ?? null,
@@ -76,7 +77,7 @@ class Warehouse
 
     public static function update(PDO $pdo, string $id, array $data): array
     {
-        $allowed = ['name', 'address', 'city', 'district', 'total_floors', 'description', 'is_active', 'monthly_base_fee'];
+        $allowed = ['name', 'logo_url', 'address', 'city', 'district', 'total_floors', 'description', 'is_active', 'monthly_base_fee'];
         $set = [];
         $params = [];
         foreach ($allowed as $k) {

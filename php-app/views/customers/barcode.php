@@ -1,6 +1,5 @@
 <?php
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
-$company = $company ?? null;
 $depots = $depots ?? [];
 $qrCodeDataUri = $qrCodeDataUri ?? null;
 ?>
@@ -29,9 +28,11 @@ $qrCodeDataUri = $qrCodeDataUri ?? null;
     </div>
 
     <div class="max-w-md mx-auto border-2 border-gray-300 rounded-2xl bg-white p-6 print:border-gray-500 print:shadow-none shadow-sm">
-        <?php if ($company && !empty($company['logo_url'])): ?>
-        <div class="mb-4 flex justify-center">
-            <img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-12 object-contain">
+        <?php if ($depots !== []): ?>
+        <div class="mb-4 flex justify-center flex-wrap gap-3 items-center">
+            <?php foreach ($depots as $depot): ?>
+                <?php $warehouse = $depot; $size = count($depots) > 1 ? 'md' : 'lg'; require __DIR__ . '/../partials/warehouse_logo.php'; ?>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
@@ -51,7 +52,7 @@ $qrCodeDataUri = $qrCodeDataUri ?? null;
         <div class="space-y-4 text-sm border-t border-gray-200 pt-4">
             <?php if ($depots !== []): ?>
                 <?php foreach ($depots as $depot): ?>
-                    <?php $compact = true; require __DIR__ . '/../partials/customer_label_depot_block.php'; ?>
+                    <?php $compact = true; $hideLogo = true; require __DIR__ . '/../partials/customer_label_depot_block.php'; ?>
                 <?php endforeach; ?>
             <?php else: ?>
                 <div>

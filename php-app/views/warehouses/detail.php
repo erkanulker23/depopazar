@@ -9,7 +9,9 @@ $statusLabels = ['empty' => 'Boş', 'occupied' => 'Dolu', 'reserved' => 'Rezerve
 ob_start();
 ?>
 <div class="page-header mb-6 flex flex-wrap items-start justify-between gap-4">
-    <div>
+    <div class="flex items-start gap-4">
+        <?php $size = 'lg'; require __DIR__ . '/../partials/warehouse_logo.php'; ?>
+        <div>
         <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <a href="/depolar" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Depolar</a>
             <i class="bi bi-chevron-right"></i>
@@ -17,6 +19,7 @@ ob_start();
         </div>
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Depo Detayı</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($warehouse['name'] ?? '') ?></p>
+        </div>
     </div>
     <a href="/depolar" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
         <i class="bi bi-pencil mr-2"></i> Depo Listesinde Düzenle

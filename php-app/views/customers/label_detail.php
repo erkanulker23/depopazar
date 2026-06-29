@@ -1,6 +1,5 @@
 <?php
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
-$company = $company ?? null;
 $depots = $depots ?? [];
 $items = $items ?? [];
 $contracts = $contracts ?? [];
@@ -31,8 +30,12 @@ $isStaff = !empty($isStaff);
 
     <div class="max-w-3xl mx-auto p-4 sm:p-6">
         <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 sm:p-6">
-            <?php if ($company && !empty($company['logo_url'])): ?>
-            <div class="mb-4"><img src="<?= htmlspecialchars($company['logo_url']) ?>" alt="Logo" class="h-14 object-contain"></div>
+            <?php if ($depots !== []): ?>
+            <div class="mb-4 flex flex-wrap gap-3 items-center">
+                <?php foreach ($depots as $depot): ?>
+                    <?php $warehouse = $depot; $size = count($depots) > 1 ? 'md' : 'lg'; require __DIR__ . '/../partials/warehouse_logo.php'; ?>
+                <?php endforeach; ?>
+            </div>
             <?php endif; ?>
 
             <h1 class="text-xl font-bold text-gray-900 mb-1"><?= htmlspecialchars($customerName) ?></h1>
@@ -42,7 +45,7 @@ $isStaff = !empty($isStaff);
                 <?php if ($depots !== []): ?>
                     <?php foreach ($depots as $depot): ?>
                         <div class="rounded-xl bg-gray-50 border border-gray-100 p-4 sm:col-span-1">
-                            <?php $compact = false; require __DIR__ . '/../partials/customer_label_depot_block.php'; ?>
+                            <?php $compact = false; $hideLogo = count($depots) === 1; require __DIR__ . '/../partials/customer_label_depot_block.php'; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>

@@ -58,6 +58,7 @@ ob_start();
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                         <th class="px-4 py-3 text-left"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="selectAllWh" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" title="Tümünü seç"></label></th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest w-14">Logo</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Depo Adı</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Adres / Şehir</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Oda Sayısı</th>
@@ -69,6 +70,9 @@ ob_start();
                     <?php foreach ($warehouses as $w): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="wh-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($w['id']) ?>"></label></td>
+                            <td class="px-4 py-3">
+                                <?php $warehouse = $w; $size = 'sm'; require __DIR__ . '/../partials/warehouse_logo.php'; ?>
+                            </td>
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><a href="/depolar/<?= htmlspecialchars($w['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($w['name']) ?></a></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                                 <?= htmlspecialchars(trim($w['address'] ?? '') ?: '-') ?>
@@ -97,6 +101,7 @@ ob_start();
                                     'description' => $w['description'] ?? '',
                                     'is_active' => !empty($w['is_active']),
                                     'monthly_base_fee' => $w['monthly_base_fee'] ?? null,
+                                    'logo_url' => warehouseLogoHref($w) ?: '',
                                 ]) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
                                 <form method="post" action="/depolar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('depo')) ?>);">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($w['id']) ?>">
@@ -136,11 +141,16 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Yeni Depo</h3>
                 <button type="button" onclick="closeModal('addWarehouseModal')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><i class="bi bi-x-lg"></i></button>
             </div>
-            <form method="post" action="/depolar/ekle">
+            <form method="post" action="/depolar/ekle" enctype="multipart/form-data">
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Depo Adı <span class="text-red-500">*</span></label>
                         <input type="text" name="name" required placeholder="Örn: Ana Depo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo Logosu</label>
+                        <input type="file" name="logo" accept="image/jpeg,image/png,image/gif,image/webp" class="w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:text-emerald-700 dark:file:bg-emerald-900/30 dark:file:text-emerald-300">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">JPG, PNG, GIF veya WebP</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adres</label>
@@ -187,12 +197,21 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Depo Düzenle</h3>
                 <button type="button" onclick="closeModal('editWarehouseModal')" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><i class="bi bi-x-lg"></i></button>
             </div>
-            <form method="post" action="/depolar/guncelle">
+            <form method="post" action="/depolar/guncelle" enctype="multipart/form-data">
                 <input type="hidden" name="id" id="edit_id">
                 <div class="space-y-4">
+                    <div id="edit_logo_preview_wrap" class="flex items-center gap-3">
+                        <div id="edit_logo_preview"></div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Mevcut logo</p>
+                    </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Depo Adı <span class="text-red-500">*</span></label>
                         <input type="text" name="name" id="edit_name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo Logosu</label>
+                        <input type="file" name="logo" accept="image/jpeg,image/png,image/gif,image/webp" class="w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:text-emerald-700 dark:file:bg-emerald-900/30 dark:file:text-emerald-300">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Yeni dosya seçerseniz mevcut logo değişir</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adres</label>
@@ -247,6 +266,17 @@ function openEditWarehouse(d) {
     document.getElementById('edit_monthly_base_fee').value = d.monthly_base_fee != null && d.monthly_base_fee !== '' ? d.monthly_base_fee : '';
     document.getElementById('edit_desc').value = d.description || '';
     document.getElementById('edit_active').checked = !!d.is_active;
+    var preview = document.getElementById('edit_logo_preview');
+    var previewWrap = document.getElementById('edit_logo_preview_wrap');
+    if (preview) {
+        if (d.logo_url) {
+            preview.innerHTML = '<img src="' + d.logo_url.replace(/"/g, '&quot;') + '" alt="Logo" class="w-12 h-12 rounded-xl object-contain border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-0.5">';
+            if (previewWrap) previewWrap.classList.remove('hidden');
+        } else {
+            preview.innerHTML = '<span class="w-12 h-12 rounded-xl inline-flex items-center justify-center text-sm font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">' + (d.name ? String(d.name).substring(0, 2).toUpperCase() : 'D') + '</span>';
+            if (previewWrap) previewWrap.classList.remove('hidden');
+        }
+    }
     openModal('editWarehouseModal');
 }
 document.querySelectorAll('.modal-overlay').forEach(function(el) {

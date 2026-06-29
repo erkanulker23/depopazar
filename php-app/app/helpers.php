@@ -1870,6 +1870,58 @@ if (!function_exists('unlinkPublicFile')) {
     }
 }
 
+/** Depo logosu URL (dosya yoksa null) */
+if (!function_exists('warehouseLogoHref')) {
+    function warehouseLogoHref(?array $warehouse): ?string
+    {
+        if (!$warehouse) {
+            return null;
+        }
+        return publicUploadHref($warehouse['logo_url'] ?? null);
+    }
+}
+
+/** Depo adından kısa baş harfler (logo yedek) */
+if (!function_exists('warehouseInitials')) {
+    function warehouseInitials(?array $warehouse): string
+    {
+        $name = trim((string) ($warehouse['name'] ?? ''));
+        if ($name === '') {
+            return 'D';
+        }
+        $parts = preg_split('/\s+/u', $name, 3) ?: [];
+        if (count($parts) >= 2) {
+            return mb_strtoupper(mb_substr($parts[0], 0, 1) . mb_substr($parts[1], 0, 1));
+        }
+        return mb_strtoupper(mb_substr($name, 0, 2));
+    }
+}
+
+/** Depo logosu yükle; başarılıysa /uploads/warehouses/... yolu */
+if (!function_exists('storeWarehouseLogoUpload')) {
+    function storeWarehouseLogoUpload(?array $file, string $warehouseId): ?string
+    {
+        if (!$file || empty($file['name']) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+            return null;
+        }
+        $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/warehouses' : dirname(__DIR__) . '/public/uploads/warehouses';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        $safeId = preg_replace('/[^a-zA-Z0-9\-]/', '', $warehouseId) ?: bin2hex(random_bytes(8));
+        $filename = 'warehouse_' . $safeId . '_' . time() . '.' . $ext;
+        $path = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $path)) {
+            return null;
+        }
+        return '/uploads/warehouses/' . $filename;
+    }
+}
+
 /** Personel profil fotoğrafı URL (dosya yoksa null) */
 if (!function_exists('personnelPhotoHref')) {
     function personnelPhotoHref(?array $personnel): ?string
@@ -2136,7 +2188,7 @@ if (!function_exists('formatWarehouseAddress')) {
 if (!function_exists('customerLabelDepots')) {
     function customerLabelDepots(PDO $pdo, string $customerId, ?string $companyId = null): array
     {
-        $sql = 'SELECT w.id AS warehouse_id, w.name, w.address, w.city, w.district, w.description,
+            $sql = 'SELECT w.id AS warehouse_id, w.name, w.logo_url, w.address, w.city, w.district, w.description,
                        r.room_number, c.is_active, c.terminated_at, c.start_date
                 FROM contracts c
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
@@ -2161,6 +2213,7 @@ if (!function_exists('customerLabelDepots')) {
                 $byId[$wid] = [
                     'warehouse_id' => $wid,
                     'name' => (string) ($row['name'] ?? ''),
+                    'logo_url' => (string) ($row['logo_url'] ?? ''),
                     'address' => (string) ($row['address'] ?? ''),
                     'city' => (string) ($row['city'] ?? ''),
                     'district' => (string) ($row['district'] ?? ''),
