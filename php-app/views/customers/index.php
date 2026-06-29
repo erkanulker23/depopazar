@@ -8,7 +8,9 @@ $borc = $debtFilter ?? '';
 $warehouses = $warehouses ?? [];
 $customers = $customers ?? [];
 $customersTotal = $customersTotal ?? 0;
+$customersWithContractTotal = $customersWithContractTotal ?? 0;
 $duplicateFullNames = $duplicateFullNames ?? [];
+$tekrarlayan = isset($_GET['tekrarlayan']) && $_GET['tekrarlayan'] === '1';
 $borcQuery = array_key_exists('borc', $_GET)
     ? ($borc !== '' ? $borc : '')
     : ($borc !== '' ? $borc : null);
@@ -17,8 +19,9 @@ $filterQuery = http_build_query(array_filter([
     'in_depo' => $inDepo !== '' ? $inDepo : null,
     'warehouse_id' => $warehouseId !== '' ? $warehouseId : null,
     'borc' => $borcQuery,
+    'tekrarlayan' => $tekrarlayan ? '1' : null,
 ], fn($v) => $v !== null && $v !== ''));
-$hasActiveFilters = $q !== '' || $inDepo !== '' || $warehouseId !== '' || array_key_exists('borc', $_GET);
+$hasActiveFilters = $q !== '' || $inDepo !== '' || $warehouseId !== '' || array_key_exists('borc', $_GET) || $tekrarlayan;
 $activeFilterTags = [];
 if ($q !== '') $activeFilterTags[] = 'Arama: ' . $q;
 if ($inDepo === 'yes') $activeFilterTags[] = 'Depoda olan';
@@ -33,13 +36,16 @@ if ($warehouseId !== '') {
 }
 if ($borc === 'overdue') $activeFilterTags[] = 'Vadesi geçmiş borcu olan';
 elseif ($borc === 'unpaid') $activeFilterTags[] = 'Ödenmemiş borcu olan';
+if ($tekrarlayan) $activeFilterTags[] = 'Tekrarlayan müşteriler';
 $tableColspan = $debtFilter !== null ? 10 : 9;
 ob_start();
 ?>
 <div class="mb-6">
     <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Müşteriler</h1>
-    <p class="text-sm text-gray-600 dark:text-gray-400">
+    <p class="text-sm text-gray-600 dark:text-gray-400 flex flex-wrap items-center gap-x-2 gap-y-1">
         <span class="font-semibold text-emerald-700 dark:text-emerald-400"><?= number_format((int) $customersTotal, 0, ',', '.') ?> müşteri</span>
+        <span class="text-gray-400 dark:text-gray-500" aria-hidden="true">·</span>
+        <span class="font-semibold text-gray-700 dark:text-gray-300"><?= number_format((int) $customersWithContractTotal, 0, ',', '.') ?> sözleşmeli müşteri</span>
     </p>
 </div>
 
@@ -254,6 +260,7 @@ if (!empty($customers)):
         'q' => $q !== '' ? $q : null,
         'in_depo' => $inDepo !== '' ? $inDepo : null,
         'warehouse_id' => $warehouseId !== '' ? $warehouseId : null,
+        'tekrarlayan' => $tekrarlayan ? '1' : null,
     ], fn($v) => $v !== null && $v !== '');
     if (array_key_exists('borc', $_GET)) {
         $paginationParams['borc'] = $borc !== '' ? $borc : '';
@@ -294,6 +301,13 @@ ob_start();
             <option value="">Tüm müşteriler</option>
             <option value="overdue" <?= $borc === 'overdue' ? 'selected' : '' ?>>Vadesi geçmiş borcu olan</option>
             <option value="unpaid" <?= $borc === 'unpaid' ? 'selected' : '' ?>>Ödenmemiş borcu olan</option>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label class="filter-label" for="customer_filter_tekrarlayan">Tekrarlayan müşteriler</label>
+        <select name="tekrarlayan" id="customer_filter_tekrarlayan" class="filter-input">
+            <option value="">Tüm müşteriler</option>
+            <option value="1" <?= $tekrarlayan ? 'selected' : '' ?>>Yalnızca tekrarlayan (aynı ad-soyad)</option>
         </select>
     </div>
 <?php

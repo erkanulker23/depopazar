@@ -25,6 +25,7 @@ class CustomersController
         } else {
             $debtFilter = null;
         }
+        $duplicateOnly = isset($_GET['tekrarlayan']) && $_GET['tekrarlayan'] === '1';
         $perPage = 50;
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $offset = ($page - 1) * $perPage;
@@ -32,15 +33,18 @@ class CustomersController
         $warehouses = [];
         if ($companyId) {
             $warehouses = Warehouse::findAll($this->pdo, $companyId);
-            $customersTotal = Customer::count($this->pdo, $companyId, $search, $inDepo, $warehouseId, $debtFilter);
-            $customers = Customer::findAll($this->pdo, $companyId, $search, $perPage, $offset, $inDepo, $warehouseId, $debtFilter);
+            $customersTotal = Customer::count($this->pdo, $companyId, $search, $inDepo, $warehouseId, $debtFilter, $duplicateOnly);
+            $customers = Customer::findAll($this->pdo, $companyId, $search, $perPage, $offset, $inDepo, $warehouseId, $debtFilter, $duplicateOnly);
+            $customersWithContractTotal = Customer::count($this->pdo, $companyId, null, 'yes', null, null, false);
         } elseif (($user['role'] ?? '') === 'super_admin') {
             $warehouses = Warehouse::findAll($this->pdo, null);
-            $customersTotal = Customer::count($this->pdo, null, $search, $inDepo, $warehouseId, $debtFilter);
-            $customers = Customer::findAll($this->pdo, null, $search, $perPage, $offset, $inDepo, $warehouseId, $debtFilter);
+            $customersTotal = Customer::count($this->pdo, null, $search, $inDepo, $warehouseId, $debtFilter, $duplicateOnly);
+            $customers = Customer::findAll($this->pdo, null, $search, $perPage, $offset, $inDepo, $warehouseId, $debtFilter, $duplicateOnly);
+            $customersWithContractTotal = Customer::count($this->pdo, null, null, 'yes', null, null, false);
         } else {
             $customersTotal = 0;
             $customers = [];
+            $customersWithContractTotal = 0;
         }
 
         $totalPages = $customersTotal > 0 ? (int) ceil($customersTotal / $perPage) : 1;
@@ -96,6 +100,7 @@ class CustomersController
             'in_depo' => isset($_GET['in_depo']) && in_array($_GET['in_depo'], ['yes', 'no'], true) ? $_GET['in_depo'] : null,
             'warehouse_id' => isset($_GET['warehouse_id']) && $_GET['warehouse_id'] !== '' ? trim($_GET['warehouse_id']) : null,
             'borc' => isset($_GET['borc']) && in_array($_GET['borc'], ['overdue', 'unpaid'], true) ? $_GET['borc'] : null,
+            'tekrarlayan' => isset($_GET['tekrarlayan']) && $_GET['tekrarlayan'] === '1' ? '1' : null,
         ]);
         header('Location: /musteriler' . ($redirectParams !== [] ? '?' . http_build_query($redirectParams) : ''));
         exit;
@@ -1081,10 +1086,11 @@ class CustomersController
         } else {
             $debtFilter = null;
         }
+        $duplicateOnly = isset($_GET['tekrarlayan']) && $_GET['tekrarlayan'] === '1';
         if ($companyId) {
-            $customers = Customer::findAll($this->pdo, $companyId, $search, null, 0, $inDepo, $warehouseId, $debtFilter);
+            $customers = Customer::findAll($this->pdo, $companyId, $search, null, 0, $inDepo, $warehouseId, $debtFilter, $duplicateOnly);
         } elseif (($user['role'] ?? '') === 'super_admin') {
-            $customers = Customer::findAll($this->pdo, null, $search, null, 0, $inDepo, $warehouseId, $debtFilter);
+            $customers = Customer::findAll($this->pdo, null, $search, null, 0, $inDepo, $warehouseId, $debtFilter, $duplicateOnly);
         } else {
             $customers = [];
         }

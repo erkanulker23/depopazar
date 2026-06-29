@@ -1,7 +1,7 @@
 <?php
 class Customer
 {
-    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $search = null, ?int $limit = null, int $offset = 0, ?string $inDepo = null, ?string $warehouseId = null, ?string $debtFilter = null): array
+    public static function findAll(PDO $pdo, ?string $companyId = null, ?string $search = null, ?int $limit = null, int $offset = 0, ?string $inDepo = null, ?string $warehouseId = null, ?string $debtFilter = null, bool $duplicateOnly = false): array
     {
         $params = [];
         $debtFilter = self::normalizeDebtFilter($debtFilter);
@@ -46,6 +46,9 @@ class Customer
         if ($debtClause !== '') {
             $sql .= ' AND ' . $debtClause;
         }
+        if ($duplicateOnly) {
+            $sql .= ' AND ' . self::duplicateFilterSql();
+        }
         if ($debtFilter === 'overdue') {
             $sql .= ' ORDER BY overdue_debt_total DESC, c.first_name, c.last_name ';
         } elseif ($debtFilter === 'unpaid') {
@@ -65,7 +68,7 @@ class Customer
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function count(PDO $pdo, ?string $companyId = null, ?string $search = null, ?string $inDepo = null, ?string $warehouseId = null, ?string $debtFilter = null): int
+    public static function count(PDO $pdo, ?string $companyId = null, ?string $search = null, ?string $inDepo = null, ?string $warehouseId = null, ?string $debtFilter = null, bool $duplicateOnly = false): int
     {
         $sql = 'SELECT COUNT(*) FROM customers c WHERE c.deleted_at IS NULL ';
         $params = [];
@@ -91,6 +94,9 @@ class Customer
         $debtClause = self::debtFilterSql(self::normalizeDebtFilter($debtFilter), $params);
         if ($debtClause !== '') {
             $sql .= ' AND ' . $debtClause;
+        }
+        if ($duplicateOnly) {
+            $sql .= ' AND ' . self::duplicateFilterSql();
         }
         $stmt = count($params) > 0 ? $pdo->prepare($sql) : $pdo->query($sql);
         if (count($params) > 0) {
@@ -194,6 +200,15 @@ class Customer
             return 'NOT EXISTS (' . $sub . ')';
         }
         return 'EXISTS (' . $sub . ')';
+    }
+
+    /** Aynı ad-soyada birden fazla kayıt olan müşteriler (tekrarlayan). */
+    private static function duplicateFilterSql(): string
+    {
+        return '(SELECT COUNT(*) FROM customers c2 WHERE c2.deleted_at IS NULL
+            AND TRIM(c2.first_name) = TRIM(c.first_name)
+            AND TRIM(c2.last_name) = TRIM(c.last_name)
+            AND (c.company_id <=> c2.company_id)) > 1';
     }
 
     /** Aynı ad-soyada sahip (tekrarlanan) müşteri adlarını döndürür – şirket veya tümü. */
