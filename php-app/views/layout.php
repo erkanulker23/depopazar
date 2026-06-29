@@ -370,6 +370,35 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             .settings-tabs-wrap::-webkit-scrollbar {
                 display: none;
             }
+            .settings-page .card-modern > div {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            .settings-page .settings-tabs-wrap nav a {
+                padding: 0.625rem 0.75rem;
+                font-size: 0.8125rem;
+                gap: 0.375rem;
+            }
+            .settings-page .settings-list-item {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .settings-page .settings-list-item > .flex.items-center.gap-2 {
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 0.5rem;
+                border-top: 1px solid rgb(229 231 235);
+            }
+            .dark .settings-page .settings-list-item > .flex.items-center.gap-2 {
+                border-top-color: rgb(55 65 81);
+            }
+            .settings-page .form-submit-bar .btn-submit,
+            .settings-page .form-submit-bar button[type="submit"] {
+                width: 100%;
+            }
+            .settings-page .form-submit-bar.flex .btn-touch:not(.btn-submit) {
+                flex: 1 1 auto;
+            }
             /* Sayfa kartları — mobilde fixed modalları kırmasın */
             main .card-modern,
             main .user-profile-page .profile-card {

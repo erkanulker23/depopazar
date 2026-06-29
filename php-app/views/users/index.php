@@ -41,9 +41,11 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
     require __DIR__ . '/../partials/page_filter_trigger.php';
     ?>
     <?php if ($canManageUsers): ?>
-    <button type="button" onclick="openAddUserModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
-        <i class="bi bi-plus-lg mr-2"></i> Yeni Kullanıcı
-    </button>
+    <div class="page-toolbar-actions">
+        <button type="button" onclick="openAddUserModal()" class="col-span-2 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
+            <i class="bi bi-plus-lg mr-2"></i> Yeni Kullanıcı
+        </button>
+    </div>
     <?php endif; ?>
 </div>
 
@@ -51,7 +53,48 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
     <?php if (empty($staff)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Henüz kullanıcı kaydı yok.</div>
     <?php else: ?>
-        <div class="overflow-x-auto">
+        <!-- Mobil: kart listesi -->
+        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+            <?php foreach ($staff as $s): ?>
+                <?php $userName = trim(($s['first_name'] ?? '') . ' ' . ($s['last_name'] ?? '')); ?>
+                <div class="mobile-data-card">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            <?php $userRow = $s; $size = 'md'; require __DIR__ . '/../partials/user_avatar.php'; ?>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <a href="/kullanicilar/<?= htmlspecialchars($s['id'] ?? '') ?>" class="font-semibold text-emerald-600 dark:text-emerald-400 block truncate"><?= htmlspecialchars($userName) ?></a>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5"><?= htmlspecialchars($s['email'] ?? '') ?></p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1"><?= htmlspecialchars($roleLabels[$s['role'] ?? ''] ?? $s['role'] ?? '') ?></p>
+                            <?php if (($s['role'] ?? '') === 'warehouse_manager' && !empty($s['managed_warehouse_id'])): ?>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= htmlspecialchars($warehouseNamesById[$s['managed_warehouse_id']] ?? '—') ?></p>
+                            <?php endif; ?>
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <?php if (!empty($s['is_active'])): ?>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>
+                                <?php else: ?>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">Pasif</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if ($canManageUsers): ?>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <a href="/kullanicilar/<?= htmlspecialchars($s['id']) ?>/duzenle" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600">Düzenle</a>
+                                <button type="button" onclick="openChangePasswordModal('<?= htmlspecialchars($s['id']) ?>', '<?= htmlspecialchars(addslashes($userName)) ?>')" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">Şifre</button>
+                                <form method="post" action="/kullanicilar/sil" class="inline" onsubmit="return confirm(<?= json_encode(deleteConfirmMessage('kullanıcı')) ?>);">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars($s['id']) ?>">
+                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20">Sil</button>
+                                </form>
+                            </div>
+                            <?php else: ?>
+                            <a href="/kullanicilar/<?= htmlspecialchars($s['id'] ?? '') ?>" class="inline-flex items-center mt-3 px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Profil</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <!-- Masaüstü: tablo -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>

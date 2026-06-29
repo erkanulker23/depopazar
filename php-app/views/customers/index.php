@@ -49,8 +49,8 @@ ob_start();
     $filterClearUrl = '/musteriler?borc=';
     require __DIR__ . '/../partials/page_filter_trigger.php';
     ?>
-    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <button type="submit" id="bulkDeleteBtn" form="bulkDeleteForm" class="btn-touch hidden inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40">
+    <div class="page-toolbar-actions">
+        <button type="submit" id="bulkDeleteBtn" form="bulkDeleteForm" class="btn-touch hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40">
             <i class="bi bi-trash"></i> Seçilenleri sil
         </button>
         <a href="/musteriler/excel-disari-aktar<?= $filterQuery !== '' ? '?' . $filterQuery : '' ?>" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -59,7 +59,7 @@ ob_start();
         <a href="/musteriler/excel-ice-aktar" class="btn-touch inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <i class="bi bi-file-earmark-arrow-up"></i> Excel İçe Aktar
         </a>
-        <button type="button" onclick="document.getElementById('addCustomerModal').classList.remove('hidden')" class="btn-touch w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
+        <button type="button" onclick="document.getElementById('addCustomerModal').classList.remove('hidden')" class="col-span-2 btn-touch inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
             <i class="bi bi-plus-lg mr-2"></i> Yeni Müşteri
         </button>
     </div>
@@ -80,7 +80,7 @@ ob_start();
         <!-- Mobil: kart listesi -->
         <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
             <?php foreach ($customers as $c): ?>
-                <div class="p-4 active:bg-gray-50 dark:active:bg-gray-700/50" data-customer-id="<?= htmlspecialchars($c['id']) ?>">
+                <div class="mobile-data-card" data-customer-id="<?= htmlspecialchars($c['id']) ?>">
                     <div class="flex items-start gap-3">
                         <label class="flex-shrink-0 flex items-center mt-1 cursor-pointer">
                             <input type="checkbox" name="ids[]" value="<?= htmlspecialchars($c['id']) ?>" form="bulkDeleteForm" class="customer-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">

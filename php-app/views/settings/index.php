@@ -30,6 +30,7 @@ ob_start();
         <a href="/genel-bakis" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"><i class="bi bi-speedometer2"></i> Genel bakışa dön</a>
     </div>
 <?php else: ?>
+<div class="settings-page max-w-full min-w-0">
 <!-- Sekmeler - mobilde yatay scroll -->
 <div class="settings-tabs-wrap mb-6 overflow-x-auto overscroll-x-contain max-w-full -webkit-overflow-scrolling-touch">
     <nav class="flex gap-1 min-w-max border-b border-gray-200 dark:border-gray-600 pb-px" aria-label="Ayarlar sekmeleri">
@@ -44,7 +45,7 @@ ob_start();
 
 <div class="card-modern overflow-visible">
     <?php if ($activeTab === 'firma'): ?>
-        <div class="p-6">
+        <div class="p-4 md:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-building text-emerald-600"></i> Firma Bilgileri</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Proje adı uygulama başlığında ve SEO’da kullanılır.</p>
             <?php
@@ -124,7 +125,7 @@ ob_start();
             </form>
         </div>
     <?php elseif ($activeTab === 'paytr'): ?>
-        <div class="p-6">
+        <div class="p-4 md:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-credit-card text-emerald-600"></i> PayTR Entegrasyonu</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Online kredi kartı ile ödeme almak için PayTR bilgilerinizi girin.</p>
             <form method="post" action="/ayarlar/paytr-guncelle" class="space-y-4 max-w-2xl">
@@ -158,7 +159,7 @@ ob_start();
             </form>
         </div>
     <?php elseif ($activeTab === 'banka'): ?>
-        <div class="p-6">
+        <div class="p-4 md:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-bank text-emerald-600"></i> Banka Hesapları</h2>
             <div class="mb-6">
                 <button type="button" onclick="document.getElementById('addBankAccountModal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
@@ -170,7 +171,7 @@ ob_start();
             <?php else: ?>
                 <ul class="space-y-4">
                     <?php foreach ($bankAccounts as $ba): ?>
-                        <li class="border border-gray-100 dark:border-gray-600 rounded-xl p-4 flex flex-wrap items-start justify-between gap-3">
+                        <li class="settings-list-item border border-gray-100 dark:border-gray-600 rounded-xl p-4 flex flex-wrap items-start justify-between gap-3">
                             <div class="flex-1 min-w-0">
                                 <div class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($ba['bank_name'] ?? '') ?></div>
                                 <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Hesap sahibi: <?= htmlspecialchars($ba['account_holder_name'] ?? '') ?></div>
@@ -298,7 +299,7 @@ ob_start();
         }
         </script>
     <?php elseif ($activeTab === 'kredi-karti'): ?>
-        <div class="p-6">
+        <div class="p-4 md:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-credit-card-2-back text-emerald-600"></i> Kredi Kartları</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Masraf kaydı yaparken hangi kredi kartından ödeme yapıldığını seçebilirsiniz.</p>
             <div class="mb-6">
@@ -312,7 +313,7 @@ ob_start();
             <?php else: ?>
                 <ul class="space-y-4">
                     <?php foreach ($creditCards as $cc): ?>
-                        <li class="border border-gray-100 dark:border-gray-600 rounded-xl p-4 flex flex-wrap items-start justify-between gap-3">
+                        <li class="settings-list-item border border-gray-100 dark:border-gray-600 rounded-xl p-4 flex flex-wrap items-start justify-between gap-3">
                             <div class="flex-1 min-w-0">
                                 <div class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($cc['bank_name'] ?? '') ?></div>
                                 <div class="text-sm text-gray-600 dark:text-gray-400 mt-1"><?= htmlspecialchars($cc['card_holder_name'] ?? '') ?></div>
@@ -421,7 +422,7 @@ ob_start();
         }
         </script>
     <?php elseif ($activeTab === 'eposta'): ?>
-        <div class="p-6">
+        <div class="p-4 md:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-envelope text-emerald-600"></i> E-posta Ayarları</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Sözleşme ve ödeme bildirimleri için SMTP bilgilerinizi girin.</p>
             <form method="post" action="/ayarlar/eposta-guncelle" class="space-y-4 max-w-2xl">
@@ -547,7 +548,7 @@ ob_start();
             <?php endif; ?>
         </div>
     <?php elseif ($activeTab === 'sms'): ?>
-        <div class="p-6">
+        <div class="p-4 md:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-chat-dots text-emerald-600"></i> Netgsm SMS Ayarları</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Müşterilere SMS göndermek için Netgsm API bilgilerinizi girin. Ayarlar kaydedildikten sonra müşteri detayından ve bildirimlerde bu ayarlara göre SMS gönderilir.</p>
             <form method="post" action="/ayarlar/sms-guncelle" class="space-y-4 max-w-2xl">
@@ -613,7 +614,7 @@ ob_start();
         $fromName = $mailSettings['from_name'] ?? $company['name'] ?? 'Depo ve Nakliye Takip';
         $fromEmail = $mailSettings['from_email'] ?? $company['email'] ?? 'bildirim@firma.com';
     ?>
-        <div class="p-6">
+        <div class="p-4 md:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-file-earmark-text text-emerald-600"></i> E-posta Şablonları</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Müşteriye ve yöneticiye gidecek e-postaların metinlerini düzenleyebilirsiniz.</p>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Müşteri şablonları: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{musteri_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{tutar}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{vade}</code> — Yönetici ödeme: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{odeme_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{odeme_yontemi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{hesap_adi}</code> — Yönetici sözleşme: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{depo_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{oda_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{baslangic_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{bitis_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{aylik_ucret}</code></p>
@@ -715,6 +716,7 @@ ob_start();
         function escapeHtml(s) { var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
         </script>
     <?php endif; ?>
+</div>
 </div>
 <?php endif; ?>
 

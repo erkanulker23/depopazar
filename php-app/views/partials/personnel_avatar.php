@@ -1,7 +1,8 @@
 <?php
-/** @var array|null $personnel */
+/** @var array|null $personnelRow tek personel satırı */
+/** @var array|null $personnel @deprecated $personnelRow kullanın */
 /** @var string $size sm|md|lg */
-$personnel = $personnel ?? null;
+$row = $personnelRow ?? $personnel ?? null;
 $size = $size ?? 'md';
 $sizeClasses = [
     'sm' => 'w-8 h-8 text-xs',
@@ -9,9 +10,9 @@ $sizeClasses = [
     'lg' => 'w-14 h-14 text-base',
 ];
 $cls = $sizeClasses[$size] ?? $sizeClasses['md'];
-$photo = personnelPhotoHref($personnel);
-$initials = personnelInitials($personnel);
-$name = trim(($personnel['first_name'] ?? '') . ' ' . ($personnel['last_name'] ?? ''));
+$photo = personnelPhotoHref($row);
+$initials = personnelInitials($row);
+$name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
 ?>
 <?php if ($photo): ?>
     <img src="<?= htmlspecialchars($photo) ?>" alt="<?= htmlspecialchars($name) ?>" class="<?= htmlspecialchars($cls) ?> rounded-full object-cover ring-2 ring-white dark:ring-gray-800 shrink-0 bg-gray-100 dark:bg-gray-700">
