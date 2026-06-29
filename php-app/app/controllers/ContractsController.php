@@ -1251,6 +1251,34 @@ class ContractsController
         require __DIR__ . '/../../views/contracts/print.php';
     }
 
+    /** Sözleşme e-imza ekranı (müşteri + firma) */
+    public function signPage(array $params): void
+    {
+        Auth::requireStaff();
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /girisler');
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $id);
+        if (!$contract) {
+            Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
+            header('Location: /girisler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            Auth::setSession('flash_error', 'Bu sözleşmeye erişim yetkiniz yok.');
+            header('Location: /girisler');
+            exit;
+        }
+        $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
+        $customerSignatureHref = publicUploadHref($contract['customer_signature_url'] ?? null);
+        $companySignatureHref = publicUploadHref($contract['company_signature_url'] ?? null);
+        require __DIR__ . '/../../views/contracts/sign.php';
+    }
+
     /** Sözleşme PDF indir – yüklenmiş PDF veya otomatik oluşturulan belge */
     public function downloadPdf(array $params): void
     {

@@ -53,6 +53,9 @@ ob_start();
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($contract['contract_number'] ?? '') ?></p>
     </div>
     <div class="page-header-actions flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto">
+        <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/imzala" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 shrink-0">
+            <i class="bi bi-pen mr-2"></i> Sözleşme İmzala
+        </a>
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/duzenle" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
             <i class="bi bi-pencil mr-2"></i> Düzenle
         </a>

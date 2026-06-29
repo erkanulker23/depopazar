@@ -77,6 +77,7 @@ $router->get('/musteriler/{id}', fn(array $p) => (new CustomersController($pdo))
 $router->get('/girisler', fn() => (new ContractsController($pdo))->index());
 $router->get('/girisler/yeni', function () { Auth::requireStaff(); header('Location: /girisler?newSale=1'); exit; });
 $router->get('/girisler/{id}/yazdir', fn(array $p) => (new ContractsController($pdo))->printPage($p));
+$router->get('/girisler/{id}/imzala', fn(array $p) => (new ContractsController($pdo))->signPage($p));
 $router->get('/girisler/{id}/pdf-indir', fn(array $p) => (new ContractsController($pdo))->downloadPdf($p));
 $router->get('/girisler/{id}/cikis-belgesi', fn(array $p) => (new ContractsController($pdo))->exitDocumentPrint($p));
 $router->get('/girisler/{id}/duzenle', fn(array $p) => (new ContractsController($pdo))->edit($p));
