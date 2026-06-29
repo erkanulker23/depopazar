@@ -5,6 +5,7 @@ $soldByName = $soldByName ?? '-';
 $payments = $payments ?? [];
 $customerSignatureHref = $customerSignatureHref ?? null;
 $companySignatureHref = $companySignatureHref ?? null;
+$signMode = !empty($signMode);
 if (!function_exists('fmtPrice')) {
     function fmtPrice($n) {
         if ($n === null || $n === '') return '';
@@ -18,7 +19,7 @@ if (!function_exists('fmtPrice')) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sözleşme Yazdır - <?= htmlspecialchars($contract['contract_number'] ?? '') ?></title>
+    <title><?= $signMode ? 'Sözleşme İmzala' : 'Sözleşme Yazdır' ?> - <?= htmlspecialchars($contract['contract_number'] ?? '') ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -29,11 +30,18 @@ if (!function_exists('fmtPrice')) {
     </style>
 </head>
 <body class="bg-white text-gray-900 p-6 max-w-4xl mx-auto">
-    <div class="no-print mb-4 flex justify-between items-center">
+    <div class="no-print mb-4 flex flex-wrap justify-between items-center gap-3">
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>" class="text-emerald-600 hover:underline">&larr; Sözleşmeye dön</a>
-        <button type="button" onclick="window.print()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
-            <i class="bi bi-printer inline-block mr-2"></i>Yazdır / PDF olarak kaydet
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+            <?php if ($signMode): ?>
+                <a href="#contractSignatures" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
+                    <i class="bi bi-pen inline-block mr-2"></i>İmzalara git
+                </a>
+            <?php endif; ?>
+            <button type="button" onclick="window.print()" class="px-4 py-2 <?= $signMode ? 'border border-gray-300 text-gray-700 hover:bg-gray-50' : 'bg-emerald-600 text-white hover:bg-emerald-700' ?> rounded-xl font-medium">
+                <i class="bi bi-printer inline-block mr-2"></i>Yazdır / PDF olarak kaydet
+            </button>
+        </div>
     </div>
 
     <div class="border-2 border-gray-200 rounded-xl p-6 print:border-gray-400">
@@ -108,8 +116,11 @@ if (!function_exists('fmtPrice')) {
         </table>
         <p class="text-xs text-gray-500 mt-4">Oluşturulma: <?= fmtDateTime($contract['created_at'] ?? null) ?></p>
 
-        <div class="mt-8 pt-6 border-t-2 border-gray-300 print:border-gray-500">
+        <div id="contractSignatures" class="mt-8 pt-6 border-t-2 border-gray-300 print:border-gray-500<?= $signMode ? ' scroll-mt-4' : '' ?>">
             <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-4">İmzalar</h2>
+            <?php if ($signMode): ?>
+                <p class="no-print text-sm text-gray-600 mb-4">Aşağıdaki sözleşme belgesini okuduktan sonra müşteri ve firma yetkilisi imza atmalıdır.</p>
+            <?php endif; ?>
             <?php
             $signaturePadHeight = 'h-28';
             $signatureBeforePrint = true;

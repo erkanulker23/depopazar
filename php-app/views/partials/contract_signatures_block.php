@@ -13,7 +13,7 @@ $companySignatureHref = $companySignatureHref ?? null;
 $signatureBeforePrint = !empty($signatureBeforePrint);
 $signaturePadHeight = $signaturePadHeight ?? 'h-36';
 ?>
-<div id="contractSignatures" class="contract-signatures">
+<div class="contract-signatures">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
             <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Müşteri</p>
