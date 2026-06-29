@@ -1867,7 +1867,30 @@ if (!function_exists('request_dedupe_store')) {
     /** @param array<string, mixed> $extra */
     function request_dedupe_store(string $action, string $key, array $extra = []): void
     {
-        Auth::setSession('dedupe_' . $action, array_merge(['key' => $key, 'at' => time()], $extra));
+        Auth::ensureSession();
+        $_SESSION['dedupe_' . $action] = array_merge(['key' => $key, 'at' => time()], $extra);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+    }
+}
+
+/** Eşzamanlı POST isteklerinde (çift tıklama) aynı kaynağın iki kez işlenmesini engeller */
+if (!function_exists('db_request_lock')) {
+    function db_request_lock(PDO $pdo, string $name, int $timeoutSeconds = 8): bool
+    {
+        $stmt = $pdo->prepare('SELECT GET_LOCK(?, ?)');
+        $stmt->execute([$name, max(1, $timeoutSeconds)]);
+
+        return (int) $stmt->fetchColumn() === 1;
+    }
+}
+
+if (!function_exists('db_request_unlock')) {
+    function db_request_unlock(PDO $pdo, string $name): void
+    {
+        $stmt = $pdo->prepare('SELECT RELEASE_LOCK(?)');
+        $stmt->execute([$name]);
     }
 }
 

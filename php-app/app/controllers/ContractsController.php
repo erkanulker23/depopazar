@@ -215,6 +215,20 @@ class ContractsController
         $contractPdfUrl = storeContractPdfUpload($_FILES['contract_pdf'] ?? null);
         $pickupLocation = $this->resolvePickupLocation($_POST);
         $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
+        $roomKeyParts = array_merge([$roomId], array_column($additionalRooms, 'room_id'));
+        sort($roomKeyParts, SORT_STRING);
+        $contractDedupeKey = hash('sha256', ($companyId ?? '') . '|' . $customerId . '|' . implode(',', $roomKeyParts) . '|' . $startDate . '|' . $endDate);
+        $contractLockName = 'contract_create:' . substr($contractDedupeKey, 0, 40);
+        $contractLockAcquired = db_request_lock($this->pdo, $contractLockName, 10);
+        $lastContractCreate = request_dedupe_hit('contract_create', $contractDedupeKey, 30);
+        if ($lastContractCreate !== null && !empty($lastContractCreate['done'])) {
+            if ($contractLockAcquired) {
+                db_request_unlock($this->pdo, $contractLockName);
+            }
+            header('Location: ' . $redirectTargets['success']);
+            exit;
+        }
+        request_dedupe_store('contract_create', $contractDedupeKey, ['pending' => true]);
         $sharedContractFields = [
             'customer_id' => $customerId,
             'start_date' => $startDate . ' 00:00:00',
@@ -335,7 +349,12 @@ class ContractsController
             Auth::setSession('flash_error', 'Kayıt oluşturulamadı: ' . $e->getMessage());
             header('Location: ' . $redirectTargets['error']);
             exit;
+        } finally {
+            if ($contractLockAcquired) {
+                db_request_unlock($this->pdo, $contractLockName);
+            }
         }
+        request_dedupe_store('contract_create', $contractDedupeKey, ['done' => true]);
         header('Location: ' . $redirectTargets['success']);
         exit;
     }

@@ -317,6 +317,58 @@ class Customer
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    /**
+     * Yeni müşteri kaydı öncesi aynı kişi zaten var mı (telefon, e-posta, TC veya ad-soyad).
+     * Çift tıklama / eşzamanlı isteklerde tekrar kayıt oluşturmayı engellemek için kullanılır.
+     */
+    public static function findExistingForCreate(
+        PDO $pdo,
+        string $companyId,
+        string $firstName,
+        string $lastName,
+        ?string $phone = null,
+        ?string $email = null,
+        ?string $identityNumber = null
+    ): ?array {
+        if ($phone !== null && $phone !== '') {
+            $existing = self::findByPhoneOrPhone2($pdo, $companyId, $phone, null);
+            if ($existing) {
+                return $existing;
+            }
+        }
+        $email = trim((string) $email);
+        if ($email !== '') {
+            $existing = self::findByEmail($pdo, $companyId, $email, null);
+            if ($existing) {
+                return $existing;
+            }
+        }
+        if ($identityNumber !== null && trim($identityNumber) !== '') {
+            $existing = self::findByIdentityNumber($pdo, $companyId, $identityNumber, null);
+            if ($existing) {
+                return $existing;
+            }
+        }
+        $firstName = trim($firstName);
+        $lastName = trim($lastName);
+        if ($firstName === '' || $lastName === '') {
+            return null;
+        }
+        // Telefon/e-posta/TC yoksa yalnızca çok kısa sürede tekrarlanan istekleri birleştir (çift tıklama).
+        $stmt = $pdo->prepare(
+            'SELECT * FROM customers
+             WHERE company_id = ? AND deleted_at IS NULL
+             AND LOWER(TRIM(first_name)) = LOWER(?)
+             AND LOWER(TRIM(last_name)) = LOWER(?)
+             AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+             ORDER BY created_at DESC
+             LIMIT 1'
+        );
+        $stmt->execute([$companyId, $firstName, $lastName]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     /** Telefon eşleşmesi (biçim farklarını normalize ederek) */
     public static function findByPhoneNormalized(PDO $pdo, string $companyId, ?string $phone, ?string $excludeId = null): ?array
     {

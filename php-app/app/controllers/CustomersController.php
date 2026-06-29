@@ -920,16 +920,6 @@ class CustomersController
         }
         $phoneFormatted = $phone !== null ? formatPhoneInput($phone) : null;
         $phone2Formatted = $phone2 !== null ? formatPhoneInput($phone2) : null;
-        if ($email !== '' && Customer::findByEmail($this->pdo, $companyId, $email, null)) {
-            Auth::setSession('flash_error', 'Bu e-posta adresi ile kayıtlı bir müşteri zaten var. Aynı e-posta ile müşteri kaydedilemez.');
-            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
-            exit;
-        }
-        if ($phoneFormatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $companyId, $phoneFormatted, null)) {
-            Auth::setSession('flash_error', 'Bu telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarasına ait başka bir müşteri olamaz.');
-            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
-            exit;
-        }
         if ($phone2Formatted !== null && Customer::findByPhoneOrPhone2($this->pdo, $companyId, $phone2Formatted, null)) {
             Auth::setSession('flash_error', 'Bu 2. telefon numarası ile kayıtlı bir müşteri zaten var. Aynı telefon numarasına ait başka bir müşteri olamaz.');
             $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
@@ -948,33 +938,63 @@ class CustomersController
             'invoice_info'    => trim($_POST['invoice_info'] ?? '') ?: null,
         ];
         $dedupeKey = hash('sha256', $companyId . '|' . mb_strtolower($firstName) . '|' . mb_strtolower($lastName) . '|' . ($phoneFormatted ?? '') . '|' . ($email ?? ''));
-        $lastCreate = request_dedupe_hit('customer_create', $dedupeKey);
-        if ($lastCreate !== null && !empty($lastCreate['id']) && Customer::findOne($this->pdo, (string) $lastCreate['id'])) {
-            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', ['id' => (string) $lastCreate['id']]);
-        }
+        $lockName = 'customer_create:' . substr($dedupeKey, 0, 40);
+        $lockAcquired = db_request_lock($this->pdo, $lockName, 8);
         try {
-            $customer = Customer::create($this->pdo, $data);
-        } catch (Throwable $e) {
-            Auth::setSession('flash_error', 'Müşteri eklenemedi: ' . $e->getMessage());
-            $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
-            exit;
+            $lastCreate = request_dedupe_hit('customer_create', $dedupeKey);
+            if ($lastCreate !== null && !empty($lastCreate['id']) && Customer::findOne($this->pdo, (string) $lastCreate['id'])) {
+                $this->finishCustomerCreate($user, $companyId, $firstName, $lastName, ['id' => (string) $lastCreate['id']], $_POST['redirect_to'] ?? '', true);
+            }
+            $existing = Customer::findExistingForCreate(
+                $this->pdo,
+                $companyId,
+                $firstName,
+                $lastName,
+                $phoneFormatted,
+                $email,
+                $identityNumber
+            );
+            if ($existing !== null) {
+                request_dedupe_store('customer_create', $dedupeKey, ['id' => $existing['id']]);
+                $this->finishCustomerCreate($user, $companyId, $firstName, $lastName, $existing, $_POST['redirect_to'] ?? '', true);
+            }
+            request_dedupe_store('customer_create', $dedupeKey, ['pending' => true]);
+            try {
+                $customer = Customer::create($this->pdo, $data);
+            } catch (Throwable $e) {
+                Auth::setSession('flash_error', 'Müşteri eklenemedi: ' . $e->getMessage());
+                $this->redirectAfterCreate($_POST['redirect_to'] ?? '', null);
+                exit;
+            }
+            request_dedupe_store('customer_create', $dedupeKey, ['id' => $customer['id']]);
+            $this->finishCustomerCreate($user, $companyId, $firstName, $lastName, $customer, $_POST['redirect_to'] ?? '', false);
+        } finally {
+            if ($lockAcquired) {
+                db_request_unlock($this->pdo, $lockName);
+            }
         }
+    }
+
+    /** @param array{id?: string} $customer */
+    private function finishCustomerCreate(array $user, string $companyId, string $firstName, string $lastName, array $customer, string $redirectTo, bool $reused): void
+    {
         $name = trim($firstName . ' ' . $lastName);
-        $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri eklendi', $name . ' müşterisi eklendi.', ['customer_id' => $customer['id'], 'actor_name' => $actorName]);
-        request_dedupe_store('customer_create', $dedupeKey, ['id' => $customer['id']]);
-        $redirectTo = $_POST['redirect_to'] ?? '';
-        if ($redirectTo === 'new_sale') {
-            Auth::setSession('flash_success', 'Müşteri eklendi. Yeni satış formunda seçebilirsiniz.');
-            header('Location: /girisler?newSale=1&newCustomerId=' . urlencode($customer['id']));
-        } elseif ($redirectTo === 'new_job') {
-            Auth::setSession('flash_success', 'Müşteri eklendi. Nakliye formunda seçebilirsiniz.');
-            header('Location: /nakliye-isler?newCustomerId=' . urlencode($customer['id']));
-        } else {
-            Auth::setSession('flash_success', 'Müşteri eklendi.');
-            header('Location: /musteriler');
+        if (!$reused) {
+            $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri eklendi', $name . ' müşterisi eklendi.', ['customer_id' => $customer['id'], 'actor_name' => $actorName]);
         }
-        exit;
+        if ($redirectTo === 'new_sale') {
+            Auth::setSession('flash_success', $reused
+                ? 'Müşteri zaten kayıtlı. Yeni satış formunda seçildi.'
+                : 'Müşteri eklendi. Yeni satış formunda seçebilirsiniz.');
+        } elseif ($redirectTo === 'new_job') {
+            Auth::setSession('flash_success', $reused
+                ? 'Müşteri zaten kayıtlı. Nakliye formunda seçildi.'
+                : 'Müşteri eklendi. Nakliye formunda seçebilirsiniz.');
+        } else {
+            Auth::setSession('flash_success', $reused ? 'Bu müşteri zaten kayıtlı.' : 'Müşteri eklendi.');
+        }
+        $this->redirectAfterCreate($redirectTo, $customer);
     }
 
     private function redirectAfterCreate(string $redirectTo, ?array $customer): void
