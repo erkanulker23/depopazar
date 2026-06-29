@@ -85,12 +85,19 @@ if ($bulkPaidExtraCount > 0):
         Aynı anda <?= (int) $bulkPaidExtraCount ?> taksit daha ödendi işaretlenmiş görünüyor (toplam <?= array_sum(array_map(fn($g) => (int)($g['count'] ?? 0), $bulkPaidIssues)) ?> kayıt, aynı tahsilat saati).
         Muhtemelen yalnızca 1 taksit tahsil edilmiştir.
     </p>
-    <form method="post" action="/musteriler/<?= htmlspecialchars($customer['id']) ?>/toplu-tahsilat-duzelt" class="mt-3" onsubmit="return confirm('<?= (int) $bulkPaidExtraCount ?> taksit geri alınacak; yalnızca en erken vadeli taksit ödendi kalacak. Devam edilsin mi?');">
-        <input type="hidden" name="keep_count" value="1">
-        <button type="submit" class="inline-flex items-center px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700">
-            <i class="bi bi-arrow-counterclockwise mr-2"></i> Düzelt — yalnızca 1. vade ödendi kalsın
-        </button>
-    </form>
+    <div class="mt-3 flex flex-wrap gap-2">
+        <form method="post" action="/musteriler/<?= htmlspecialchars($customer['id']) ?>/toplu-tahsilat-duzelt" onsubmit="return confirm('<?= (int) $bulkPaidExtraCount ?> taksit geri alınacak; yalnızca en erken vadeli taksit ödendi kalacak. Devam edilsin mi?');">
+            <input type="hidden" name="keep_count" value="1">
+            <button type="submit" class="inline-flex items-center px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700">
+                <i class="bi bi-arrow-counterclockwise mr-2"></i> Düzelt — yalnızca 1. vade ödendi kalsın
+            </button>
+        </form>
+        <form method="post" action="/musteriler/<?= htmlspecialchars($customer['id']) ?>/toplu-tahsilat-onayla">
+            <button type="submit" class="inline-flex items-center px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-200 text-sm font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                <i class="bi bi-check-circle mr-2"></i> Evet, eminim doğru
+            </button>
+        </form>
+    </div>
 </div>
 <?php endif; ?>
 
@@ -275,57 +282,47 @@ if ($bulkPaidExtraCount > 0):
             <?php endif; ?>
         </div>
 
-        <!-- Aylar takvimi: Ocak, Şubat, Mart... hangi ay ödendi / ödenmedi (ay bazında tüm ödemeler birleştirilir, Ödeme Takvimi ile tutarlı) -->
+        <!-- Aylar takvimi: sözleşme başına (birden fazla sözleşmede karışıklığı önler) -->
         <?php
         $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-        $monthsCalendar = buildPaymentMonthsCalendar($payments, $contracts);
-        $monthsStatus = $monthsCalendar['months'];
-        $minYear = $monthsCalendar['minYear'];
-        $maxYear = $monthsCalendar['maxYear'];
+        $hasMultipleContracts = count($contracts) > 1;
+        $paymentGroups = groupPaymentsByContract($payments, $contracts);
         ?>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-calendar-month text-emerald-600"></i> Aylar Takvimi – Ödendi / Ödenmedi
             </h2>
-            <div class="p-4 overflow-x-auto">
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Ocak, Şubat, Mart… hangi ay ödendi, hangi ay ödenmedi</p>
-                <?php if ($maxYear >= $minYear): ?>
-                <table class="min-w-full border border-gray-200 dark:border-gray-600 text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50">
-                        <tr>
-                            <th class="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left font-bold text-gray-700 dark:text-gray-300">Yıl</th>
-                            <?php for ($m = 1; $m <= 12; $m++): ?>
-                                <th class="border border-gray-200 dark:border-gray-600 px-2 py-2 text-center font-bold text-gray-700 dark:text-gray-300"><?= $monthNames[$m - 1] ?></th>
-                            <?php endfor; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php for ($year = $maxYear; $year >= $minYear; $year--): ?>
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                            <td class="border border-gray-200 dark:border-gray-600 px-2 py-2 font-medium text-gray-900 dark:text-white"><?= $year ?></td>
-                            <?php for ($m = 1; $m <= 12; $m++): ?>
-                                <?php
-                                $key = $year . '-' . str_pad((string)$m, 2, '0', STR_PAD_LEFT);
-                                $info = $monthsStatus[$key] ?? null;
-                                $status = $info['status'] ?? null;
-                                $label = $info ? $info['label'] : '–';
-                                $bg = match ($status) {
-                                    'paid' => 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-                                    'partial' => 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
-                                    'overdue' => 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
-                                    'pending' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
-                                    default => 'bg-gray-50 dark:bg-gray-700/30 text-gray-500 dark:text-gray-400',
-                                };
-                                $title = $info ? (($info['contract_number'] ?? '') . ' – ' . fmtPrice($info['amount'] ?? 0)) : '';
-                                ?>
-                                <td class="border border-gray-200 dark:border-gray-600 px-2 py-1.5 text-center <?= $bg ?>" title="<?= htmlspecialchars($title) ?>"><?= htmlspecialchars($label) ?></td>
-                            <?php endfor; ?>
-                        </tr>
-                        <?php endfor; ?>
-                    </tbody>
-                </table>
+            <div class="p-4 overflow-x-auto space-y-6">
+                <?php if ($hasMultipleContracts): ?>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Bu müşterinin <?= count($contracts) ?> sözleşmesi var; her sözleşme için ayrı takvim gösterilir.</p>
+                    <?php foreach ($contracts as $c):
+                        $cid = $c['id'] ?? '';
+                        if ($cid === '') continue;
+                        $contractCalendar = buildPaymentMonthsCalendar($payments, [$c]);
+                    ?>
+                    <div class="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
+                        <div class="px-3 py-2.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600 flex flex-wrap items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <a href="/girisler/<?= htmlspecialchars($cid) ?>?fromCustomer=1" class="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a>
+                                <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars(contractLocationLabel($c)) ?> · <?= fmtDate($c['start_date'] ?? null) ?> – <?= fmtDate($c['end_date'] ?? null) ?></p>
+                            </div>
+                            <?php if (!empty($c['terminated_at'])): ?>
+                                <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">Sonlandı</span>
+                            <?php elseif (!empty($c['is_active'])): ?>
+                                <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Aktif</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="p-3 overflow-x-auto">
+                            <?php $monthsCalendar = $contractCalendar; require __DIR__ . '/_months_calendar_table.php'; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 <?php else: ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Sözleşme veya ödeme kaydı yok.</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Ocak, Şubat, Mart… hangi ay ödendi, hangi ay ödenmedi</p>
+                    <?php
+                    $monthsCalendar = buildPaymentMonthsCalendar($payments, $contracts);
+                    require __DIR__ . '/_months_calendar_table.php';
+                    ?>
                 <?php endif; ?>
             </div>
         </div>
@@ -367,19 +364,18 @@ if ($bulkPaidExtraCount > 0):
             <?php endif; ?>
         </div>
 
-        <!-- Ödeme takvimi (son ödemeler) -->
+        <!-- Ödeme takvimi (sözleşmeye göre gruplu) -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-credit-card text-emerald-600"></i> Ödeme Takvimi / Ödenenler
             </h2>
             <?php if (empty($payments)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Ödeme kaydı yok.</div>
-            <?php else: ?>
+            <?php elseif (!$hasMultipleContracts): ?>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Vade</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
@@ -391,7 +387,6 @@ if ($bulkPaidExtraCount > 0):
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
                             <?php foreach ($payments as $p): ?>
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($p['due_date'] ?? null) ?></td>
                                     <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</td>
                                     <td class="px-4 py-3">
@@ -403,9 +398,7 @@ if ($bulkPaidExtraCount > 0):
                                         <?php if (($p['status'] ?? '') === 'paid'): ?>
                                             <?php $collectorName = paymentCollectorName($p); ?>
                                             <?= $collectorName !== '' ? htmlspecialchars($collectorName) : '–' ?>
-                                        <?php else: ?>
-                                            –
-                                        <?php endif; ?>
+                                        <?php else: ?>–<?php endif; ?>
                                     </td>
                                     <td class="px-4 py-3">
                                         <?php if (paymentIsCollectible($p)): ?>
@@ -424,6 +417,89 @@ if ($bulkPaidExtraCount > 0):
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+            <?php else: ?>
+                <p class="px-4 pt-4 text-xs text-gray-500 dark:text-gray-400">Taksitler sözleşmeye göre gruplandı. Her blokta depo/oda ve özet görünür.</p>
+                <div class="p-4 pt-2 space-y-6">
+                    <?php
+                    $contractsById = $paymentGroups['contracts_by_id'];
+                    $paymentsByContract = $paymentGroups['by_contract'];
+                    foreach ($paymentGroups['order'] as $groupContractId):
+                        $groupPayments = $paymentsByContract[$groupContractId] ?? [];
+                        if ($groupPayments === []) {
+                            continue;
+                        }
+                        $groupContract = $contractsById[$groupContractId] ?? [];
+                        $paidCount = count(array_filter($groupPayments, fn($p) => ($p['status'] ?? '') === 'paid'));
+                        $pendingCount = count(array_filter($groupPayments, fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue'], true)));
+                        $groupDebt = array_sum(array_map(fn($p) => in_array($p['status'] ?? '', ['pending', 'overdue'], true) ? (float) ($p['amount'] ?? 0) : 0.0, $groupPayments));
+                    ?>
+                    <div class="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
+                        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600 flex flex-wrap items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <a href="/girisler/<?= htmlspecialchars($groupContractId) ?>?fromCustomer=1" class="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($groupContract['contract_number'] ?? ($groupPayments[0]['contract_number'] ?? '-')) ?></a>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><?= htmlspecialchars(contractLocationLabel($groupContract)) ?></p>
+                            </div>
+                            <div class="flex flex-wrap gap-2 text-[11px] font-semibold">
+                                <span class="px-2 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300"><?= $paidCount ?> ödendi</span>
+                                <?php if ($pendingCount > 0): ?>
+                                    <span class="px-2 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"><?= $pendingCount ?> bekliyor</span>
+                                    <span class="px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"><?= fmtPrice($groupDebt) ?> borç</span>
+                                <?php else: ?>
+                                    <span class="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-600/40 text-gray-600 dark:text-gray-300">Borç yok</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                                <thead class="bg-white dark:bg-gray-800">
+                                    <tr>
+                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Vade</th>
+                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</th>
+                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
+                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödenme</th>
+                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşleyen</th>
+                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                                    <?php foreach ($groupPayments as $p): ?>
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($p['due_date'] ?? null) ?></td>
+                                            <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</td>
+                                            <td class="px-4 py-3">
+                                                <?php $ps = paymentStatusDisplay($p); ?>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($p['paid_at'] ?? null) ?></td>
+                                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                                <?php if (($p['status'] ?? '') === 'paid'): ?>
+                                                    <?php $collectorName = paymentCollectorName($p); ?>
+                                                    <?= $collectorName !== '' ? htmlspecialchars($collectorName) : '–' ?>
+                                                <?php else: ?>
+                                                    –
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <?php if (paymentIsCollectible($p)): ?>
+                                                    <a href="/odemeler?payment=<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 text-sm font-medium">Ödeme al</a>
+                                                <?php elseif (($p['status'] ?? '') === 'paid'): ?>
+                                                    <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm mr-2">Detay</a>
+                                                    <form method="post" action="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>/iptal" class="inline" onsubmit="return confirm('Bu tahsilat iptal edilsin mi? Taksit tekrar borç olarak görünür.');">
+                                                        <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
+                                                        <button type="submit" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm font-medium">Geri al</button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-sm">Detay</a>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -614,18 +690,37 @@ $bankAccounts = $bankAccounts ?? [];
                 <form method="post" action="/odemeler/odeme-al" id="paymentModalForm">
                     <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
                     <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">Ödeme alınacak kalemleri işaretleyin. Vadesi gelmemiş aylar için erken tahsilat yapılabilir.</p>
-                    <div class="max-h-48 overflow-y-auto space-y-2 mb-4">
-                        <?php foreach ($unpaidPayments as $p): ?>
+                    <div class="max-h-48 overflow-y-auto space-y-3 mb-4">
+                        <?php
+                        $unpaidGroups = groupPaymentsByContract($unpaidPayments, $contracts);
+                        $showUnpaidContractHeaders = count($contracts) > 1;
+                        foreach ($unpaidGroups['order'] as $modalContractId):
+                            $modalContractPayments = $unpaidGroups['by_contract'][$modalContractId] ?? [];
+                            if ($modalContractPayments === []) {
+                                continue;
+                            }
+                            $modalContract = $unpaidGroups['contracts_by_id'][$modalContractId] ?? [];
+                        ?>
+                        <?php if ($showUnpaidContractHeaders): ?>
+                            <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-1 pt-1">
+                                <?= htmlspecialchars($modalContract['contract_number'] ?? ($modalContractPayments[0]['contract_number'] ?? '-')) ?>
+                                · <?= htmlspecialchars(contractLocationLabel($modalContract)) ?>
+                            </p>
+                        <?php endif; ?>
+                        <?php foreach ($modalContractPayments as $p): ?>
                             <?php $psModal = paymentStatusDisplay($p); ?>
                             <label class="flex items-center justify-between gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
                                 <span class="flex items-center gap-2 min-w-0 flex-wrap">
                                     <input type="checkbox" name="payment_ids[]" value="<?= htmlspecialchars($p['id']) ?>" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0">
-                                    <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></span>
+                                    <?php if (!$showUnpaidContractHeaders): ?>
+                                        <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></span>
+                                    <?php endif; ?>
                                     <span class="text-xs text-gray-500 dark:text-gray-400">Vade: <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></span>
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $psModal['badge'] ?>"><?= htmlspecialchars($psModal['label']) ?></span>
                                 </span>
                                 <span class="font-semibold text-gray-900 dark:text-white shrink-0"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</span>
                             </label>
+                        <?php endforeach; ?>
                         <?php endforeach; ?>
                         <?php foreach ($unpaidCharges as $ch): ?>
                             <label class="flex items-center justify-between gap-2 p-3 border border-amber-200 dark:border-amber-800 rounded-xl hover:bg-amber-50/50 dark:hover:bg-amber-900/10 cursor-pointer">
@@ -761,6 +856,7 @@ $bankAccounts = $bankAccounts ?? [];
 </div>
 
 <script src="/room-picker.js"></script>
+<script src="/contract-billing.js"></script>
 <script>
 window.closeEditCustomerModal = function() {
     var modal = document.getElementById('editCustomerModal');
@@ -842,6 +938,27 @@ function toggleCustContractConditionNote(value) {
             }
         });
     };
+    var custUseCampaign = document.getElementById('custContract_use_campaign');
+    var custCampaignBlock = document.getElementById('custContract_campaign_block');
+    var custCampaignSelect = document.getElementById('custContract_campaign_code');
+    var custStartDate = document.getElementById('custContract_start_date');
+    var custEndDate = document.getElementById('custContract_end_date');
+    function applyCustContractCampaignDates() {
+        if (!custStartDate || !custEndDate || typeof ContractBilling === 'undefined') return;
+        if (!custUseCampaign || !custUseCampaign.checked || !custCampaignSelect || !custCampaignSelect.value) return;
+        if (!custStartDate.value) return;
+        var end = ContractBilling.campaignEndDate(custStartDate.value, custCampaignSelect.value);
+        if (end) custEndDate.value = end;
+    }
+    if (custUseCampaign && custCampaignBlock) {
+        custUseCampaign.addEventListener('change', function() {
+            custCampaignBlock.classList.toggle('hidden', !custUseCampaign.checked);
+            if (!custUseCampaign.checked && custCampaignSelect) custCampaignSelect.value = '';
+            applyCustContractCampaignDates();
+        });
+    }
+    if (custCampaignSelect) custCampaignSelect.addEventListener('change', applyCustContractCampaignDates);
+    if (custStartDate) custStartDate.addEventListener('change', applyCustContractCampaignDates);
     var form = document.getElementById('custContractForm');
     if (form) {
         form.addEventListener('submit', function(e) {

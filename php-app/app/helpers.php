@@ -432,6 +432,36 @@ if (!function_exists('paymentMethodLabel')) {
     }
 }
 
+/** Tahsilatın yatırıldığı hesap / kaynak metni */
+if (!function_exists('paymentDepositAccountLabel')) {
+    function paymentDepositAccountLabel(array $payment): string
+    {
+        $bankName = trim((string) ($payment['bank_name'] ?? ''));
+        $holder = trim((string) ($payment['account_holder_name'] ?? ''));
+        if ($bankName !== '' || $holder !== '') {
+            $parts = array_filter([
+                $bankName,
+                $holder !== '' ? $holder : null,
+                !empty($payment['account_number']) ? 'Hesap no: ' . trim((string) $payment['account_number']) : null,
+                !empty($payment['iban']) ? 'IBAN: ' . trim((string) $payment['iban']) : null,
+                !empty($payment['branch_name']) ? trim((string) $payment['branch_name']) : null,
+            ]);
+            return implode(' · ', $parts);
+        }
+        $method = strtolower(trim((string) ($payment['payment_method'] ?? '')));
+        if (in_array($method, ['credit_card', 'kredi_karti'], true) || str_contains($method, 'kredi')) {
+            return 'Kredi kartı';
+        }
+        if (in_array($method, ['cash', 'nakit'], true)) {
+            return 'Nakit';
+        }
+        if ($method !== '') {
+            return paymentMethodLabel($payment['payment_method'] ?? '') . ' (hesap seçilmemiş)';
+        }
+        return 'Hesap belirtilmemiş';
+    }
+}
+
 /**
  * Ödeme vadesinden önce tahsil edilmiş mi (paid_at < due_date).
  */
@@ -617,6 +647,68 @@ if (!function_exists('buildPaymentMonthsCalendar')) {
         }
 
         return ['months' => $months, 'minYear' => $minYear, 'maxYear' => $maxYear];
+    }
+}
+
+if (!function_exists('contractLocationLabel')) {
+    function contractLocationLabel(array $contract): string
+    {
+        $wh = trim((string) ($contract['warehouse_name'] ?? ''));
+        $room = trim((string) ($contract['room_number'] ?? ''));
+        if ($wh !== '' && $room !== '') {
+            return $wh . ' / ' . $room;
+        }
+        if ($wh !== '') {
+            return $wh;
+        }
+        return $room !== '' ? $room : '–';
+    }
+}
+
+/**
+ * Ödemeleri sözleşme sırasına göre gruplar.
+ *
+ * @return array{by_contract: array<string, list<array>>, contracts_by_id: array<string, array>, order: list<string>}
+ */
+if (!function_exists('groupPaymentsByContract')) {
+    function groupPaymentsByContract(array $payments, array $contracts): array
+    {
+        $contractsById = [];
+        $order = [];
+        foreach ($contracts as $c) {
+            $cid = $c['id'] ?? '';
+            if ($cid === '') {
+                continue;
+            }
+            $contractsById[$cid] = $c;
+            $order[] = $cid;
+        }
+        $byContract = [];
+        foreach ($order as $cid) {
+            $byContract[$cid] = [];
+        }
+        foreach ($payments as $p) {
+            $cid = $p['contract_id'] ?? '';
+            if ($cid === '') {
+                continue;
+            }
+            if (!isset($byContract[$cid])) {
+                $byContract[$cid] = [];
+                $order[] = $cid;
+                $contractsById[$cid] = [
+                    'id' => $cid,
+                    'contract_number' => $p['contract_number'] ?? '',
+                    'warehouse_name' => $p['warehouse_name'] ?? '',
+                    'room_number' => $p['room_number'] ?? '',
+                ];
+            }
+            $byContract[$cid][] = $p;
+        }
+        return [
+            'by_contract' => $byContract,
+            'contracts_by_id' => $contractsById,
+            'order' => $order,
+        ];
     }
 }
 
@@ -1063,6 +1155,20 @@ if (!function_exists('paymentIsCollectible')) {
     function paymentIsCollectible(array $payment): bool
     {
         return paymentStatusDisplay($payment)['collectible'];
+    }
+}
+
+/** Toplu fiyat güncellemesine uygun mu (ödenmemiş, vadesi henüz gelmemiş) */
+if (!function_exists('paymentIsBulkPriceUpdatable')) {
+    function paymentIsBulkPriceUpdatable(array $payment): bool
+    {
+        if (in_array($payment['status'] ?? '', ['paid', 'cancelled'], true)) {
+            return false;
+        }
+        if ((float) ($payment['amount'] ?? 0) < 0.01) {
+            return false;
+        }
+        return (paymentStatusDisplay($payment)['label'] ?? '') === 'Vadesi gelmemiş';
     }
 }
 

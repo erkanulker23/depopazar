@@ -309,13 +309,15 @@ class Payment
             'SELECT p.*, c.contract_number, c.id AS contract_id, c.customer_id,
              cu.first_name AS customer_first_name, cu.last_name AS customer_last_name, cu.email AS customer_email, cu.phone AS customer_phone,
              r.room_number, w.name AS warehouse_name, w.company_id,
-             pu.first_name AS paid_by_first_name, pu.last_name AS paid_by_last_name
+             pu.first_name AS paid_by_first_name, pu.last_name AS paid_by_last_name,
+             ba.bank_name, ba.account_holder_name, ba.account_number, ba.iban, ba.branch_name
              FROM payments p
              INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
              INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
              INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
              INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
              LEFT JOIN users pu ON pu.id = p.paid_by_user_id AND pu.deleted_at IS NULL
+             LEFT JOIN bank_accounts ba ON ba.id = p.bank_account_id AND ba.deleted_at IS NULL
              WHERE p.id = ? AND p.deleted_at IS NULL LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -531,6 +533,34 @@ class Payment
         return $stmt->rowCount() > 0;
     }
 
+    /**
+     * Sözleşmedeki vadesi gelmemiş ödenmemiş ödemeleri toplu tutar güncelle.
+     *
+     * @param array<int, array{payment_id: string, amount: float}> $updates
+     * @return int Güncellenen kayıt sayısı
+     */
+    public static function bulkUpdatePendingAmounts(PDO $pdo, string $contractId, array $updates): int
+    {
+        if ($updates === []) {
+            return 0;
+        }
+        $stmt = $pdo->prepare(
+            "UPDATE payments SET amount = ?
+             WHERE id = ? AND contract_id = ? AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
+        );
+        $count = 0;
+        foreach ($updates as $row) {
+            $paymentId = trim((string) ($row['payment_id'] ?? ''));
+            if ($paymentId === '') {
+                continue;
+            }
+            $amount = (float) ($row['amount'] ?? 0);
+            $stmt->execute([$amount, $paymentId, $contractId]);
+            $count += $stmt->rowCount();
+        }
+        return $count;
+    }
+
     /** Vadesi gelmiş / ödemesi alınmamış müşteriler: sadece bulunduğumuz ay ve önceki aylara ait ödenmemiş borç (gelecek ayların vadeleri dahil değil) */
     public static function findCustomersWithUnpaidPayments(PDO $pdo, ?string $companyId = null, int $limit = 50): array
     {
@@ -609,6 +639,42 @@ class Payment
             'end' => $sunday->format('Y-m-d'),
             'label' => $label,
         ];
+    }
+
+    /** Tahsil edilmiş ödemeler toplamı (paid_at tarihi aralığı, dahil). */
+    public static function sumPaidByPaidAtDateRange(PDO $pdo, ?string $companyId, string $startDate, string $endDate): float
+    {
+        $start = substr(trim($startDate), 0, 10);
+        $end = substr(trim($endDate), 0, 10);
+        if ($start === '' || $end === '') {
+            return 0.0;
+        }
+        $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\' AND p.paid_at IS NOT NULL
+                AND DATE(p.paid_at) >= ? AND DATE(p.paid_at) <= ? ';
+        $params = [$start, $end];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
+    }
+
+    public static function sumPaidToday(PDO $pdo, ?string $companyId): float
+    {
+        $today = date('Y-m-d');
+        return self::sumPaidByPaidAtDateRange($pdo, $companyId, $today, $today);
+    }
+
+    public static function sumPaidThisWeek(PDO $pdo, ?string $companyId): float
+    {
+        $week = self::currentWeekRange();
+        return self::sumPaidByPaidAtDateRange($pdo, $companyId, $week['start'], $week['end']);
     }
 
     /** Vadesi geçmiş ödemeler (liste) */
@@ -803,7 +869,9 @@ class Payment
 
     public static function findByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): array
     {
-        $sql = 'SELECT p.*, c.contract_number, pu.first_name AS paid_by_first_name, pu.last_name AS paid_by_last_name
+        $sql = 'SELECT p.*, c.contract_number, c.id AS contract_id,
+                       w.name AS warehouse_name, r.room_number,
+                       pu.first_name AS paid_by_first_name, pu.last_name AS paid_by_last_name
                 FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
@@ -821,10 +889,35 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Müşterinin tahsil edilmiş ödemeleri (banka hesabı bilgisi ile). */
+    public static function findPaidByCustomerIdWithBank(PDO $pdo, string $customerId, ?string $companyId = null): array
+    {
+        $sql = 'SELECT p.id, p.payment_number, p.amount, p.paid_at, p.due_date, p.payment_method, p.transaction_id, p.status,
+                       c.contract_number, c.id AS contract_id,
+                       w.name AS warehouse_name, r.room_number,
+                       ba.bank_name, ba.account_holder_name, ba.account_number, ba.iban, ba.branch_name
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                LEFT JOIN bank_accounts ba ON ba.id = p.bank_account_id AND ba.deleted_at IS NULL
+                WHERE c.customer_id = ? AND p.deleted_at IS NULL AND p.status = \'paid\' ';
+        $params = [$customerId];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.paid_at DESC, p.due_date DESC ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /** Müşteri: tahsil edilebilir ödemeler (vadesi gelmemiş dahil, vade tarihi filtresi yok) */
     public static function findCollectibleByCustomerId(PDO $pdo, string $customerId, ?string $companyId = null): array
     {
-        $sql = 'SELECT p.*, c.contract_number
+        $sql = 'SELECT p.*, c.contract_number, c.id AS contract_id,
+                       w.name AS warehouse_name, r.room_number
                 FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
@@ -930,7 +1023,7 @@ class Payment
      *
      * @return list<array{contract_id: string, contract_number: string, paid_at: string, count: int, excess: int}>
      */
-    public static function findSuspiciousBulkPaidGroups(PDO $pdo, ?string $customerId = null, ?string $companyId = null): array
+    public static function findSuspiciousBulkPaidGroups(PDO $pdo, ?string $customerId = null, ?string $companyId = null, bool $excludeAcknowledged = true): array
     {
         $sql = 'SELECT p.id, p.contract_id, p.paid_at, p.due_date, c.contract_number, c.customer_id
                 FROM payments p
@@ -977,7 +1070,48 @@ class Payment
             unset($g['items']);
             $out[] = $g;
         }
+        if ($excludeAcknowledged && $customerId) {
+            $acked = self::getAcknowledgedBulkPaidKeys($pdo, $customerId);
+            $out = array_values(array_filter($out, function (array $g) use ($acked): bool {
+                $key = ($g['contract_id'] ?? '') . '|' . ($g['paid_at'] ?? '');
+                return !isset($acked[$key]);
+            }));
+        }
         return $out;
+    }
+
+    /** @return array<string, true> contract_id|paid_at */
+    private static function getAcknowledgedBulkPaidKeys(PDO $pdo, string $customerId): array
+    {
+        $stmt = $pdo->prepare('SELECT contract_id, paid_at FROM bulk_paid_acknowledgments WHERE customer_id = ?');
+        $stmt->execute([$customerId]);
+        $keys = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $keys[($row['contract_id'] ?? '') . '|' . ($row['paid_at'] ?? '')] = true;
+        }
+        return $keys;
+    }
+
+    /** Kullanıcı toplu tahsilatın doğru olduğunu onayladığında uyarıyı kaldırır. */
+    public static function acknowledgeBulkPaidGroups(PDO $pdo, string $customerId, ?string $companyId, ?string $userId = null): int
+    {
+        $groups = self::findSuspiciousBulkPaidGroups($pdo, $customerId, $companyId, false);
+        $inserted = 0;
+        $stmt = $pdo->prepare(
+            'INSERT IGNORE INTO bulk_paid_acknowledgments (id, customer_id, contract_id, paid_at, acknowledged_by_user_id)
+             VALUES (?, ?, ?, ?, ?)'
+        );
+        foreach ($groups as $g) {
+            $stmt->execute([
+                self::uuid(),
+                $customerId,
+                $g['contract_id'],
+                $g['paid_at'],
+                $userId,
+            ]);
+            $inserted += $stmt->rowCount();
+        }
+        return $inserted;
     }
 
     /** Toplu yanlış tahsilatta yalnızca en erken vadeli $keepPerGroup taksiti bırakır, diğerlerini geri alır. */

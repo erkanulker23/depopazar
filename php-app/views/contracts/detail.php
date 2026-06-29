@@ -207,6 +207,9 @@ if ($hasContractOverdue) {
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-48">Sözleşme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['contract_number'] ?? '-') ?></td></tr>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Başlangıç – Bitiş</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
+        <?php if (ContractCampaign::isValid($contract['campaign_code'] ?? null)): ?>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Kampanya</td><td class="border border-gray-300 px-3 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-medium"><?= htmlspecialchars(ContractCampaign::label($contract['campaign_code'])) ?></span></td></tr>
+        <?php endif; ?>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></td></tr>
         <?php if (!empty($contract['stored_items_condition'])): ?>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ürün Durumu</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><span class="text-xs text-gray-600 mt-1 block">Hasar notu: <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?></span><?php endif; ?></td></tr>
@@ -271,6 +274,12 @@ if ($hasContractOverdue) {
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Başlangıç – Bitiş</dt>
                     <dd class="mt-1 text-gray-900 dark:text-white"><?= fmtDate($contract['start_date'] ?? null) ?> – <?= fmtDate($contract['end_date'] ?? null) ?></dd>
                 </div>
+                <?php if (ContractCampaign::isValid($contract['campaign_code'] ?? null)): ?>
+                <div>
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kampanya</dt>
+                    <dd class="mt-1"><span class="inline-flex items-center px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm font-medium"><?= htmlspecialchars(ContractCampaign::label($contract['campaign_code'])) ?></span></dd>
+                </div>
+                <?php endif; ?>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Fiyat</dt>
                     <dd class="mt-1 font-semibold text-gray-900 dark:text-white"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></dd>
@@ -412,13 +421,22 @@ if ($hasContractOverdue) {
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <i class="bi bi-credit-card text-emerald-600"></i> Ödeme Takvimi
                 </h2>
-                <button type="button"
-                        onclick="openRestructureDueDatesModal()"
-                        class="no-print inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40">
-                    <i class="bi bi-calendar-range"></i> Vade tarihlerini yeniden yapılandır
-                </button>
+                <div class="flex flex-wrap gap-2 no-print">
+                    <?php if (!empty($bulkPriceUpdatablePayments)): ?>
+                    <button type="button"
+                            onclick="openBulkPriceUpdateModal()"
+                            class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40">
+                        <i class="bi bi-currency-exchange"></i> Fiyatları toplu güncelle
+                    </button>
+                    <?php endif; ?>
+                    <button type="button"
+                            onclick="openRestructureDueDatesModal()"
+                            class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                        <i class="bi bi-calendar-range"></i> Vade tarihlerini yeniden yapılandır
+                    </button>
+                </div>
             </div>
-            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz. Giriş/çıkış tarihlerine göre vadeleri yeniden oluşturmak için yukarıdaki düğmeyi kullanın.</p>
+            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz. Vadesi gelmemiş tüm ayları tek seferde güncellemek için <strong class="font-medium text-gray-600 dark:text-gray-300">Fiyatları toplu güncelle</strong> düğmesini kullanın; ödenmiş aylar değişmez.</p>
             <?php if (empty($payments)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu sözleşmeye ait ödeme kaydı yok.</div>
             <?php else: ?>
@@ -877,6 +895,9 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
         }
     }
 
+    window.updateCollectButtonsForPayment = updateCollectButtonsForPayment;
+    window.syncMonthlyPriceSidebar = syncMonthlyPriceSidebar;
+
     function finishEditor(save) {
         if (!activeEditor) return;
         var wrap = activeEditor.wrap;
@@ -983,6 +1004,158 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
 </script>
 
 <!-- Vade tarihlerini yeniden yapılandır -->
+<?php if (!empty($bulkPriceUpdatablePayments)): ?>
+<div id="bulkPriceUpdateModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto no-print" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeBulkPriceUpdateModal()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Fiyatları Toplu Güncelle</h3>
+                <button type="button" onclick="closeBulkPriceUpdateModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Yalnızca <strong class="font-medium">vadesi gelmemiş</strong> ve <strong class="font-medium">ödenmemiş</strong>
+                <?= count($bulkPriceUpdatablePayments) ?> ay güncellenir. Ödenmiş, vadesi geçmiş veya bugün vadesi gelen aylar değişmez.
+            </p>
+            <form id="bulkPriceUpdateForm" onsubmit="return submitBulkPriceUpdate(event);">
+                <input type="hidden" name="contract_id" value="<?= htmlspecialchars($contractId) ?>">
+                <div class="space-y-4">
+                    <div>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Güncelleme türü</span>
+                        <div class="flex flex-col gap-2">
+                            <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <input type="radio" name="bulk_price_mode" value="fixed" checked class="text-emerald-600 focus:ring-emerald-500" onchange="toggleBulkPriceMode()">
+                                Sabit yeni tutar
+                            </label>
+                            <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <input type="radio" name="bulk_price_mode" value="percent" class="text-emerald-600 focus:ring-emerald-500" onchange="toggleBulkPriceMode()">
+                                Yüzde zam (TEFE/TÜFE vb.)
+                            </label>
+                        </div>
+                    </div>
+                    <div id="bulkPriceFixedWrap">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="bulk_price_amount">Yeni aylık tutar <span class="text-red-500">*</span></label>
+                        <input type="text" id="bulk_price_amount" inputmode="decimal" autocomplete="off" placeholder="örn. 5.000"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <div id="bulkPricePercentWrap" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="bulk_price_percent">Zam oranı (%) <span class="text-red-500">*</span></label>
+                        <input type="text" id="bulk_price_percent" inputmode="decimal" autocomplete="off" placeholder="örn. 12,5"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Her ayın mevcut tutarına bu oran uygulanır.</p>
+                    </div>
+                </div>
+                <p id="bulkPriceUpdateError" class="hidden mt-3 text-sm text-red-600 dark:text-red-400"></p>
+                <div class="flex justify-end gap-2 mt-5">
+                    <button type="button" onclick="closeBulkPriceUpdateModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                    <button type="submit" id="bulkPriceUpdateSubmit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function openBulkPriceUpdateModal() {
+    var modal = document.getElementById('bulkPriceUpdateModal');
+    var err = document.getElementById('bulkPriceUpdateError');
+    if (err) {
+        err.classList.add('hidden');
+        err.textContent = '';
+    }
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+}
+function closeBulkPriceUpdateModal() {
+    var modal = document.getElementById('bulkPriceUpdateModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+}
+function toggleBulkPriceMode() {
+    var mode = document.querySelector('input[name="bulk_price_mode"]:checked');
+    var isPercent = mode && mode.value === 'percent';
+    var fixedWrap = document.getElementById('bulkPriceFixedWrap');
+    var percentWrap = document.getElementById('bulkPricePercentWrap');
+    if (fixedWrap) fixedWrap.classList.toggle('hidden', !!isPercent);
+    if (percentWrap) percentWrap.classList.toggle('hidden', !isPercent);
+}
+function showBulkPriceError(message) {
+    var err = document.getElementById('bulkPriceUpdateError');
+    if (!err) return;
+    if (!message) {
+        err.classList.add('hidden');
+        err.textContent = '';
+        return;
+    }
+    err.textContent = message;
+    err.classList.remove('hidden');
+}
+function submitBulkPriceUpdate(e) {
+    e.preventDefault();
+    var modeEl = document.querySelector('input[name="bulk_price_mode"]:checked');
+    var mode = modeEl ? modeEl.value : 'fixed';
+    var amountInput = document.getElementById('bulk_price_amount');
+    var percentInput = document.getElementById('bulk_price_percent');
+    var submitBtn = document.getElementById('bulkPriceUpdateSubmit');
+    var contractId = '<?= htmlspecialchars($contractId, ENT_QUOTES) ?>';
+    var affectedCount = <?= (int) count($bulkPriceUpdatablePayments) ?>;
+    var confirmMsg = mode === 'percent'
+        ? affectedCount + ' adet vadesi gelmemiş ayın tutarına zam uygulanacak. Ödenmiş aylara dokunulmaz. Devam edilsin mi?'
+        : affectedCount + ' adet vadesi gelmemiş ayın tutarı güncellenecek. Ödenmiş aylara dokunulmaz. Devam edilsin mi?';
+    if (!confirm(confirmMsg)) {
+        return false;
+    }
+    var fd = new FormData();
+    fd.append('contract_id', contractId);
+    fd.append('mode', mode);
+    if (mode === 'percent') {
+        fd.append('percent', percentInput ? percentInput.value : '');
+    } else {
+        fd.append('amount', amountInput ? amountInput.value : '');
+    }
+    if (submitBtn) submitBtn.disabled = true;
+    showBulkPriceError('');
+    fetch('/girisler/fiyatlari-toplu-guncelle', { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (!data.ok) {
+                showBulkPriceError(data.error || 'Güncellenemedi.');
+                if (submitBtn) submitBtn.disabled = false;
+                return;
+            }
+            (data.items || []).forEach(function(item) {
+                document.querySelectorAll('.payment-amount-editable[data-payment-id="' + item.payment_id + '"]').forEach(function(btn) {
+                    btn.setAttribute('data-amount', String(item.amount));
+                    var display = btn.querySelector('.payment-amount-display');
+                    if (display) display.textContent = item.formatted;
+                });
+                if (typeof updateCollectButtonsForPayment === 'function') {
+                    updateCollectButtonsForPayment(item.payment_id, item.amount);
+                }
+                if (typeof syncMonthlyPriceSidebar === 'function' && item.month_key) {
+                    syncMonthlyPriceSidebar(item.month_key, item.formatted);
+                }
+            });
+            closeBulkPriceUpdateModal();
+            if (submitBtn) submitBtn.disabled = false;
+            alert((data.updated_count || 0) + ' ayın tutarı güncellendi.');
+        })
+        .catch(function() {
+            showBulkPriceError('Bağlantı hatası. Tekrar deneyin.');
+            if (submitBtn) submitBtn.disabled = false;
+        });
+    return false;
+}
+document.getElementById('bulkPriceUpdateModal')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeBulkPriceUpdateModal();
+});
+</script>
+<?php endif; ?>
 <div id="restructureDueDatesModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto no-print" aria-hidden="true">
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" onclick="closeRestructureDueDatesModal()"></div>

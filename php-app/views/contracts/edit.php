@@ -41,6 +41,21 @@ ob_start();
                 <input type="date" name="end_date" id="edit_end_date" value="<?= !empty($contract['end_date']) ? date('Y-m-d', strtotime($contract['end_date'])) : '' ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700 dark:text-white">
             </div>
         </div>
+        <?php $currentCampaign = $contract['campaign_code'] ?? ''; ?>
+        <div class="p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="use_campaign" id="edit_use_campaign" value="1" <?= ContractCampaign::isValid($currentCampaign) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                <span class="text-sm font-medium text-gray-800 dark:text-gray-200">Kampanya kullan</span>
+            </label>
+            <div id="edit_campaign_block" class="<?= ContractCampaign::isValid($currentCampaign) ? '' : 'hidden' ?> mt-3 space-y-2">
+                <select name="campaign_code" id="edit_campaign_code" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">
+                    <option value="">Kampanya seçin</option>
+                    <option value="6_plus_1" <?= $currentCampaign === '6_plus_1' ? 'selected' : '' ?>>6 ay kalsın, 1 ay ücretsiz (7 vade)</option>
+                    <option value="12_plus_1" <?= $currentCampaign === '12_plus_1' ? 'selected' : '' ?>>1 yıl kalsın, 1 ay ücretsiz (13 vade)</option>
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Son ay ücretsiz (0 ₺) ödeme taahhüdü olarak uygulanır.</p>
+            </div>
+        </div>
         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depo <span class="text-red-500">*</span></label>
@@ -218,6 +233,22 @@ function toggleEditStoredItemsConditionNote(value) {
         return n.toFixed(2).replace('.', ',');
     }
 
+    function getEditCampaignCode() {
+        var useCb = document.getElementById('edit_use_campaign');
+        var sel = document.getElementById('edit_campaign_code');
+        if (!useCb || !useCb.checked || !sel || !sel.value) return '';
+        return sel.value;
+    }
+    function applyEditCampaignDates() {
+        var startEl = document.getElementById('edit_start_date');
+        var endEl = document.getElementById('edit_end_date');
+        var code = getEditCampaignCode();
+        if (!startEl || !endEl || !code || typeof ContractBilling === 'undefined') return;
+        if (!startEl.value) return;
+        var endDate = ContractBilling.campaignEndDate(startEl.value, code);
+        if (endDate) endEl.value = endDate;
+    }
+
     function buildEditMonthlyPricesList() {
         var startEl = document.getElementById('edit_start_date');
         var endEl = document.getElementById('edit_end_date');
@@ -237,6 +268,8 @@ function toggleEditStoredItemsConditionNote(value) {
         }
 
         var defaultVal = defaultPriceEl && defaultPriceEl.value ? defaultPriceEl.value.replace(',', '.') : '';
+        var campaignCode = getEditCampaignCode();
+        var freeKey = campaignCode ? ContractBilling.campaignFreePeriodKey(startStr, campaignCode) : '';
         var currentValues = {};
         list.querySelectorAll('input[name^="monthly_prices"]').forEach(function(inp) {
             var match = inp.name.match(/monthly_prices\[(\d{4}-\d{2}-\d{2})\]/);
@@ -252,23 +285,27 @@ function toggleEditStoredItemsConditionNote(value) {
                     ? formatPriceInput(existingMonthlyPrices[item.key])
                     : (defaultVal ? formatPriceInput(defaultVal) : ''));
             var isPaid = ContractBilling.isPaidPeriodKey(item.key, paidPeriodKeys);
+            var isFree = !isPaid && freeKey && item.key === freeKey;
             if (isPaid) {
                 var paidAmt = ContractBilling.paidAmountForPeriodKey(item.key, paidAmountsByPeriod);
                 if (paidAmt != null) {
                     existing = formatPriceInput(paidAmt);
                 }
+            } else if (isFree) {
+                existing = '0,00';
             }
             var row = document.createElement('div');
-            row.className = 'flex items-center gap-3' + (isPaid ? ' opacity-90' : '');
+            row.className = 'flex items-center gap-3' + (isPaid ? ' opacity-90' : '') + (isFree ? ' bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-2 py-1' : '');
             var inputClass = 'flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm ' +
-                (isPaid
+                (isPaid || isFree
                     ? 'bg-gray-100 dark:bg-gray-600/50 text-gray-600 dark:text-gray-300 cursor-not-allowed'
                     : 'focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white');
             row.innerHTML = '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0" title="Vade">' + item.label + '</label>' +
                 '<input type="text" name="monthly_prices[' + item.key + ']" value="' + existing + '" placeholder="0,00"' +
-                (isPaid ? ' readonly' : '') + ' class="' + inputClass + '">' +
+                (isPaid || isFree ? ' readonly' : '') + ' class="' + inputClass + '">' +
                 '<span class="text-gray-500 dark:text-gray-400 text-sm shrink-0">₺</span>' +
-                (isPaid ? '<span class="text-xs font-medium text-green-700 dark:text-green-400 shrink-0">Ödeme alındı</span>' : '');
+                (isPaid ? '<span class="text-xs font-medium text-green-700 dark:text-green-400 shrink-0">Ödeme alındı</span>' : '') +
+                (isFree ? '<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 shrink-0">Ücretsiz</span>' : '');
             list.appendChild(row);
         });
     }
@@ -276,7 +313,25 @@ function toggleEditStoredItemsConditionNote(value) {
     var startEl = document.getElementById('edit_start_date');
     var endEl = document.getElementById('edit_end_date');
     var defaultPriceEl = document.getElementById('edit_monthly_price');
-    if (startEl) startEl.addEventListener('change', buildEditMonthlyPricesList);
+    var editUseCampaign = document.getElementById('edit_use_campaign');
+    var editCampaignBlock = document.getElementById('edit_campaign_block');
+    var editCampaignSelect = document.getElementById('edit_campaign_code');
+    function toggleEditCampaignBlock() {
+        if (!editCampaignBlock || !editUseCampaign) return;
+        editCampaignBlock.classList.toggle('hidden', !editUseCampaign.checked);
+        if (!editUseCampaign.checked && editCampaignSelect) editCampaignSelect.value = '';
+        applyEditCampaignDates();
+        buildEditMonthlyPricesList();
+    }
+    if (editUseCampaign) editUseCampaign.addEventListener('change', toggleEditCampaignBlock);
+    if (editCampaignSelect) editCampaignSelect.addEventListener('change', function() {
+        applyEditCampaignDates();
+        buildEditMonthlyPricesList();
+    });
+    if (startEl) startEl.addEventListener('change', function() {
+        applyEditCampaignDates();
+        buildEditMonthlyPricesList();
+    });
     if (endEl) endEl.addEventListener('change', buildEditMonthlyPricesList);
     if (defaultPriceEl) {
         defaultPriceEl.addEventListener('blur', function() {

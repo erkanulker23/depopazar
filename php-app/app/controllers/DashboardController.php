@@ -23,6 +23,9 @@ class DashboardController
         $customersCount = 0;
         $activeContracts = 0;
         $monthlyRevenue = 0.0;
+        $paidTodaySum = 0.0;
+        $paidThisWeekSum = 0.0;
+        $weekRange = Payment::currentWeekRange();
         $pendingPayments = 0;
         $overduePayments = 0;
         $debtOverdue = 0.0;      // vadesi geçmiş borç (tutar)
@@ -42,6 +45,8 @@ class DashboardController
             $customersCount = Customer::count($this->pdo, $companyId);
             $activeContracts = Contract::countActiveByCompany($this->pdo, $companyId);
             $monthlyRevenue = Payment::sumPaidThisMonthByCompany($this->pdo, $companyId);
+            $paidTodaySum = Payment::sumPaidToday($this->pdo, $companyId);
+            $paidThisWeekSum = Payment::sumPaidThisWeek($this->pdo, $companyId);
             $pendingPayments = Payment::countByStatus($this->pdo, $companyId, 'pending');
             $overduePayments = Payment::countOverdueByDueDate($this->pdo, $companyId);
             $companyDebtSummary = computeCompanyDebtSummary($this->pdo, $companyId);
@@ -59,6 +64,8 @@ class DashboardController
             $customersCount = Customer::count($this->pdo, null);
             $activeContracts = Contract::countActiveGlobal($this->pdo);
             $monthlyRevenue = Payment::sumPaidThisMonthGlobal($this->pdo);
+            $paidTodaySum = Payment::sumPaidToday($this->pdo, null);
+            $paidThisWeekSum = Payment::sumPaidThisWeek($this->pdo, null);
             $pendingPayments = Payment::countByStatusGlobal($this->pdo, 'pending');
             $overduePayments = Payment::countOverdueByDueDateGlobal($this->pdo);
             $companyDebtSummary = computeCompanyDebtSummary($this->pdo, null);

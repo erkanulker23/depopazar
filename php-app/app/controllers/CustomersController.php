@@ -263,6 +263,42 @@ class CustomersController
         exit;
     }
 
+    /** Toplu tahsilat uyarısını onayla (kayıtlar doğru kabul edilir, uyarı kalkar). */
+    public function acknowledgeBulkPaid(array $params): void
+    {
+        Auth::requireStaff();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /musteriler');
+            exit;
+        }
+        $id = $params['id'] ?? '';
+        if (!$id) {
+            header('Location: /musteriler');
+            exit;
+        }
+        $customer = Customer::findOne($this->pdo, $id);
+        if (!$customer) {
+            Auth::setSession('flash_error', 'Müşteri bulunamadı.');
+            header('Location: /musteriler');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($customer['company_id'] ?? '') !== $companyId) {
+            Auth::setSession('flash_error', 'Bu müşteriye erişim yetkiniz yok.');
+            header('Location: /musteriler');
+            exit;
+        }
+        $acknowledged = Payment::acknowledgeBulkPaidGroups($this->pdo, $id, $companyId, !empty($user['id']) ? (string) $user['id'] : null);
+        if ($acknowledged > 0) {
+            Auth::setSession('flash_success', 'Tahsilat kayıtları doğru kabul edildi.');
+        } else {
+            Auth::setSession('flash_error', 'Onaylanacak toplu tahsilat uyarısı bulunamadı.');
+        }
+        header('Location: /musteriler/' . $id);
+        exit;
+    }
+
     /** Müşteriye SMS gönder (Ayarlar > SMS ayarlarına göre). */
     public function sendSms(array $params): void
     {

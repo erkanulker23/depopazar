@@ -180,6 +180,35 @@ $userDisplayName = trim(($authUser['first_name'] ?? '') . ' ' . ($authUser['last
     </div>
 </div>
 
+<?php if ($companyId || ($user['role'] ?? '') === 'super_admin'): ?>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+    <a href="/odemeler?collect=1" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-teal-500/10 transition-all duration-300 group block">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex-1 min-w-0">
+                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Bugün Alınan</p>
+                <p class="text-2xl font-bold text-teal-600 dark:text-teal-400 tabular-nums"><?= fmtMoney($paidTodaySum ?? 0) ?> ₺</p>
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-bold">Bugün tahsil edilen ödemeler</p>
+            </div>
+            <div class="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-cash-coin text-white text-xl"></i>
+            </div>
+        </div>
+    </a>
+    <a href="/odemeler" class="stat-card min-h-[110px] hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300 group block">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex-1 min-w-0">
+                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Bu Hafta Alınan</p>
+                <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400 tabular-nums"><?= fmtMoney($paidThisWeekSum ?? 0) ?> ₺</p>
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-bold"><?= htmlspecialchars($weekRange['label'] ?? 'Bu hafta') ?> · Pazartesi–Pazar</p>
+            </div>
+            <div class="p-3 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl flex-shrink-0 shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+                <i class="bi bi-calendar-week text-white text-xl"></i>
+            </div>
+        </div>
+    </a>
+</div>
+<?php endif; ?>
+
 <?php
 $topSellers = $topSellers ?? [];
 $topPersonnelByJobs = $topPersonnelByJobs ?? [];
@@ -403,70 +432,57 @@ $hasMonthData = !empty($showMonthPanel);
 <?php endif; ?>
 
 <?php if (!empty($showMonthPanel)): ?>
-<section class="mb-8 rounded-2xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" aria-label="Erken ve peşin ödemeler">
+<section class="mb-8 rounded-2xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" aria-label="Erken tahsilatlar">
     <div class="px-5 py-4 border-b border-blue-100 dark:border-blue-900/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
                 <i class="bi bi-lightning-charge text-xl"></i>
             </span>
             <div>
-                <h2 class="text-base font-bold text-gray-900 dark:text-white">Erken &amp; peşin ödemeler</h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Vadesinden önce tahsil edilen · <?= (int) ($earlyPaymentsCount ?? 0) ?> erken ödeme · <?= fmtMoney($earlyPaymentsSum ?? 0) ?> ₺</p>
+                <h2 class="text-base font-bold text-gray-900 dark:text-white">Erken tahsilatlar</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Vadesinden önce alınan ödemeler · <?= (int) ($earlyPaymentsCount ?? 0) ?> kayıt · <?= fmtMoney($earlyPaymentsSum ?? 0) ?> ₺
+                    <?php if (!empty($prepaidContracts)): ?>
+                        · <?= count($prepaidContracts) ?> peşin sözleşme
+                    <?php endif; ?>
+                </p>
             </div>
         </div>
         <a href="/raporlar/erken-odemeler" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-            Tüm rapor <i class="bi bi-arrow-right"></i>
+            Detaylı rapor <i class="bi bi-arrow-right"></i>
         </a>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-gray-700">
-        <div class="p-4 lg:p-5">
-            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Son erken tahsilatlar</h3>
-            <?php if (empty($earlyPaymentsList)): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Henüz erken ödeme kaydı yok</p>
-            <?php else: ?>
-                <ul class="space-y-2 max-h-52 overflow-y-auto pr-1">
-                    <?php foreach ($earlyPaymentsList as $p):
-                        $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
-                        $daysEarly = (int) ($p['days_early'] ?? paymentDaysEarly($p));
-                    ?>
-                    <li class="flex items-start justify-between gap-2 py-2.5 px-3 rounded-xl bg-blue-50/60 dark:bg-blue-900/10 border border-blue-100/80 dark:border-blue-900/30">
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($name ?: '-') ?></p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
-                                Tahsilat <?= fmtDateTime($p['paid_at'] ?? null) ?>
-                                · Vade <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?>
-                            </p>
-                            <p class="text-xs font-medium text-blue-600 dark:text-blue-400 mt-0.5"><?= $daysEarly ?> gün erken</p>
-                        </div>
-                        <p class="text-sm font-bold text-blue-700 dark:text-blue-300 tabular-nums shrink-0"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</p>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
-        </div>
-        <div class="p-4 lg:p-5">
-            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Peşin ödemiş sözleşmeler</h3>
-            <?php if (empty($prepaidContracts)): ?>
-                <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Tüm taksitlerini peşin kapatan aktif sözleşme yok</p>
-            <?php else: ?>
-                <ul class="space-y-2 max-h-52 overflow-y-auto pr-1">
-                    <?php foreach ($prepaidContracts as $c):
-                        $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));
-                    ?>
-                    <li class="py-2.5 px-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-900/10 border border-indigo-100/80 dark:border-indigo-900/30">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="min-w-0">
-                                <a href="/girisler/<?= htmlspecialchars($c['contract_id'] ?? '') ?>" class="text-sm font-semibold text-gray-900 dark:text-white hover:text-emerald-600 truncate block"><?= htmlspecialchars($name) ?></a>
-                                <p class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($c['contract_number'] ?? '') ?> · <?= (int) ($c['payment_count'] ?? 0) ?> taksit · <?= fmtMoney($c['total_paid'] ?? 0) ?> ₺</p>
-                            </div>
-                            <span class="shrink-0 px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">Peşin</span>
-                        </div>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
-        </div>
+    <div class="p-4 lg:p-5">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3 rounded-lg bg-slate-50 dark:bg-gray-700/40 px-3 py-2">
+            <strong class="text-gray-700 dark:text-gray-300">Erken ödeme:</strong> tek bir taksit vadesinden önce tahsil edilmiş.
+            <strong class="text-gray-700 dark:text-gray-300 ml-1">Peşin sözleşme:</strong> tüm taksitleri ödenmiş ve en az biri erken tahsil edilmiş — ayrıntılar raporda.
+        </p>
+        <?php if (empty($earlyPaymentsList)): ?>
+            <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl bg-slate-50 dark:bg-gray-700/30">Henüz erken tahsilat kaydı yok</p>
+        <?php else: ?>
+            <ul class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                <?php foreach ($earlyPaymentsList as $p):
+                    $name = trim(($p['customer_first_name'] ?? '') . ' ' . ($p['customer_last_name'] ?? ''));
+                    $daysEarly = (int) ($p['days_early'] ?? paymentDaysEarly($p));
+                ?>
+                <li class="flex items-start justify-between gap-2 py-2.5 px-3 rounded-xl bg-blue-50/60 dark:bg-blue-900/10 border border-blue-100/80 dark:border-blue-900/30">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($name ?: '-') ?></p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Tahsilat <?= fmtDateTime($p['paid_at'] ?? null) ?>
+                            · Vade <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?>
+                            <?php if (!empty($p['contract_number'])): ?>
+                                · <?= htmlspecialchars($p['contract_number']) ?>
+                            <?php endif; ?>
+                        </p>
+                        <p class="text-xs font-medium text-blue-600 dark:text-blue-400 mt-0.5"><?= $daysEarly ?> gün erken</p>
+                    </div>
+                    <p class="text-sm font-bold text-blue-700 dark:text-blue-300 tabular-nums shrink-0"><?= fmtMoney($p['amount'] ?? 0) ?> ₺</p>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
     </div>
 </section>
 <?php endif; ?>

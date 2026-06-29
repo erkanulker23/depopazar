@@ -83,6 +83,31 @@ class Contract
 
     private static ?bool $hasStoredItemsColumnsCache = null;
     private static ?bool $monthlyPricesMonthColumnReadyCache = null;
+    private static ?bool $hasCampaignColumnCache = null;
+
+    public static function hasCampaignColumn(PDO $pdo): bool
+    {
+        if (self::$hasCampaignColumnCache !== null) {
+            return self::$hasCampaignColumnCache;
+        }
+        try {
+            $pdo->query('SELECT campaign_code FROM contracts LIMIT 0');
+            self::$hasCampaignColumnCache = true;
+        } catch (Throwable $e) {
+            self::$hasCampaignColumnCache = false;
+        }
+        return self::$hasCampaignColumnCache;
+    }
+
+    private static function setCampaignCode(PDO $pdo, string $contractId, ?string $campaignCode): void
+    {
+        if (!self::hasCampaignColumn($pdo)) {
+            return;
+        }
+        $code = ContractCampaign::isValid($campaignCode) ? $campaignCode : null;
+        $stmt = $pdo->prepare('UPDATE contracts SET campaign_code = ? WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$code, $contractId]);
+    }
 
     /** Eski kurulumlarda month VARCHAR(7) (Y-m); Y-m-d anahtarları için genişlet */
     public static function ensureMonthlyPricesMonthColumn(PDO $pdo): void
@@ -219,6 +244,9 @@ class Contract
                         $data['notes'] ?? null,
                     ]);
                 }
+                if (array_key_exists('campaign_code', $data)) {
+                    self::setCampaignCode($pdo, $id, $data['campaign_code'] ?? null);
+                }
                 return self::findOne($pdo, $id);
             } catch (PDOException $e) {
                 if ($attempt === $maxAttempts - 1) {
@@ -293,6 +321,9 @@ class Contract
                 $soldBy,
                 $id,
             ]);
+            if (array_key_exists('campaign_code', $data)) {
+                self::setCampaignCode($pdo, $id, $data['campaign_code'] ?? null);
+            }
             return;
         }
         $stmt = $pdo->prepare(
@@ -312,6 +343,9 @@ class Contract
             $soldBy,
             $id,
         ]);
+        if (array_key_exists('campaign_code', $data)) {
+            self::setCampaignCode($pdo, $id, $data['campaign_code'] ?? null);
+        }
     }
 
     /** @return list<string> */
@@ -511,6 +545,24 @@ class Contract
                 'due_date' => $info['due_date'],
             ]);
         }
+    }
+
+    /** Kampanya varsa ücretsiz ayın tutarını 0 yapar (ödenmemiş dönemler). */
+    /** @param array<string, array{price: float, due_date: string}> $validPeriods */
+    private static function applyCampaignToValidPeriods(
+        array $validPeriods,
+        ?string $startDate,
+        ?string $campaignCode,
+        array $paidPeriodKeys
+    ): array {
+        if ($startDate === null || $startDate === '' || !ContractCampaign::isValid($campaignCode)) {
+            return $validPeriods;
+        }
+        $freeKey = ContractCampaign::freePeriodKey($startDate, $campaignCode);
+        if (isset($validPeriods[$freeKey]) && !ContractBilling::isPaidPeriodKey($freeKey, $paidPeriodKeys)) {
+            $validPeriods[$freeKey]['price'] = 0.0;
+        }
+        return $validPeriods;
     }
 
     /** @param array<string, array{price: float, due_date: string}> $validPeriods */
@@ -721,6 +773,14 @@ class Contract
                 ];
             }
         }
+
+        $campaignCode = null;
+        if (self::hasCampaignColumn($pdo)) {
+            $stmtCamp = $pdo->prepare('SELECT campaign_code FROM contracts WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+            $stmtCamp->execute([$contractId]);
+            $campaignCode = $stmtCamp->fetchColumn() ?: null;
+        }
+        $validPeriods = self::applyCampaignToValidPeriods($validPeriods, $startDate, $campaignCode, $paidPeriodKeys);
 
         $stmtUpdate = $pdo->prepare('UPDATE contract_monthly_prices SET price = ?, deleted_at = NULL WHERE id = ?');
         $stmtInsert = $pdo->prepare('INSERT INTO contract_monthly_prices (id, contract_id, month, price) VALUES (?, ?, ?, ?)');

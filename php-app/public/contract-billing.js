@@ -80,11 +80,26 @@
     }
 
     global.ContractBilling = {
+        CAMPAIGNS: {
+            '6_plus_1': { totalPeriods: 7, paidMonths: 6, freeMonths: 1, label: '6 ay kalsın, 1 ay ücretsiz' },
+            '12_plus_1': { totalPeriods: 13, paidMonths: 12, freeMonths: 1, label: '1 yıl kalsın, 1 ay ücretsiz' }
+        },
         addMonthsSameDay: addMonthsSameDay,
         billingPeriods: billingPeriods,
         formatPeriodLabel: formatPeriodLabel,
         normalizeDateStr: normalizeDateStr,
         isPaidPeriodKey: isPaidPeriodKey,
-        paidAmountForPeriodKey: paidAmountForPeriodKey
+        paidAmountForPeriodKey: paidAmountForPeriodKey,
+        getCampaign: function(code) {
+            return this.CAMPAIGNS[code] || null;
+        },
+        campaignEndDate: function(startStr, code) {
+            var c = this.getCampaign(code);
+            if (!c || !startStr) return '';
+            return addMonthsSameDay(startStr, c.totalPeriods - 1);
+        },
+        campaignFreePeriodKey: function(startStr, code) {
+            return this.campaignEndDate(startStr, code);
+        }
     };
 })(typeof window !== 'undefined' ? window : this);

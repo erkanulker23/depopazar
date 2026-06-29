@@ -397,6 +397,20 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
                         <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-calendar3"></i> Tarih Bilgileri</h4>
+                        <div class="mb-3 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10">
+                            <label class="inline-flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="use_campaign" id="newSale_use_campaign" value="1" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                                <span class="text-sm font-medium text-gray-800 dark:text-gray-200">Kampanya kullan</span>
+                            </label>
+                            <div id="newSale_campaign_block" class="hidden mt-3 space-y-2">
+                                <select name="campaign_code" id="newSale_campaign_code" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">
+                                    <option value="">Kampanya seçin</option>
+                                    <option value="6_plus_1">6 ay kalsın, 1 ay ücretsiz (7 vade)</option>
+                                    <option value="12_plus_1">1 yıl kalsın, 1 ay ücretsiz (13 vade)</option>
+                                </select>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Başlangıç tarihine göre bitiş ve ödeme planı otomatik ayarlanır. Son ay ücretsiz (0 ₺) ödeme taahhüdü olarak eklenir.</p>
+                            </div>
+                        </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Başlangıç Tarihi <span class="text-red-500">*</span></label>
@@ -851,6 +865,21 @@ function closeNewSaleModal() {
             }
         });
     }
+    function getNewSaleCampaignCode() {
+        var useCb = document.getElementById('newSale_use_campaign');
+        var sel = document.getElementById('newSale_campaign_code');
+        if (!useCb || !useCb.checked || !sel || !sel.value) return '';
+        return sel.value;
+    }
+    function applyNewSaleCampaignDates() {
+        var startEl = document.getElementById('newSale_start_date');
+        var endEl = document.getElementById('newSale_end_date');
+        var code = getNewSaleCampaignCode();
+        if (!startEl || !endEl || !code || typeof ContractBilling === 'undefined') return;
+        if (!startEl.value) return;
+        var endDate = ContractBilling.campaignEndDate(startEl.value, code);
+        if (endDate) endEl.value = endDate;
+    }
     function buildMonthlyPricesList() {
         var startEl = document.getElementById('newSale_start_date');
         var endEl = document.getElementById('newSale_end_date');
@@ -862,25 +891,51 @@ function closeNewSaleModal() {
         var startStr = startEl.value, endStr = endEl.value;
         if (!startStr || !endStr) { section.classList.add('hidden'); list.innerHTML = ''; return; }
         if (endStr < startStr) { section.classList.add('hidden'); list.innerHTML = ''; return; }
+        var campaignCode = getNewSaleCampaignCode();
+        var freeKey = campaignCode ? ContractBilling.campaignFreePeriodKey(startStr, campaignCode) : '';
         var periods = ContractBilling.billingPeriods(startStr, endStr);
         list.innerHTML = '';
         periods.forEach(function(item) {
+            var isFree = freeKey && item.key === freeKey;
+            var priceVal = isFree ? '0,00' : (defaultVal ? defaultVal.replace('.', ',') : '');
             var row = document.createElement('div');
-            row.className = 'flex items-center gap-3';
-            row.innerHTML = '<label class="w-28 text-sm text-gray-700 shrink-0" title="Vade tarihi">' + item.label + '</label>' +
-                '<input type="text" name="monthly_prices[' + item.key + ']" value="' + (defaultVal ? defaultVal.replace('.', ',') : '') + '" placeholder="0,00" class="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm">' +
-                '<span class="text-gray-500 text-sm shrink-0">₺</span>';
+            row.className = 'flex items-center gap-3' + (isFree ? ' bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-2 py-1' : '');
+            row.innerHTML = '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0" title="Vade tarihi">' + item.label + '</label>' +
+                '<input type="text" name="monthly_prices[' + item.key + ']" value="' + priceVal + '" placeholder="0,00"' + (isFree ? ' readonly' : '') + ' class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm' + (isFree ? ' bg-gray-100 dark:bg-gray-600/50' : '') + '">' +
+                '<span class="text-gray-500 text-sm shrink-0">₺</span>' +
+                (isFree ? '<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 shrink-0">Ücretsiz</span>' : '');
             list.appendChild(row);
         });
         section.classList.remove('hidden');
     }
-    document.getElementById('newSale_start_date').addEventListener('change', buildMonthlyPricesList);
+    var useCampaignCb = document.getElementById('newSale_use_campaign');
+    var campaignBlock = document.getElementById('newSale_campaign_block');
+    var campaignSelect = document.getElementById('newSale_campaign_code');
+    function toggleNewSaleCampaignBlock() {
+        if (!campaignBlock || !useCampaignCb) return;
+        campaignBlock.classList.toggle('hidden', !useCampaignCb.checked);
+        if (!useCampaignCb.checked && campaignSelect) campaignSelect.value = '';
+        applyNewSaleCampaignDates();
+        buildMonthlyPricesList();
+    }
+    if (useCampaignCb) useCampaignCb.addEventListener('change', toggleNewSaleCampaignBlock);
+    if (campaignSelect) campaignSelect.addEventListener('change', function() {
+        applyNewSaleCampaignDates();
+        buildMonthlyPricesList();
+    });
+    document.getElementById('newSale_start_date').addEventListener('change', function() {
+        applyNewSaleCampaignDates();
+        buildMonthlyPricesList();
+    });
     document.getElementById('newSale_end_date').addEventListener('change', buildMonthlyPricesList);
     document.getElementById('newSale_monthly_price').addEventListener('blur', function() {
         var list = document.getElementById('newSale_monthly_prices_list');
         if (!list || !list.querySelectorAll('input').length) return;
         var val = this.value.replace(',', '.');
-        list.querySelectorAll('input').forEach(function(inp) { if (!inp.value || inp.value === '0') inp.value = val ? val.replace('.', ',') : ''; });
+        list.querySelectorAll('input').forEach(function(inp) {
+            if (inp.readOnly) return;
+            if (!inp.value || inp.value === '0') inp.value = val ? val.replace('.', ',') : '';
+        });
     });
     var pickupAddrDetail = document.getElementById('newSale_pickup_address_detail');
     var pickupDepo = document.getElementById('newSale_pickup_warehouse_id');

@@ -43,6 +43,19 @@ $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_na
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bitiş <span class="text-red-500">*</span></label>
             <input type="date" name="end_date" id="custContract_end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
         </div>
+        <div class="sm:col-span-2 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="use_campaign" id="custContract_use_campaign" value="1" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                <span class="text-sm font-medium text-gray-800 dark:text-gray-200">Kampanya kullan</span>
+            </label>
+            <div id="custContract_campaign_block" class="hidden mt-2">
+                <select name="campaign_code" id="custContract_campaign_code" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white text-sm">
+                    <option value="">Kampanya seçin</option>
+                    <option value="6_plus_1">6 ay kalsın, 1 ay ücretsiz</option>
+                    <option value="12_plus_1">1 yıl kalsın, 1 ay ücretsiz</option>
+                </select>
+            </div>
+        </div>
         <div class="sm:col-span-2">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aylık ücret (₺) <span class="text-red-500">*</span></label>
             <input type="text" name="monthly_price" id="custContract_monthly_price" required placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">

@@ -350,6 +350,11 @@ class PaymentsController
         }
         $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
         $company = !empty($payment['company_id']) ? Company::findOne($this->pdo, $payment['company_id']) : null;
+        $customerPaidPayments = [];
+        $customerId = $payment['customer_id'] ?? '';
+        if ($customerId !== '') {
+            $customerPaidPayments = Payment::findPaidByCustomerIdWithBank($this->pdo, $customerId, $companyId);
+        }
         $pageTitle = 'Ödeme: ' . ($payment['payment_number'] ?? $id);
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/payments/detail.php';

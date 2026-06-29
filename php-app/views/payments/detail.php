@@ -90,6 +90,12 @@ ob_start();
                     <dd class="mt-1 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(paymentMethodLabel($payment['payment_method'] ?? '')) ?></dd>
                 </div>
                 <?php if (($payment['status'] ?? '') === 'paid'): ?>
+                <div class="sm:col-span-2">
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tahsilat Hesabı</dt>
+                    <dd class="mt-1 text-gray-900 dark:text-gray-300"><?= htmlspecialchars(paymentDepositAccountLabel($payment)) ?></dd>
+                </div>
+                <?php endif; ?>
+                <?php if (($payment['status'] ?? '') === 'paid'): ?>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşleyen</dt>
                     <dd class="mt-1 text-gray-900 dark:text-gray-300"><?php $collectorName = paymentCollectorName($payment); echo $collectorName !== '' ? htmlspecialchars($collectorName) : '–'; ?></dd>
@@ -109,6 +115,58 @@ ob_start();
                 <?php endif; ?>
             </dl>
         </div>
+
+        <?php
+        $customerPaidPayments = $customerPaidPayments ?? [];
+        if (!empty($customerPaidPayments)):
+        ?>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                <i class="bi bi-bank text-emerald-600"></i> Müşterinin Tahsilatları ve Hesaplar
+            </h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4"><?= htmlspecialchars($customerName ?: 'Müşteri') ?> — yapılan ödemelerin hangi hesaba işlendiği</p>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-700/50">
+                        <tr>
+                            <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tahsilat</th>
+                            <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme</th>
+                            <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Vade</th>
+                            <th class="px-3 py-2.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</th>
+                            <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Yöntem</th>
+                            <th class="px-3 py-2.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Hesap / Kaynak</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                        <?php foreach ($customerPaidPayments as $cp):
+                            $isCurrent = ($cp['id'] ?? '') === ($payment['id'] ?? '');
+                            $accountLabel = paymentDepositAccountLabel($cp);
+                        ?>
+                        <tr class="<?= $isCurrent ? 'bg-emerald-50/80 dark:bg-emerald-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30' ?>">
+                            <td class="px-3 py-3 whitespace-nowrap">
+                                <?php if ($isCurrent): ?>
+                                    <span class="font-semibold text-emerald-700 dark:text-emerald-300"><?= fmtDateTime($cp['paid_at'] ?? null) ?></span>
+                                    <span class="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Bu kayıt</span>
+                                <?php else: ?>
+                                    <a href="/odemeler/<?= htmlspecialchars($cp['id'] ?? '') ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"><?= fmtDateTime($cp['paid_at'] ?? null) ?></a>
+                                    <span class="block text-[10px] text-gray-400 dark:text-gray-500"><?= htmlspecialchars($cp['payment_number'] ?? '') ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-3 py-3 text-gray-700 dark:text-gray-300">
+                                <span class="block font-medium"><?= htmlspecialchars($cp['contract_number'] ?? '–') ?></span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars(trim(($cp['warehouse_name'] ?? '') . ' / ' . ($cp['room_number'] ?? ''), ' /')) ?></span>
+                            </td>
+                            <td class="px-3 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap"><?= fmtDate($cp['due_date'] ?? null) ?></td>
+                            <td class="px-3 py-3 text-right font-semibold text-gray-900 dark:text-white whitespace-nowrap"><?= fmtPrice($cp['amount'] ?? 0) ?></td>
+                            <td class="px-3 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap"><?= htmlspecialchars(paymentMethodLabel($cp['payment_method'] ?? '')) ?></td>
+                            <td class="px-3 py-3 text-gray-800 dark:text-gray-200"><?= htmlspecialchars($accountLabel) ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     <div class="space-y-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">

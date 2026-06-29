@@ -215,6 +215,13 @@ class ContractsController
         $contractPdfUrl = storeContractPdfUpload($_FILES['contract_pdf'] ?? null);
         $pickupLocation = $this->resolvePickupLocation($_POST);
         $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
+        $campaignCode = null;
+        $campaignError = $this->applyCampaignFromRequest($_POST, $startDate, $endDate, $monthlyPrice, $monthlyPricesPost, $campaignCode);
+        if ($campaignError !== null) {
+            Auth::setSession('flash_error', $campaignError);
+            header('Location: ' . $redirectTargets['error']);
+            exit;
+        }
         $roomKeyParts = array_merge([$roomId], array_column($additionalRooms, 'room_id'));
         sort($roomKeyParts, SORT_STRING);
         $contractDedupeKey = hash('sha256', ($companyId ?? '') . '|' . $customerId . '|' . implode(',', $roomKeyParts) . '|' . $startDate . '|' . $endDate);
@@ -241,6 +248,7 @@ class ContractsController
             'notes' => trim($_POST['notes'] ?? '') ?: null,
             'stored_items_condition' => $storedCondition,
             'stored_items_condition_note' => $storedConditionNote,
+            'campaign_code' => $campaignCode,
         ];
         try {
             $created = $this->createSingleSaleContract(
@@ -259,6 +267,8 @@ class ContractsController
             );
             $createdAdditional = [];
             foreach ($additionalRooms as $extra) {
+                $extraFields = $sharedContractFields;
+                $extraFields['campaign_code'] = null;
                 $createdAdditional[] = $this->createSingleSaleContract(
                     $user,
                     $companyId,
@@ -266,7 +276,7 @@ class ContractsController
                     $extra['room_id'],
                     $extra['monthly_price'],
                     [],
-                    $sharedContractFields,
+                    $extraFields,
                     0,
                     0,
                     null,
@@ -377,6 +387,38 @@ class ContractsController
             'error' => '/girisler?newSale=1',
             'generic' => '/girisler',
         ];
+    }
+
+    /**
+     * Kampanya seçildiyse bitiş tarihini ve aylık fiyatları ayarlar.
+     *
+     * @param array<string, mixed> $post
+     * @param array<string, string|float> $monthlyPricesPost
+     */
+    private function applyCampaignFromRequest(
+        array $post,
+        string $startDate,
+        string &$endDate,
+        float $monthlyPrice,
+        array &$monthlyPricesPost,
+        ?string &$campaignCode
+    ): ?string {
+        $campaignCode = null;
+        $useCampaign = isset($post['use_campaign']) && $post['use_campaign'] === '1';
+        if (!$useCampaign) {
+            return null;
+        }
+        $code = trim((string) ($post['campaign_code'] ?? ''));
+        if (!ContractCampaign::isValid($code)) {
+            return 'Kampanya kullanmak için geçerli bir kampanya seçin.';
+        }
+        $campaignCode = $code;
+        $endDate = ContractCampaign::endDateForCampaign($startDate, $code);
+        $monthlyPricesPost = ContractCampaign::applyToMonthlyPrices($startDate, $endDate, $code, $monthlyPrice, $monthlyPricesPost);
+        if (!ContractCampaign::matchesPeriodCount($startDate, $endDate, $code)) {
+            return 'Seçilen kampanya ile tarih aralığı uyuşmuyor.';
+        }
+        return null;
     }
 
     /**
@@ -563,6 +605,26 @@ class ContractsController
             exit;
         }
         try {
+            $contractStart = substr((string) ($startDate ?? $contract['start_date'] ?? ''), 0, 10);
+            $contractEnd = substr((string) ($endDate ?? $contract['end_date'] ?? ''), 0, 10);
+            $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
+            $campaignCode = $contract['campaign_code'] ?? null;
+            $campaignError = $this->applyCampaignFromRequest($_POST, $contractStart, $contractEnd, $monthlyPrice, $monthlyPricesPost, $campaignCode);
+            if ($campaignError !== null) {
+                Auth::setSession('flash_error', $campaignError);
+                header('Location: /girisler/' . $id . '/duzenle');
+                exit;
+            }
+            $useCampaign = isset($_POST['use_campaign']) && $_POST['use_campaign'] === '1';
+            if (!$useCampaign) {
+                $campaignCode = null;
+            }
+            if ($startDate) {
+                $startDate = $contractStart . ' 00:00:00';
+            }
+            if ($endDate) {
+                $endDate = $contractEnd . ' 23:59:59';
+            }
             Contract::update($this->pdo, $id, [
                 'start_date' => $startDate ?? $contract['start_date'],
                 'end_date' => $endDate ?? $contract['end_date'],
@@ -577,6 +639,7 @@ class ContractsController
                 'stored_items_condition' => $storedCondition,
                 'stored_items_condition_note' => $storedConditionNote,
                 'sold_by_user_id' => trim($_POST['sold_by_user_id'] ?? '') ?: null,
+                'campaign_code' => $campaignCode,
             ]);
             $contractCompanyId = $contract['company_id'] ?? $companyId;
             if ($contractCompanyId) {
@@ -586,7 +649,6 @@ class ContractsController
                 $personnelIds = Personnel::filterIdsForCompany($this->pdo, $personnelIds, $contractCompanyId);
                 Contract::syncPersonnel($this->pdo, $id, $personnelIds);
             }
-            $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
             $paidMonths = Payment::getPaidPeriodKeysByContractId($this->pdo, $id);
             $paidAmountsByMonth = Payment::getPaidAmountsByPeriodForContract($this->pdo, $id);
             $existingMonthlyByKey = [];
@@ -617,8 +679,8 @@ class ContractsController
             Contract::syncMonthlyPrices(
                 $this->pdo,
                 $id,
-                $startDate ?? $contract['start_date'],
-                $endDate ?? $contract['end_date'],
+                $contractStart,
+                $contractEnd,
                 $monthlyPrice,
                 $monthlyPricesPost
             );
@@ -835,6 +897,133 @@ class ContractsController
         exit;
     }
 
+    /** Sözleşme detayından vadesi gelmemiş ödenmemiş tüm tutarları toplu güncelle (AJAX) */
+    public function bulkUpdatePaymentAmounts(): void
+    {
+        Auth::requireStaff();
+        header('Content-Type: application/json; charset=utf-8');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'error' => 'Geçersiz istek.']);
+            exit;
+        }
+        $contractId = trim($_POST['contract_id'] ?? '');
+        $mode = trim($_POST['mode'] ?? 'fixed');
+        $amountRaw = trim(str_replace([' ', '₺'], '', $_POST['amount'] ?? ''));
+        $percentRaw = trim(str_replace([' ', '%'], '', $_POST['percent'] ?? ''));
+        if (str_contains($amountRaw, ',')) {
+            $amountRaw = str_replace('.', '', $amountRaw);
+            $amountRaw = str_replace(',', '.', $amountRaw);
+        }
+        if (str_contains($percentRaw, ',')) {
+            $percentRaw = str_replace('.', '', $percentRaw);
+            $percentRaw = str_replace(',', '.', $percentRaw);
+        }
+        if ($contractId === '') {
+            echo json_encode(['ok' => false, 'error' => 'Eksik bilgi.']);
+            exit;
+        }
+        $contract = Contract::findOne($this->pdo, $contractId);
+        if (!$contract) {
+            echo json_encode(['ok' => false, 'error' => 'Sözleşme bulunamadı.']);
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Bu sözleşmeye erişim yetkiniz yok.']);
+            exit;
+        }
+        if ($mode === 'percent') {
+            if ($percentRaw === '' || !is_numeric($percentRaw)) {
+                echo json_encode(['ok' => false, 'error' => 'Geçerli bir zam oranı girin.']);
+                exit;
+            }
+            $percent = (float) $percentRaw;
+            if ($percent <= 0) {
+                echo json_encode(['ok' => false, 'error' => 'Zam oranı 0\'dan büyük olmalı.']);
+                exit;
+            }
+        } else {
+            $mode = 'fixed';
+            if ($amountRaw === '' || !is_numeric($amountRaw)) {
+                echo json_encode(['ok' => false, 'error' => 'Geçerli bir tutar girin.']);
+                exit;
+            }
+            $fixedAmount = (float) $amountRaw;
+            if ($fixedAmount <= 0) {
+                echo json_encode(['ok' => false, 'error' => 'Tutar 0\'dan büyük olmalı.']);
+                exit;
+            }
+        }
+        $payments = Payment::findByContractId($this->pdo, $contractId);
+        $payments = filterPaymentsToValidContractPeriods($payments, [$contract]);
+        $eligible = array_values(array_filter($payments, static fn(array $p): bool => paymentIsBulkPriceUpdatable($p)));
+        if ($eligible === []) {
+            echo json_encode(['ok' => false, 'error' => 'Güncellenecek vadesi gelmemiş ödeme bulunamadı.']);
+            exit;
+        }
+        $updates = [];
+        $responseItems = [];
+        foreach ($eligible as $payment) {
+            $current = (float) ($payment['amount'] ?? 0);
+            if ($mode === 'percent') {
+                $newAmount = round($current * (1 + $percent / 100), 2);
+            } else {
+                $newAmount = round($fixedAmount, 2);
+            }
+            if ($newAmount <= 0) {
+                continue;
+            }
+            if (abs($newAmount - $current) < 0.009) {
+                continue;
+            }
+            $paymentId = (string) ($payment['id'] ?? '');
+            $monthYm = ContractBilling::periodKeyFromDueDate($payment['due_date'] ?? null);
+            $updates[] = ['payment_id' => $paymentId, 'amount' => $newAmount];
+            $responseItems[] = [
+                'payment_id' => $paymentId,
+                'amount' => $newAmount,
+                'formatted' => fmtPrice($newAmount),
+                'month_key' => $monthYm,
+            ];
+        }
+        if ($updates === []) {
+            echo json_encode(['ok' => false, 'error' => 'Tutarlar zaten güncel veya geçerli bir değişiklik yok.']);
+            exit;
+        }
+        try {
+            $this->pdo->beginTransaction();
+            $updated = Payment::bulkUpdatePendingAmounts($this->pdo, $contractId, $updates);
+            if ($updated === 0) {
+                $this->pdo->rollBack();
+                echo json_encode(['ok' => false, 'error' => 'Tutarlar güncellenemedi.']);
+                exit;
+            }
+            foreach ($responseItems as $item) {
+                $monthYm = $item['month_key'] ?? '';
+                if ($monthYm !== '') {
+                    Contract::setMonthlyPriceForMonth($this->pdo, $contractId, $monthYm, (float) $item['amount']);
+                }
+            }
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log('bulkUpdatePaymentAmounts failed for ' . $contractId . ': ' . $e->getMessage());
+            echo json_encode(['ok' => false, 'error' => 'Güncelleme sırasında bir hata oluştu.']);
+            exit;
+        }
+        echo json_encode([
+            'ok' => true,
+            'updated_count' => $updated,
+            'items' => $responseItems,
+        ]);
+        exit;
+    }
+
     public function show(array $params): void
     {
         Auth::requireStaff();
@@ -895,6 +1084,7 @@ class ContractsController
         }
         $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
         $collectPayments = array_values(array_filter($payments, fn($p) => paymentIsCollectible($p)));
+        $bulkPriceUpdatablePayments = array_values(array_filter($payments, fn($p) => paymentIsBulkPriceUpdatable($p)));
         $bankAccounts = [];
         $cid = $contract['company_id'] ?? $companyId;
         if ($cid) {
