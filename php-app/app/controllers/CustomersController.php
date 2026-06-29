@@ -977,6 +977,7 @@ class CustomersController
             'address'         => trim($_POST['address'] ?? '') ?: null,
             'notes'           => trim($_POST['notes'] ?? '') ?: null,
             'invoice_info'    => trim($_POST['invoice_info'] ?? '') ?: null,
+            'created_by_user_id' => $user['id'] ?? null,
         ];
         $dedupeKey = hash('sha256', $companyId . '|' . mb_strtolower($firstName) . '|' . mb_strtolower($lastName) . '|' . ($phoneFormatted ?? '') . '|' . ($email ?? ''));
         $lockName = 'customer_create:' . substr($dedupeKey, 0, 40);
@@ -1329,6 +1330,7 @@ class CustomersController
                     'notes'           => $notes,
                     'is_active'       => $isActive,
                     'external_id'     => $externalId,
+                    'created_by_user_id' => $user['id'] ?? null,
                 ];
                 if ($existing) {
                     Customer::update($this->pdo, $existing['id'], $data);

@@ -1,6 +1,7 @@
 <?php
 $currentPage = 'musteriler';
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
+$customerCreatedByName = trim(($customer['created_by_first_name'] ?? '') . ' ' . ($customer['created_by_last_name'] ?? ''));
 $debtOverdue = $debtOverdue ?? 0;
 $debtDueThisMonth = $debtDueThisMonth ?? 0;
 $debtAmount = (float) ($debt ?? 0);
@@ -42,6 +43,14 @@ ob_start();
         </div>
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Müşteri Detayı</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold"><?= htmlspecialchars($customerName) ?></p>
+        <?php if (!empty($customer['created_at'])): ?>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Eklenme: <?= fmtDateTime($customer['created_at']) ?>
+            <?php if ($customerCreatedByName !== ''): ?>
+                · Ekleyen: <span class="font-medium text-gray-700 dark:text-gray-300"><?= htmlspecialchars($customerCreatedByName) ?></span>
+            <?php endif; ?>
+        </p>
+        <?php endif; ?>
         <?php if ($hasOverdueDebt): ?>
         <p class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
             <i class="bi bi-exclamation-triangle-fill"></i> Gecikmede olan borçları var
@@ -199,6 +208,14 @@ if ($bulkPaidExtraCount > 0):
                 <button type="button" onclick="openEditCustomerModal()" class="ml-2 p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" title="Düzenle"><i class="bi bi-pencil"></i></button>
             </h2>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Eklenme Tarihi</dt>
+                    <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= !empty($customer['created_at']) ? fmtDateTime($customer['created_at']) : '-' ?></dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ekleyen</dt>
+                    <dd class="mt-1 text-gray-600 dark:text-gray-300"><?= $customerCreatedByName !== '' ? htmlspecialchars($customerCreatedByName) : '-' ?></dd>
+                </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ad Soyad</dt>
                     <dd class="mt-1 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($customerName ?: '-') ?></dd>

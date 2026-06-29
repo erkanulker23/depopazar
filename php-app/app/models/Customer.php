@@ -1,6 +1,22 @@
 <?php
 class Customer
 {
+    private static ?bool $hasCreatedByColumnCache = null;
+
+    public static function hasCreatedByColumn(PDO $pdo): bool
+    {
+        if (self::$hasCreatedByColumnCache !== null) {
+            return self::$hasCreatedByColumnCache;
+        }
+        try {
+            $pdo->query('SELECT created_by_user_id FROM customers LIMIT 0');
+            self::$hasCreatedByColumnCache = true;
+        } catch (Throwable $e) {
+            self::$hasCreatedByColumnCache = false;
+        }
+        return self::$hasCreatedByColumnCache;
+    }
+
     public static function findAll(PDO $pdo, ?string $companyId = null, ?string $search = null, ?int $limit = null, int $offset = 0, ?string $inDepo = null, ?string $warehouseId = null, ?string $debtFilter = null, bool $duplicateOnly = false): array
     {
         $params = [];
@@ -234,7 +250,16 @@ class Customer
 
     public static function findOne(PDO $pdo, string $id): ?array
     {
-        $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+        if (self::hasCreatedByColumn($pdo)) {
+            $stmt = $pdo->prepare(
+                'SELECT c.*, cb.first_name AS created_by_first_name, cb.last_name AS created_by_last_name
+                 FROM customers c
+                 LEFT JOIN users cb ON cb.id = c.created_by_user_id AND cb.deleted_at IS NULL
+                 WHERE c.id = ? AND c.deleted_at IS NULL LIMIT 1'
+            );
+        } else {
+            $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+        }
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
@@ -435,6 +460,7 @@ class Customer
     public static function create(PDO $pdo, array $data): array
     {
         $id = self::uuid();
+        $createdBy = trim((string) ($data['created_by_user_id'] ?? '')) ?: null;
         $paramsNew = [
             $id,
             $data['company_id'],
@@ -463,11 +489,19 @@ class Customer
             isset($data['is_active']) ? (int) $data['is_active'] : 1,
         ];
         try {
-            $stmt = $pdo->prepare(
-                'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, phone_2, identity_number, address, notes, invoice_info, is_active, external_id) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-            );
-            $stmt->execute($paramsNew);
+            if (self::hasCreatedByColumn($pdo)) {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, phone_2, identity_number, address, notes, invoice_info, is_active, external_id, created_by_user_id)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                );
+                $stmt->execute([...$paramsNew, $createdBy]);
+            } else {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, phone_2, identity_number, address, notes, invoice_info, is_active, external_id)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                );
+                $stmt->execute($paramsNew);
+            }
         } catch (PDOException $e) {
             $existing = self::findOne($pdo, $id);
             if ($existing) {
@@ -477,7 +511,7 @@ class Customer
                 throw $e;
             }
             $stmt = $pdo->prepare(
-                'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, identity_number, address, notes, is_active) 
+                'INSERT INTO customers (id, company_id, first_name, last_name, email, phone, identity_number, address, notes, is_active)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute($paramsOld);
