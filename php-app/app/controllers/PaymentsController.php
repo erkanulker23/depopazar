@@ -132,6 +132,14 @@ class PaymentsController
             $stmt = $this->pdo->query('SELECT * FROM bank_accounts WHERE deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
             $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
+        $activePersonnel = [];
+        if (Personnel::tableExists($this->pdo)) {
+            if ($companyId) {
+                $activePersonnel = Personnel::findActiveForCompany($this->pdo, $companyId);
+            } elseif (($user['role'] ?? '') === 'super_admin') {
+                $activePersonnel = Personnel::findAll($this->pdo, null, null, null, '1');
+            }
+        }
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $paymentsByCustomer = $paymentsByCustomer ?? [];
         $totalPayments = $totalPayments ?? 0;
@@ -232,8 +240,20 @@ class PaymentsController
         }
         try {
             $paidByUserId = !empty($user['id']) ? (string) $user['id'] : null;
+            $paidByPersonnelId = trim($_POST['paid_by_personnel_id'] ?? '') ?: null;
+            if ($paidByPersonnelId) {
+                if ($companyId) {
+                    $validIds = Personnel::filterIdsForCompany($this->pdo, [$paidByPersonnelId], $companyId);
+                    $paidByPersonnelId = $validIds[0] ?? null;
+                } elseif (($user['role'] ?? '') === 'super_admin') {
+                    $personnelRow = Personnel::findOne($this->pdo, $paidByPersonnelId);
+                    $paidByPersonnelId = $personnelRow ? $paidByPersonnelId : null;
+                } else {
+                    $paidByPersonnelId = null;
+                }
+            }
             if (count($paymentIds) === 1 && empty($chargeIds)) {
-                Payment::markAsPaid($this->pdo, $paymentIds[0], $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt, $paidByUserId);
+                Payment::markAsPaid($this->pdo, $paymentIds[0], $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt, $paidByUserId, $paidByPersonnelId);
                 $firstPayment = Payment::findOne($this->pdo, $paymentIds[0]);
                 if ($firstPayment && !empty($firstPayment['contract_id'])) {
                     $contract = Contract::findOne($this->pdo, $firstPayment['contract_id']);
@@ -244,7 +264,7 @@ class PaymentsController
                     }
                 }
             } elseif (!empty($paymentIds)) {
-                Payment::markManyAsPaid($this->pdo, $paymentIds, $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt, $paidByUserId);
+                Payment::markManyAsPaid($this->pdo, $paymentIds, $paymentMethod, $transactionId, $notes, $bankAccountId, $paidAt, $paidByUserId, $paidByPersonnelId);
                 $notifiedWarehouses = [];
                 foreach ($paymentIds as $pid) {
                     $p = Payment::findOne($this->pdo, $pid);

@@ -23,13 +23,13 @@ $navItems = [
     ['name' => 'Müşteriler', 'href' => '/musteriler', 'active' => $currentPath === '/musteriler'],
     ['name' => 'Tüm Sözleşmeler', 'href' => '/girisler', 'active' => $currentPath === '/girisler'],
     ['name' => 'Depolar', 'href' => '/depolar', 'active' => $currentPath === '/depolar'],
-    ['name' => 'Odalar', 'href' => '/odalar', 'active' => $currentPath === '/odalar'],
+    ['name' => 'Odalar', 'href' => '/odalar', 'active' => $currentPath === '/odalar' || strpos($currentPath, '/odalar/') === 0],
     ['name' => 'Ödeme Al', 'href' => '/odemeler?collect=1', 'active' => false],
     ['name' => 'Nakliye İşler', 'href' => '/nakliye-isler', 'active' => $currentPath === '/nakliye-isler'],
     ['name' => 'Araçlar', 'href' => '/araclar', 'active' => $currentPath === '/araclar' || (strpos($currentPath, '/araclar/') === 0)],
     ['name' => 'Hizmetler', 'href' => '/hizmetler', 'active' => $currentPath === '/hizmetler'],
     ['name' => 'Teklifler', 'href' => '/teklifler', 'active' => $currentPath === '/teklifler'],
-    ['name' => 'Personel', 'href' => '/personel', 'active' => $currentPath === '/personel'],
+    ['name' => 'Personel', 'href' => '/personel', 'active' => $currentPath === '/personel' || strpos($currentPath, '/personel/') === 0],
     ['name' => 'Kullanıcılar', 'href' => '/kullanicilar', 'active' => $currentPath === '/kullanicilar'],
     ['name' => 'Kullanıcı Yetkileri', 'href' => '/yetkiler', 'active' => $currentPath === '/yetkiler'],
     ['name' => 'Ödemeler', 'href' => '/odemeler', 'active' => $currentPath === '/odemeler'],
@@ -107,6 +107,12 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             --safe-left: env(safe-area-inset-left);
             --safe-right: env(safe-area-inset-right);
             --mobile-nav-height: calc(4.75rem + max(0.5rem, var(--safe-bottom)));
+            --mobile-page-bg: #f8fafc;
+            --mobile-nav-bg: rgba(255, 255, 255, 0.97);
+        }
+        .dark:root {
+            --mobile-page-bg: #1a1614;
+            --mobile-nav-bg: rgba(26, 22, 20, 0.98);
         }
         html, body, input, select, textarea, button { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
         .nav-active { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.35); }
@@ -233,7 +239,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         @media (max-width: 767px) {
             #sidebar.sidebar-mobile.open { z-index: 60; }
             #sidebarOverlay:not(.hidden) { z-index: 55; }
-            body.sidebar-open #mobileBottomNav {
+            body.sidebar-open #mobileBottomNavHost {
                 visibility: hidden;
                 pointer-events: none;
             }
@@ -250,13 +256,29 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             }
         }
         * { -webkit-tap-highlight-color: transparent; }
-        html { overflow-x: hidden; scroll-padding-bottom: var(--mobile-nav-height); }
+        html {
+            overflow-x: hidden;
+            scroll-padding-bottom: var(--mobile-nav-height);
+            background-color: var(--mobile-page-bg);
+        }
         .main-content-wrap { padding-bottom: env(safe-area-inset-bottom, 0); }
         @media (max-width: 767px) {
-            html { scroll-padding-bottom: var(--mobile-nav-height); }
+            html {
+                height: 100%;
+                scroll-padding-bottom: var(--mobile-nav-height);
+                overscroll-behavior-y: none;
+            }
             body {
                 overflow-x: hidden;
                 max-width: 100vw;
+                min-height: 100dvh;
+                min-height: -webkit-fill-available;
+                background-color: var(--mobile-page-bg) !important;
+                overscroll-behavior-y: none;
+            }
+            body.min-h-screen {
+                min-height: 100dvh !important;
+                min-height: -webkit-fill-available !important;
             }
             #appShell,
             body > .flex.min-h-screen {
@@ -588,7 +610,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 border-top: 1px solid rgb(229 231 235);
                 z-index: 10;
             }
-            body.modal-open #mobileBottomNav {
+            body.modal-open #mobileBottomNavHost {
                 visibility: hidden;
                 pointer-events: none;
             }
@@ -602,27 +624,61 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 min-height: 44px;
             }
         }
+        #mobileBottomNavHost {
+            display: none;
+        }
         #mobileBottomNav {
             padding-bottom: max(0.5rem, var(--safe-bottom));
         }
         @media (max-width: 767px) {
-            #mobileBottomNav {
+            #mobileBottomNavHost {
+                display: block;
                 position: fixed !important;
                 left: 0;
                 right: 0;
                 bottom: 0;
                 width: 100%;
                 max-width: 100vw;
-                z-index: 50;
+                z-index: 9990;
+                pointer-events: none;
+                padding: 0;
+                margin: 0;
+                transform: translate3d(0, 0, 0);
+                -webkit-transform: translate3d(0, 0, 0);
+            }
+            #mobileBottomNav {
+                position: relative !important;
+                left: auto;
+                right: auto;
+                bottom: auto;
+                width: 100%;
+                max-width: 100vw;
+                z-index: 1;
                 margin: 0;
                 padding-top: 0.625rem;
                 padding-left: max(0.5rem, var(--safe-left));
                 padding-right: max(0.5rem, var(--safe-right));
-                background: rgba(255,255,255,.97);
+                padding-bottom: max(0.5rem, var(--safe-bottom));
+                background: var(--mobile-nav-bg);
                 backdrop-filter: blur(16px);
                 -webkit-backdrop-filter: blur(16px);
                 border-top: 1px solid rgb(229 231 235);
                 box-shadow: 0 -8px 32px rgba(0,0,0,.08);
+                pointer-events: auto;
+                transform: translate3d(0, 0, 0);
+                -webkit-transform: translate3d(0, 0, 0);
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+            }
+            #mobileBottomNav::after {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: env(safe-area-inset-bottom, 0px);
+                background: var(--mobile-nav-bg);
+                pointer-events: none;
             }
             #mobileBottomNav .mobile-nav-bar {
                 display: grid;
@@ -687,9 +743,12 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 transform: scale(0.94);
             }
             .dark #mobileBottomNav {
-                background: rgba(26,22,20,.98);
+                background: var(--mobile-nav-bg);
                 border-top-color: rgb(61 52 46);
                 box-shadow: 0 -8px 32px rgba(0,0,0,.4);
+            }
+            .dark #mobileBottomNav::after {
+                background: var(--mobile-nav-bg);
             }
             /* Mobil bildirim paneli */
             #notificationBackdrop {
@@ -706,7 +765,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             body.notification-panel-open #appTopBar {
                 z-index: 111;
             }
-            body.notification-panel-open #mobileBottomNav {
+            body.notification-panel-open #mobileBottomNavHost {
                 visibility: hidden;
                 pointer-events: none;
             }
@@ -763,7 +822,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 touch-action: manipulation;
             }
         }
-        @media (min-width: 768px) { #mobileBottomNav { display: none !important; } }
+        @media (min-width: 768px) { #mobileBottomNavHost, #mobileBottomNav { display: none !important; } }
         @media (max-width: 767px) {
             .nav-link { min-height: 48px; padding: 0.75rem 1rem; -webkit-tap-highlight-color: transparent; }
             .btn-touch { min-height: 44px; min-width: 44px; padding: 0.625rem 1rem; }
@@ -972,7 +1031,8 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
 
     <div id="notificationBackdrop" class="hidden md:hidden" aria-hidden="true"></div>
 
-    <nav id="mobileBottomNav" class="md:hidden" aria-label="Hızlı erişim">
+    <div id="mobileBottomNavHost" class="md:hidden" aria-hidden="false">
+    <nav id="mobileBottomNav" aria-label="Hızlı erişim">
         <div class="mobile-nav-bar">
             <div class="mobile-nav-group">
                 <a href="/genel-bakis" class="mobile-nav-item <?= $currentPath === '/genel-bakis' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400' ?>">
@@ -999,6 +1059,44 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
             </div>
         </div>
     </nav>
+    </div>
+    <script>
+    (function(){
+        var host = document.getElementById('mobileBottomNavHost');
+        var nav = document.getElementById('mobileBottomNav');
+        if (!host || !nav) return;
+        function isMobile() { return window.matchMedia('(max-width: 767px)').matches; }
+        function pinMobileNav() {
+            if (!isMobile()) return;
+            if (host.parentNode !== document.body) {
+                document.body.appendChild(host);
+            }
+        }
+        function syncMobileNavHeight() {
+            if (!isMobile() || !nav) return;
+            var h = Math.ceil(nav.getBoundingClientRect().height);
+            if (h > 0) {
+                document.documentElement.style.setProperty('--mobile-nav-height', h + 'px');
+            }
+        }
+        pinMobileNav();
+        syncMobileNavHeight();
+        window.addEventListener('resize', function() { pinMobileNav(); syncMobileNavHeight(); });
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() { pinMobileNav(); syncMobileNavHeight(); }, 120);
+        });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', syncMobileNavHeight);
+            window.visualViewport.addEventListener('scroll', syncMobileNavHeight);
+        }
+        if (typeof ResizeObserver !== 'undefined') {
+            try {
+                var ro = new ResizeObserver(syncMobileNavHeight);
+                ro.observe(nav);
+            } catch (e) {}
+        }
+    })();
+    </script>
     <script>
     (function(){
         var t=document.getElementById('menuToggle'), s=document.getElementById('sidebar'), o=document.getElementById('sidebarOverlay');

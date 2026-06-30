@@ -1029,11 +1029,27 @@ class Payment
         return (float) $stmt->fetchColumn();
     }
 
+    public static function paidByPersonnelColumnExists(PDO $pdo): bool
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+        try {
+            $stmt = $pdo->query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' AND COLUMN_NAME = 'paid_by_personnel_id' LIMIT 1");
+            $cache = (bool) ($stmt && $stmt->fetch());
+        } catch (Throwable $e) {
+            $cache = false;
+        }
+        return $cache;
+    }
+
     /** Ödemeyi iptal et / geri al (paid -> pending, paid_at temizlenir; borç olarak tekrar görünür) */
     public static function cancel(PDO $pdo, string $paymentId): bool
     {
+        $clearPersonnel = self::paidByPersonnelColumnExists($pdo) ? ', paid_by_personnel_id = NULL' : '';
         $stmt = $pdo->prepare(
-            'UPDATE payments SET status = \'pending\', paid_at = NULL, payment_method = NULL, transaction_id = NULL, bank_account_id = NULL, paid_by_user_id = NULL WHERE id = ? AND deleted_at IS NULL'
+            'UPDATE payments SET status = \'pending\', paid_at = NULL, payment_method = NULL, transaction_id = NULL, bank_account_id = NULL, paid_by_user_id = NULL' . $clearPersonnel . ' WHERE id = ? AND deleted_at IS NULL'
         );
         $stmt->execute([$paymentId]);
         return $stmt->rowCount() > 0;
@@ -1189,28 +1205,36 @@ class Payment
         return $stmt->rowCount() > 0;
     }
 
-    public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null, ?string $paidByUserId = null): void
+    public static function markAsPaid(PDO $pdo, string $paymentId, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null, ?string $paidByUserId = null, ?string $paidByPersonnelId = null): void
     {
         $paidAtValue = self::normalizeCollectedPaidAt($paidAt);
+        $method = $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti';
+        if (self::paidByPersonnelColumnExists($pdo)) {
+            $stmt = $pdo->prepare(
+                'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ?, paid_by_personnel_id = ? WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
+            );
+            $stmt->execute([$paidAtValue, $method, $transactionId, $notes, $bankAccountId, $paidByUserId, $paidByPersonnelId, $paymentId]);
+            return;
+        }
         $stmt = $pdo->prepare(
             'UPDATE payments SET status = \'paid\', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id = ? AND deleted_at IS NULL AND status IN (\'pending\', \'overdue\')'
         );
-        $stmt->execute([
-            $paidAtValue,
-            $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti',
-            $transactionId,
-            $notes,
-            $bankAccountId,
-            $paidByUserId,
-            $paymentId,
-        ]);
+        $stmt->execute([$paidAtValue, $method, $transactionId, $notes, $bankAccountId, $paidByUserId, $paymentId]);
     }
 
-    public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null, ?string $paidByUserId = null): void
+    public static function markManyAsPaid(PDO $pdo, array $paymentIds, string $paymentMethod, ?string $transactionId = null, ?string $notes = null, ?string $bankAccountId = null, ?string $paidAt = null, ?string $paidByUserId = null, ?string $paidByPersonnelId = null): void
     {
         $method = $paymentMethod === 'bank_transfer' ? 'havale' : 'kredi_karti';
         $paidAtValue = self::normalizeCollectedPaidAt($paidAt);
         $placeholders = implode(',', array_fill(0, count($paymentIds), '?'));
+        if (self::paidByPersonnelColumnExists($pdo)) {
+            $params = array_merge([$paidAtValue, $method, $transactionId, $notes, $bankAccountId, $paidByUserId, $paidByPersonnelId], $paymentIds);
+            $stmt = $pdo->prepare(
+                "UPDATE payments SET status = 'paid', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ?, paid_by_personnel_id = ? WHERE id IN ($placeholders) AND deleted_at IS NULL AND status IN ('pending', 'overdue')"
+            );
+            $stmt->execute($params);
+            return;
+        }
         $params = array_merge([$paidAtValue, $method, $transactionId, $notes, $bankAccountId, $paidByUserId], $paymentIds);
         $stmt = $pdo->prepare(
             "UPDATE payments SET status = 'paid', paid_at = ?, payment_method = ?, transaction_id = ?, notes = ?, bank_account_id = ?, paid_by_user_id = ? WHERE id IN ($placeholders) AND deleted_at IS NULL AND status IN ('pending', 'overdue')"

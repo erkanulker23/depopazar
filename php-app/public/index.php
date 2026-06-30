@@ -148,6 +148,7 @@ $router->post('/teklifler/guncelle', fn() => (new ProposalsController($pdo))->up
 $router->post('/teklifler/durum', fn() => (new ProposalsController($pdo))->updateStatus());
 $router->post('/teklifler/sil', fn() => (new ProposalsController($pdo))->delete());
 $router->get('/personel', fn() => (new PersonnelController($pdo))->index());
+$router->get('/personel/{id}', fn(array $p) => (new PersonnelController($pdo))->detail($p));
 $router->post('/personel/ekle', fn() => (new PersonnelController($pdo))->create());
 $router->post('/personel/guncelle', fn() => (new PersonnelController($pdo))->update());
 $router->post('/personel/sil', fn() => (new PersonnelController($pdo))->delete());

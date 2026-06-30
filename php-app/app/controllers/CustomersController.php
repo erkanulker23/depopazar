@@ -196,6 +196,14 @@ class CustomersController
             $stmt = $this->pdo->query('SELECT * FROM bank_accounts WHERE deleted_at IS NULL AND is_active = 1 ORDER BY bank_name');
             $bankAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
+        $activePersonnel = [];
+        if (Personnel::tableExists($this->pdo)) {
+            if ($companyId) {
+                $activePersonnel = Personnel::findActiveForCompany($this->pdo, $companyId);
+            } elseif (($user['role'] ?? '') === 'super_admin') {
+                $activePersonnel = Personnel::findAll($this->pdo, null, null, null, '1');
+            }
+        }
         $openAddContract = isset($_GET['addContract']) && $_GET['addContract'] !== '0';
         $warehouses = [];
         $contractRoomsJson = [];

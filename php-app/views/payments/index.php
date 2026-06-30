@@ -376,6 +376,19 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                             <input type="text" name="transaction_id" placeholder="Havale işlem numarası" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                         </div>
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahsil eden personel (opsiyonel)</label>
+                            <?php if (!empty($activePersonnel)): ?>
+                                <select name="paid_by_personnel_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                    <option value="">Seçin</option>
+                                    <?php foreach ($activePersonnel as $ap): ?>
+                                        <option value="<?= htmlspecialchars($ap['id']) ?>"><?= htmlspecialchars(trim(($ap['first_name'] ?? '') . ' ' . ($ap['last_name'] ?? ''))) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php else: ?>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Aktif personel yok. <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline">Personel ekleyin</a>.</p>
+                            <?php endif; ?>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not (opsiyonel)</label>
                             <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"></textarea>
                         </div>

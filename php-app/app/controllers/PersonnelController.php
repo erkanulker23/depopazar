@@ -39,6 +39,39 @@ class PersonnelController
         require __DIR__ . '/../../views/personnel/index.php';
     }
 
+    public function detail(array $params): void
+    {
+        Auth::requireStaff();
+        $id = trim($params['id'] ?? '');
+        if (!$id || !Personnel::tableExists($this->pdo)) {
+            header('Location: /personel');
+            exit;
+        }
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $isSuperAdmin = ($user['role'] ?? '') === 'super_admin';
+        $personnelRow = Personnel::findOne($this->pdo, $id, $isSuperAdmin ? null : $companyId);
+        if (!$personnelRow) {
+            Auth::setSession('flash_error', 'Personel bulunamadı.');
+            header('Location: /personel');
+            exit;
+        }
+        $personnelCompanyId = $personnelRow['company_id'] ?? null;
+        $contracts = Personnel::findContractsForPersonnel($this->pdo, $id, $personnelCompanyId);
+        $payments = Personnel::findPaymentsCollectedForPersonnel($this->pdo, $id, $personnelCompanyId);
+        $stats = Personnel::getDetailStats($contracts, $payments);
+        $jobTypeLabels = Personnel::jobTypeLabels();
+        $canManage = in_array($user['role'] ?? '', ['super_admin', 'company_owner', 'company_staff', 'warehouse_manager'], true);
+        $companyName = null;
+        if ($isSuperAdmin && $personnelCompanyId) {
+            $stmt = $this->pdo->prepare('SELECT name FROM companies WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+            $stmt->execute([$personnelCompanyId]);
+            $companyName = $stmt->fetchColumn() ?: null;
+        }
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
+        require __DIR__ . '/../../views/personnel/detail.php';
+    }
+
     public function create(): void
     {
         Auth::requireStaff();
@@ -153,7 +186,8 @@ class PersonnelController
 
         Notification::createForCompany($this->pdo, $row['company_id'] ?? null, 'personnel', 'Personel güncellendi', trim($firstName . ' ' . $lastName) . ' bilgileri güncellendi.');
         Auth::setSession('flash_success', 'Personel güncellendi.');
-        header('Location: /personel');
+        $redirect = trim($_POST['redirect'] ?? '');
+        header('Location: ' . ($redirect !== '' && preg_match('#^/personel/[a-f0-9\-]+$#i', $redirect) ? $redirect : '/personel'));
         exit;
     }
 

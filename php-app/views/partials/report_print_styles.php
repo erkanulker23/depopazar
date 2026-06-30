@@ -14,6 +14,7 @@
     #sidebar,
     #sidebarOverlay,
     #appTopBar,
+    #mobileBottomNavHost,
     #mobileBottomNav,
     #notificationBackdrop,
     #notificationWrap,

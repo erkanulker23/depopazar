@@ -245,6 +245,92 @@ class Personnel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** @return list<array<string, mixed>> */
+    public static function findContractsForPersonnel(PDO $pdo, string $personnelId, ?string $companyId): array
+    {
+        if (!self::tableExists($pdo)) {
+            return [];
+        }
+        $sql = 'SELECT DISTINCT c.id, c.contract_number, c.start_date, c.end_date, c.monthly_price, c.is_active, c.created_at,
+                       cu.id AS customer_id, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
+                       w.name AS warehouse_name, r.room_number,
+                       sb.first_name AS sold_by_first_name, sb.last_name AS sold_by_last_name
+                FROM contracts c
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                LEFT JOIN contract_personnel cp ON cp.contract_id = c.id AND cp.deleted_at IS NULL AND cp.personnel_id = ?
+                LEFT JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                LEFT JOIN users sb ON sb.id = c.sold_by_user_id AND sb.deleted_at IS NULL
+                WHERE c.deleted_at IS NULL
+                  AND (cp.personnel_id IS NOT NULL OR c.sold_by_user_id = ?) ';
+        $params = [$personnelId, $personnelId];
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY c.created_at DESC ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** @return list<array<string, mixed>> */
+    public static function findPaymentsCollectedForPersonnel(PDO $pdo, string $personnelId, ?string $companyId): array
+    {
+        if (!self::tableExists($pdo)) {
+            return [];
+        }
+        $hasPersonnelCol = Payment::paidByPersonnelColumnExists($pdo);
+        $sql = 'SELECT p.id, p.amount, p.paid_at, p.payment_method, p.status, p.due_date,
+                       c.id AS contract_id, c.contract_number,
+                       cu.id AS customer_id, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
+                       w.name AS warehouse_name
+                FROM payments p
+                INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+                INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL AND p.status = \'paid\' ';
+        $params = [];
+        if ($hasPersonnelCol) {
+            $sql .= ' AND (p.paid_by_personnel_id = ? OR p.paid_by_user_id = ?) ';
+            $params[] = $personnelId;
+            $params[] = $personnelId;
+        } else {
+            $sql .= ' AND p.paid_by_user_id = ? ';
+            $params[] = $personnelId;
+        }
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ? ';
+            $params[] = $companyId;
+        }
+        $sql .= ' ORDER BY p.paid_at DESC, p.created_at DESC ';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** @param list<array<string, mixed>> $contracts @param list<array<string, mixed>> $payments */
+    public static function getDetailStats(array $contracts, array $payments): array
+    {
+        $activeContracts = 0;
+        foreach ($contracts as $c) {
+            if (!empty($c['is_active'])) {
+                $activeContracts++;
+            }
+        }
+        $totalCollected = 0.0;
+        foreach ($payments as $p) {
+            $totalCollected += (float) ($p['amount'] ?? 0);
+        }
+        return [
+            'contract_count' => count($contracts),
+            'active_contract_count' => $activeContracts,
+            'payment_count' => count($payments),
+            'total_collected' => $totalCollected,
+        ];
+    }
+
     private static function uuid(): string
     {
         $data = random_bytes(16);

@@ -70,7 +70,7 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
                             <?php $size = 'md'; require __DIR__ . '/../partials/personnel_avatar.php'; ?>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-gray-900 dark:text-white truncate"><?= htmlspecialchars($personName) ?></p>
+                            <a href="/personel/<?= htmlspecialchars($personnelRow['id']) ?>" class="font-semibold text-gray-900 dark:text-white truncate block hover:text-emerald-600 dark:hover:text-emerald-400"><?= htmlspecialchars($personName) ?></a>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"><?= htmlspecialchars($personnelRow['phone'] ?? '–') ?></p>
                             <div class="flex flex-wrap items-center gap-2 mt-2">
                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"><?= htmlspecialchars($jobLabel) ?></span>
@@ -80,15 +80,16 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">Pasif</span>
                                 <?php endif; ?>
                             </div>
-                            <?php if ($canManage): ?>
                             <div class="flex flex-wrap gap-2 mt-3">
+                                <a href="/personel/<?= htmlspecialchars($personnelRow['id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">Detay</a>
+                                <?php if ($canManage): ?>
                                 <button type="button" onclick='openEditPersonnelModal(<?= json_encode(array_merge($personnelRow, ['photo_href' => personnelPhotoHref($personnelRow) ?? '']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>)' class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600">Düzenle</button>
                                 <form method="post" action="/personel/sil" class="inline">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($personnelRow['id']) ?>">
                                     <button type="button" onclick="confirmDeletePersonnel(this)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20">Sil</button>
                                 </form>
+                                <?php endif; ?>
                             </div>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -104,7 +105,7 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Görev</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Telefon</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</th>
-                        <?php if ($canManage): ?><th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th><?php endif; ?>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">İşlem</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
@@ -113,7 +114,9 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
                             <td class="px-4 py-3">
                                 <?php $size = 'md'; require __DIR__ . '/../partials/personnel_avatar.php'; ?>
                             </td>
-                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars(trim(($personnelRow['first_name'] ?? '') . ' ' . ($personnelRow['last_name'] ?? ''))) ?></td>
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                <a href="/personel/<?= htmlspecialchars($personnelRow['id']) ?>" class="hover:text-emerald-600 dark:hover:text-emerald-400"><?= htmlspecialchars(trim(($personnelRow['first_name'] ?? '') . ' ' . ($personnelRow['last_name'] ?? ''))) ?></a>
+                            </td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"><?= htmlspecialchars($jobTypeLabels[$personnelRow['job_type'] ?? 'diger'] ?? 'Diğer') ?></span>
                             </td>
@@ -125,15 +128,16 @@ elseif ($activeGet === '0') $activeFilterTags[] = 'Durum: Pasif';
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300">Pasif</span>
                                 <?php endif; ?>
                             </td>
-                            <?php if ($canManage): ?>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <a href="/personel/<?= htmlspecialchars($personnelRow['id']) ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1" title="Detay"><i class="bi bi-eye"></i></a>
+                                <?php if ($canManage): ?>
                                 <button type="button" onclick='openEditPersonnelModal(<?= json_encode(array_merge($personnelRow, ['photo_href' => personnelPhotoHref($personnelRow) ?? '']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>)' class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1" title="Düzenle"><i class="bi bi-pencil"></i></button>
                                 <form method="post" action="/personel/sil" class="inline">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars($personnelRow['id']) ?>">
                                     <button type="button" onclick="confirmDeletePersonnel(this)" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100" title="Sil"><i class="bi bi-trash"></i></button>
                                 </form>
+                                <?php endif; ?>
                             </td>
-                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

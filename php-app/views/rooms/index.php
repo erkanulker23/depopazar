@@ -160,7 +160,7 @@ ob_start();
                         <div class="flex-1 min-w-0">
                             <div class="flex items-start justify-between gap-2">
                                 <div class="min-w-0">
-                                    <p class="font-semibold text-gray-900 dark:text-white truncate">Oda <?= htmlspecialchars(fmtRoomNumber($r['room_number'] ?? '')) ?></p>
+                                    <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="font-semibold text-gray-900 dark:text-white truncate block hover:text-emerald-600 dark:hover:text-emerald-400">Oda <?= htmlspecialchars(fmtRoomNumber($r['room_number'] ?? '')) ?></a>
                                     <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5"><?= htmlspecialchars($r['warehouse_name'] ?? '-') ?></p>
                                 </div>
                                 <p class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0"><?= fmtPrice($r['monthly_price'] ?? 0) ?></p>
@@ -234,7 +234,9 @@ ob_start();
                         ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50<?= $isDuplicateRoom ? ' bg-amber-50/80 dark:bg-amber-900/10' : '' ?>">
                             <td class="px-4 py-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" class="room-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($r['id']) ?>"></label></td>
-                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><?= htmlspecialchars(fmtRoomNumber($r['room_number'] ?? '')) ?></td>
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                <a href="/odalar/<?= htmlspecialchars($r['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars(fmtRoomNumber($r['room_number'] ?? '')) ?></a>
+                            </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['warehouse_name'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= number_format((float)$r['area_m2'], 2, ',', '.') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($r['monthly_price'] ?? 0) ?></td>
