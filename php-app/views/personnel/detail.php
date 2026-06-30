@@ -3,6 +3,9 @@ $currentPage = 'personel';
 $personnelRow = $personnelRow ?? [];
 $contracts = $contracts ?? [];
 $payments = $payments ?? [];
+$contractsTotal = $contractsTotal ?? count($contracts);
+$contractsPerPage = $contractsPerPage ?? 20;
+$contractsPage = $contractsPage ?? max(1, (int) ($_GET['page'] ?? 1));
 $stats = $stats ?? ['contract_count' => 0, 'active_contract_count' => 0, 'payment_count' => 0, 'total_collected' => 0];
 $jobTypeLabels = $jobTypeLabels ?? Personnel::jobTypeLabels();
 $canManage = $canManage ?? false;
@@ -120,9 +123,9 @@ ob_start();
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <i class="bi bi-file-earmark-text text-emerald-600"></i> Satışlar / Sözleşmeler
-                <span class="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400"><?= count($contracts) ?></span>
+                <span class="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400"><?= (int) $contractsTotal ?></span>
             </h2>
-            <?php if (empty($contracts)): ?>
+            <?php if ($contractsTotal === 0): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu personele atanmış sözleşme veya satış kaydı yok.</div>
             <?php else: ?>
                 <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
@@ -188,6 +191,9 @@ ob_start();
                         </tbody>
                     </table>
                 </div>
+                <?php if ($contractsTotal > $contractsPerPage):
+                    echo renderPagination($contractsTotal, $contractsPerPage, $contractsPage, '/personel/' . $personnelId);
+                endif; ?>
             <?php endif; ?>
         </div>
 

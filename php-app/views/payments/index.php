@@ -85,17 +85,6 @@ if ($dateTo !== '') $activeFilterTags[] = 'Bitiş: ' . $dateTo;
             </div>
             <?php endforeach; ?>
         </div>
-        <?php if (($listTotal ?? 0) > ($perPage ?? 30)):
-            $paginationParams = array_filter([
-                'q' => $payQ !== '' ? $payQ : null,
-                'status' => $payStatus !== '' ? $payStatus : null,
-                'date_from' => $dateFrom !== '' ? $dateFrom : null,
-                'date_to' => $dateTo !== '' ? $dateTo : null,
-                'collect' => '1',
-                'customer' => ($preselectedCustomerId ?? '') !== '' ? $preselectedCustomerId : null,
-            ]);
-            echo renderPagination($listTotal, $perPage, $page, '/odemeler', $paginationParams);
-        endif; ?>
     <?php elseif ($collectMode && empty($customersWithDebt)): ?>
         <div class="p-8 text-center text-gray-500 dark:text-gray-400">Borcu olan müşteri yok.</div>
     <?php elseif (empty($paymentsByCustomer)): ?>

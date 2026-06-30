@@ -246,21 +246,52 @@ class Personnel
     }
 
     /** @return list<array<string, mixed>> */
-    public static function findContractsForPersonnel(PDO $pdo, string $personnelId, ?string $companyId): array
+    public static function findContractsForPersonnel(PDO $pdo, string $personnelId, ?string $companyId, ?int $limit = null, ?int $offset = null): array
     {
         if (!self::tableExists($pdo)) {
             return [];
         }
+        $params = [];
+        $fromWhere = self::contractsForPersonnelFromWhere($params, $personnelId, $companyId);
         $sql = 'SELECT DISTINCT c.id, c.contract_number, c.start_date, c.end_date, c.monthly_price, c.is_active, c.created_at,
                        cu.id AS customer_id, cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
                        w.name AS warehouse_name, r.room_number,
-                       sb.first_name AS sold_by_first_name, sb.last_name AS sold_by_last_name
-                FROM contracts c
+                       sb.first_name AS sold_by_first_name, sb.last_name AS sold_by_last_name '
+            . $fromWhere
+            . ' LEFT JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                LEFT JOIN users sb ON sb.id = c.sold_by_user_id AND sb.deleted_at IS NULL
+                ORDER BY c.created_at DESC ';
+        if ($limit !== null) {
+            $sql .= ' LIMIT ' . max(1, (int) $limit);
+            if ($offset !== null && $offset > 0) {
+                $sql .= ' OFFSET ' . (int) $offset;
+            }
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function countContractsForPersonnel(PDO $pdo, string $personnelId, ?string $companyId, bool $activeOnly = false): int
+    {
+        if (!self::tableExists($pdo)) {
+            return 0;
+        }
+        $params = [];
+        $fromWhere = self::contractsForPersonnelFromWhere($params, $personnelId, $companyId, $activeOnly);
+        $sql = 'SELECT COUNT(DISTINCT c.id) ' . $fromWhere;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** @param array<int, mixed> $params */
+    private static function contractsForPersonnelFromWhere(array &$params, string $personnelId, ?string $companyId, bool $activeOnly = false): string
+    {
+        $sql = ' FROM contracts c
                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
                 INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
                 LEFT JOIN contract_personnel cp ON cp.contract_id = c.id AND cp.deleted_at IS NULL AND cp.personnel_id = ?
-                LEFT JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
-                LEFT JOIN users sb ON sb.id = c.sold_by_user_id AND sb.deleted_at IS NULL
                 WHERE c.deleted_at IS NULL
                   AND (cp.personnel_id IS NOT NULL OR c.sold_by_user_id = ?) ';
         $params = [$personnelId, $personnelId];
@@ -268,10 +299,10 @@ class Personnel
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
         }
-        $sql .= ' ORDER BY c.created_at DESC ';
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($activeOnly) {
+            $sql .= ' AND c.is_active = 1 ';
+        }
+        return $sql;
     }
 
     /** @return list<array<string, mixed>> */
@@ -310,22 +341,16 @@ class Personnel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** @param list<array<string, mixed>> $contracts @param list<array<string, mixed>> $payments */
-    public static function getDetailStats(array $contracts, array $payments): array
+    /** @param list<array<string, mixed>> $payments */
+    public static function getDetailStats(int $contractCount, int $activeContractCount, array $payments): array
     {
-        $activeContracts = 0;
-        foreach ($contracts as $c) {
-            if (!empty($c['is_active'])) {
-                $activeContracts++;
-            }
-        }
         $totalCollected = 0.0;
         foreach ($payments as $p) {
             $totalCollected += (float) ($p['amount'] ?? 0);
         }
         return [
-            'contract_count' => count($contracts),
-            'active_contract_count' => $activeContracts,
+            'contract_count' => $contractCount,
+            'active_contract_count' => $activeContractCount,
             'payment_count' => count($payments),
             'total_collected' => $totalCollected,
         ];

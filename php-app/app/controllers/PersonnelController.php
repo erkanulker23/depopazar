@@ -57,9 +57,19 @@ class PersonnelController
             exit;
         }
         $personnelCompanyId = $personnelRow['company_id'] ?? null;
-        $contracts = Personnel::findContractsForPersonnel($this->pdo, $id, $personnelCompanyId);
+        $contractsPerPage = 20;
+        $contractsPage = max(1, (int) ($_GET['page'] ?? 1));
+        $contractsTotal = Personnel::countContractsForPersonnel($this->pdo, $id, $personnelCompanyId);
+        $activeContractsTotal = Personnel::countContractsForPersonnel($this->pdo, $id, $personnelCompanyId, true);
+        $contractsTotalPages = $contractsTotal > 0 ? (int) ceil($contractsTotal / $contractsPerPage) : 1;
+        if ($contractsPage > $contractsTotalPages && $contractsTotal > 0) {
+            header('Location: /personel/' . rawurlencode($id) . '?page=' . $contractsTotalPages);
+            exit;
+        }
+        $contractsOffset = ($contractsPage - 1) * $contractsPerPage;
+        $contracts = Personnel::findContractsForPersonnel($this->pdo, $id, $personnelCompanyId, $contractsPerPage, $contractsOffset);
         $payments = Personnel::findPaymentsCollectedForPersonnel($this->pdo, $id, $personnelCompanyId);
-        $stats = Personnel::getDetailStats($contracts, $payments);
+        $stats = Personnel::getDetailStats($contractsTotal, $activeContractsTotal, $payments);
         $jobTypeLabels = Personnel::jobTypeLabels();
         $canManage = in_array($user['role'] ?? '', ['super_admin', 'company_owner', 'company_staff', 'warehouse_manager'], true);
         $companyName = null;
