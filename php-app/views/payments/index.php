@@ -178,17 +178,11 @@ if ($dateTo !== '') $activeFilterTags[] = 'Bitiş: ' . $dateTo;
             </div>
             <?php endforeach; ?>
         </div>
+        <?php if ($listTotal <= $perPage): ?>
         <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400">
-            <?php
-            $shownCustomers = count($paymentsByCustomer);
-            $from = $listTotal > 0 ? (($page - 1) * $perPage + 1) : 0;
-            $to = min($page * $perPage, $listTotal);
-            if ($listTotal > $perPage): ?>
-                <?= $from ?>–<?= $to ?> / <?= $listTotal ?> müşteri · Toplam <?= (int) $totalPayments ?> ödeme
-            <?php else: ?>
-                <?= $shownCustomers ?> müşteri · Toplam <?= (int) $totalPayments ?> ödeme
-            <?php endif; ?>
+            <?= count($paymentsByCustomer) ?> müşteri · Toplam <?= (int) $totalPayments ?> ödeme
         </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 

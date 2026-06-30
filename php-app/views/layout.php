@@ -264,20 +264,20 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         .main-content-wrap { padding-bottom: env(safe-area-inset-bottom, 0); }
         @media (max-width: 767px) {
             html {
-                height: 100%;
+                height: auto;
+                min-height: 100%;
                 scroll-padding-bottom: var(--mobile-nav-height);
                 overscroll-behavior-y: none;
             }
             body {
                 overflow-x: hidden;
                 max-width: 100vw;
-                min-height: 100dvh;
+                min-height: 0;
                 min-height: -webkit-fill-available;
                 background-color: var(--mobile-page-bg) !important;
                 overscroll-behavior-y: none;
             }
             body.min-h-screen {
-                min-height: 100dvh !important;
                 min-height: -webkit-fill-available !important;
             }
             #appShell,
@@ -645,6 +645,7 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 margin: 0;
                 transform: translate3d(0, 0, 0);
                 -webkit-transform: translate3d(0, 0, 0);
+                will-change: bottom, left, width;
             }
             #mobileBottomNav {
                 position: relative !important;
@@ -669,16 +670,6 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 -webkit-transform: translate3d(0, 0, 0);
                 backface-visibility: hidden;
                 -webkit-backface-visibility: hidden;
-            }
-            #mobileBottomNav::after {
-                content: '';
-                position: absolute;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                height: env(safe-area-inset-bottom, 0px);
-                background: var(--mobile-nav-bg);
-                pointer-events: none;
             }
             #mobileBottomNav .mobile-nav-bar {
                 display: grid;
@@ -746,9 +737,6 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 background: var(--mobile-nav-bg);
                 border-top-color: rgb(61 52 46);
                 box-shadow: 0 -8px 32px rgba(0,0,0,.4);
-            }
-            .dark #mobileBottomNav::after {
-                background: var(--mobile-nav-bg);
             }
             /* Mobil bildirim paneli */
             #notificationBackdrop {
@@ -1072,10 +1060,30 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 document.body.appendChild(host);
             }
         }
+        function syncMobileNavViewport() {
+            if (!isMobile()) {
+                host.style.bottom = '';
+                host.style.left = '';
+                host.style.width = '';
+                return;
+            }
+            if (window.visualViewport) {
+                var vv = window.visualViewport;
+                var bottomGap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+                host.style.bottom = bottomGap + 'px';
+                host.style.left = vv.offsetLeft + 'px';
+                host.style.width = vv.width + 'px';
+            } else {
+                host.style.bottom = '0';
+                host.style.left = '0';
+                host.style.width = '100%';
+            }
+        }
         function syncMobileNavHeight() {
             if (!isMobile() || !nav) return;
-            var h = Math.ceil(nav.getBoundingClientRect().height);
-            if (h > 0) {
+            syncMobileNavViewport();
+            var h = Math.ceil(host.getBoundingClientRect().height);
+            if (h > 0 && h <= 160) {
                 document.documentElement.style.setProperty('--mobile-nav-height', h + 'px');
             }
         }
@@ -1085,9 +1093,10 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         window.addEventListener('orientationchange', function() {
             setTimeout(function() { pinMobileNav(); syncMobileNavHeight(); }, 120);
         });
+        window.addEventListener('scroll', syncMobileNavViewport, { passive: true });
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', syncMobileNavHeight);
-            window.visualViewport.addEventListener('scroll', syncMobileNavHeight);
+            window.visualViewport.addEventListener('scroll', syncMobileNavViewport);
         }
         if (typeof ResizeObserver !== 'undefined') {
             try {
