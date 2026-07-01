@@ -21,12 +21,12 @@ $hasActiveFilters = ($periodMode ?? 'month') === 'custom' || $year !== (int) dat
 $activeFilterTags = ['Dönem: ' . $periodLabel];
 ob_start();
 ?>
-<div class="mb-8">
+<div class="mb-8 screen-only">
     <h1 class="page-title gradient-title">Raporlar</h1>
     <p class="page-subtitle">Doluluk, gelir ve müşteri ödeme raporları</p>
 </div>
 
-<div class="page-toolbar mb-6">
+<div class="page-toolbar mb-6 screen-only">
     <?php
     $filterModalId = 'reportPeriodFilterModal';
     $filterClearUrl = '/raporlar';
@@ -93,6 +93,24 @@ function toggleReportPeriodMode() {
 <div id="report-content">
 <?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
 
+<?php
+$printTitle = 'Genel Rapor Özeti';
+$printMeta = [['label' => 'Dönem', 'value' => $periodLabel]];
+$printSummary = [
+    'headers' => ['Bekleyen borç', 'Dönem tahsilatı', 'Aktif sözleşme', 'Doluluk', 'Havale', 'Kredi kartı'],
+    'values' => [
+        fmtMoney($totalUnpaid ?? 0) . ' ₺',
+        fmtMoney($revenueByMonth['total_revenue'] ?? 0) . ' ₺',
+        (int) ($activeContracts ?? 0),
+        '%' . number_format($occupancy['occupancy_rate'] ?? 0, 1, ',', ''),
+        fmtMoney($paymentBreakdown['bank'] ?? 0) . ' ₺',
+        fmtMoney($paymentBreakdown['credit_card'] ?? 0) . ' ₺',
+    ],
+];
+require __DIR__ . '/../partials/report_print_header.php';
+?>
+
+<div class="screen-only">
 <!-- Rapor kartları -->
 <div class="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     <a href="/raporlar/banka-hesaplari" class="block p-6 card-modern hover:border-emerald-500/50 dark:hover:border-emerald-500/50 group">
@@ -274,28 +292,33 @@ function toggleReportPeriodMode() {
         </div>
     </div>
 </div>
+</div>
 
 <!-- Tahsil edilen müşteriler -->
-<div class="grid grid-cols-1 gap-6 mb-8">
+<div class="grid grid-cols-1 gap-6 mb-8 report-print-table-wrap">
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
-        <div class="px-4 py-3 bg-green-50 dark:bg-green-900/20 border-b border-green-100 dark:border-green-800 flex flex-wrap justify-between items-center gap-2">
+        <div class="px-4 py-3 bg-green-50 dark:bg-green-900/20 border-b border-green-100 dark:border-green-800 flex flex-wrap justify-between items-center gap-2 screen-only">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i class="bi bi-check-circle text-green-600"></i> Ödemesi yapılan müşteriler
             </h2>
             <span class="text-sm font-semibold text-green-800 dark:text-green-300"><?= count($paidPayments) ?> kayıt · <?= fmtMoney($paidPeriodTotal) ?> ₺</span>
         </div>
         <?php if (empty($paidPayments)): ?>
-            <div class="p-6 text-center text-gray-500 dark:text-gray-400">Seçilen dönemde tahsilat kaydı yok.</div>
+            <div class="p-6 text-center text-gray-500 dark:text-gray-400 screen-only">Seçilen dönemde tahsilat kaydı yok.</div>
+            <div class="print-only p-4 text-gray-600">Seçilen dönemde tahsilat kaydı yok.</div>
         <?php else: ?>
+        <div class="print-only report-print-section">
+            <h2>Ödemesi yapılan müşteriler (<?= count($paidPayments) ?> kayıt · <?= fmtMoney($paidPeriodTotal) ?> ₺)</h2>
+        </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm report-data-table">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Müşteri</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Sözleşme</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Depo / Oda</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase col-print-hide">Depo / Oda</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Tahsilat</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Yöntem</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase col-print-hide">Yöntem</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Tutar</th>
                     </tr>
                 </thead>
@@ -304,23 +327,31 @@ function toggleReportPeriodMode() {
                         $pName = trim(($pp['customer_first_name'] ?? '') . ' ' . ($pp['customer_last_name'] ?? ''));
                     ?>
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td class="px-4 py-3"><a href="/musteriler/<?= htmlspecialchars($pp['customer_id'] ?? '') ?>" class="font-medium text-emerald-600 hover:underline"><?= htmlspecialchars($pName) ?></a></td>
+                        <td class="px-4 py-3">
+                            <a href="/musteriler/<?= htmlspecialchars($pp['customer_id'] ?? '') ?>" class="font-medium text-emerald-600 hover:underline screen-only"><?= htmlspecialchars($pName) ?></a>
+                            <span class="print-only"><?= htmlspecialchars($pName) ?></span>
+                        </td>
                         <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($pp['contract_number'] ?? '-') ?></td>
-                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(($pp['warehouse_name'] ?? '') . ' / ' . ($pp['room_number'] ?? '')) ?></td>
-                        <td class="px-4 py-3"><?= fmtDateTime($pp['paid_at'] ?? null) ?></td>
-                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($pp['payment_method'] ?? '–') ?></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400 col-print-hide"><?= htmlspecialchars(trim(($pp['warehouse_name'] ?? '') . ' / ' . ($pp['room_number'] ?? ''), ' /')) ?></td>
+                        <td class="px-4 py-3"><?= !empty($pp['paid_at']) ? date('d.m.Y', strtotime($pp['paid_at'])) : '-' ?></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400 col-print-hide"><?= htmlspecialchars($pp['payment_method'] ?? '–') ?></td>
                         <td class="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400"><?= fmtMoney($pp['amount'] ?? 0) ?> ₺</td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
+                <tfoot class="print-only">
+                    <tr>
+                        <td colspan="4" class="px-4 py-3 text-right font-bold">Toplam</td>
+                        <td class="px-4 py-3 text-right font-bold"><?= fmtMoney($paidPeriodTotal) ?> ₺</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
         <?php endif; ?>
     </div>
 </div>
 
-<!-- Özet + Hızlı erişim -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 screen-only">
     <div class="card-modern p-6">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <i class="bi bi-hourglass-split text-emerald-600 dark:text-emerald-400"></i> Ödeme Durumu

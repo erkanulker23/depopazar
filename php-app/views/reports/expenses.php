@@ -203,7 +203,7 @@ require __DIR__ . '/../partials/report_print_header.php';
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Kategori</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Açıklama</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Ödeme Kaynağı</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase col-print-hide">Ödeme Kaynağı</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
                     </tr>
                 </thead>
@@ -213,14 +213,14 @@ require __DIR__ . '/../partials/report_print_header.php';
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= $r['expense_date'] ? date('d.m.Y', strtotime($r['expense_date'])) : '-' ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['category_name'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['description'] ?? '-') ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars(getPaymentSourceDisplay($r, $bankAccounts, $creditCards)) ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 col-print-hide"><?= htmlspecialchars(getPaymentSourceDisplay($r, $bankAccounts, $creditCards)) ?></td>
                             <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white"><?= fmtMoney($r['amount'] ?? 0) ?> ₺</td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot class="print-only">
                     <tr>
-                        <td colspan="4" class="px-4 py-3 text-right font-bold">Toplam</td>
+                        <td colspan="3" class="px-4 py-3 text-right font-bold">Toplam</td>
                         <td class="px-4 py-3 text-right font-bold"><?= fmtMoney($totalAmount) ?> ₺</td>
                     </tr>
                 </tfoot>

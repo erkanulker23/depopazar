@@ -134,12 +134,12 @@ require __DIR__ . '/../partials/report_print_header.php';
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Sözleşme</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Depo / Oda</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase col-print-hide">Depo / Oda</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Taksit</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Toplam</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">İlk tahsilat</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Son vade</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Erken taksit</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase col-print-hide">İlk tahsilat</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase col-print-hide">Son vade</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase col-print-hide">Erken taksit</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
@@ -155,12 +155,12 @@ require __DIR__ . '/../partials/report_print_header.php';
                         <a href="/girisler/<?= htmlspecialchars($c['contract_id'] ?? '') ?>" class="text-gray-700 dark:text-gray-300 hover:text-emerald-600 screen-only"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a>
                         <span class="print-only"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></span>
                     </td>
-                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(($c['warehouse_name'] ?? '') . ' / ' . ($c['room_number'] ?? '')) ?></td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400 col-print-hide"><?= htmlspecialchars(trim(($c['warehouse_name'] ?? '') . ' / ' . ($c['room_number'] ?? ''), ' /')) ?></td>
                     <td class="px-4 py-3"><?= (int) ($c['payment_count'] ?? 0) ?></td>
                     <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white"><?= fmtMoney($c['total_paid'] ?? 0) ?> ₺</td>
-                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= fmtDateTime($c['first_paid_at'] ?? null) ?></td>
-                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= !empty($c['last_due_date']) ? date('d.m.Y', strtotime($c['last_due_date'])) : '-' ?></td>
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400 col-print-hide"><?= fmtDateTime($c['first_paid_at'] ?? null) ?></td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400 col-print-hide"><?= !empty($c['last_due_date']) ? date('d.m.Y', strtotime($c['last_due_date'])) : '-' ?></td>
+                    <td class="px-4 py-3 col-print-hide">
                         <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                             <?= (int) ($c['early_payment_count'] ?? 0) ?> taksit
                             <?php if (!empty($c['max_days_early'])): ?> · max <?= (int) $c['max_days_early'] ?> gün erken<?php endif; ?>
@@ -174,7 +174,7 @@ require __DIR__ . '/../partials/report_print_header.php';
 </div>
 <?php endif; ?>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden report-print-table-wrap">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden report-print-table-wrap<?= !empty($prepaidContracts) ? ' report-page-break' : '' ?>">
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center flex-wrap gap-2 screen-only">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Erken tahsil edilen ödemeler</h2>
         <span class="text-sm text-gray-500 dark:text-gray-400"><?= count($rows) ?> kayıt gösteriliyor</span>
@@ -215,19 +215,19 @@ require __DIR__ . '/../partials/report_print_header.php';
                         </td>
                         <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($r['contract_number'] ?? '-') ?></td>
                         <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white"><?= fmtMoney($r['amount'] ?? 0) ?> ₺</td>
-                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= fmtDateTime($r['paid_at'] ?? null) ?></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= !empty($r['paid_at']) ? date('d.m.Y', strtotime($r['paid_at'])) : '-' ?></td>
                         <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= !empty($r['due_date']) ? date('d.m.Y', strtotime($r['due_date'])) : '-' ?></td>
                         <td class="px-4 py-3">
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"><?= $daysEarly ?> gün erken</span>
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 screen-only"><?= $daysEarly ?> gün erken</span>
+                            <span class="print-only"><?= $daysEarly ?> gün</span>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot class="print-only">
                     <tr>
-                        <td colspan="3" class="px-4 py-3 text-right font-bold">Toplam</td>
+                        <td colspan="6" class="px-4 py-3 text-right font-bold">Toplam</td>
                         <td class="px-4 py-3 font-bold"><?= fmtMoney($totalSum) ?> ₺</td>
-                        <td colspan="3"></td>
                     </tr>
                 </tfoot>
             </table>

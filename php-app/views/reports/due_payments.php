@@ -184,9 +184,9 @@ require __DIR__ . '/../partials/report_print_header.php';
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Ödeme No</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Telefon</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase col-print-hide">Telefon</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Sözleşme</th>
-                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Depo / Oda</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase col-print-hide">Depo / Oda</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Vade</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
                         <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tahsilat</th>
@@ -208,18 +208,19 @@ require __DIR__ . '/../partials/report_print_header.php';
                             <a href="/musteriler/<?= htmlspecialchars($r['customer_id'] ?? '') ?>" class="text-gray-700 dark:text-gray-300 hover:text-emerald-600 screen-only"><?= htmlspecialchars($name) ?></a>
                             <span class="print-only"><?= htmlspecialchars($name) ?></span>
                         </td>
-                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($r['customer_phone'] ?? '–') ?></td>
+                        <td class="px-4 py-3 col-print-hide text-gray-600 dark:text-gray-400"><?= htmlspecialchars($r['customer_phone'] ?? '–') ?></td>
                         <td class="px-4 py-3">
                             <a href="/girisler/<?= htmlspecialchars($r['contract_id'] ?? '') ?>" class="text-gray-700 dark:text-gray-300 hover:text-emerald-600 screen-only"><?= htmlspecialchars($r['contract_number'] ?? '-') ?></a>
                             <span class="print-only"><?= htmlspecialchars($r['contract_number'] ?? '-') ?></span>
                         </td>
-                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars(($r['warehouse_name'] ?? '') . ' / ' . ($r['room_number'] ?? '')) ?></td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400 col-print-hide"><?= htmlspecialchars(trim(($r['warehouse_name'] ?? '') . ' / ' . ($r['room_number'] ?? ''), ' /')) ?></td>
                         <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><?= !empty($r['due_date']) ? date('d.m.Y', strtotime($r['due_date'])) : '-' ?></td>
                         <td class="px-4 py-3">
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $dStatus['badge'] ?? 'bg-gray-100 text-gray-800' ?>"><?= htmlspecialchars($dStatus['label'] ?? '') ?></span>
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $dStatus['badge'] ?? 'bg-gray-100 text-gray-800' ?> screen-only"><?= htmlspecialchars($dStatus['label'] ?? '') ?></span>
+                            <span class="print-only"><?= htmlspecialchars($dStatus['label'] ?? '') ?></span>
                         </td>
                         <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-                            <?= $isPaid ? fmtDateTime($r['paid_at'] ?? null) : '–' ?>
+                            <?= $isPaid ? (!empty($r['paid_at']) ? date('d.m.Y', strtotime($r['paid_at'])) : '–') : '–' ?>
                             <?php if ($isPaid && !empty($r['payment_method'])): ?>
                                 <span class="block text-xs text-gray-400 screen-only"><?= htmlspecialchars($r['payment_method']) ?></span>
                             <?php endif; ?>
@@ -230,7 +231,7 @@ require __DIR__ . '/../partials/report_print_header.php';
                 </tbody>
                 <tfoot class="print-only">
                     <tr>
-                        <td colspan="8" class="px-4 py-3 text-right font-bold">Toplam</td>
+                        <td colspan="6" class="px-4 py-3 text-right font-bold">Toplam</td>
                         <td class="px-4 py-3 text-right font-bold"><?= fmtMoney($totalSum) ?> ₺</td>
                     </tr>
                 </tfoot>

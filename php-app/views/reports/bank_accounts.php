@@ -221,7 +221,10 @@ require __DIR__ . '/../partials/report_print_header.php';
                                 <a href="/odemeler/<?= htmlspecialchars($r['id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium screen-only"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></a>
                                 <span class="print-only"><?= htmlspecialchars($r['payment_number'] ?? '-') ?></span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($r['paid_at'] ?? null) ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                <span class="screen-only"><?= !empty($r['paid_at']) ? date('d.m.Y H:i', strtotime($r['paid_at'])) : '-' ?></span>
+                                <span class="print-only"><?= !empty($r['paid_at']) ? date('d.m.Y', strtotime($r['paid_at'])) : '-' ?></span>
+                            </td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($r['bank_name'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                                 <span class="screen-only"><?= htmlspecialchars($contractCustomer) ?></span>
