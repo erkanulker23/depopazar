@@ -58,7 +58,10 @@ $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_na
         </div>
         <div class="sm:col-span-2">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aylık ücret (₺) <span class="text-red-500">*</span></label>
-            <input type="text" name="monthly_price" id="custContract_monthly_price" required placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+            <input type="text" name="monthly_price" id="custContract_monthly_price" data-vat-price required placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+        </div>
+        <div data-contract-vat-block data-vat-prefix="custContract" class="sm:col-span-2">
+            <?php $prefix = 'custContract'; $contract = null; require __DIR__ . '/contract_vat_fields.php'; ?>
         </div>
     </div>
     <div>

@@ -84,6 +84,32 @@ class Contract
     private static ?bool $hasStoredItemsColumnsCache = null;
     private static ?bool $monthlyPricesMonthColumnReadyCache = null;
     private static ?bool $hasCampaignColumnCache = null;
+    private static ?bool $hasVatColumnsCache = null;
+
+    public static function hasVatColumns(PDO $pdo): bool
+    {
+        if (self::$hasVatColumnsCache !== null) {
+            return self::$hasVatColumnsCache;
+        }
+        try {
+            $pdo->query('SELECT vat_rate, price_includes_vat FROM contracts LIMIT 0');
+            self::$hasVatColumnsCache = true;
+        } catch (Throwable $e) {
+            self::$hasVatColumnsCache = false;
+        }
+        return self::$hasVatColumnsCache;
+    }
+
+    private static function setVatFields(PDO $pdo, string $contractId, float $vatRate, bool $priceIncludesVat): void
+    {
+        if (!self::hasVatColumns($pdo)) {
+            return;
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE contracts SET vat_rate = ?, price_includes_vat = ? WHERE id = ? AND deleted_at IS NULL'
+        );
+        $stmt->execute([max(0, min(100, $vatRate)), $priceIncludesVat ? 1 : 0, $contractId]);
+    }
 
     public static function hasCampaignColumn(PDO $pdo): bool
     {
@@ -247,6 +273,14 @@ class Contract
                 if (array_key_exists('campaign_code', $data)) {
                     self::setCampaignCode($pdo, $id, $data['campaign_code'] ?? null);
                 }
+                if (array_key_exists('vat_rate', $data)) {
+                    self::setVatFields(
+                        $pdo,
+                        $id,
+                        (float) ($data['vat_rate'] ?? 20),
+                        !empty($data['price_includes_vat'])
+                    );
+                }
                 return self::findOne($pdo, $id);
             } catch (PDOException $e) {
                 if ($attempt === $maxAttempts - 1) {
@@ -324,6 +358,14 @@ class Contract
             if (array_key_exists('campaign_code', $data)) {
                 self::setCampaignCode($pdo, $id, $data['campaign_code'] ?? null);
             }
+            if (array_key_exists('vat_rate', $data)) {
+                self::setVatFields(
+                    $pdo,
+                    $id,
+                    (float) ($data['vat_rate'] ?? 20),
+                    !empty($data['price_includes_vat'])
+                );
+            }
             return;
         }
         $stmt = $pdo->prepare(
@@ -345,6 +387,14 @@ class Contract
         ]);
         if (array_key_exists('campaign_code', $data)) {
             self::setCampaignCode($pdo, $id, $data['campaign_code'] ?? null);
+        }
+        if (array_key_exists('vat_rate', $data)) {
+            self::setVatFields(
+                $pdo,
+                $id,
+                (float) ($data['vat_rate'] ?? 20),
+                !empty($data['price_includes_vat'])
+            );
         }
     }
 
@@ -833,6 +883,8 @@ class Contract
     {
         self::reconcilePaymentDueDates($pdo, $contractId, $startDate, $endDate);
 
+        $contractRow = self::findOne($pdo, $contractId) ?? [];
+
         $existing = self::getMonthlyPricesByContractId($pdo, $contractId);
         $existingByMonth = [];
         foreach ($existing as $row) {
@@ -851,8 +903,12 @@ class Contract
                         'due_date' => $period['due_date'],
                     ];
                 } elseif (isset($paidAmountsByPeriod[$periodKey])) {
+                    $paidPrice = (float) $paidAmountsByPeriod[$periodKey];
+                    if (!contractPriceIncludesVat($contractRow)) {
+                        $paidPrice = contractNetFromGross($paidPrice, $contractRow);
+                    }
                     $validPeriods[$periodKey] = [
-                        'price' => $paidAmountsByPeriod[$periodKey],
+                        'price' => $paidPrice,
                         'due_date' => $period['due_date'],
                     ];
                 } else {
@@ -918,7 +974,15 @@ class Contract
             $pdo->prepare('UPDATE contract_monthly_prices SET deleted_at = NOW() WHERE id = ?')->execute([$row['id']]);
         }
 
-        self::syncPaymentsForPeriods($pdo, $contractId, $validPeriods, $paidPeriodKeys, $startDate, $endDate);
+        $paymentPeriods = [];
+        foreach ($validPeriods as $periodKey => $info) {
+            $paymentPeriods[$periodKey] = [
+                'price' => contractGrossFromEntered((float) $info['price'], $contractRow),
+                'due_date' => $info['due_date'],
+            ];
+        }
+
+        self::syncPaymentsForPeriods($pdo, $contractId, $paymentPeriods, $paidPeriodKeys, $startDate, $endDate);
     }
 
     /** Sözleşme dönemine göre eksik ödeme kayıtlarını oluşturur (bitiş uzatma sonrası vb.) */

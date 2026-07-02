@@ -58,6 +58,10 @@ ob_start();
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tutar</dt>
                     <dd class="mt-1 font-semibold text-gray-900 dark:text-white"><?= fmtPrice($payment['amount'] ?? 0) ?></dd>
+                    <?php if (!empty($paymentContract)): ?>
+                        <?php $vatBd = contractVatBreakdown((float) ($payment['amount'] ?? 0), $paymentContract, $company ?? null); ?>
+                        <dd class="mt-1 text-xs text-gray-500 dark:text-gray-400">Net: <?= fmtPrice($vatBd['net']) ?> · KDV (%<?= htmlspecialchars(rtrim(rtrim(number_format($vatBd['rate'], 2, ',', '.'), '0'), ',')) ?>): <?= fmtPrice($vatBd['vat']) ?></dd>
+                    <?php endif; ?>
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Durum</dt>

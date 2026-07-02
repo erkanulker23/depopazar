@@ -100,6 +100,11 @@ ob_start();
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Vergi Dairesi</label>
                         <input type="text" name="tax_office" value="<?= htmlspecialchars($company['tax_office'] ?? '') ?>" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Varsayılan KDV Oranı (%)</label>
+                        <input type="number" name="default_vat_rate" value="<?= htmlspecialchars((string) ($company['default_vat_rate'] ?? '20')) ?>" step="0.01" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Yeni sözleşmelerde varsayılan KDV oranı olarak kullanılır.</p>
+                    </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Adres</label>
                         <textarea name="address" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($company['address'] ?? '') ?></textarea>

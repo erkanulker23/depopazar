@@ -103,6 +103,9 @@ class SettingsController
             'address' => trim($_POST['address'] ?? '') ?: null,
             'mersis_number' => trim($_POST['mersis_number'] ?? '') ?: null,
             'tax_office' => trim($_POST['tax_office'] ?? '') ?: null,
+            'default_vat_rate' => trim($_POST['default_vat_rate'] ?? '') !== ''
+                ? max(0, min(100, (float) str_replace(',', '.', $_POST['default_vat_rate'])))
+                : 20,
         ];
         $uploadDir = defined('APP_ROOT') ? APP_ROOT . '/public/uploads/company' : __DIR__ . '/../../public/uploads/company';
         if (!is_dir($uploadDir)) {

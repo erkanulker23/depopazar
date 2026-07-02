@@ -208,6 +208,7 @@ class CustomersController
         $warehouses = [];
         $contractRoomsJson = [];
         $custCompanyId = $customer['company_id'] ?? $companyId;
+        $company = $custCompanyId ? Company::findOne($this->pdo, $custCompanyId) : null;
         if ($custCompanyId) {
             $warehouses = Warehouse::findAll($this->pdo, $custCompanyId);
         } elseif (($user['role'] ?? '') === 'super_admin') {

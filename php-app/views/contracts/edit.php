@@ -81,8 +81,11 @@ ob_start();
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Varsayılan Aylık Ücret (₺)</label>
-                <input type="text" name="monthly_price" id="edit_monthly_price" value="<?= htmlspecialchars($monthlyPriceDisplay) ?>" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                <input type="text" name="monthly_price" id="edit_monthly_price" data-vat-price value="<?= htmlspecialchars($monthlyPriceDisplay) ?>" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Sözleşme dönemindeki aylar için temel tutar. Aşağıdan ay bazında özelleştirebilirsiniz.</p>
+            </div>
+            <div data-contract-vat-block data-vat-prefix="edit" class="sm:col-span-2">
+                <?php $prefix = 'edit'; require __DIR__ . '/../partials/contract_vat_fields.php'; ?>
             </div>
             <div id="edit_monthly_prices_section">
                 <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar</h4>
@@ -174,6 +177,7 @@ ob_start();
 <script src="/turkish-search.js"></script>
 <script src="/room-picker.js"></script>
 <script src="/contract-billing.js"></script>
+<script src="/contract-vat.js"></script>
 <script>
 (function() {
     var editContractRoomsData = <?= json_encode($contractRoomsJson, JSON_UNESCAPED_UNICODE) ?>;

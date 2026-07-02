@@ -96,7 +96,7 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                                     <p class="font-semibold text-emerald-600 dark:text-emerald-400 truncate"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></p>
                                     <p class="text-sm text-gray-900 dark:text-white mt-0.5 truncate"><?= htmlspecialchars(trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''))) ?></p>
                                 </a>
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0"><?= fmtPrice($c['monthly_price'] ?? 0) ?><span class="text-xs font-normal text-gray-500 dark:text-gray-400">/ay</span></p>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0"><?= fmtPrice($c['monthly_price'] ?? 0) ?><span class="text-xs font-normal text-gray-500 dark:text-gray-400">/ay</span><?php if (!contractPriceIncludesVat($c)): ?><span class="text-xs font-normal text-amber-600 dark:text-amber-400 ml-1">+KDV</span><?php endif; ?></p>
                             </div>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> · Oda <?= htmlspecialchars($c['room_number'] ?? '') ?></p>
                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5"><?= fmtDateTime($c['created_at'] ?? null) ?></p>
@@ -314,7 +314,10 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aylık Ücret (₺) <span class="text-red-500">*</span></label>
-                                <input type="text" name="monthly_price" id="newSale_monthly_price" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                                <input type="text" name="monthly_price" id="newSale_monthly_price" data-vat-price placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div data-contract-vat-block data-vat-prefix="newSale" class="sm:col-span-2">
+                                <?php $prefix = 'newSale'; $contract = null; require __DIR__ . '/../partials/contract_vat_fields.php'; ?>
                             </div>
                             <div class="sm:col-span-2">
                                 <label class="inline-flex items-center gap-2 cursor-pointer">
@@ -561,6 +564,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
 <script src="/customer-picker.js"></script>
 <script src="/room-picker.js"></script>
 <script src="/contract-billing.js"></script>
+<script src="/contract-vat.js"></script>
 <?php
 $newSaleRoomsJson = [];
 foreach ($rooms as $r) {

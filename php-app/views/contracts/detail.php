@@ -213,7 +213,7 @@ if ($hasContractOverdue) {
         <?php if (ContractCampaign::isValid($contract['campaign_code'] ?? null)): ?>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Kampanya</td><td class="border border-gray-300 px-3 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-medium"><?= htmlspecialchars(ContractCampaign::label($contract['campaign_code'])) ?></span></td></tr>
         <?php endif; ?>
-        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?php $enteredPrice = $contract['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td></tr>
         <?php if (!empty($contract['stored_items_condition'])): ?>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ürün Durumu</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><span class="text-xs text-gray-600 mt-1 block">Hasar notu: <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?></span><?php endif; ?></td></tr>
         <?php endif; ?>
@@ -298,7 +298,11 @@ if ($hasContractOverdue) {
                 <?php endif; ?>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Fiyat</dt>
-                    <dd class="mt-1 font-semibold text-gray-900 dark:text-white"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></dd>
+                    <dd class="mt-1 text-gray-900 dark:text-white"><?php $enteredPrice = $contract['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">KDV</dt>
+                    <dd class="mt-1 text-gray-900 dark:text-white"><?= htmlspecialchars(contractVatStatusLabel($contract)) ?> · %<?= htmlspecialchars(rtrim(rtrim(number_format(contractVatRate($contract, $company ?? null), 2, ',', '.'), '0'), ',')) ?></dd>
                 </div>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşmeyi Yapan</dt>
@@ -546,7 +550,7 @@ if ($hasContractOverdue) {
                     <?php foreach ($monthlyPrices as $mp): ?>
                         <li class="px-4 py-3 flex justify-between items-center text-sm"<?= !empty($mp['month_key']) ? ' id="monthly-price-' . htmlspecialchars($mp['month_key']) . '"' : '' ?>>
                             <span class="text-gray-700 dark:text-gray-300"><?= htmlspecialchars($mp['month'] ?? '') ?></span>
-                            <span class="font-medium text-gray-900 dark:text-white monthly-price-value"><?= fmtPrice($mp['price'] ?? 0) ?></span>
+                            <span class="font-medium text-gray-900 dark:text-white monthly-price-value"><?php $enteredPrice = $mp['price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></span>
                         </li>
                     <?php endforeach; ?>
                 </ul>

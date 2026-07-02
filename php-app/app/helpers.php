@@ -7,6 +7,117 @@ if (!function_exists('fmtPrice')) {
     }
 }
 
+/** Şirket varsayılan KDV oranı (%) */
+if (!function_exists('companyDefaultVatRate')) {
+    function companyDefaultVatRate(?array $company): float
+    {
+        $rate = (float) ($company['default_vat_rate'] ?? 20);
+        return max(0.0, min(100.0, $rate));
+    }
+}
+
+/** Sözleşme KDV oranı (%) */
+if (!function_exists('contractVatRate')) {
+    function contractVatRate(array $contract, ?array $company = null): float
+    {
+        if (array_key_exists('vat_rate', $contract) && $contract['vat_rate'] !== '' && $contract['vat_rate'] !== null) {
+            return max(0.0, min(100.0, (float) $contract['vat_rate']));
+        }
+        return companyDefaultVatRate($company);
+    }
+}
+
+/** Sözleşme fiyatı KDV dahil mi? (mevcut kayıtlar için varsayılan: evet) */
+if (!function_exists('contractPriceIncludesVat')) {
+    function contractPriceIncludesVat(array $contract): bool
+    {
+        if (!array_key_exists('price_includes_vat', $contract)) {
+            return true;
+        }
+        return !empty($contract['price_includes_vat']);
+    }
+}
+
+/** KDV durumu etiketi */
+if (!function_exists('contractVatStatusLabel')) {
+    function contractVatStatusLabel(array $contract): string
+    {
+        return contractPriceIncludesVat($contract) ? 'KDV Dahil' : 'KDV Hariç';
+    }
+}
+
+/** Girilen tutardan tahsil edilecek brüt tutar (ödeme satırı) */
+if (!function_exists('contractGrossFromEntered')) {
+    function contractGrossFromEntered(float $entered, array $contract, ?array $company = null): float
+    {
+        if ($entered <= 0) {
+            return 0.0;
+        }
+        if (contractPriceIncludesVat($contract)) {
+            return round($entered, 2);
+        }
+        $rate = contractVatRate($contract, $company);
+        return round($entered * (1 + $rate / 100), 2);
+    }
+}
+
+/** Brüt tutardan net tutar */
+if (!function_exists('contractNetFromGross')) {
+    function contractNetFromGross(float $gross, array $contract, ?array $company = null): float
+    {
+        if ($gross <= 0) {
+            return 0.0;
+        }
+        $rate = contractVatRate($contract, $company);
+        if (contractPriceIncludesVat($contract)) {
+            if ($rate <= 0) {
+                return round($gross, 2);
+            }
+            return round($gross / (1 + $rate / 100), 2);
+        }
+        return round($gross, 2);
+    }
+}
+
+/** Brüt tutar için KDV / net / brüt dökümü */
+if (!function_exists('contractVatBreakdown')) {
+    function contractVatBreakdown(float $gross, array $contract, ?array $company = null): array
+    {
+        $rate = contractVatRate($contract, $company);
+        $includesVat = contractPriceIncludesVat($contract);
+        $gross = round(max(0, $gross), 2);
+        if ($includesVat) {
+            $net = $rate > 0 ? round($gross / (1 + $rate / 100), 2) : $gross;
+        } else {
+            $net = $gross > 0 && $rate > 0 ? round($gross / (1 + $rate / 100), 2) : $gross;
+        }
+        $vat = round(max(0, $gross - $net), 2);
+        return [
+            'gross' => $gross,
+            'net' => $net,
+            'vat' => $vat,
+            'rate' => $rate,
+            'includes_vat' => $includesVat,
+        ];
+    }
+}
+
+/** Formdan KDV alanlarını okur */
+if (!function_exists('parseContractVatFromPost')) {
+    function parseContractVatFromPost(array $post, ?array $company): array
+    {
+        $defaultRate = companyDefaultVatRate($company);
+        $rateRaw = trim((string) ($post['vat_rate'] ?? ''));
+        $vatRate = $rateRaw !== '' ? (float) str_replace(',', '.', $rateRaw) : $defaultRate;
+        $vatRate = max(0.0, min(100.0, $vatRate));
+        $includesVat = isset($post['price_includes_vat']) && $post['price_includes_vat'] === '1';
+        return [
+            'vat_rate' => $vatRate,
+            'price_includes_vat' => $includesVat,
+        ];
+    }
+}
+
 /** Form tutar alanı: 5.000,00 / 5000 / 5000,50 → float */
 if (!function_exists('parseMoneyInput')) {
     function parseMoneyInput(mixed $value): float
@@ -1444,8 +1555,11 @@ if (!function_exists('contractStorageTerms')) {
         $depotName = trim((string) ($warehouse['name'] ?? $contract['warehouse_name'] ?? ''));
         $partyName = $depotName !== '' ? $depotName : trim((string) ($company['name'] ?? 'Firma'));
         $customerDisplay = trim($customerName) !== '' ? trim($customerName) : 'Müşteri';
+        $vatLine = contractPriceIncludesVat($contract)
+            ? 'Fiyatlarımıza K.D.V. dahildir.'
+            : 'Fiyatlarımıza K.D.V. dahil değildir.';
         return [
-            'Fiyatlarımıza K.D.V. dahil değildir.',
+            $vatLine,
             'Sözleşme yapıldıktan sonra iptal edilemez. Ertelenebilmesi için 24 saat önceden bilgi verilmeli.',
             'Firmamızdan kaynaklanmayan iş gecikmelerinden iş veren herhangi bir hak iddia edemez.',
             'Depolama esnasında para, ziynet v.s. sorumluluklardan firma sorumlu değildir.',

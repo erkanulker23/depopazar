@@ -887,6 +887,7 @@ $bankAccounts = $bankAccounts ?? [];
 
 <script src="/room-picker.js"></script>
 <script src="/contract-billing.js"></script>
+<script src="/contract-vat.js"></script>
 <script>
 window.closeEditCustomerModal = function() {
     var modal = document.getElementById('editCustomerModal');

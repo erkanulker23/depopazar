@@ -370,6 +370,7 @@ class PaymentsController
         }
         $statusLabels = ['pending' => 'Bekliyor', 'paid' => 'Ödendi', 'overdue' => 'Gecikmiş', 'cancelled' => 'İptal'];
         $company = !empty($payment['company_id']) ? Company::findOne($this->pdo, $payment['company_id']) : null;
+        $paymentContract = !empty($payment['contract_id']) ? Contract::findOne($this->pdo, $payment['contract_id']) : null;
         $customerPaidPayments = [];
         $customerId = $payment['customer_id'] ?? '';
         if ($customerId !== '') {

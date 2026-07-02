@@ -54,7 +54,8 @@ if (!function_exists('fmtPrice')) {
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100 w-48">Sözleşme No</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['contract_number'] ?? '-') ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Depo / Oda</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Başlangıç – Bitiş</td><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
-            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($contract['monthly_price'] ?? 0) ?></td></tr>
+            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?php $enteredPrice = $contract['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td></tr>
+            <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">KDV</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(contractVatStatusLabel($contract)) ?> · %<?= htmlspecialchars(rtrim(rtrim(number_format(contractVatRate($contract, $company ?? null), 2, ',', '.'), '0'), ',')) ?></td></tr>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Sözleşmeyi Yapan</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($soldByName) ?></td></tr>
             <?php if (!empty($contract['stored_items_condition'])): ?>
             <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ürün Durumu</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><span class="text-xs text-gray-600 mt-1 block">Hasar notu: <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?></span><?php endif; ?></td></tr>
@@ -91,6 +92,9 @@ if (!function_exists('fmtPrice')) {
             </table>
         <?php endif; ?>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Takvimi</h2>
+        <?php if (!contractPriceIncludesVat($contract)): ?>
+        <p class="text-xs text-gray-600 mb-2">Ödeme tutarları KDV dahil tahsil edilecek tutarlardır.</p>
+        <?php endif; ?>
         <table class="min-w-full border border-gray-300 text-sm">
             <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th></tr></thead>
             <tbody>

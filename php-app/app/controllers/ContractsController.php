@@ -66,6 +66,7 @@ class ContractsController
         $contractDebt = $this->getContractDebtCounts($contracts);
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         $rooms = $roomsEmpty;
+        $company = $companyId ? Company::findOne($this->pdo, $companyId) : null;
         require __DIR__ . '/../../views/contracts/index.php';
     }
 
@@ -215,6 +216,8 @@ class ContractsController
         $contractPdfUrl = storeContractPdfUpload($_FILES['contract_pdf'] ?? null);
         $pickupLocation = $this->resolvePickupLocation($_POST);
         $monthlyPricesPost = isset($_POST['monthly_prices']) && is_array($_POST['monthly_prices']) ? $_POST['monthly_prices'] : [];
+        $company = $companyId ? Company::findOne($this->pdo, $companyId) : null;
+        $vatData = parseContractVatFromPost($_POST, $company);
         $campaignCode = null;
         $campaignError = $this->applyCampaignFromRequest($_POST, $startDate, $endDate, $monthlyPrice, $monthlyPricesPost, $campaignCode);
         if ($campaignError !== null) {
@@ -273,6 +276,8 @@ class ContractsController
             'stored_items_condition' => $storedCondition,
             'stored_items_condition_note' => $storedConditionNote,
             'campaign_code' => $campaignCode,
+            'vat_rate' => $vatData['vat_rate'],
+            'price_includes_vat' => $vatData['price_includes_vat'],
         ];
         try {
             $created = $this->createSingleSaleContract(
@@ -559,6 +564,9 @@ class ContractsController
             }
             $paidAmount = ContractBilling::paidAmountForPeriodKey($periodKey, $paidAmountsByMonth);
             if ($paidAmount !== null) {
+                if (!contractPriceIncludesVat($contract)) {
+                    $paidAmount = contractNetFromGross($paidAmount, $contract, $company ?? null);
+                }
                 $monthlyPricesByKey[$periodKey] = $paidAmount;
             }
         }
@@ -592,6 +600,7 @@ class ContractsController
         $owners = $this->ensureSoldByInOwnersList($owners, $contract['sold_by_user_id'] ?? null);
         $contractPersonnelIds = Contract::getPersonnelIdsByContractId($this->pdo, $id);
         $jobTypeLabels = Personnel::jobTypeLabels();
+        $company = $contractCompanyId ? Company::findOne($this->pdo, $contractCompanyId) : null;
         require __DIR__ . '/../../views/contracts/edit.php';
     }
 
@@ -661,6 +670,10 @@ class ContractsController
             if (!$useCampaign) {
                 $campaignCode = null;
             }
+            $contractCompany = !empty($contract['company_id'])
+                ? Company::findOne($this->pdo, $contract['company_id'])
+                : ($companyId ? Company::findOne($this->pdo, $companyId) : null);
+            $vatData = parseContractVatFromPost($_POST, $contractCompany);
             if ($startDate) {
                 $startDate = $contractStart . ' 00:00:00';
             }
@@ -682,6 +695,8 @@ class ContractsController
                 'stored_items_condition_note' => $storedConditionNote,
                 'sold_by_user_id' => trim($_POST['sold_by_user_id'] ?? '') ?: null,
                 'campaign_code' => $campaignCode,
+                'vat_rate' => $vatData['vat_rate'],
+                'price_includes_vat' => $vatData['price_includes_vat'],
             ]);
             $contractCompanyId = $contract['company_id'] ?? $companyId;
             if ($contractCompanyId) {
