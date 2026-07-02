@@ -39,7 +39,7 @@ $statusStyles = [
                                     <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline"><?= htmlspecialchars($c['contract_number'] ?? '') ?></a>
                                     <span class="text-slate-400 dark:text-gray-500">·</span>
                                     <span class="text-slate-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></span>
-                                    <span class="ml-auto shrink-0 font-medium text-slate-700 dark:text-gray-200"><?= number_format((float)($c['monthly_price'] ?? 0), 2, ',', '.') ?> ₺/ay</span>
+                                    <span class="ml-auto shrink-0 font-medium text-slate-700 dark:text-gray-200 text-right"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; $showCharge = false; require __DIR__ . '/../partials/contract_price_display.php'; ?></span>
                                 </li>
                             <?php endforeach; ?>
                         </ul>

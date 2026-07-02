@@ -119,7 +119,9 @@ $depotWebsite = trim((string) ($warehouse['website'] ?? ''));
 
     <h2>Ödeme Takvimi</h2>
     <?php if (!contractPriceIncludesVat($contract)): ?>
-    <p class="muted">Ödeme tutarları KDV dahil tahsil edilecek tutarlardır.</p>
+    <p class="muted">Ödeme tutarları KDV dahil tahsil edilecek tutarlardır. Girilen aylık fiyatlar KDV hariçtir.</p>
+    <?php else: ?>
+    <p class="muted">Ödeme tutarları KDV dahil tutarlardır.</p>
     <?php endif; ?>
     <table class="data">
         <thead><tr><th>Vade</th><th>Tutar</th><th>Durum</th></tr></thead>
@@ -127,7 +129,7 @@ $depotWebsite = trim((string) ($warehouse['website'] ?? ''));
             <?php foreach ($payments as $p): $ps = paymentStatusDisplay($p); ?>
             <tr>
                 <td><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td>
-                <td><?= fmtPrice($p['amount'] ?? 0) ?></td>
+                <td><?php $grossAmount = $p['amount'] ?? 0; require __DIR__ . '/../partials/contract_payment_amount_display.php'; ?></td>
                 <td><?= htmlspecialchars($ps['label']) ?></td>
             </tr>
             <?php endforeach; ?>

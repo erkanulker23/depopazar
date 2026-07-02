@@ -138,7 +138,7 @@ ob_start();
                         <div class="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
                             <p><span class="text-gray-500 dark:text-gray-500">Müşteri:</span> <?php if (!empty($c['customer_id'])): ?><a href="/musteriler/<?= htmlspecialchars($c['customer_id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($custName) ?></a><?php else: ?><?= htmlspecialchars($custName ?: '–') ?><?php endif; ?></p>
                             <p><span class="text-gray-500">Depo / Oda:</span> <?= htmlspecialchars(trim(($c['warehouse_name'] ?? '') . ' · ' . ($c['room_number'] ?? ''), ' ·') ?: '–') ?></p>
-                            <p><span class="text-gray-500">Aylık:</span> <?= fmtPrice($c['monthly_price'] ?? 0) ?></p>
+                            <p><span class="text-gray-500">Aylık:</span> <?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></p>
                             <?php if ($soldBy !== ''): ?><p><span class="text-gray-500">Sözleşmeyi yapan:</span> <?= htmlspecialchars($soldBy) ?></p><?php endif; ?>
                         </div>
                         <div class="mt-2">
@@ -178,7 +178,7 @@ ob_start();
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"><?= htmlspecialchars(trim(($c['warehouse_name'] ?? '') . ' · ' . ($c['room_number'] ?? ''), ' ·') ?: '–') ?></td>
-                                <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white tabular-nums"><?= fmtPrice($c['monthly_price'] ?? 0) ?></td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-white"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td>
                                 <td class="px-4 py-3">
                                     <?php if (!empty($c['is_active'])): ?>
                                         <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">Aktif</span>

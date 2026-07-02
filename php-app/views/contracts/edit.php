@@ -89,6 +89,7 @@ ob_start();
             </div>
             <div id="edit_monthly_prices_section">
                 <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar</h4>
+                <p id="edit_monthly_prices_vat_note" class="text-xs text-gray-500 dark:text-gray-400 mb-2"></p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Giriş tarihinden itibaren her ayın vade gününe göre listelenir. Ödemesi alınmış vadelerin fiyatı değiştirilemez.</p>
                 <div id="edit_monthly_prices_list" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
             </div>
@@ -289,28 +290,29 @@ function toggleEditStoredItemsConditionNote(value) {
                     : (defaultVal ? formatPriceInput(defaultVal) : ''));
             var isPaid = ContractBilling.isPaidPeriodKey(item.key, paidPeriodKeys);
             var isFree = !isPaid && freeKey && item.key === freeKey;
-            if (isPaid) {
-                var paidAmt = ContractBilling.paidAmountForPeriodKey(item.key, paidAmountsByPeriod);
-                if (paidAmt != null) {
-                    existing = formatPriceInput(paidAmt);
-                }
-            } else if (isFree) {
+            if (isFree) {
                 existing = '0,00';
             }
             var row = document.createElement('div');
-            row.className = 'flex items-center gap-3' + (isPaid ? ' opacity-90' : '') + (isFree ? ' bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-2 py-1' : '');
+            row.className = 'monthly-price-row flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3' + (isPaid ? ' opacity-90' : '') + (isFree ? ' bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-2 py-1' : '');
             var inputClass = 'flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm ' +
                 (isPaid || isFree
                     ? 'bg-gray-100 dark:bg-gray-600/50 text-gray-600 dark:text-gray-300 cursor-not-allowed'
                     : 'focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white');
-            row.innerHTML = '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0" title="Vade">' + item.label + '</label>' +
+            row.innerHTML = '<div class="flex items-center gap-3 w-full">' +
+                '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0" title="Vade">' + item.label + '</label>' +
                 '<input type="text" name="monthly_prices[' + item.key + ']" value="' + existing + '" placeholder="0,00"' +
                 (isPaid || isFree ? ' readonly' : '') + ' class="' + inputClass + '">' +
                 '<span class="text-gray-500 dark:text-gray-400 text-sm shrink-0">₺</span>' +
                 (isPaid ? '<span class="text-xs font-medium text-green-700 dark:text-green-400 shrink-0">Ödeme alındı</span>' : '') +
-                (isFree ? '<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 shrink-0">Ücretsiz</span>' : '');
+                (isFree ? '<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 shrink-0">Ücretsiz</span>' : '') +
+                '</div>' +
+                '<p class="monthly-price-vat-hint text-xs text-emerald-700 dark:text-emerald-300 sm:ml-28 hidden"></p>';
             list.appendChild(row);
         });
+        if (typeof ContractVat !== 'undefined') {
+            ContractVat.refreshMonthlyPriceHints(list, 'edit');
+        }
     }
 
     var startEl = document.getElementById('edit_start_date');
@@ -347,6 +349,9 @@ function toggleEditStoredItemsConditionNote(value) {
                     inp.value = val ? formatPriceInput(val) : '';
                 }
             });
+            if (typeof ContractVat !== 'undefined') {
+                ContractVat.refreshMonthlyPriceHints(list, 'edit');
+            }
         });
     }
     buildEditMonthlyPricesList();

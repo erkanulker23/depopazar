@@ -118,7 +118,7 @@ $isStaff = !empty($isStaff);
                                 <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                                     <div><dt class="text-gray-500 text-xs">Başlangıç</dt><dd><?= !empty($c['start_date']) ? date('d.m.Y', strtotime($c['start_date'])) : '-' ?></dd></div>
                                     <div><dt class="text-gray-500 text-xs">Bitiş</dt><dd><?= !empty($c['end_date']) ? date('d.m.Y', strtotime($c['end_date'])) : '-' ?></dd></div>
-                                    <div><dt class="text-gray-500 text-xs">Aylık ücret</dt><dd class="font-medium"><?= number_format((float) ($c['monthly_price'] ?? 0), 2, ',', '.') ?> ₺</dd></div>
+                                    <div><dt class="text-gray-500 text-xs">Aylık ücret</dt><dd class="font-medium"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></dd></div>
                                     <div><dt class="text-gray-500 text-xs">Durum</dt><dd><?= !empty($c['is_active']) ? 'Aktif' : 'Sonlandırılmış' ?></dd></div>
                                 </dl>
                                 <?php if (!empty($c['notes'])): ?>

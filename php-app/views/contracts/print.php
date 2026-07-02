@@ -93,13 +93,15 @@ if (!function_exists('fmtPrice')) {
         <?php endif; ?>
         <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Takvimi</h2>
         <?php if (!contractPriceIncludesVat($contract)): ?>
-        <p class="text-xs text-gray-600 mb-2">Ödeme tutarları KDV dahil tahsil edilecek tutarlardır.</p>
+        <p class="text-xs text-gray-600 mb-2">Ödeme tutarları KDV dahil tahsil edilecek tutarlardır. Girilen aylık fiyatlar KDV hariçtir.</p>
+        <?php else: ?>
+        <p class="text-xs text-gray-600 mb-2">Ödeme tutarları KDV dahil tutarlardır.</p>
         <?php endif; ?>
         <table class="min-w-full border border-gray-300 text-sm">
             <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th></tr></thead>
             <tbody>
                 <?php foreach ($payments as $p): $ps = paymentStatusDisplay($p); ?>
-                <tr><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td><td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($ps['label']) ?></td></tr>
+                <tr><td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td><td class="border border-gray-300 px-3 py-2"><?php $grossAmount = $p['amount'] ?? 0; require __DIR__ . '/../partials/contract_payment_amount_display.php'; ?></td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($ps['label']) ?></td></tr>
                 <?php endforeach; ?>
             </tbody>
         </table>

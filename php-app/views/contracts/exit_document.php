@@ -74,7 +74,7 @@ if (!function_exists('fmtPrice')) {
             <?php foreach ($contractPayments as $p): ?>
                 <tr>
                     <td class="border border-gray-300 px-3 py-2"><?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></td>
-                    <td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td>
+                    <td class="border border-gray-300 px-3 py-2"><?php $grossAmount = $p['amount'] ?? 0; $compact = true; require __DIR__ . '/../partials/contract_payment_amount_display.php'; ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= (($p['status'] ?? '') === 'paid') ? 'Ödendi' : htmlspecialchars(paymentStatusDisplay($p)['label']) ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= fmtDateTime($p['paid_at'] ?? null) ?></td>
                 </tr>

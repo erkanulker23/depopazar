@@ -2,6 +2,12 @@
 $customerName = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
 $company = $company ?? null;
 $contracts = $contracts ?? [];
+$contractsById = [];
+foreach ($contracts as $cRow) {
+    if (!empty($cRow['id'])) {
+        $contractsById[$cRow['id']] = $cRow;
+    }
+}
 $payments = $payments ?? [];
 $debt = $debt ?? 0;
 $monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -89,7 +95,7 @@ if (!function_exists('fmtPrice')) {
                     <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($c['start_date'] ?? '')) ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($c['end_date'] ?? '')) ?></td>
-                    <td class="border border-gray-300 px-3 py-2"><?= fmtPrice($c['monthly_price'] ?? 0) ?></td>
+                    <td class="border border-gray-300 px-3 py-2"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -115,7 +121,16 @@ if (!function_exists('fmtPrice')) {
                 <tr>
                     <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></td>
-                    <td class="border border-gray-300 px-3 py-2"><?= fmtPrice($p['amount'] ?? 0) ?></td>
+                    <td class="border border-gray-300 px-3 py-2"><?php
+                        $contract = $contractsById[$p['contract_id'] ?? ''] ?? null;
+                        if ($contract) {
+                            $grossAmount = $p['amount'] ?? 0;
+                            $compact = true;
+                            require __DIR__ . '/../partials/contract_payment_amount_display.php';
+                        } else {
+                            echo fmtPrice($p['amount'] ?? 0);
+                        }
+                    ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars($ps['label']) ?></td>
                     <td class="border border-gray-300 px-3 py-2"><?= fmtDateTime($p['paid_at'] ?? null) ?></td>
                 </tr>

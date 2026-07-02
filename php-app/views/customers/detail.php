@@ -32,6 +32,22 @@ if ($hasOverdueDebt) {
     $debtSummaryLabelClass = 'text-emerald-700 dark:text-emerald-400';
     $debtSummaryAmountClass = 'text-emerald-800 dark:text-emerald-300';
 }
+$contractsById = [];
+foreach ($contracts ?? [] as $cRow) {
+    if (!empty($cRow['id'])) {
+        $contractsById[$cRow['id']] = $cRow;
+    }
+}
+$renderCustomerPaymentAmount = static function (array $p) use ($contractsById, $company): void {
+    $contract = $contractsById[$p['contract_id'] ?? ''] ?? null;
+    if (!$contract) {
+        echo fmtPrice($p['amount'] ?? 0);
+        return;
+    }
+    $grossAmount = $p['amount'] ?? 0;
+    $compact = true;
+    require __DIR__ . '/../partials/contract_payment_amount_display.php';
+};
 ob_start();
 ?>
 <div class="page-header mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -289,7 +305,7 @@ if ($bulkPaidExtraCount > 0):
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($c['start_date'] ?? null) ?></td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($c['end_date'] ?? null) ?></td>
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= number_format((float)($c['monthly_price'] ?? 0), 2, ',', '.') ?> ₺</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td>
                                     <td class="px-4 py-3"><a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?fromCustomer=1" class="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">Detay</a></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -405,7 +421,7 @@ if ($bulkPaidExtraCount > 0):
                             <?php foreach ($payments as $p): ?>
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($p['due_date'] ?? null) ?></td>
-                                    <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-white"><?php $renderCustomerPaymentAmount($p); ?></td>
                                     <td class="px-4 py-3">
                                         <?php $ps = paymentStatusDisplay($p); ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
@@ -483,7 +499,7 @@ if ($bulkPaidExtraCount > 0):
                                     <?php foreach ($groupPayments as $p): ?>
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($p['due_date'] ?? null) ?></td>
-                                            <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</td>
+                                            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white"><?php $renderCustomerPaymentAmount($p); ?></td>
                                             <td class="px-4 py-3">
                                                 <?php $ps = paymentStatusDisplay($p); ?>
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
@@ -735,7 +751,7 @@ $bankAccounts = $bankAccounts ?? [];
                                     <span class="text-xs text-gray-500 dark:text-gray-400">Vade: <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></span>
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $psModal['badge'] ?>"><?= htmlspecialchars($psModal['label']) ?></span>
                                 </span>
-                                <span class="font-semibold text-gray-900 dark:text-white shrink-0"><?= number_format((float)($p['amount'] ?? 0), 2, ',', '.') ?> ₺</span>
+                                <span class="font-semibold text-gray-900 dark:text-white shrink-0"><?php $renderCustomerPaymentAmount($p); ?></span>
                             </label>
                         <?php endforeach; ?>
                         <?php endforeach; ?>

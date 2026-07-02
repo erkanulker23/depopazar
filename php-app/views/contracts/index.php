@@ -96,7 +96,7 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                                     <p class="font-semibold text-emerald-600 dark:text-emerald-400 truncate"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></p>
                                     <p class="text-sm text-gray-900 dark:text-white mt-0.5 truncate"><?= htmlspecialchars(trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''))) ?></p>
                                 </a>
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap shrink-0"><?= fmtPrice($c['monthly_price'] ?? 0) ?><span class="text-xs font-normal text-gray-500 dark:text-gray-400">/ay</span><?php if (!contractPriceIncludesVat($c)): ?><span class="text-xs font-normal text-amber-600 dark:text-amber-400 ml-1">+KDV</span><?php endif; ?></p>
+                                <div class="text-right shrink-0"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; $showCharge = false; require __DIR__ . '/../partials/contract_price_display.php'; ?></div>
                             </div>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> · Oda <?= htmlspecialchars($c['room_number'] ?? '') ?></p>
                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5"><?= fmtDateTime($c['created_at'] ?? null) ?></p>
@@ -153,7 +153,7 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? '')) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($c['created_at'] ?? null) ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtPrice($c['monthly_price'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?php $enteredPrice = $c['monthly_price'] ?? 0; $contract = $c; require __DIR__ . '/../partials/contract_price_display.php'; ?></td>
                             <td class="px-4 py-3">
                                 <?php
                                 $debt = $contractDebt[$c['id'] ?? ''] ?? ['overdue' => 0, 'pending' => 0];
@@ -438,6 +438,7 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                     </div>
                     <div id="newSale_monthly_prices_section" class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 hidden">
                         <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2"><i class="bi bi-calendar-month"></i> Aylık Fiyatlar</h4>
+                        <p id="newSale_monthly_prices_vat_note" class="text-xs text-gray-500 dark:text-gray-400 mb-2"></p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Giriş tarihinden itibaren her ayın vade gününe göre listelenir (ör. giriş 28.06 → vadeler 28.06, 28.07 …).</p>
                         <div id="newSale_monthly_prices_list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
                     </div>
@@ -935,13 +936,19 @@ function closeNewSaleModal() {
             var isFree = freeKey && item.key === freeKey;
             var priceVal = isFree ? '0,00' : (defaultVal ? defaultVal.replace('.', ',') : '');
             var row = document.createElement('div');
-            row.className = 'flex items-center gap-3' + (isFree ? ' bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-2 py-1' : '');
-            row.innerHTML = '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0" title="Vade tarihi">' + item.label + '</label>' +
+            row.className = 'monthly-price-row flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3' + (isFree ? ' bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-2 py-1' : '');
+            row.innerHTML = '<div class="flex items-center gap-3 w-full">' +
+                '<label class="w-28 text-sm text-gray-700 dark:text-gray-300 shrink-0" title="Vade tarihi">' + item.label + '</label>' +
                 '<input type="text" name="monthly_prices[' + item.key + ']" value="' + priceVal + '" placeholder="0,00"' + (isFree ? ' readonly' : '') + ' class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm' + (isFree ? ' bg-gray-100 dark:bg-gray-600/50' : '') + '">' +
                 '<span class="text-gray-500 text-sm shrink-0">₺</span>' +
-                (isFree ? '<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 shrink-0">Ücretsiz</span>' : '');
+                (isFree ? '<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 shrink-0">Ücretsiz</span>' : '') +
+                '</div>' +
+                '<p class="monthly-price-vat-hint text-xs text-emerald-700 dark:text-emerald-300 sm:ml-28 hidden"></p>';
             list.appendChild(row);
         });
+        if (typeof ContractVat !== 'undefined') {
+            ContractVat.refreshMonthlyPriceHints(list, 'newSale');
+        }
         section.classList.remove('hidden');
     }
     var useCampaignCb = document.getElementById('newSale_use_campaign');
@@ -972,6 +979,9 @@ function closeNewSaleModal() {
             if (inp.readOnly) return;
             if (!inp.value || inp.value === '0') inp.value = val ? val.replace('.', ',') : '';
         });
+        if (typeof ContractVat !== 'undefined') {
+            ContractVat.refreshMonthlyPriceHints(list, 'newSale');
+        }
     });
     var pickupAddrDetail = document.getElementById('newSale_pickup_address_detail');
     var pickupDepo = document.getElementById('newSale_pickup_warehouse_id');
