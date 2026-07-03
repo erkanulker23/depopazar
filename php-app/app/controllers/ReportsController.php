@@ -662,7 +662,8 @@ class ReportsController
                 $name,
                 $r['customer_phone'] ?? '',
                 $r['contract_number'] ?? '',
-                ($r['warehouse_name'] ?? '') . ' / ' . ($r['room_number'] ?? ''),
+                $r['warehouse_name'] ?? '',
+                $r['room_number'] ?? '',
                 number_format($amount, 2, ',', '.'),
                 !empty($r['due_date']) ? date('d.m.Y', strtotime($r['due_date'])) : '',
                 $dStatus['label'] ?? '',
@@ -693,7 +694,7 @@ class ReportsController
             'vadesi-gelen-' . $startDate . '-' . $endDate . '.xls',
             'Vadesi Gelen Ödemeler Raporu',
             $meta,
-            ['Ödeme No', 'Müşteri', 'Telefon', 'Sözleşme', 'Depo/Oda', 'Tutar (₺)', 'Vade', 'Durum', 'Tahsilat', 'Yöntem'],
+            ['Ödeme No', 'Müşteri', 'Telefon', 'Sözleşme', 'Depo', 'Oda', 'Tutar (₺)', 'Vade', 'Durum', 'Tahsilat', 'Yöntem'],
             $csvRows,
             $summary
         );
