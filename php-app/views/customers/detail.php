@@ -78,6 +78,9 @@ ob_start();
         <?php endif; ?>
     </div>
     <div class="page-header-actions flex flex-nowrap md:flex-wrap gap-2">
+        <button type="button" onclick="goBackToCustomerList()" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <i class="bi bi-arrow-left mr-2"></i> Geri Dön
+        </button>
         <button type="button" onclick="openEditCustomerModal()" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
             <i class="bi bi-pencil mr-2"></i> Müşteri Düzenle
         </button>
@@ -905,6 +908,20 @@ $bankAccounts = $bankAccounts ?? [];
 <script src="/contract-billing.js"></script>
 <script src="/contract-vat.js"></script>
 <script>
+window.goBackToCustomerList = function() {
+    try {
+        if (document.referrer) {
+            var ref = new URL(document.referrer);
+            if (ref.origin === window.location.origin && ref.pathname === '/musteriler') {
+                window.history.back();
+                return;
+            }
+        }
+    } catch (e) {
+        // Referrer parse edilemezse listeye don.
+    }
+    window.location.href = '/musteriler';
+};
 window.closeEditCustomerModal = function() {
     var modal = document.getElementById('editCustomerModal');
     if (modal) modal.classList.add('hidden');
