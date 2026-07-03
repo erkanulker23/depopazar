@@ -2628,6 +2628,7 @@ if (!function_exists('duePaymentStatusFilterLabel')) {
             'pending' => 'Bekleyen',
             'overdue' => 'Vadesi geçmiş',
             'paid' => 'Ödenmiş',
+            'early' => 'Erken ödenmiş',
             'unpaid' => 'Ödenmemiş',
             default => 'Tümü',
         };

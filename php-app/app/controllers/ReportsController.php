@@ -235,7 +235,7 @@ class ReportsController
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
         $search = $search !== '' ? $search : null;
-        $status = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'overdue', 'paid', 'unpaid'], true) ? $_GET['status'] : null;
+        $status = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'overdue', 'paid', 'unpaid', 'early'], true) ? $_GET['status'] : null;
         $warehouseId = $this->resolveReportWarehouseId($companyId, $_GET['warehouse_id'] ?? null);
         if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             $this->exportDuePaymentsCsv($companyId, $startDate, $endDate, $search, $status, $warehouseId);
@@ -252,6 +252,9 @@ class ReportsController
         foreach ($rows as $r) {
             $display = paymentStatusDisplay($r);
             if (($r['status'] ?? '') === 'paid') {
+                if (!empty($display['early'])) {
+                    continue;
+                }
                 $paidCount++;
                 $paidSum += (float) ($r['amount'] ?? 0);
             } else {

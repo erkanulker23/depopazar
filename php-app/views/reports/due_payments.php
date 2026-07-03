@@ -99,6 +99,7 @@ ob_start();
             <option value="pending" <?= ($status ?? '') === 'pending' ? 'selected' : '' ?>>Bekleyen</option>
             <option value="overdue" <?= ($status ?? '') === 'overdue' ? 'selected' : '' ?>>Vadesi geçmiş</option>
             <option value="paid" <?= ($status ?? '') === 'paid' ? 'selected' : '' ?>>Ödenmiş</option>
+            <option value="early" <?= ($status ?? '') === 'early' ? 'selected' : '' ?>>Erken ödenmiş</option>
             <option value="unpaid" <?= ($status ?? '') === 'unpaid' ? 'selected' : '' ?>>Ödenmemiş</option>
         </select>
     </div>

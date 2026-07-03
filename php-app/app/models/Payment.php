@@ -1410,7 +1410,9 @@ class Payment
             $params[] = $warehouseId;
         }
         if ($status === 'paid') {
-            $sql .= ' AND p.status = \'paid\' ';
+            $sql .= ' AND p.status = \'paid\' AND p.paid_at IS NOT NULL AND p.due_date IS NOT NULL AND DATE(p.paid_at) >= DATE(p.due_date) ';
+        } elseif ($status === 'early') {
+            $sql .= ' AND p.status = \'paid\' AND p.paid_at IS NOT NULL AND p.due_date IS NOT NULL AND DATE(p.paid_at) < DATE(p.due_date) ';
         } elseif ($status === 'overdue') {
             $sql .= ' AND p.status != \'paid\' AND DATE(p.due_date) < CURDATE() ';
         } elseif ($status === 'pending') {
