@@ -230,15 +230,17 @@ class ReportsController
         Auth::requireStaff();
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $warehouses = $this->loadReportWarehouses($companyId);
         $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-01');
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
         $search = isset($_GET['q']) ? trim($_GET['q']) : null;
         $search = $search !== '' ? $search : null;
         $status = isset($_GET['status']) && in_array($_GET['status'], ['pending', 'overdue', 'paid', 'unpaid'], true) ? $_GET['status'] : null;
+        $warehouseId = $this->resolveReportWarehouseId($companyId, $_GET['warehouse_id'] ?? null);
         if (isset($_GET['export']) && $_GET['export'] === 'csv') {
-            $this->exportDuePaymentsCsv($companyId, $startDate, $endDate, $search, $status);
+            $this->exportDuePaymentsCsv($companyId, $startDate, $endDate, $search, $status, $warehouseId);
         }
-        $rows = Payment::findDuePaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate, 5000, $search, $status);
+        $rows = Payment::findDuePaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate, 5000, $search, $status, $warehouseId);
         $totalCount = count($rows);
         $totalSum = array_sum(array_map(static fn($r) => (float) ($r['amount'] ?? 0), $rows));
         $pendingCount = 0;
@@ -274,15 +276,17 @@ class ReportsController
         Auth::requireStaff();
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $warehouses = $this->loadReportWarehouses($companyId);
         $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-01', strtotime('-11 months'));
         $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-t');
+        $warehouseId = $this->resolveReportWarehouseId($companyId, $_GET['warehouse_id'] ?? null);
         if (isset($_GET['export']) && $_GET['export'] === 'csv') {
-            $this->exportEarlyPaymentsCsv($companyId, $startDate, $endDate);
+            $this->exportEarlyPaymentsCsv($companyId, $startDate, $endDate, $warehouseId);
         }
-        $rows = Payment::findEarlyPayments($this->pdo, $companyId, 500, $startDate, $endDate);
-        $prepaidContracts = Payment::findFullyPrepaidContracts($this->pdo, $companyId, 100);
-        $totalCount = Payment::countEarlyPayments($this->pdo, $companyId, $startDate, $endDate);
-        $totalSum = Payment::sumEarlyPayments($this->pdo, $companyId, $startDate, $endDate);
+        $rows = Payment::findEarlyPayments($this->pdo, $companyId, 500, $startDate, $endDate, $warehouseId);
+        $prepaidContracts = Payment::findFullyPrepaidContracts($this->pdo, $companyId, 100, $warehouseId);
+        $totalCount = Payment::countEarlyPayments($this->pdo, $companyId, $startDate, $endDate, $warehouseId);
+        $totalSum = Payment::sumEarlyPayments($this->pdo, $companyId, $startDate, $endDate, $warehouseId);
         $companyName = $this->resolveCompanyName($companyId);
         $pageTitle = 'Erken ve Peşin Ödemeler';
         require __DIR__ . '/../../views/reports/early_payments.php';
@@ -325,6 +329,30 @@ class ReportsController
         }
         $company = Company::findOne($this->pdo, $companyId);
         return $company['name'] ?? null;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function loadReportWarehouses(?string $companyId): array
+    {
+        return $companyId
+            ? Warehouse::findAll($this->pdo, $companyId)
+            : Warehouse::findAll($this->pdo, null);
+    }
+
+    private function resolveReportWarehouseId(?string $companyId, mixed $warehouseId): ?string
+    {
+        $warehouseId = trim((string) ($warehouseId ?? ''));
+        if ($warehouseId === '') {
+            return null;
+        }
+        $warehouse = Warehouse::findOne($this->pdo, $warehouseId);
+        if (!$warehouse) {
+            return null;
+        }
+        if ($companyId && ($warehouse['company_id'] ?? '') !== $companyId) {
+            return null;
+        }
+        return $warehouseId;
     }
 
     private function groupExpensesByCategory(array $rows): array
@@ -601,9 +629,9 @@ class ReportsController
         );
     }
 
-    private function exportDuePaymentsCsv(?string $companyId, string $startDate, string $endDate, ?string $search, ?string $status): never
+    private function exportDuePaymentsCsv(?string $companyId, string $startDate, string $endDate, ?string $search, ?string $status, ?string $warehouseId = null): never
     {
-        $rows = Payment::findDuePaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate, 5000, $search, $status);
+        $rows = Payment::findDuePaymentRowsInPeriod($this->pdo, $companyId, $startDate, $endDate, 5000, $search, $status, $warehouseId);
         $companyName = 'DepoPazar';
         if ($companyId) {
             $company = Company::findOne($this->pdo, $companyId);
@@ -648,6 +676,12 @@ class ReportsController
         if ($search) {
             $meta[] = 'Arama: ' . $search;
         }
+        if ($warehouseId) {
+            $warehouse = Warehouse::findOne($this->pdo, $warehouseId);
+            if ($warehouse) {
+                $meta[] = 'Depo: ' . ($warehouse['name'] ?? '');
+            }
+        }
         $summary = [
             'Toplam kayıt: ' . count($rows) . ' · Toplam tutar: ' . number_format($totalSum, 2, ',', '.') . ' ₺',
             'Bekleyen: ' . $pendingCount . ' · Vadesi geçmiş: ' . $overdueCount . ' · Ödenmiş: ' . $paidCount,
@@ -662,10 +696,10 @@ class ReportsController
         );
     }
 
-    private function exportEarlyPaymentsCsv(?string $companyId, string $startDate, string $endDate): never
+    private function exportEarlyPaymentsCsv(?string $companyId, string $startDate, string $endDate, ?string $warehouseId = null): never
     {
-        $rows = Payment::findEarlyPayments($this->pdo, $companyId, 5000, $startDate, $endDate);
-        $prepaid = Payment::findFullyPrepaidContracts($this->pdo, $companyId, 500);
+        $rows = Payment::findEarlyPayments($this->pdo, $companyId, 5000, $startDate, $endDate, $warehouseId);
+        $prepaid = Payment::findFullyPrepaidContracts($this->pdo, $companyId, 500, $warehouseId);
         $csvRows = [];
         foreach ($prepaid as $c) {
             $name = trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''));

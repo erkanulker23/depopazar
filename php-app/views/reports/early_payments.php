@@ -2,13 +2,23 @@
 $currentPage = 'raporlar';
 $rows = $rows ?? [];
 $prepaidContracts = $prepaidContracts ?? [];
+$warehouses = $warehouses ?? [];
+$warehouseId = $warehouseId ?? '';
 $startDate = $startDate ?? date('Y-m-01');
 $endDate = $endDate ?? date('Y-m-t');
 $totalCount = $totalCount ?? 0;
 $totalSum = $totalSum ?? 0;
 $periodLabel = date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate));
-$hasActiveFilters = $startDate !== date('Y-m-01') || $endDate !== date('Y-m-t');
+$hasActiveFilters = $warehouseId !== '' || $startDate !== date('Y-m-01') || $endDate !== date('Y-m-t');
 $activeFilterTags = ['Dönem: ' . $periodLabel];
+if ($warehouseId !== '') {
+    foreach ($warehouses as $wh) {
+        if (($wh['id'] ?? '') === $warehouseId) {
+            $activeFilterTags[] = 'Depo: ' . ($wh['name'] ?? '');
+            break;
+        }
+    }
+}
 $companyName = $companyName ?? null;
 ob_start();
 function fmtMoney($n) { return number_format((float)$n, 2, ',', '.'); }
@@ -64,6 +74,15 @@ ob_start();
         <label class="filter-label" for="early_end_date">Tahsilat bitiş</label>
         <input type="date" name="end_date" id="early_end_date" value="<?= htmlspecialchars($endDate) ?>" class="filter-input">
     </div>
+    <div class="filter-field">
+        <label class="filter-label" for="early_warehouse_id">Depo</label>
+        <select name="warehouse_id" id="early_warehouse_id" class="filter-input">
+            <option value="">Tüm depolar</option>
+            <?php foreach ($warehouses as $wh): ?>
+                <option value="<?= htmlspecialchars($wh['id']) ?>" <?= $warehouseId === ($wh['id'] ?? '') ? 'selected' : '' ?>><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
 <?php
 $filterModalBody = ob_get_clean();
 $filterFormId = 'earlyPaymentsFilterForm';
@@ -86,7 +105,11 @@ function applyEarlyMonthPreset() {
 </script>
 
 <?php
-$csvUrl = reportExportUrl('/raporlar/erken-odemeler', ['start_date' => $startDate, 'end_date' => $endDate]);
+$csvUrl = reportExportUrl('/raporlar/erken-odemeler', array_filter([
+    'start_date' => $startDate,
+    'end_date' => $endDate,
+    'warehouse_id' => $warehouseId ?: null,
+], static fn($v) => $v !== null && $v !== ''));
 ?>
 <div id="report-content">
 <?php require __DIR__ . '/../partials/report_export_toolbar.php'; ?>
@@ -96,6 +119,14 @@ $printTitle = 'Erken ve Peşin Ödemeler Raporu';
 $printMeta = [
     ['label' => 'Dönem', 'value' => $periodLabel],
 ];
+if ($warehouseId !== '') {
+    foreach ($warehouses as $wh) {
+        if (($wh['id'] ?? '') === $warehouseId) {
+            $printMeta[] = ['label' => 'Depo', 'value' => $wh['name'] ?? ''];
+            break;
+        }
+    }
+}
 $printSummary = [
     'headers' => ['Erken ödeme adedi', 'Erken ödeme tutarı', 'Peşin sözleşme'],
     'values' => [(int) $totalCount, fmtMoney($totalSum) . ' ₺', count($prepaidContracts)],

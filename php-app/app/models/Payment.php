@@ -1243,7 +1243,7 @@ class Payment
     }
 
     /** Vadesinden önce tahsil edilmiş ödemeler (paid_at < due_date) */
-    public static function findEarlyPayments(PDO $pdo, ?string $companyId, int $limit = 50, ?string $paidFrom = null, ?string $paidTo = null): array
+    public static function findEarlyPayments(PDO $pdo, ?string $companyId, int $limit = 50, ?string $paidFrom = null, ?string $paidTo = null, ?string $warehouseId = null): array
     {
         $sql = 'SELECT p.*, c.contract_number, c.customer_id, c.id AS contract_id,
                        cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
@@ -1269,13 +1269,17 @@ class Payment
             $sql .= ' AND DATE(p.paid_at) <= ? ';
             $params[] = $paidTo;
         }
+        if ($warehouseId) {
+            $sql .= ' AND w.id = ? ';
+            $params[] = $warehouseId;
+        }
         $sql .= ' ORDER BY p.paid_at DESC LIMIT ' . (int) $limit;
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function countEarlyPayments(PDO $pdo, ?string $companyId, ?string $paidFrom = null, ?string $paidTo = null): int
+    public static function countEarlyPayments(PDO $pdo, ?string $companyId, ?string $paidFrom = null, ?string $paidTo = null, ?string $warehouseId = null): int
     {
         $sql = 'SELECT COUNT(*) FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
@@ -1297,12 +1301,16 @@ class Payment
             $sql .= ' AND DATE(p.paid_at) <= ? ';
             $params[] = $paidTo;
         }
+        if ($warehouseId) {
+            $sql .= ' AND w.id = ? ';
+            $params[] = $warehouseId;
+        }
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return (int) $stmt->fetchColumn();
     }
 
-    public static function sumEarlyPayments(PDO $pdo, ?string $companyId, ?string $paidFrom = null, ?string $paidTo = null): float
+    public static function sumEarlyPayments(PDO $pdo, ?string $companyId, ?string $paidFrom = null, ?string $paidTo = null, ?string $warehouseId = null): float
     {
         $sql = 'SELECT COALESCE(SUM(p.amount), 0) FROM payments p
                 INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
@@ -1324,13 +1332,17 @@ class Payment
             $sql .= ' AND DATE(p.paid_at) <= ? ';
             $params[] = $paidTo;
         }
+        if ($warehouseId) {
+            $sql .= ' AND w.id = ? ';
+            $params[] = $warehouseId;
+        }
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return (float) $stmt->fetchColumn();
     }
 
     /** Tüm taksitleri ödenmiş ve en az bir erken ödeme içeren aktif sözleşmeler */
-    public static function findFullyPrepaidContracts(PDO $pdo, ?string $companyId, int $limit = 20): array
+    public static function findFullyPrepaidContracts(PDO $pdo, ?string $companyId, int $limit = 20, ?string $warehouseId = null): array
     {
         $sql = 'SELECT c.id AS contract_id, c.contract_number, c.customer_id, c.start_date, c.end_date,
                        cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
@@ -1357,6 +1369,10 @@ class Payment
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
         }
+        if ($warehouseId) {
+            $sql .= ' AND w.id = ? ';
+            $params[] = $warehouseId;
+        }
         $sql .= ' GROUP BY c.id, c.contract_number, c.customer_id, c.start_date, c.end_date,
                          cu.first_name, cu.last_name, w.name, r.room_number
                   HAVING early_payment_count > 0 AND payment_count >= 1
@@ -1368,7 +1384,7 @@ class Payment
     }
 
     /** Seçilen dönemde vadesi gelen ödemeler (due_date aralığı; durum filtresi opsiyonel) */
-    public static function findDuePaymentRowsInPeriod(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 1000, ?string $search = null, ?string $status = null): array
+    public static function findDuePaymentRowsInPeriod(PDO $pdo, ?string $companyId, string $startDate, string $endDate, int $limit = 1000, ?string $search = null, ?string $status = null, ?string $warehouseId = null): array
     {
         $sql = 'SELECT p.id, p.payment_number, p.amount, p.due_date, p.status, p.paid_at, p.payment_method,
                        c.contract_number, c.id AS contract_id, c.customer_id,
@@ -1388,6 +1404,10 @@ class Payment
         if ($companyId) {
             $sql .= ' AND w.company_id = ? ';
             $params[] = $companyId;
+        }
+        if ($warehouseId) {
+            $sql .= ' AND w.id = ? ';
+            $params[] = $warehouseId;
         }
         if ($status === 'paid') {
             $sql .= ' AND p.status = \'paid\' ';

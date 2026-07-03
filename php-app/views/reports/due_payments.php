@@ -6,6 +6,8 @@ $endDate = $endDate ?? date('Y-m-t');
 $search = $search ?? null;
 $status = $status ?? null;
 $statusLabel = $statusLabel ?? duePaymentStatusFilterLabel($status);
+$warehouses = $warehouses ?? [];
+$warehouseId = $warehouseId ?? '';
 $companyName = $companyName ?? null;
 $totalCount = $totalCount ?? 0;
 $totalSum = $totalSum ?? 0;
@@ -18,8 +20,16 @@ $overdueSum = $overdueSum ?? 0;
 $periodLabel = date('d.m.Y', strtotime($startDate)) . ' – ' . date('d.m.Y', strtotime($endDate));
 $defaultStart = date('Y-m-01');
 $defaultEnd = date('Y-m-t');
-$hasActiveFilters = ($status ?? '') !== '' || ($search ?? '') !== '' || $startDate !== $defaultStart || $endDate !== $defaultEnd;
+$hasActiveFilters = ($status ?? '') !== '' || ($search ?? '') !== '' || $warehouseId !== '' || $startDate !== $defaultStart || $endDate !== $defaultEnd;
 $activeFilterTags = ['Dönem: ' . $periodLabel];
+if ($warehouseId !== '') {
+    foreach ($warehouses as $wh) {
+        if (($wh['id'] ?? '') === $warehouseId) {
+            $activeFilterTags[] = 'Depo: ' . ($wh['name'] ?? '');
+            break;
+        }
+    }
+}
 if (($status ?? '') !== '') {
     $activeFilterTags[] = 'Durum: ' . $statusLabel;
 }
@@ -93,6 +103,15 @@ ob_start();
         </select>
     </div>
     <div class="filter-field">
+        <label class="filter-label" for="due_warehouse_id">Depo</label>
+        <select name="warehouse_id" id="due_warehouse_id" class="filter-input">
+            <option value="">Tüm depolar</option>
+            <?php foreach ($warehouses as $wh): ?>
+                <option value="<?= htmlspecialchars($wh['id']) ?>" <?= $warehouseId === ($wh['id'] ?? '') ? 'selected' : '' ?>><?= htmlspecialchars($wh['name'] ?? '') ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-field">
         <label class="filter-label" for="due_search">Ara</label>
         <input type="search" name="q" id="due_search" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Müşteri, sözleşme, ödeme no…" class="filter-input">
     </div>
@@ -122,6 +141,7 @@ $csvUrl = reportExportUrl('/raporlar/vadesi-gelen', array_filter([
     'start_date' => $startDate,
     'end_date' => $endDate,
     'status' => $status,
+    'warehouse_id' => $warehouseId ?: null,
     'q' => $search,
 ], static fn($v) => $v !== null && $v !== ''));
 $csvLabel = 'Excel Raporu İndir';
@@ -135,6 +155,14 @@ $printMeta = [
     ['label' => 'Dönem', 'value' => $periodLabel],
     ['label' => 'Durum', 'value' => $statusLabel],
 ];
+if ($warehouseId !== '') {
+    foreach ($warehouses as $wh) {
+        if (($wh['id'] ?? '') === $warehouseId) {
+            $printMeta[] = ['label' => 'Depo', 'value' => $wh['name'] ?? ''];
+            break;
+        }
+    }
+}
 if ($search) {
     $printMeta[] = ['label' => 'Arama', 'value' => $search];
 }
