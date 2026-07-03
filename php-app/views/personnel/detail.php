@@ -138,7 +138,7 @@ ob_start();
                         <div class="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
                             <p><span class="text-gray-500 dark:text-gray-500">Müşteri:</span> <?php if (!empty($c['customer_id'])): ?><a href="/musteriler/<?= htmlspecialchars($c['customer_id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($custName) ?></a><?php else: ?><?= htmlspecialchars($custName ?: '–') ?><?php endif; ?></p>
                             <p><span class="text-gray-500">Depo / Oda:</span> <?= htmlspecialchars(trim(($c['warehouse_name'] ?? '') . ' · ' . ($c['room_number'] ?? ''), ' ·') ?: '–') ?></p>
-                            <p><span class="text-gray-500">Aylık:</span> <?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></p>
+                            <div class="min-w-0"><span class="text-gray-500">Aylık:</span> <div class="mt-0.5"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></div></div>
                             <?php if ($soldBy !== ''): ?><p><span class="text-gray-500">Sözleşmeyi yapan:</span> <?= htmlspecialchars($soldBy) ?></p><?php endif; ?>
                         </div>
                         <div class="mt-2">

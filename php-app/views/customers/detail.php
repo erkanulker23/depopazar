@@ -46,7 +46,9 @@ $renderCustomerPaymentAmount = static function (array $p) use ($contractsById, $
     }
     $grossAmount = $p['amount'] ?? 0;
     $compact = true;
+    echo '<span class="block min-w-0 max-w-full">';
     require __DIR__ . '/../partials/contract_payment_amount_display.php';
+    echo '</span>';
 };
 ob_start();
 ?>
@@ -289,7 +291,18 @@ if ($bulkPaidExtraCount > 0):
             <?php if (empty($contracts)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Depo girişi yok.</div>
             <?php else: ?>
-                <div class="overflow-x-auto">
+                <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+                    <?php foreach ($contracts as $c): ?>
+                        <div class="p-4 space-y-2">
+                            <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?fromCustomer=1" class="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></a>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 break-words"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400"><?= fmtDate($c['start_date'] ?? null) ?> – <?= fmtDate($c['end_date'] ?? null) ?></p>
+                            <div class="min-w-0 text-sm text-gray-900 dark:text-white"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></div>
+                            <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?fromCustomer=1" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20">Detay</a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="hidden md:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
@@ -308,7 +321,7 @@ if ($bulkPaidExtraCount > 0):
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($c['start_date'] ?? null) ?></td>
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($c['end_date'] ?? null) ?></td>
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 min-w-0"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td>
                                     <td class="px-4 py-3"><a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?fromCustomer=1" class="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">Detay</a></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -408,7 +421,38 @@ if ($bulkPaidExtraCount > 0):
             <?php if (empty($payments)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Ödeme kaydı yok.</div>
             <?php elseif (!$hasMultipleContracts): ?>
-                <div class="overflow-x-auto">
+                <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+                    <?php foreach ($payments as $p): ?>
+                        <?php $ps = paymentStatusDisplay($p); ?>
+                        <div class="p-4 space-y-2">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= fmtDate($p['due_date'] ?? null) ?></p>
+                            <div class="min-w-0 text-sm text-gray-900 dark:text-white"><?php $renderCustomerPaymentAmount($p); ?></div>
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
+                                <?php if (paymentIsCollectible($p)): ?>
+                                    <a href="/odemeler?payment=<?= htmlspecialchars($p['id'] ?? '') ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Ödeme al</a>
+                                <?php elseif (($p['status'] ?? '') === 'paid'): ?>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-sm text-gray-500 dark:text-gray-400">Detay</a>
+                                        <form method="post" action="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>/iptal" class="inline" onsubmit="return confirm('Bu tahsilat iptal edilsin mi? Taksit tekrar borç olarak görünür.');">
+                                            <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
+                                            <button type="submit" class="text-red-600 dark:text-red-400 text-sm font-medium">Geri al</button>
+                                        </form>
+                                    </div>
+                                <?php else: ?>
+                                    <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-sm text-gray-500 dark:text-gray-400">Detay</a>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (($p['status'] ?? '') === 'paid'): ?>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    Ödenme: <?= fmtDateTime($p['paid_at'] ?? null) ?>
+                                    <?php $collectorName = paymentCollectorName($p); if ($collectorName !== ''): ?> · İşleyen: <?= htmlspecialchars($collectorName) ?><?php endif; ?>
+                                </p>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="hidden md:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
@@ -424,7 +468,7 @@ if ($bulkPaidExtraCount > 0):
                             <?php foreach ($payments as $p): ?>
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($p['due_date'] ?? null) ?></td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-white"><?php $renderCustomerPaymentAmount($p); ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-white min-w-0"><?php $renderCustomerPaymentAmount($p); ?></td>
                                     <td class="px-4 py-3">
                                         <?php $ps = paymentStatusDisplay($p); ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
@@ -486,7 +530,32 @@ if ($bulkPaidExtraCount > 0):
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
+                        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+                            <?php foreach ($groupPayments as $p): ?>
+                                <?php $ps = paymentStatusDisplay($p); ?>
+                                <div class="p-4 space-y-2">
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= fmtDate($p['due_date'] ?? null) ?></p>
+                                    <div class="min-w-0 text-sm text-gray-900 dark:text-white"><?php $renderCustomerPaymentAmount($p); ?></div>
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
+                                        <?php if (paymentIsCollectible($p)): ?>
+                                            <a href="/odemeler?payment=<?= htmlspecialchars($p['id'] ?? '') ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Ödeme al</a>
+                                        <?php elseif (($p['status'] ?? '') === 'paid'): ?>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-sm text-gray-500 dark:text-gray-400">Detay</a>
+                                                <form method="post" action="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>/iptal" class="inline" onsubmit="return confirm('Bu tahsilat iptal edilsin mi? Taksit tekrar borç olarak görünür.');">
+                                                    <input type="hidden" name="redirect" value="/musteriler/<?= htmlspecialchars($customer['id']) ?>">
+                                                    <button type="submit" class="text-red-600 dark:text-red-400 text-sm font-medium">Geri al</button>
+                                                </form>
+                                            </div>
+                                        <?php else: ?>
+                                            <a href="/odemeler/<?= htmlspecialchars($p['id'] ?? '') ?>" class="text-sm text-gray-500 dark:text-gray-400">Detay</a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="hidden md:block overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
                                 <thead class="bg-white dark:bg-gray-800">
                                     <tr>
@@ -502,7 +571,7 @@ if ($bulkPaidExtraCount > 0):
                                     <?php foreach ($groupPayments as $p): ?>
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDate($p['due_date'] ?? null) ?></td>
-                                            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white"><?php $renderCustomerPaymentAmount($p); ?></td>
+                                            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white min-w-0"><?php $renderCustomerPaymentAmount($p); ?></td>
                                             <td class="px-4 py-3">
                                                 <?php $ps = paymentStatusDisplay($p); ?>
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
@@ -745,16 +814,18 @@ $bankAccounts = $bankAccounts ?? [];
                         <?php endif; ?>
                         <?php foreach ($modalContractPayments as $p): ?>
                             <?php $psModal = paymentStatusDisplay($p); ?>
-                            <label class="flex items-center justify-between gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
-                                <span class="flex items-center gap-2 min-w-0 flex-wrap">
-                                    <input type="checkbox" name="payment_ids[]" value="<?= htmlspecialchars($p['id']) ?>" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0">
-                                    <?php if (!$showUnpaidContractHeaders): ?>
-                                        <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></span>
-                                    <?php endif; ?>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">Vade: <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></span>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $psModal['badge'] ?>"><?= htmlspecialchars($psModal['label']) ?></span>
+                            <label class="flex flex-col gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                                <span class="flex items-start gap-2 min-w-0">
+                                    <input type="checkbox" name="payment_ids[]" value="<?= htmlspecialchars($p['id']) ?>" class="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0 mt-0.5">
+                                    <span class="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                        <?php if (!$showUnpaidContractHeaders): ?>
+                                            <span class="font-medium text-gray-900 dark:text-white"><?= htmlspecialchars($p['contract_number'] ?? '-') ?></span>
+                                        <?php endif; ?>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">Vade: <?= !empty($p['due_date']) ? date('d.m.Y', strtotime($p['due_date'])) : '-' ?></span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $psModal['badge'] ?>"><?= htmlspecialchars($psModal['label']) ?></span>
+                                    </span>
                                 </span>
-                                <span class="font-semibold text-gray-900 dark:text-white shrink-0"><?php $renderCustomerPaymentAmount($p); ?></span>
+                                <span class="min-w-0 font-semibold text-gray-900 dark:text-white pl-6"><?php $renderCustomerPaymentAmount($p); ?></span>
                             </label>
                         <?php endforeach; ?>
                         <?php endforeach; ?>

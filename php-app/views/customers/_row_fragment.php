@@ -35,11 +35,13 @@ $statusStyles = [
                     <?php else: ?>
                         <ul class="space-y-2">
                             <?php foreach ($contracts as $c): ?>
-                                <li class="flex items-center gap-2 text-sm">
-                                    <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline"><?= htmlspecialchars($c['contract_number'] ?? '') ?></a>
-                                    <span class="text-slate-400 dark:text-gray-500">·</span>
-                                    <span class="text-slate-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></span>
-                                    <span class="ml-auto shrink-0 font-medium text-slate-700 dark:text-gray-200 text-right"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; $showCharge = false; require __DIR__ . '/../partials/contract_price_display.php'; ?></span>
+                                <li class="flex flex-col gap-1 text-sm min-w-0 py-1">
+                                    <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
+                                        <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline"><?= htmlspecialchars($c['contract_number'] ?? '') ?></a>
+                                        <span class="text-slate-400 dark:text-gray-500">·</span>
+                                        <span class="text-slate-600 dark:text-gray-300 break-words"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></span>
+                                    </div>
+                                    <div class="min-w-0 font-medium text-slate-700 dark:text-gray-200"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; $showCharge = false; require __DIR__ . '/../partials/contract_price_display.php'; ?></div>
                                 </li>
                             <?php endforeach; ?>
                         </ul>

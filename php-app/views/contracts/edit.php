@@ -307,7 +307,7 @@ function toggleEditStoredItemsConditionNote(value) {
                 (isPaid ? '<span class="text-xs font-medium text-green-700 dark:text-green-400 shrink-0">Ödeme alındı</span>' : '') +
                 (isFree ? '<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 shrink-0">Ücretsiz</span>' : '') +
                 '</div>' +
-                '<p class="monthly-price-vat-hint text-xs text-emerald-700 dark:text-emerald-300 sm:ml-28 hidden"></p>';
+                '<p class="monthly-price-vat-hint text-xs text-emerald-700 dark:text-emerald-300 sm:ml-28 break-words hidden"></p>';
             list.appendChild(row);
         });
         if (typeof ContractVat !== 'undefined') {

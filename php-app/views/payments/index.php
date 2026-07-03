@@ -509,20 +509,18 @@ function renderPaymentChecklist(payments) {
     sortPaymentsByDueDate(payments).forEach(function(p) {
         var st = getPaymentStatusForDueDate(p.due_date);
         var label = document.createElement('label');
-        label.className = 'flex items-center justify-between gap-3 p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer';
+        label.className = 'flex flex-col gap-2 p-4 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer';
         label.innerHTML =
-            '<span class="flex items-start gap-3 min-w-0 flex-1">' +
+            '<span class="flex items-start gap-3 min-w-0">' +
                 '<input type="checkbox" class="collect-payment-cb mt-1 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0" value="' + (p.id || '') + '">' +
-                '<span class="min-w-0">' +
-                    '<span class="block font-medium text-gray-900 dark:text-white">' + (p.payment_number || '') + '</span>' +
-                    (p.contract_number ? '<span class="block text-xs text-gray-600 dark:text-gray-300 mt-0.5">Sözleşme: ' + p.contract_number + '</span>' : '') +
+                '<span class="min-w-0 flex-1">' +
+                    '<span class="block font-medium text-gray-900 dark:text-white break-words">' + (p.payment_number || '') + '</span>' +
+                    (p.contract_number ? '<span class="block text-xs text-gray-600 dark:text-gray-300 mt-0.5 break-words">Sözleşme: ' + p.contract_number + '</span>' : '') +
                     '<span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Vade: ' + (formatDueMonth(p.due_date) || (p.due_date ? p.due_date.split(' ')[0] : '-')) + '</span>' +
                 '</span>' +
+                '<span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold shrink-0 ' + st.className + '">' + st.label + '</span>' +
             '</span>' +
-            '<span class="flex flex-col items-end gap-1 shrink-0">' +
-                '<span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold ' + st.className + '">' + st.label + '</span>' +
-                '<span class="font-semibold text-gray-900 dark:text-white tabular-nums">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>' +
-            '</span>';
+            '<span class="pl-8 font-semibold text-gray-900 dark:text-white tabular-nums">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
         var cb = label.querySelector('.collect-payment-cb');
         if (cb) cb.addEventListener('change', updatePaymentSelectionUi);
         list.appendChild(label);

@@ -12,19 +12,17 @@ $renderPaymentAmountCell = function (array $p) use ($contractId, $contract, $com
     $amount = (float) ($p['amount'] ?? 0);
     if ($editable): ?>
         <button type="button"
-                class="payment-amount-editable text-left inline-flex flex-col items-start gap-0.5 text-sm font-semibold text-gray-900 dark:text-white rounded-lg px-2 py-1 -mx-2 border border-transparent hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                class="payment-amount-editable text-left inline-flex items-start gap-1.5 max-w-full min-w-0 text-sm font-semibold text-gray-900 dark:text-white rounded-lg px-2 py-1 -mx-2 border border-transparent hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
                 data-payment-id="<?= htmlspecialchars($p['id'] ?? '') ?>"
                 data-contract-id="<?= htmlspecialchars($contractId) ?>"
                 data-month-key="<?= htmlspecialchars($monthKey) ?>"
                 data-amount="<?= htmlspecialchars((string) $amount) ?>"
                 title="Tutarı değiştirmek için tıklayın">
-            <span class="inline-flex items-start gap-1 whitespace-nowrap">
-                <span class="payment-amount-display"><?php $grossAmount = $amount; $compact = true; require __DIR__ . '/../partials/contract_payment_amount_display.php'; ?></span>
-                <i class="bi bi-pencil-square text-xs text-emerald-600 dark:text-emerald-400 opacity-70 mt-0.5 shrink-0" aria-hidden="true"></i>
-            </span>
+            <span class="payment-amount-display min-w-0 break-words"><?php $grossAmount = $amount; require __DIR__ . '/../partials/contract_payment_amount_display.php'; ?></span>
+            <i class="bi bi-pencil-square text-xs text-emerald-600 dark:text-emerald-400 opacity-70 mt-1 shrink-0" aria-hidden="true"></i>
         </button>
     <?php else: ?>
-        <span class="text-sm text-gray-900 dark:text-white"><?php $grossAmount = $amount; require __DIR__ . '/../partials/contract_payment_amount_display.php'; ?></span>
+        <span class="text-sm text-gray-900 dark:text-white min-w-0 break-words"><?php $grossAmount = $amount; require __DIR__ . '/../partials/contract_payment_amount_display.php'; ?></span>
     <?php endif;
 };
 ob_start();
@@ -273,15 +271,17 @@ if ($hasContractOverdue) {
                     <dd class="mt-1 text-gray-900 dark:text-white">
                         <?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?>
                         <?php if (!empty($linkedContractRooms)): ?>
-                            <span class="block mt-1 text-sm text-gray-600 dark:text-gray-300">
-                                Bağlı odalar:
-                                <?php foreach ($linkedContractRooms as $i => $lr): ?>
-                                    <?= $i > 0 ? ', ' : '' ?><?= htmlspecialchars(trim(($lr['warehouse_name'] ?? '') . ' / ' . ($lr['room_number'] ?? ''))) ?>
-                                    <?php if (!empty($lr['monthly_price'])): ?>
-                                        <span class="text-gray-500 dark:text-gray-400">(<?php $enteredPrice = $lr['monthly_price']; require __DIR__ . '/../partials/contract_price_display.php'; ?>)</span>
-                                    <?php endif; ?>
+                            <div class="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                                <p class="font-medium text-gray-700 dark:text-gray-300">Bağlı odalar</p>
+                                <?php foreach ($linkedContractRooms as $lr): ?>
+                                    <div class="min-w-0 rounded-lg bg-gray-50 dark:bg-gray-700/40 px-3 py-2">
+                                        <p class="text-gray-900 dark:text-white break-words"><?= htmlspecialchars(trim(($lr['warehouse_name'] ?? '') . ' / ' . ($lr['room_number'] ?? ''))) ?></p>
+                                        <?php if (!empty($lr['monthly_price'])): ?>
+                                            <div class="mt-1 min-w-0 text-gray-500 dark:text-gray-400"><?php $enteredPrice = $lr['monthly_price']; $showCharge = false; require __DIR__ . '/../partials/contract_price_display.php'; ?></div>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php endforeach; ?>
-                            </span>
+                            </div>
                         <?php endif; ?>
                     </dd>
                 </div>
@@ -466,20 +466,20 @@ if ($hasContractOverdue) {
                 <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
                     <?php foreach ($payments as $p): ?>
                         <?php $ps = paymentStatusDisplay($p); ?>
-                        <div class="p-4">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></p>
-                                    <?php if (paymentIsPaid($p) && !empty($p['paid_at'])): ?>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ödendi: <?= fmtDateTime($p['paid_at']) ?></p>
-                                    <?php endif; ?>
-                                    <?php if (($p['status'] ?? '') === 'paid' && ($cn = paymentCollectorName($p)) !== ''): ?>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">İşleyen: <?= htmlspecialchars($cn) ?></p>
-                                    <?php endif; ?>
-                                </div>
+                        <div class="p-4 space-y-2">
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= date('d.m.Y', strtotime($p['due_date'] ?? '')) ?></p>
+                                <?php if (paymentIsPaid($p) && !empty($p['paid_at'])): ?>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ödendi: <?= fmtDateTime($p['paid_at']) ?></p>
+                                <?php endif; ?>
+                                <?php if (($p['status'] ?? '') === 'paid' && ($cn = paymentCollectorName($p)) !== ''): ?>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">İşleyen: <?= htmlspecialchars($cn) ?></p>
+                                <?php endif; ?>
+                            </div>
+                            <div class="min-w-0">
                                 <?php $renderPaymentAmountCell($p); ?>
                             </div>
-                            <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $ps['badge'] ?>"><?= htmlspecialchars($ps['label']) ?></span>
                                 <?php if (paymentIsCollectible($p)): ?>
                                     <button type="button"
@@ -551,9 +551,9 @@ if ($hasContractOverdue) {
             <?php else: ?>
                 <ul class="divide-y divide-gray-100 dark:divide-gray-700 max-h-64 overflow-y-auto">
                     <?php foreach ($monthlyPrices as $mp): ?>
-                        <li class="px-4 py-3 flex justify-between items-center text-sm"<?= !empty($mp['month_key']) ? ' id="monthly-price-' . htmlspecialchars($mp['month_key']) . '"' : '' ?>>
-                            <span class="text-gray-700 dark:text-gray-300"><?= htmlspecialchars($mp['month'] ?? '') ?></span>
-                            <span class="font-medium text-gray-900 dark:text-white monthly-price-value"><?php $enteredPrice = $mp['price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></span>
+                        <li class="px-4 py-3 flex flex-col gap-1 text-sm min-w-0"<?= !empty($mp['month_key']) ? ' id="monthly-price-' . htmlspecialchars($mp['month_key']) . '"' : '' ?>>
+                            <span class="text-gray-700 dark:text-gray-300 shrink-0"><?= htmlspecialchars($mp['month'] ?? '') ?></span>
+                            <span class="font-medium text-gray-900 dark:text-white monthly-price-value min-w-0"><?php $enteredPrice = $mp['price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></span>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -685,13 +685,13 @@ function renderContractCollectList() {
     list.innerHTML = '';
     contractCollectPayments.forEach(function(p) {
         var label = document.createElement('label');
-        label.className = 'flex items-center justify-between gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer';
+        label.className = 'flex flex-col gap-1.5 p-3 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer';
         label.innerHTML =
             '<span class="flex items-center gap-2 min-w-0">' +
                 '<input type="checkbox" class="contract-collect-cb rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0" value="' + (p.id || '') + '">' +
                 '<span class="text-sm text-gray-900 dark:text-white">Vade: ' + formatCollectDueDate(p.due_date) + '</span>' +
             '</span>' +
-            '<span class="font-semibold text-gray-900 dark:text-white shrink-0">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
+            '<span class="pl-6 font-semibold text-gray-900 dark:text-white tabular-nums">' + parseFloat(p.amount || 0).toFixed(2).replace('.', ',') + ' ₺</span>';
         var cb = label.querySelector('.contract-collect-cb');
         if (cb) cb.addEventListener('change', updateContractCollectUi);
         list.appendChild(label);
@@ -879,14 +879,16 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
     function renderPaymentAmountCellHtml(gross) {
         gross = parseFloat(gross) || 0;
         if (typeof ContractVat === 'undefined') {
-            return '<span class="font-medium">' + gross.toFixed(2).replace('.', ',') + ' ₺</span>';
+            return '<span class="contract-amount-display block min-w-0 max-w-full"><span class="block font-medium leading-snug">' + gross.toFixed(2).replace('.', ',') + ' ₺</span></span>';
         }
         var bd = ContractVat.breakdownFromGross(gross, contractVatSettings.rate, contractVatSettings.includesVat);
-        var html = '<span class="font-medium">' + ContractVat.formatMoney(gross) + '</span>'
-            + '<span class="text-xs text-gray-500 dark:text-gray-400"> (Tahsil · KDV Dahil)</span>';
+        var html = '<span class="contract-amount-display block min-w-0 max-w-full">'
+            + '<span class="block font-medium leading-snug break-words">' + ContractVat.formatMoney(gross) + '</span>'
+            + '<span class="block text-xs text-gray-500 dark:text-gray-400 leading-snug">(Tahsil · KDV Dahil)</span>';
         if (gross > 0 && contractVatSettings.rate > 0) {
-            html += '<span class="text-xs text-gray-500 dark:text-gray-400 ml-1">· Net ' + ContractVat.formatMoney(bd.net) + '</span>';
+            html += '<span class="block text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-snug break-words">Net ' + ContractVat.formatMoney(bd.net) + '</span>';
         }
+        html += '</span>';
         return html;
     }
 

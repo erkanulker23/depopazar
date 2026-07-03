@@ -91,12 +91,12 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                             <input type="checkbox" class="contract-cb rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
                         </label>
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-start justify-between gap-2">
-                                <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="min-w-0 flex-1">
+                            <div class="min-w-0 space-y-1">
+                                <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="block min-w-0">
                                     <p class="font-semibold text-emerald-600 dark:text-emerald-400 truncate"><?= htmlspecialchars($c['contract_number'] ?? '-') ?></p>
                                     <p class="text-sm text-gray-900 dark:text-white mt-0.5 truncate"><?= htmlspecialchars(trim(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? ''))) ?></p>
                                 </a>
-                                <div class="text-right shrink-0"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; $showCharge = false; require __DIR__ . '/../partials/contract_price_display.php'; ?></div>
+                                <div class="min-w-0"><?php $contract = $c; $enteredPrice = $c['monthly_price'] ?? 0; $showCharge = false; require __DIR__ . '/../partials/contract_price_display.php'; ?></div>
                             </div>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> · Oda <?= htmlspecialchars($c['room_number'] ?? '') ?></p>
                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5"><?= fmtDateTime($c['created_at'] ?? null) ?></p>
@@ -153,7 +153,7 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars(($c['customer_first_name'] ?? '') . ' ' . ($c['customer_last_name'] ?? '')) ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= htmlspecialchars($c['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($c['room_number'] ?? '') ?></td>
                             <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?= fmtDateTime($c['created_at'] ?? null) ?></td>
-                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"><?php $enteredPrice = $c['monthly_price'] ?? 0; $contract = $c; require __DIR__ . '/../partials/contract_price_display.php'; ?></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 min-w-0 max-w-[12rem]"><?php $enteredPrice = $c['monthly_price'] ?? 0; $contract = $c; require __DIR__ . '/../partials/contract_price_display.php'; ?></td>
                             <td class="px-4 py-3">
                                 <?php
                                 $debt = $contractDebt[$c['id'] ?? ''] ?? ['overdue' => 0, 'pending' => 0];
@@ -943,7 +943,7 @@ function closeNewSaleModal() {
                 '<span class="text-gray-500 text-sm shrink-0">₺</span>' +
                 (isFree ? '<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 shrink-0">Ücretsiz</span>' : '') +
                 '</div>' +
-                '<p class="monthly-price-vat-hint text-xs text-emerald-700 dark:text-emerald-300 sm:ml-28 hidden"></p>';
+                '<p class="monthly-price-vat-hint text-xs text-emerald-700 dark:text-emerald-300 sm:ml-28 break-words hidden"></p>';
             list.appendChild(row);
         });
         if (typeof ContractVat !== 'undefined') {
