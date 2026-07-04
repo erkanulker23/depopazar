@@ -65,9 +65,20 @@ ob_start();
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/pdf-indir" class="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700">
             <i class="bi bi-file-pdf mr-2"></i> PDF İndir
         </a>
-        <a href="mailto:<?= htmlspecialchars($contract['customer_email'] ?? '') ?>?subject=Sözleşme%20<?= urlencode($contract['contract_number'] ?? '') ?>" class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
+        <?php
+        $customerEmailForSend = trim((string) ($contract['customer_email'] ?? ''));
+        $hasCustomerEmailForSend = $customerEmailForSend !== '' && filter_var($customerEmailForSend, FILTER_VALIDATE_EMAIL);
+        ?>
+        <button type="button"
+                id="contractHeaderEmailBtn"
+                class="inline-flex items-center px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60"
+                data-contract-id="<?= htmlspecialchars($contract['id'] ?? '') ?>"
+                data-customer-email="<?= htmlspecialchars($customerEmailForSend) ?>"
+                data-customer-name="<?= htmlspecialchars($customerName) ?>"
+                data-contract-number="<?= htmlspecialchars($contract['contract_number'] ?? '') ?>"
+                <?= !$hasCustomerEmailForSend ? 'disabled title="Müşteri e-posta adresi yok"' : '' ?>>
             <i class="bi bi-envelope mr-2"></i> E-posta Gönder
-        </a>
+        </button>
         <?php
         $pdfDownloadUrl = '/girisler/' . ($contract['id'] ?? '') . '/pdf-indir';
         $pdfFilename = ContractPdf::filename($contract);
@@ -92,6 +103,18 @@ ob_start();
                 <?= $waIntlPhone === '' ? 'data-no-phone="1"' : '' ?>>
             <i class="bi bi-whatsapp mr-2"></i> WhatsApp Gönder
         </button>
+        <?php if (!empty($contract['is_active'])): ?>
+        <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>/cikis-belgesi" class="inline-flex items-center px-4 py-2 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 font-medium hover:bg-rose-100 dark:hover:bg-rose-900/40">
+            <i class="bi bi-box-arrow-right mr-2"></i> Çıkış Belgesi
+        </a>
+        <form method="post" action="/girisler/sonlandir" class="inline" onsubmit="return confirm('Sözleşmeyi sonlandırmak istediğinize emin misiniz? Borç varsa önce tahsilat ve çıkış belgesi gerekir.');">
+            <input type="hidden" name="id" value="<?= htmlspecialchars($contract['id'] ?? '') ?>">
+            <input type="hidden" name="redirect" value="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>">
+            <button type="submit" class="inline-flex items-center px-4 py-2 rounded-xl border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                <i class="bi bi-flag mr-2"></i> Sonlandır
+            </button>
+        </form>
+        <?php endif; ?>
         <button type="button"
                 onclick="openContractDeleteModal()"
                 class="inline-flex items-center px-4 py-2 rounded-xl border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 font-medium hover:bg-red-100 dark:hover:bg-red-900/40">
@@ -289,9 +312,27 @@ if ($hasContractOverdue) {
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Kayıt Tarihi</dt>
                     <dd class="mt-1 text-gray-900 dark:text-white"><?= fmtDateTime($contract['created_at'] ?? null) ?></dd>
                 </div>
-                <div>
-                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Başlangıç – Bitiş</dt>
-                    <dd class="mt-1 text-gray-900 dark:text-white"><?= fmtDate($contract['start_date'] ?? null) ?> – <?= fmtDate($contract['end_date'] ?? null) ?></dd>
+                <div class="sm:col-span-2">
+                    <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Başlangıç – Bitiş</dt>
+                    <dd class="mt-0">
+                        <div class="flex flex-wrap items-stretch gap-2 sm:gap-3">
+                            <div class="flex-1 min-w-[9rem] rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/80 dark:bg-emerald-900/20 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                    <i class="bi bi-calendar-event"></i> Başlangıç
+                                </p>
+                                <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-emerald-900 dark:text-emerald-200 tracking-tight"><?= fmtDate($contract['start_date'] ?? null) ?></p>
+                            </div>
+                            <div class="hidden sm:flex items-center text-gray-400 dark:text-gray-500 px-1" aria-hidden="true">
+                                <i class="bi bi-arrow-right text-lg"></i>
+                            </div>
+                            <div class="flex-1 min-w-[9rem] rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-900/20 px-4 py-3">
+                                <p class="text-[11px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                                    <i class="bi bi-calendar-check"></i> Bitiş
+                                </p>
+                                <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-amber-900 dark:text-amber-200 tracking-tight"><?= fmtDate($contract['end_date'] ?? null) ?></p>
+                            </div>
+                        </div>
+                    </dd>
                 </div>
                 <?php if (ContractCampaign::isValid($contract['campaign_code'] ?? null)): ?>
                 <div>
@@ -541,22 +582,64 @@ if ($hasContractOverdue) {
     </div>
 
     <!-- Sağ sütun: Aylık fiyatlar -->
+    <?php
+    $monthlyVatRate = contractVatRate($contract, $company ?? null);
+    $monthlyIncludesVat = contractPriceIncludesVat($contract);
+    $monthlyVatRateLabel = rtrim(rtrim(number_format($monthlyVatRate, 2, ',', '.'), '0'), ',');
+    $paymentAmountByPeriod = [];
+    foreach ($payments ?? [] as $pPay) {
+        $pk = ContractBilling::periodKeyFromDueDate($pPay['due_date'] ?? null);
+        if ($pk !== '') {
+            $paymentAmountByPeriod[$pk] = (float) ($pPay['amount'] ?? 0);
+        }
+    }
+    $monthlyTahsilTotal = 0.0;
+    ?>
     <div class="space-y-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-                <i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar
-            </h2>
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar
+                </h2>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold <?= $monthlyIncludesVat ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' ?>">
+                        <?= htmlspecialchars(contractVatStatusLabel($contract)) ?>
+                    </span>
+                    <?php if ($monthlyVatRate > 0): ?>
+                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">KDV %<?= htmlspecialchars($monthlyVatRateLabel) ?></span>
+                    <?php endif; ?>
+                </div>
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    <?php if ($monthlyIncludesVat): ?>
+                        Tüm aylar KDV dahil; listelenen tutarlar tahsil fiyatıdır.
+                    <?php else: ?>
+                        Sözleşme fiyatı KDV hariç girilir; listelenen tutarlar tahsil (KDV dahil) fiyatıdır.
+                    <?php endif; ?>
+                </p>
+            </div>
             <?php if (empty($monthlyPrices)): ?>
                 <div class="p-4 text-sm text-gray-500 dark:text-gray-400">Kayıt yok.</div>
             <?php else: ?>
-                <ul class="divide-y divide-gray-100 dark:divide-gray-700 max-h-64 overflow-y-auto">
-                    <?php foreach ($monthlyPrices as $mp): ?>
-                        <li class="px-4 py-3 flex flex-col gap-1 text-sm min-w-0"<?= !empty($mp['month_key']) ? ' id="monthly-price-' . htmlspecialchars($mp['month_key']) . '"' : '' ?>>
-                            <span class="text-gray-700 dark:text-gray-300 shrink-0"><?= htmlspecialchars($mp['month'] ?? '') ?></span>
-                            <span class="font-medium text-gray-900 dark:text-white monthly-price-value min-w-0"><?php $enteredPrice = $mp['price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></span>
+                <ul class="divide-y divide-gray-100 dark:divide-gray-700 max-h-80 overflow-y-auto">
+                    <?php foreach ($monthlyPrices as $mp):
+                        $monthKey = $mp['month_key'] ?? '';
+                        $enteredPrice = (float) ($mp['price'] ?? 0);
+                        $tahsilPrice = $monthKey !== '' && array_key_exists($monthKey, $paymentAmountByPeriod)
+                            ? $paymentAmountByPeriod[$monthKey]
+                            : contractGrossFromEntered($enteredPrice, $contract, $company ?? null);
+                        $monthlyTahsilTotal += $tahsilPrice;
+                        $monthLabel = preg_replace('/\s+vadesi$/u', '', (string) ($mp['month'] ?? ''));
+                    ?>
+                        <li class="px-4 py-2.5 flex items-center justify-between gap-3 min-w-0"<?= $monthKey !== '' ? ' id="monthly-price-' . htmlspecialchars($monthKey) . '"' : '' ?>>
+                            <span class="text-sm text-gray-600 dark:text-gray-300 min-w-0 truncate"><?= htmlspecialchars($monthLabel) ?></span>
+                            <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-white shrink-0 monthly-price-value"><?= fmtPrice($tahsilPrice) ?></span>
                         </li>
                     <?php endforeach; ?>
                 </ul>
+                <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-700/30 flex items-center justify-between gap-3">
+                    <span class="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Toplam tahsil</span>
+                    <span class="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300" id="monthly-price-total"><?= fmtPrice($monthlyTahsilTotal) ?></span>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -868,6 +951,138 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
 })();
 </script>
 
+<div id="contractEmailConfirmModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto no-print" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeContractEmailConfirmModal()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div class="flex items-start gap-3 mb-4">
+                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 shrink-0">
+                    <i class="bi bi-envelope"></i>
+                </span>
+                <div class="min-w-0">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">E-posta Gönder</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">E-posta göndermek istediğinizden emin misiniz?</p>
+                </div>
+            </div>
+            <div class="rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-600 px-4 py-3 mb-4 text-sm">
+                <p class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Alıcı</p>
+                <p id="contractEmailConfirmRecipient" class="font-medium text-gray-900 dark:text-white break-all">—</p>
+                <p class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest mt-3 mb-1">Sözleşme</p>
+                <p id="contractEmailConfirmContract" class="font-medium text-gray-900 dark:text-white">—</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">Sözleşme PDF belgesi e-posta eki olarak gönderilir.</p>
+            </div>
+            <p id="contractEmailConfirmStatus" class="text-sm mb-4 hidden"></p>
+            <div class="flex justify-end gap-2">
+                <button type="button" id="contractEmailConfirmCancelBtn" onclick="closeContractEmailConfirmModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                <button type="button" id="contractEmailConfirmSendBtn" class="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60">
+                    <i class="bi bi-send mr-2"></i> Gönder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    var openBtn = document.getElementById('contractHeaderEmailBtn');
+    var modal = document.getElementById('contractEmailConfirmModal');
+    var sendBtn = document.getElementById('contractEmailConfirmSendBtn');
+    var cancelBtn = document.getElementById('contractEmailConfirmCancelBtn');
+    var statusEl = document.getElementById('contractEmailConfirmStatus');
+    var recipientEl = document.getElementById('contractEmailConfirmRecipient');
+    var contractEl = document.getElementById('contractEmailConfirmContract');
+    var activeContractId = '';
+    var sending = false;
+
+    window.closeContractEmailConfirmModal = function() {
+        if (sending) return;
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        if (statusEl) {
+            statusEl.classList.add('hidden');
+            statusEl.textContent = '';
+        }
+    };
+
+    function setStatus(message, isError) {
+        if (!statusEl) return;
+        statusEl.textContent = message || '';
+        statusEl.classList.toggle('hidden', !message);
+        statusEl.className = 'text-sm mb-4 ' + (isError ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-300');
+    }
+
+    function openModal(btn) {
+        if (!btn || btn.disabled || !modal) return;
+        activeContractId = btn.getAttribute('data-contract-id') || '';
+        var email = btn.getAttribute('data-customer-email') || '';
+        var name = btn.getAttribute('data-customer-name') || '';
+        var number = btn.getAttribute('data-contract-number') || '';
+        if (!email) {
+            alert('Müşteri e-posta adresi kayıtlı değil. Müşteri düzenleme ekranından e-posta ekleyin.');
+            return;
+        }
+        if (recipientEl) recipientEl.textContent = (name ? name + ' · ' : '') + email;
+        if (contractEl) contractEl.textContent = number || activeContractId;
+        setStatus('', false);
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="bi bi-send mr-2"></i> Gönder';
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    if (openBtn) {
+        openBtn.addEventListener('click', function() {
+            openModal(openBtn);
+        });
+    }
+
+    if (sendBtn) {
+        sendBtn.addEventListener('click', function() {
+            if (!activeContractId || sending) return;
+            sending = true;
+            sendBtn.disabled = true;
+            if (cancelBtn) cancelBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="bi bi-hourglass-split mr-2"></i> Gönderiliyor…';
+            setStatus('E-posta gönderiliyor…', false);
+            var fd = new FormData();
+            fd.append('contract_id', activeContractId);
+            fetch('/girisler/sozlesme-eposta-gonder', { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function(r) { return r.json().then(function(data) { return { okHttp: r.ok, data: data }; }); })
+                .then(function(res) {
+                    if (!res.data || !res.data.ok) {
+                        sending = false;
+                        sendBtn.disabled = false;
+                        if (cancelBtn) cancelBtn.disabled = false;
+                        sendBtn.innerHTML = '<i class="bi bi-send mr-2"></i> Gönder';
+                        setStatus((res.data && res.data.error) || 'E-posta gönderilemedi.', true);
+                        return;
+                    }
+                    sendBtn.innerHTML = '<i class="bi bi-check2 mr-2"></i> Gönderildi';
+                    setStatus(res.data.message || 'E-posta gönderildi.', false);
+                    setTimeout(function() {
+                        sending = false;
+                        if (cancelBtn) cancelBtn.disabled = false;
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = '<i class="bi bi-send mr-2"></i> Gönder';
+                        closeContractEmailConfirmModal();
+                    }, 1400);
+                })
+                .catch(function() {
+                    sending = false;
+                    sendBtn.disabled = false;
+                    if (cancelBtn) cancelBtn.disabled = false;
+                    sendBtn.innerHTML = '<i class="bi bi-send mr-2"></i> Gönder';
+                    setStatus('Bağlantı hatası. Tekrar deneyin.', true);
+                });
+        });
+    }
+})();
+</script>
+
 <script src="/contract-vat.js"></script>
 <script>
 (function() {
@@ -933,6 +1148,23 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
         });
     }
 
+    function parsePriceText(text) {
+        text = String(text || '').replace(/\s/g, '').replace(/₺/g, '').trim();
+        if (!text) return 0;
+        if (text.indexOf(',') >= 0) {
+            text = text.replace(/\./g, '').replace(',', '.');
+        }
+        var n = parseFloat(text);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function formatPriceText(amount) {
+        amount = Math.round((parseFloat(amount) || 0) * 100) / 100;
+        var parts = amount.toFixed(2).split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return parts.join(',') + ' ₺';
+    }
+
     function syncMonthlyPriceSidebar(monthKey, formatted) {
         if (!monthKey) return;
         var row = document.getElementById('monthly-price-' + monthKey);
@@ -940,6 +1172,13 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
             var val = row.querySelector('.monthly-price-value');
             if (val) val.textContent = formatted;
         }
+        var totalEl = document.getElementById('monthly-price-total');
+        if (!totalEl) return;
+        var sum = 0;
+        document.querySelectorAll('.monthly-price-value').forEach(function(el) {
+            sum += parsePriceText(el.textContent);
+        });
+        totalEl.textContent = formatPriceText(sum);
     }
 
     window.updateCollectButtonsForPayment = updateCollectButtonsForPayment;

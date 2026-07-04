@@ -126,6 +126,7 @@ class RoomsController
             $contractRow['debt'] = (float) (($debtByContract[$contractId]['total'] ?? 0));
         }
         unset($contractRow);
+        $roomEarnings = Payment::earningsStatsForRoom($this->pdo, $id);
         require __DIR__ . '/../../views/rooms/detail.php';
     }
 

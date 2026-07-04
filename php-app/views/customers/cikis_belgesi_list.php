@@ -14,7 +14,7 @@ ob_start();
         <span class="text-gray-700 dark:text-gray-300 font-medium">Çıkış belgesi</span>
     </div>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Çıkış belgesi oluştur</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400">Hangi sözleşme için çıkış belgesi yazdırmak istiyorsunuz?</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Çıkış belgesi için sözleşmenin tüm borçları tahsil edilmiş olmalıdır. Borç varsa önce ödeme alın, ardından belgeyi oluşturup sözleşmeyi sonlandırın.</p>
 </div>
 
 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">

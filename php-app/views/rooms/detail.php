@@ -2,6 +2,15 @@
 $currentPage = 'odalar';
 $statusLabels = ['empty' => 'Boş', 'occupied' => 'Dolu', 'reserved' => 'Rezerve', 'locked' => 'Kilitli'];
 $statusClass = ($room['status'] ?? '') === 'empty' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : (($room['status'] ?? '') === 'occupied' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : (($room['status'] ?? '') === 'reserved' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' : 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'));
+$roomEarnings = $roomEarnings ?? [];
+$contractCount = (int) ($roomEarnings['contract_count'] ?? 0);
+$activeContractCount = (int) ($roomEarnings['active_contract_count'] ?? 0);
+$totalEarned = (float) ($roomEarnings['total_earned'] ?? 0);
+$monthEarned = (float) ($roomEarnings['month_earned'] ?? 0);
+$yearEarned = (float) ($roomEarnings['year_earned'] ?? 0);
+$monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+$currentMonthLabel = ($monthNames[(int) date('n') - 1] ?? '') . ' ' . date('Y');
+$currentYearLabel = date('Y');
 ob_start();
 ?>
 <div class="mb-4">
@@ -14,6 +23,29 @@ ob_start();
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">Oda: <?= htmlspecialchars($room['room_number']) ?></h2>
     </div>
     <div class="p-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div class="rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-700/30 p-4">
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Toplam sözleşme</p>
+                <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white tabular-nums"><?= $contractCount ?></p>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"><?= $activeContractCount ?> aktif</p>
+            </div>
+            <div class="rounded-xl border border-emerald-100 dark:border-emerald-800/50 bg-emerald-50/70 dark:bg-emerald-900/20 p-4">
+                <p class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Toplam kazanç</p>
+                <p class="mt-1 text-xl font-bold text-emerald-800 dark:text-emerald-300 tabular-nums"><?= fmtPrice($totalEarned) ?></p>
+                <p class="mt-0.5 text-xs text-emerald-700/80 dark:text-emerald-400/80">Tüm tahsilatlar</p>
+            </div>
+            <div class="rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-700/30 p-4">
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Bu ay</p>
+                <p class="mt-1 text-xl font-bold text-gray-900 dark:text-white tabular-nums"><?= fmtPrice($monthEarned) ?></p>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($currentMonthLabel) ?></p>
+            </div>
+            <div class="rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-700/30 p-4">
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Bu yıl</p>
+                <p class="mt-1 text-xl font-bold text-gray-900 dark:text-white tabular-nums"><?= fmtPrice($yearEarned) ?></p>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"><?= htmlspecialchars($currentYearLabel) ?></p>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <dl class="space-y-3">
@@ -36,7 +68,10 @@ ob_start();
             </div>
         </div>
         <hr class="my-6 border-gray-100 dark:border-gray-700">
-        <h3 id="sözleşmeler" class="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"><i class="bi bi-people text-emerald-600"></i> Aktif sözleşmeler / Odayı kullanan müşteriler</h3>
+        <h3 id="sözleşmeler" class="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <i class="bi bi-people text-emerald-600"></i> Sözleşmeler
+            <span class="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400"><?= $contractCount ?> toplam · <?= $activeContractCount ?> aktif</span>
+        </h3>
         <?php
         $contracts = $contracts ?? [];
         $activeContracts = array_filter($contracts, fn($c) => !empty($c['is_active']));

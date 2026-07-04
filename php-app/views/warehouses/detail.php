@@ -6,9 +6,12 @@ $rooms = $rooms ?? [];
 $roomCustomerCounts = $roomCustomerCounts ?? [];
 $roomCustomers = $roomCustomers ?? [];
 $warehouseCustomers = $warehouseCustomers ?? [];
+$warehouseExitedContracts = $warehouseExitedContracts ?? [];
+$activeTab = $activeTab ?? 'aktif';
 $statusLabels = ['empty' => 'Boş', 'occupied' => 'Dolu', 'reserved' => 'Rezerve', 'locked' => 'Kilitli'];
 $roomCount = count($rooms);
 $customerCount = count($warehouseCustomers);
+$exitedCount = count($warehouseExitedContracts);
 $whId = $warehouse['id'] ?? '';
 ob_start();
 ?>
@@ -104,65 +107,144 @@ ob_start();
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mobile-card overflow-visible md:overflow-hidden">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-                <i class="bi bi-people text-emerald-600"></i> Depodaki Müşteriler
-                <span class="ml-auto text-sm font-normal text-gray-500 dark:text-gray-400"><?= $customerCount ?></span>
-            </h2>
-            <?php if (empty($warehouseCustomers)): ?>
-                <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu depoda aktif sözleşmeli müşteri yok.</div>
-            <?php else: ?>
-                <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
-                    <?php foreach ($warehouseCustomers as $wc): $name = trim(($wc['first_name'] ?? '') . ' ' . ($wc['last_name'] ?? '')); ?>
-                    <div class="mobile-data-card">
-                        <a href="/musteriler/<?= htmlspecialchars($wc['customer_id']) ?>" class="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($name) ?></a>
-                        <div class="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                            <?php foreach ($wc['rooms'] ?? [] as $ro): ?>
-                                <p>
-                                    <a href="/odalar/<?= htmlspecialchars($ro['room_id']) ?>" class="text-gray-800 dark:text-gray-200 hover:underline">Oda <?= htmlspecialchars($ro['room_number'] ?? '-') ?></a>
-                                    <?php if (!empty($ro['contract_id'])): ?>
-                                        · <a href="/girisler/<?= htmlspecialchars($ro['contract_id']) ?>" class="hover:underline"><?= htmlspecialchars($ro['contract_number'] ?? '-') ?></a>
-                                    <?php endif; ?>
-                                </p>
-                            <?php endforeach; ?>
+            <div class="border-b border-gray-100 dark:border-gray-700 px-2 sm:px-4">
+                <nav class="flex gap-1 overflow-x-auto" aria-label="Müşteri sekmeleri">
+                    <a href="/depolar/<?= htmlspecialchars($whId) ?>"
+                       class="inline-flex items-center gap-2 px-3 sm:px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors <?= $activeTab === 'aktif' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500' ?>">
+                        <i class="bi bi-people"></i> Depodaki Müşteriler
+                        <span class="min-w-[1.25rem] px-1.5 py-0.5 text-[11px] font-bold rounded-full <?= $activeTab === 'aktif' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' ?>"><?= $customerCount ?></span>
+                    </a>
+                    <a href="/depolar/<?= htmlspecialchars($whId) ?>?tab=ayrilanlar"
+                       class="inline-flex items-center gap-2 px-3 sm:px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors <?= $activeTab === 'ayrilanlar' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500' ?>">
+                        <i class="bi bi-box-arrow-right"></i> Depodan Ayrılanlar
+                        <span class="min-w-[1.25rem] px-1.5 py-0.5 text-[11px] font-bold rounded-full <?= $activeTab === 'ayrilanlar' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' ?>"><?= $exitedCount ?></span>
+                    </a>
+                </nav>
+            </div>
+
+            <?php if ($activeTab === 'ayrilanlar'): ?>
+                <div class="px-4 pt-3 pb-1">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Sözleşmesi sonlandırılmış / çıkış belgesi oluşturulmuş müşteriler.</p>
+                </div>
+                <?php if (empty($warehouseExitedContracts)): ?>
+                    <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu depodan ayrılan müşteri kaydı yok.</div>
+                <?php else: ?>
+                    <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+                        <?php foreach ($warehouseExitedContracts as $ex):
+                            $name = trim(($ex['customer_first_name'] ?? '') . ' ' . ($ex['customer_last_name'] ?? ''));
+                        ?>
+                        <div class="mobile-data-card space-y-2">
+                            <a href="/musteriler/<?= htmlspecialchars($ex['customer_id']) ?>" class="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($name) ?></a>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                Oda <?= htmlspecialchars($ex['room_number'] ?? '-') ?>
+                                · <a href="/girisler/<?= htmlspecialchars($ex['contract_id']) ?>" class="hover:underline"><?= htmlspecialchars($ex['contract_number'] ?? '-') ?></a>
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Çıkış: <?= !empty($ex['terminated_at']) ? fmtDateTime($ex['terminated_at']) : '–' ?>
+                                <?php if (!empty($ex['customer_phone'])): ?> · <?= htmlspecialchars(formatPhoneDisplay($ex['customer_phone'])) ?><?php endif; ?>
+                            </p>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="/musteriler/<?= htmlspecialchars($ex['customer_id']) ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600">Detay</a>
+                                <a href="/girisler/<?= htmlspecialchars($ex['contract_id']) ?>/cikis-belgesi" target="_blank" rel="noopener" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20">
+                                    <i class="bi bi-download mr-1"></i> Çıkış belgesi
+                                </a>
+                            </div>
                         </div>
+                        <?php endforeach; ?>
                     </div>
-                    <?php endforeach; ?>
-                </div>
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                        <thead class="bg-gray-50 dark:bg-gray-700/50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Oda / Sözleşme</th>
-                                <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                            <?php foreach ($warehouseCustomers as $wc): $name = trim(($wc['first_name'] ?? '') . ' ' . ($wc['last_name'] ?? '')); ?>
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                                    <a href="/musteriler/<?= htmlspecialchars($wc['customer_id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($name) ?></a>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                    <?php
-                                    $roomParts = [];
-                                    foreach ($wc['rooms'] ?? [] as $ro):
-                                        $rNum = htmlspecialchars($ro['room_number'] ?? '-');
-                                        $rLink = '<a href="/odalar/' . htmlspecialchars($ro['room_id']) . '" class="text-emerald-600 dark:text-emerald-400 hover:underline">' . $rNum . '</a>';
-                                        $cLink = $ro['contract_id'] ? '<a href="/girisler/' . htmlspecialchars($ro['contract_id']) . '" class="text-gray-600 dark:text-gray-400 hover:underline">' . htmlspecialchars($ro['contract_number'] ?? '-') . '</a>' : '-';
-                                        $roomParts[] = $rLink . ' / ' . $cLink;
-                                    endforeach;
-                                    echo implode('<br>', $roomParts) ?: '—';
-                                    ?>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <a href="/musteriler/<?= htmlspecialchars($wc['customer_id']) ?>" class="text-sm text-emerald-600 hover:underline">Detay</a>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                    <div class="hidden md:block overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Telefon</th>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Oda / Sözleşme</th>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Çıkış tarihi</th>
+                                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                                <?php foreach ($warehouseExitedContracts as $ex):
+                                    $name = trim(($ex['customer_first_name'] ?? '') . ' ' . ($ex['customer_last_name'] ?? ''));
+                                ?>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                        <a href="/musteriler/<?= htmlspecialchars($ex['customer_id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($name) ?></a>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"><?= !empty($ex['customer_phone']) ? htmlspecialchars(formatPhoneDisplay($ex['customer_phone'])) : '–' ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                        <a href="/odalar/<?= htmlspecialchars($ex['room_id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($ex['room_number'] ?? '-') ?></a>
+                                        /
+                                        <a href="/girisler/<?= htmlspecialchars($ex['contract_id']) ?>" class="hover:underline"><?= htmlspecialchars($ex['contract_number'] ?? '-') ?></a>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"><?= !empty($ex['terminated_at']) ? fmtDateTime($ex['terminated_at']) : '–' ?></td>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                                        <a href="/musteriler/<?= htmlspecialchars($ex['customer_id']) ?>" class="text-sm text-emerald-600 hover:underline mr-2">Detay</a>
+                                        <a href="/girisler/<?= htmlspecialchars($ex['contract_id']) ?>/cikis-belgesi" target="_blank" rel="noopener" class="text-sm text-red-600 dark:text-red-400 hover:underline">Çıkış belgesi</a>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            <?php else: ?>
+                <?php if (empty($warehouseCustomers)): ?>
+                    <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu depoda aktif sözleşmeli müşteri yok.</div>
+                <?php else: ?>
+                    <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-600">
+                        <?php foreach ($warehouseCustomers as $wc): $name = trim(($wc['first_name'] ?? '') . ' ' . ($wc['last_name'] ?? '')); ?>
+                        <div class="mobile-data-card">
+                            <a href="/musteriler/<?= htmlspecialchars($wc['customer_id']) ?>" class="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($name) ?></a>
+                            <div class="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                <?php foreach ($wc['rooms'] ?? [] as $ro): ?>
+                                    <p>
+                                        <a href="/odalar/<?= htmlspecialchars($ro['room_id']) ?>" class="text-gray-800 dark:text-gray-200 hover:underline">Oda <?= htmlspecialchars($ro['room_number'] ?? '-') ?></a>
+                                        <?php if (!empty($ro['contract_id'])): ?>
+                                            · <a href="/girisler/<?= htmlspecialchars($ro['contract_id']) ?>" class="hover:underline"><?= htmlspecialchars($ro['contract_number'] ?? '-') ?></a>
+                                        <?php endif; ?>
+                                    </p>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="hidden md:block overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Oda / Sözleşme</th>
+                                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                                <?php foreach ($warehouseCustomers as $wc): $name = trim(($wc['first_name'] ?? '') . ' ' . ($wc['last_name'] ?? '')); ?>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                        <a href="/musteriler/<?= htmlspecialchars($wc['customer_id']) ?>" class="text-emerald-600 dark:text-emerald-400 hover:underline"><?= htmlspecialchars($name) ?></a>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                        <?php
+                                        $roomParts = [];
+                                        foreach ($wc['rooms'] ?? [] as $ro):
+                                            $rNum = htmlspecialchars($ro['room_number'] ?? '-');
+                                            $rLink = '<a href="/odalar/' . htmlspecialchars($ro['room_id']) . '" class="text-emerald-600 dark:text-emerald-400 hover:underline">' . $rNum . '</a>';
+                                            $cLink = $ro['contract_id'] ? '<a href="/girisler/' . htmlspecialchars($ro['contract_id']) . '" class="text-gray-600 dark:text-gray-400 hover:underline">' . htmlspecialchars($ro['contract_number'] ?? '-') . '</a>' : '-';
+                                            $roomParts[] = $rLink . ' / ' . $cLink;
+                                        endforeach;
+                                        echo implode('<br>', $roomParts) ?: '—';
+                                        ?>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <a href="/musteriler/<?= htmlspecialchars($wc['customer_id']) ?>" class="text-sm text-emerald-600 hover:underline">Detay</a>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
 

@@ -1157,6 +1157,35 @@ class Contract
         }
     }
 
+    public static function hasExitDocumentColumn(PDO $pdo): bool
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+        try {
+            $pdo->query('SELECT exit_document_at FROM contracts LIMIT 0');
+            $cache = true;
+        } catch (Throwable $e) {
+            $cache = false;
+        }
+        return $cache;
+    }
+
+    /** Çıkış belgesi oluşturuldu olarak işaretle (borçsuz çıkış süreci). */
+    public static function markExitDocumentCreated(PDO $pdo, string $id): bool
+    {
+        if (!self::hasExitDocumentColumn($pdo)) {
+            return false;
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE contracts SET exit_document_at = COALESCE(exit_document_at, NOW())
+             WHERE id = ? AND deleted_at IS NULL AND is_active = 1'
+        );
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0 || self::findOne($pdo, $id) !== null;
+    }
+
     private static ?bool $hasDeletionAuditColumnsCache = null;
 
     public static function hasDeletionAuditColumns(PDO $pdo): bool

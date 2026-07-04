@@ -26,6 +26,9 @@ $waPhoneDisplay = $waIntlPhone !== '' ? formatPhoneDisplay($contract['customer_p
                 id="contractEmailSendBtn"
                 class="inline-flex items-center px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
                 data-contract-id="<?= htmlspecialchars($contractId) ?>"
+                data-customer-email="<?= htmlspecialchars($customerEmail) ?>"
+                data-customer-name="<?= htmlspecialchars($customerName) ?>"
+                data-contract-number="<?= htmlspecialchars($contract['contract_number'] ?? '') ?>"
                 <?= !$hasCustomerEmail ? 'disabled title="Müşteri e-posta adresi yok"' : '' ?>>
             <i class="bi bi-envelope mr-2"></i> Müşteriye E-posta Gönder
         </button>
@@ -49,6 +52,38 @@ $waPhoneDisplay = $waIntlPhone !== '' ? formatPhoneDisplay($contract['customer_p
     <?php endif; ?>
     <p id="contractSendStatus" class="text-sm text-gray-600 mt-3"></p>
 </div>
+
+<div id="contractEmailConfirmModal" class="modal-overlay hidden fixed inset-0 z-50 overflow-y-auto no-print" aria-hidden="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" onclick="closeContractEmailConfirmModal()"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div class="flex items-start gap-3 mb-4">
+                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 shrink-0">
+                    <i class="bi bi-envelope"></i>
+                </span>
+                <div class="min-w-0">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">E-posta Gönder</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">E-posta göndermek istediğinizden emin misiniz?</p>
+                </div>
+            </div>
+            <div class="rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-600 px-4 py-3 mb-4 text-sm">
+                <p class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Alıcı</p>
+                <p id="contractEmailConfirmRecipient" class="font-medium text-gray-900 dark:text-white break-all">—</p>
+                <p class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest mt-3 mb-1">Sözleşme</p>
+                <p id="contractEmailConfirmContract" class="font-medium text-gray-900 dark:text-white">—</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">Sözleşme PDF belgesi e-posta eki olarak gönderilir.</p>
+            </div>
+            <p id="contractEmailConfirmStatus" class="text-sm mb-4 hidden"></p>
+            <div class="flex justify-end gap-2">
+                <button type="button" id="contractEmailConfirmCancelBtn" onclick="closeContractEmailConfirmModal()" class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">İptal</button>
+                <button type="button" id="contractEmailConfirmSendBtn" class="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60">
+                    <i class="bi bi-send mr-2"></i> Gönder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 window.updateContractSendPanel = function(customerUrl, companyUrl) {
     var panel = document.getElementById('contractSendPanel');
@@ -58,34 +93,104 @@ window.updateContractSendPanel = function(customerUrl, companyUrl) {
 };
 (function() {
     var emailBtn = document.getElementById('contractEmailSendBtn');
+    var modal = document.getElementById('contractEmailConfirmModal');
+    var sendBtn = document.getElementById('contractEmailConfirmSendBtn');
+    var cancelBtn = document.getElementById('contractEmailConfirmCancelBtn');
+    var statusEl = document.getElementById('contractEmailConfirmStatus');
+    var recipientEl = document.getElementById('contractEmailConfirmRecipient');
+    var contractEl = document.getElementById('contractEmailConfirmContract');
+    var panelStatus = document.getElementById('contractSendStatus');
+    var activeContractId = '';
+    var sending = false;
+
+    window.closeContractEmailConfirmModal = function() {
+        if (sending) return;
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        if (statusEl) {
+            statusEl.classList.add('hidden');
+            statusEl.textContent = '';
+        }
+    };
+
+    function setStatus(message, isError) {
+        if (!statusEl) return;
+        statusEl.textContent = message || '';
+        statusEl.classList.toggle('hidden', !message);
+        statusEl.className = 'text-sm mb-4 ' + (isError ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-300');
+    }
+
+    function openEmailConfirmModal(btn) {
+        if (!btn || btn.disabled || !modal) return;
+        activeContractId = btn.getAttribute('data-contract-id') || '';
+        var email = btn.getAttribute('data-customer-email') || '';
+        var name = btn.getAttribute('data-customer-name') || '';
+        var number = btn.getAttribute('data-contract-number') || '';
+        if (!email) {
+            alert('Müşteri e-posta adresi kayıtlı değil.');
+            return;
+        }
+        if (recipientEl) recipientEl.textContent = (name ? name + ' · ' : '') + email;
+        if (contractEl) contractEl.textContent = number || activeContractId;
+        setStatus('', false);
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="bi bi-send mr-2"></i> Gönder';
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
     if (emailBtn) {
         emailBtn.addEventListener('click', function() {
-            if (emailBtn.disabled) return;
-            var contractId = emailBtn.getAttribute('data-contract-id');
-            var status = document.getElementById('contractSendStatus');
+            openEmailConfirmModal(emailBtn);
+        });
+    }
+
+    if (sendBtn) {
+        sendBtn.addEventListener('click', function() {
+            if (!activeContractId || sending) return;
+            sending = true;
+            sendBtn.disabled = true;
+            if (cancelBtn) cancelBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="bi bi-hourglass-split mr-2"></i> Gönderiliyor…';
+            setStatus('E-posta gönderiliyor…', false);
             var fd = new FormData();
-            fd.append('contract_id', contractId);
-            emailBtn.disabled = true;
-            if (status) status.textContent = 'E-posta gönderiliyor…';
+            fd.append('contract_id', activeContractId);
             fetch('/girisler/sozlesme-eposta-gonder', { method: 'POST', body: fd, credentials: 'same-origin' })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    emailBtn.disabled = false;
-                    if (!data.ok) {
-                        if (status) {
-                            status.textContent = data.error || 'E-posta gönderilemedi.';
-                            status.className = 'text-sm text-red-600 mt-3';
-                        }
+                .then(function(r) { return r.json().then(function(data) { return { data: data }; }); })
+                .then(function(res) {
+                    if (!res.data || !res.data.ok) {
+                        sending = false;
+                        sendBtn.disabled = false;
+                        if (cancelBtn) cancelBtn.disabled = false;
+                        sendBtn.innerHTML = '<i class="bi bi-send mr-2"></i> Gönder';
+                        setStatus((res.data && res.data.error) || 'E-posta gönderilemedi.', true);
                         return;
                     }
-                    if (status) {
-                        status.textContent = data.message || 'E-posta gönderildi.';
-                        status.className = 'text-sm text-emerald-700 mt-3';
+                    sendBtn.innerHTML = '<i class="bi bi-check2 mr-2"></i> Gönderildi';
+                    setStatus(res.data.message || 'E-posta gönderildi.', false);
+                    if (panelStatus) {
+                        panelStatus.textContent = res.data.message || 'E-posta gönderildi.';
+                        panelStatus.className = 'text-sm text-emerald-700 mt-3';
                     }
+                    setTimeout(function() {
+                        sending = false;
+                        if (cancelBtn) cancelBtn.disabled = false;
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = '<i class="bi bi-send mr-2"></i> Gönder';
+                        closeContractEmailConfirmModal();
+                    }, 1400);
                 })
                 .catch(function() {
-                    emailBtn.disabled = false;
-                    if (status) status.textContent = 'Bağlantı hatası.';
+                    sending = false;
+                    sendBtn.disabled = false;
+                    if (cancelBtn) cancelBtn.disabled = false;
+                    sendBtn.innerHTML = '<i class="bi bi-send mr-2"></i> Gönder';
+                    setStatus('Bağlantı hatası. Tekrar deneyin.', true);
                 });
         });
     }

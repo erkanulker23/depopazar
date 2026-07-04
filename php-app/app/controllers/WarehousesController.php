@@ -102,9 +102,28 @@ class WarehousesController
             usort($warehouseCustomers, function ($a, $b) {
                 return strcasecmp(trim($a['last_name'] . ' ' . $a['first_name']), trim($b['last_name'] . ' ' . $b['first_name']));
             });
+
+            $stmtExit = $this->pdo->prepare(
+                "SELECT c.id AS contract_id, c.contract_number, c.customer_id, c.room_id,
+                        c.start_date, c.end_date, c.terminated_at,
+                        cu.first_name AS customer_first_name, cu.last_name AS customer_last_name,
+                        cu.phone AS customer_phone,
+                        r.room_number
+                 FROM contracts c
+                 INNER JOIN customers cu ON cu.id = c.customer_id AND cu.deleted_at IS NULL
+                 INNER JOIN rooms r ON r.id = c.room_id AND r.deleted_at IS NULL
+                 WHERE c.room_id IN ($placeholders)
+                   AND c.deleted_at IS NULL
+                   AND c.terminated_at IS NOT NULL
+                 ORDER BY c.terminated_at DESC, cu.last_name, cu.first_name"
+            );
+            $stmtExit->execute($roomIds);
+            $warehouseExitedContracts = $stmtExit->fetchAll(PDO::FETCH_ASSOC);
         } else {
             $warehouseCustomers = [];
+            $warehouseExitedContracts = [];
         }
+        $activeTab = isset($_GET['tab']) && $_GET['tab'] === 'ayrilanlar' ? 'ayrilanlar' : 'aktif';
         ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
         require __DIR__ . '/../../views/warehouses/detail.php';
     }

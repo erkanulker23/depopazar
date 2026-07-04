@@ -483,6 +483,14 @@ ob_start();
                             <span class="text-sm text-gray-700 dark:text-gray-300">Gecikme hatırlatması gönder</span>
                         </label><br>
                         <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="notify_customer_on_welcome" value="1" <?= !array_key_exists('notify_customer_on_welcome', $mailSettings) || !empty($mailSettings['notify_customer_on_welcome']) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Müşteri eklendiğinde hoş geldin e-postası gönder</span>
+                        </label><br>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="notify_customer_on_contract_expiring" value="1" <?= !array_key_exists('notify_customer_on_contract_expiring', $mailSettings) || !empty($mailSettings['notify_customer_on_contract_expiring']) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Sözleşme bitişi yaklaşınca hatırlatma gönder</span>
+                        </label><br>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" name="notify_admin_on_contract" value="1" <?= !empty($mailSettings['notify_admin_on_contract']) ? 'checked' : '' ?> class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
                             <span class="text-sm text-gray-700 dark:text-gray-300">Yöneticiye sözleşme bildirimi</span>
                         </label><br>
@@ -605,15 +613,19 @@ ob_start();
         </div>
     <?php elseif ($activeTab === 'sablonlar'):
         $tplDefaults = [
-            'contract_created_template' => "Sayın {musteri_adi},\n\nSözleşmeniz oluşturuldu. Sözleşme No: {sozlesme_no}\n\nİyi günler dileriz.",
-            'payment_received_template' => "Sayın {musteri_adi},\n\n{tutar} tutarındaki ödemeniz alınmıştır.\n\nTeşekkür ederiz.",
-            'payment_reminder_template' => "Sayın {musteri_adi},\n\nVadesi {vade} olan {tutar} tutarındaki ödemenizin geciktiğini hatırlatırız.\n\nLütfen en kısa sürede ödeme yapınız.",
+            'welcome_template' => "Sayın {musteri_adi},\n\nSistemimize hoş geldiniz. Kaydınız oluşturulmuştur.\n\nİyi günler dileriz.",
+            'contract_created_template' => "Sayın {musteri_adi},\n\nSözleşmeniz oluşturuldu.\nSözleşme No: {sozlesme_no}\nDepo: {depo_adi}\nOda: {oda_no}\nBaşlangıç: {baslangic_tarihi} – Bitiş: {bitis_tarihi}\nAylık ücret: {aylik_ucret}\n\nİyi günler dileriz.",
+            'payment_received_template' => "Sayın {musteri_adi},\n\n{tutar} tutarındaki ödemeniz alınmıştır.\nSözleşme: {sozlesme_no}\nÖdeme tarihi: {odeme_tarihi}\nÖdeme yöntemi: {odeme_yontemi}\n\nTeşekkür ederiz.",
+            'payment_reminder_template' => "Sayın {musteri_adi},\n\nVadesi {vade} olan {tutar} tutarındaki ödemenizin geciktiğini hatırlatırız.\nSözleşme: {sozlesme_no}\n\nLütfen en kısa sürede ödeme yapınız.",
+            'contract_expiring_template' => "Sayın {musteri_adi},\n\n{sozlesme_no} numaralı sözleşmenizin bitiş tarihi {bitis_tarihi} olarak yaklaşıyor.\nDepo: {depo_adi}\nOda: {oda_no}\nBaşlangıç: {baslangic_tarihi}\nAylık ücret: {aylik_ucret}\n\nYenileme veya çıkış işlemleri için bizimle iletişime geçebilirsiniz.",
             'admin_contract_created_template' => "Yeni sözleşme bildirimi:\n\n{sozlesme_tarihi} tarihinde {sozlesme_no} numaralı sözleşme oluşturuldu.\nMüşteri: {musteri_adi}\nDepo: {depo_adi}\nOda: {oda_no}\nBaşlangıç: {baslangic_tarihi} – Bitiş: {bitis_tarihi}\nAylık ücret: {aylik_ucret}",
             'admin_payment_received_template' => "Ödeme bildirimi:\n\n{musteri_adi} müşterisi adına {tutar} tutarında ödeme alındı.\nSözleşme: {sozlesme_no}\nÖdeme tarihi: {odeme_tarihi}\nÖdeme yöntemi: {odeme_yontemi}\nHesap: {hesap_adi}",
         ];
+        $tplWelcome = !empty(trim($mailSettings['welcome_template'] ?? '')) ? $mailSettings['welcome_template'] : $tplDefaults['welcome_template'];
         $tplContractCreated = !empty(trim($mailSettings['contract_created_template'] ?? '')) ? $mailSettings['contract_created_template'] : $tplDefaults['contract_created_template'];
         $tplPaymentReceived = !empty(trim($mailSettings['payment_received_template'] ?? '')) ? $mailSettings['payment_received_template'] : $tplDefaults['payment_received_template'];
         $tplPaymentReminder = !empty(trim($mailSettings['payment_reminder_template'] ?? '')) ? $mailSettings['payment_reminder_template'] : $tplDefaults['payment_reminder_template'];
+        $tplContractExpiring = !empty(trim($mailSettings['contract_expiring_template'] ?? '')) ? $mailSettings['contract_expiring_template'] : $tplDefaults['contract_expiring_template'];
         $tplAdminContract = !empty(trim($mailSettings['admin_contract_created_template'] ?? '')) ? $mailSettings['admin_contract_created_template'] : $tplDefaults['admin_contract_created_template'];
         $tplAdminPayment = !empty(trim($mailSettings['admin_payment_received_template'] ?? '')) ? $mailSettings['admin_payment_received_template'] : $tplDefaults['admin_payment_received_template'];
         $fromName = $mailSettings['from_name'] ?? $company['name'] ?? 'Depo ve Nakliye Takip';
@@ -621,8 +633,8 @@ ob_start();
     ?>
         <div class="p-4 md:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-file-earmark-text text-emerald-600"></i> E-posta Şablonları</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Müşteriye ve yöneticiye gidecek e-postaların metinlerini düzenleyebilirsiniz.</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Müşteri şablonları: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{musteri_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{tutar}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{vade}</code> — Yönetici ödeme: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{odeme_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{odeme_yontemi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{hesap_adi}</code> — Yönetici sözleşme: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{depo_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{oda_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{baslangic_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{bitis_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{aylik_ucret}</code></p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Müşteriye ve yöneticiye gidecek e-postaların metinlerini düzenleyebilirsiniz. Bildirim aç/kapa tercihleri <a href="/ayarlar?tab=eposta" class="text-emerald-600 dark:text-emerald-400 hover:underline">E-posta</a> sekmesindedir.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Kullanılabilir değişkenler: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{musteri_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{tutar}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{vade}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{odeme_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{odeme_yontemi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{hesap_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{sozlesme_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{depo_adi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{oda_no}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{baslangic_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{bitis_tarihi}</code> <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">{aylik_ucret}</code></p>
             <form method="post" action="/ayarlar/sablonlar-guncelle" class="space-y-6">
                 <div class="space-y-4">
                     <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
@@ -630,17 +642,24 @@ ob_start();
                         <div class="space-y-4">
                             <div>
                                 <div class="flex items-center justify-between gap-2 mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Hoş geldin (müşteri eklendi)</label>
+                                    <button type="button" onclick="openPreviewModal('welcome_template', 'Hoş Geldiniz')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
+                                </div>
+                                <textarea name="welcome_template" id="welcome_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplWelcome) ?></textarea>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
                                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme oluşturuldu</label>
                                     <button type="button" onclick="openPreviewModal('contract_created_template', 'Sözleşme Oluşturuldu')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
                                 </div>
-                                <textarea name="contract_created_template" id="contract_created_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplContractCreated) ?></textarea>
+                                <textarea name="contract_created_template" id="contract_created_template" rows="5" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplContractCreated) ?></textarea>
                             </div>
                             <div>
                                 <div class="flex items-center justify-between gap-2 mb-1">
                                     <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ödeme alındı</label>
                                     <button type="button" onclick="openPreviewModal('payment_received_template', 'Ödeme Alındı')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
                                 </div>
-                                <textarea name="payment_received_template" id="payment_received_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplPaymentReceived) ?></textarea>
+                                <textarea name="payment_received_template" id="payment_received_template" rows="5" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplPaymentReceived) ?></textarea>
                             </div>
                             <div>
                                 <div class="flex items-center justify-between gap-2 mb-1">
@@ -648,6 +667,14 @@ ob_start();
                                     <button type="button" onclick="openPreviewModal('payment_reminder_template', 'Gecikme Hatırlatması')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
                                 </div>
                                 <textarea name="payment_reminder_template" id="payment_reminder_template" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplPaymentReminder) ?></textarea>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşme bitiş hatırlatması</label>
+                                    <button type="button" onclick="openPreviewModal('contract_expiring_template', 'Sözleşme Bitiş Hatırlatması')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Önizleme</button>
+                                </div>
+                                <textarea name="contract_expiring_template" id="contract_expiring_template" rows="5" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-700 dark:text-white"><?= htmlspecialchars($tplContractExpiring) ?></textarea>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Cron: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-600 rounded">php php-app/scripts/contract-expiring-remind.php</code> (30 gün içinde biten aktif sözleşmeler)</p>
                             </div>
                         </div>
                     </div>

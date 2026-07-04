@@ -461,6 +461,8 @@ class SettingsController
             'notify_customer_on_contract' => isset($_POST['notify_customer_on_contract']) ? 1 : 0,
             'notify_customer_on_payment' => isset($_POST['notify_customer_on_payment']) ? 1 : 0,
             'notify_customer_on_overdue' => isset($_POST['notify_customer_on_overdue']) ? 1 : 0,
+            'notify_customer_on_welcome' => isset($_POST['notify_customer_on_welcome']) ? 1 : 0,
+            'notify_customer_on_contract_expiring' => isset($_POST['notify_customer_on_contract_expiring']) ? 1 : 0,
             'notify_admin_on_contract' => isset($_POST['notify_admin_on_contract']) ? 1 : 0,
             'notify_admin_on_payment' => isset($_POST['notify_admin_on_payment']) ? 1 : 0,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
@@ -470,6 +472,9 @@ class SettingsController
         } elseif ($existing && !empty($existing['smtp_password'])) {
             $data['smtp_password'] = $existing['smtp_password'];
         }
+
+        $mailColumns = $this->mailSettingsColumns();
+        $data = array_filter($data, static fn($v, $k) => in_array($k, $mailColumns, true), ARRAY_FILTER_USE_BOTH);
 
         if ($existing) {
             $set = [];
@@ -482,16 +487,11 @@ class SettingsController
             $this->pdo->prepare('UPDATE company_mail_settings SET ' . implode(', ', $set) . ' WHERE id = ?')->execute($params);
         } else {
             $id = $this->uuid();
-            $this->pdo->prepare('INSERT INTO company_mail_settings (id, company_id, smtp_host, smtp_port, smtp_secure, smtp_username, smtp_password, from_email, from_name, notify_customer_on_contract, notify_customer_on_payment, notify_customer_on_overdue, notify_admin_on_contract, notify_admin_on_payment, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                ->execute([
-                    $id, $companyId,
-                    $data['smtp_host'], $data['smtp_port'], $data['smtp_secure'],
-                    $data['smtp_username'], $data['smtp_password'] ?? null,
-                    $data['from_email'], $data['from_name'],
-                    $data['notify_customer_on_contract'], $data['notify_customer_on_payment'], $data['notify_customer_on_overdue'],
-                    $data['notify_admin_on_contract'], $data['notify_admin_on_payment'],
-                    $data['is_active'],
-                ]);
+            $cols = array_keys($data);
+            $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+            $colSql = implode(', ', array_map(static fn($c) => '`' . $c . '`', $cols));
+            $this->pdo->prepare('INSERT INTO company_mail_settings (id, company_id, ' . $colSql . ') VALUES (?, ?, ' . $placeholders . ')')
+                ->execute(array_merge([$id, $companyId], array_values($data)));
         }
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         Notification::createForCompany($this->pdo, $companyId, 'settings', 'E-posta ayarları güncellendi', 'E-posta (SMTP) ayarları güncellendi.', ['actor_name' => $actorName]);
@@ -716,34 +716,45 @@ class SettingsController
             exit;
         }
         $mail = $this->getMailSettings($companyId);
+        $templateKeys = [
+            'contract_created_template',
+            'payment_received_template',
+            'payment_reminder_template',
+            'welcome_template',
+            'contract_expiring_template',
+            'admin_contract_created_template',
+            'admin_payment_received_template',
+        ];
+        $mailColumns = $this->mailSettingsColumns();
         $templates = [];
-        foreach (['contract_created_template', 'payment_received_template', 'payment_reminder_template', 'admin_contract_created_template', 'admin_payment_received_template'] as $k) {
+        foreach ($templateKeys as $k) {
+            if (!in_array($k, $mailColumns, true)) {
+                continue;
+            }
             $v = trim($_POST[$k] ?? '');
             $templates[$k] = $v !== '' ? $v : null;
         }
         try {
+            if ($templates === []) {
+                throw new RuntimeException('Şablon alanları bulunamadı.');
+            }
             if ($mail) {
-                $stmt = $this->pdo->prepare('UPDATE company_mail_settings SET contract_created_template = ?, payment_received_template = ?, payment_reminder_template = ?, admin_contract_created_template = ?, admin_payment_received_template = ? WHERE company_id = ?');
-                $stmt->execute([
-                    $templates['contract_created_template'] ?: null,
-                    $templates['payment_received_template'] ?: null,
-                    $templates['payment_reminder_template'] ?: null,
-                    $templates['admin_contract_created_template'] ?: null,
-                    $templates['admin_payment_received_template'] ?: null,
-                    $companyId,
-                ]);
+                $set = [];
+                $params = [];
+                foreach ($templates as $k => $v) {
+                    $set[] = '`' . $k . '` = ?';
+                    $params[] = $v;
+                }
+                $params[] = $companyId;
+                $stmt = $this->pdo->prepare('UPDATE company_mail_settings SET ' . implode(', ', $set) . ' WHERE company_id = ?');
+                $stmt->execute($params);
             } else {
                 $id = $this->uuid();
-                $stmt = $this->pdo->prepare('INSERT INTO company_mail_settings (id, company_id, contract_created_template, payment_received_template, payment_reminder_template, admin_contract_created_template, admin_payment_received_template) VALUES (?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([
-                    $id,
-                    $companyId,
-                    $templates['contract_created_template'] ?: null,
-                    $templates['payment_received_template'] ?: null,
-                    $templates['payment_reminder_template'] ?: null,
-                    $templates['admin_contract_created_template'] ?: null,
-                    $templates['admin_payment_received_template'] ?: null,
-                ]);
+                $cols = array_keys($templates);
+                $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+                $colSql = implode(', ', array_map(static fn($c) => '`' . $c . '`', $cols));
+                $stmt = $this->pdo->prepare('INSERT INTO company_mail_settings (id, company_id, ' . $colSql . ') VALUES (?, ?, ' . $placeholders . ')');
+                $stmt->execute(array_merge([$id, $companyId], array_values($templates)));
             }
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'settings', 'E-posta şablonları güncellendi', 'E-posta şablonları kaydedildi.', ['actor_name' => $actorName]);
@@ -753,6 +764,26 @@ class SettingsController
         }
         header('Location: /ayarlar?tab=sablonlar');
         exit;
+    }
+
+    /** @return list<string> */
+    private function mailSettingsColumns(): array
+    {
+        static $cols = null;
+        if ($cols !== null) {
+            return $cols;
+        }
+        $cols = [];
+        try {
+            $stmt = $this->pdo->query('SHOW COLUMNS FROM company_mail_settings');
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $cols[] = (string) ($row['Field'] ?? '');
+            }
+        } catch (Throwable $e) {
+            $cols = [];
+        }
+        $cols = array_values(array_filter($cols, static fn($c) => $c !== ''));
+        return $cols;
     }
 
     private function getMailSettings(string $companyId): ?array

@@ -22,7 +22,7 @@ class OverdueReminderService
 
             $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../config/config.php';
             $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
-            $defaultTpl = "Sayın {musteri_adi},\n\nVadesi {vade} olan {tutar} tutarındaki ödemenizin geciktiğini hatırlatırız.\n\nLütfen en kısa sürede ödeme yapınız.";
+            $defaultTpl = "Sayın {musteri_adi},\n\nVadesi {vade} olan {tutar} tutarındaki ödemenizin geciktiğini hatırlatırız.\nSözleşme: {sozlesme_no}\n\nLütfen en kısa sürede ödeme yapınız.";
             $tpl = !empty(trim($mail['payment_reminder_template'] ?? '')) ? $mail['payment_reminder_template'] : $defaultTpl;
 
             $overdue = Payment::findOverdueForReminder($pdo, $companyId);

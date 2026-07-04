@@ -3,29 +3,52 @@
 /** @var array<int, string> $selectedPersonnelIds */
 /** @var string $pickerId */
 /** @var string|null $emptyMessage */
+/** @var string $pickerStyle default|minimal */
 $personnelList = $personnelList ?? [];
 $selectedPersonnelIds = $selectedPersonnelIds ?? [];
 $pickerId = $pickerId ?? 'personnel_picker';
 $emptyMessage = $emptyMessage ?? 'Aktif saha personeli bulunamadı.';
+$pickerStyle = ($pickerStyle ?? 'default') === 'minimal' ? 'minimal' : 'default';
 $personnelGroups = groupPersonnelByJobType($personnelList);
 $totalCount = count($personnelList);
+$isMinimal = $pickerStyle === 'minimal';
 ?>
-<div id="<?= htmlspecialchars($pickerId) ?>" class="personnel-grouped-picker space-y-4">
+<div id="<?= htmlspecialchars($pickerId) ?>" class="personnel-grouped-picker <?= $isMinimal ? 'space-y-2' : 'space-y-4' ?>">
     <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="text-xs text-gray-500 dark:text-gray-400">
-            Görevlerine göre gruplandı. Birden fazla personel seçebilirsiniz.
-            <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Personel yönetimi</a>
-        </p>
-        <span class="personnel-pick-count inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-            <i class="bi bi-check2-circle"></i>
-            <span class="personnel-pick-count-num">0</span> / <?= (int) $totalCount ?> seçili
+        <?php if ($isMinimal): ?>
+            <p class="text-xs text-gray-500 dark:text-gray-400">İsteğe bağlı · birden fazla seçilebilir</p>
+        <?php else: ?>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                Görevlerine göre gruplandı. Birden fazla personel seçebilirsiniz.
+                <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">Personel yönetimi</a>
+            </p>
+        <?php endif; ?>
+        <span class="personnel-pick-count inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            <span class="personnel-pick-count-num">0</span>/<?= (int) $totalCount ?>
         </span>
     </div>
     <?php if ($personnelGroups === []): ?>
-        <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+        <p class="text-sm text-gray-500 dark:text-gray-400 py-3 text-center">
             <?= htmlspecialchars($emptyMessage) ?>
             <a href="/personel" class="text-emerald-600 dark:text-emerald-400 hover:underline">Personel ekleyin</a>.
         </p>
+    <?php elseif ($isMinimal): ?>
+        <div class="max-h-52 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 divide-y divide-gray-100 dark:divide-gray-700">
+            <?php foreach ($personnelGroups as $group): ?>
+                <div>
+                    <div class="px-3 py-1.5 bg-gray-50 dark:bg-gray-700/40 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <?= htmlspecialchars($group['label']) ?>
+                    </div>
+                    <div class="px-1 py-1">
+                        <?php foreach ($group['members'] as $person):
+                            $checked = in_array($person['id'] ?? '', $selectedPersonnelIds, true);
+                            $style = 'compact';
+                            require __DIR__ . '/personnel_checkbox_row.php';
+                        endforeach; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
     <?php else: ?>
         <div class="space-y-4 max-h-[22rem] overflow-y-auto pr-1">
             <?php foreach ($personnelGroups as $group): ?>

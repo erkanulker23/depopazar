@@ -650,6 +650,64 @@ class Payment
         return "DATE(IF(DATE({$alias}.paid_at) > CURDATE(), {$alias}.updated_at, {$alias}.paid_at))";
     }
 
+    /**
+     * Oda bazlı kazanç ve sözleşme özeti.
+     *
+     * @return array{contract_count: int, active_contract_count: int, total_earned: float, month_earned: float, year_earned: float}
+     */
+    public static function earningsStatsForRoom(PDO $pdo, string $roomId): array
+    {
+        $empty = [
+            'contract_count' => 0,
+            'active_contract_count' => 0,
+            'total_earned' => 0.0,
+            'month_earned' => 0.0,
+            'year_earned' => 0.0,
+        ];
+        $roomId = trim($roomId);
+        if ($roomId === '') {
+            return $empty;
+        }
+
+        $stmtContracts = $pdo->prepare(
+            'SELECT COUNT(*) AS contract_count,
+                    COALESCE(SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END), 0) AS active_contract_count
+             FROM contracts
+             WHERE room_id = ? AND deleted_at IS NULL'
+        );
+        $stmtContracts->execute([$roomId]);
+        $contractRow = $stmtContracts->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $collectedOn = self::sqlCollectedOnDateExpr('p');
+        $monthStart = date('Y-m-01');
+        $monthEnd = date('Y-m-t');
+        $yearStart = date('Y-01-01');
+        $yearEnd = date('Y-12-31');
+
+        $stmtPaid = $pdo->prepare(
+            "SELECT
+                COALESCE(SUM(p.amount), 0) AS total_earned,
+                COALESCE(SUM(CASE WHEN {$collectedOn} >= ? AND {$collectedOn} <= ? THEN p.amount ELSE 0 END), 0) AS month_earned,
+                COALESCE(SUM(CASE WHEN {$collectedOn} >= ? AND {$collectedOn} <= ? THEN p.amount ELSE 0 END), 0) AS year_earned
+             FROM payments p
+             INNER JOIN contracts c ON c.id = p.contract_id AND c.deleted_at IS NULL
+             WHERE c.room_id = ?
+               AND p.deleted_at IS NULL
+               AND p.status = 'paid'
+               AND p.paid_at IS NOT NULL"
+        );
+        $stmtPaid->execute([$monthStart, $monthEnd, $yearStart, $yearEnd, $roomId]);
+        $paidRow = $stmtPaid->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        return [
+            'contract_count' => (int) ($contractRow['contract_count'] ?? 0),
+            'active_contract_count' => (int) ($contractRow['active_contract_count'] ?? 0),
+            'total_earned' => (float) ($paidRow['total_earned'] ?? 0),
+            'month_earned' => (float) ($paidRow['month_earned'] ?? 0),
+            'year_earned' => (float) ($paidRow['year_earned'] ?? 0),
+        ];
+    }
+
     /** Tahsil edilmiş ödemeler toplamı (kasaya giriş tarihi aralığı, dahil). */
     public static function sumPaidByPaidAtDateRange(PDO $pdo, ?string $companyId, string $startDate, string $endDate): float
     {

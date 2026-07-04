@@ -27,12 +27,33 @@ if (!function_exists('fmtPrice')) {
     </style>
 </head>
 <body class="bg-white text-gray-900 p-6 max-w-4xl mx-auto">
-    <div class="no-print mb-4 flex justify-between items-center">
+    <?php $canTerminate = !empty($canTerminate); ?>
+    <div class="no-print mb-4 flex flex-wrap justify-between items-center gap-3">
         <a href="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>" class="text-emerald-600 hover:underline">&larr; Sözleşmeye dön</a>
-        <button type="button" onclick="window.print()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
-            <i class="bi bi-printer inline-block mr-2"></i>Yazdır / PDF olarak kaydet
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="window.print()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">
+                <i class="bi bi-printer inline-block mr-2"></i>Yazdır / PDF olarak kaydet
+            </button>
+            <?php if ($canTerminate): ?>
+            <form method="post" action="/girisler/sonlandir" class="inline" onsubmit="return confirm('Borçlar tahsil edildi ve çıkış belgesi oluşturuldu. Sözleşmeyi sonlandırmak istediğinize emin misiniz?');">
+                <input type="hidden" name="id" value="<?= htmlspecialchars($contract['id'] ?? '') ?>">
+                <input type="hidden" name="redirect" value="/girisler/<?= htmlspecialchars($contract['id'] ?? '') ?>">
+                <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-700">
+                    <i class="bi bi-flag inline-block mr-2"></i>Sözleşmeyi Sonlandır
+                </button>
+            </form>
+            <?php endif; ?>
+        </div>
     </div>
+    <?php if ($canTerminate): ?>
+    <div class="no-print mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-900">
+        Tüm borçlar tahsil edildi. Çıkış belgesi kaydedildi. Yazdırdıktan sonra sözleşmeyi sonlandırabilirsiniz.
+    </div>
+    <?php elseif (empty($contract['is_active'])): ?>
+    <div class="no-print mb-4 p-3 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700">
+        Bu sözleşme zaten sonlandırılmış.
+    </div>
+    <?php endif; ?>
 
     <div class="border-2 border-gray-200 rounded-xl p-6 print:border-gray-400">
         <?php if ($company && !empty($company['logo_url'])): ?>

@@ -112,11 +112,18 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                             <div class="flex flex-wrap gap-2 mt-3">
                                 <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?collectPay=1" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Ödeme Al</a>
                                 <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600">Detay</a>
-                                <?php if (!empty($c['is_active'])): ?>
-                                    <form method="post" action="/girisler/sonlandir" class="inline" onsubmit="return confirm('Bu sözleşmeyi sonlandırmak istediğinize emin misiniz?');">
+                                <?php if (!empty($c['is_active'])):
+                                    $hasUnpaid = (($debt['overdue'] ?? 0) + ($debt['pending'] ?? 0)) > 0;
+                                ?>
+                                    <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>/cikis-belgesi" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20">Çıkış belgesi</a>
+                                    <?php if ($hasUnpaid): ?>
+                                        <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?collectPay=1" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20" title="Sonlandırmak için önce borçları tahsil edin">Borç tahsil et</a>
+                                    <?php else: ?>
+                                    <form method="post" action="/girisler/sonlandir" class="inline" onsubmit="return confirm('Borç yok. Sözleşmeyi sonlandırmak istediğinize emin misiniz?');">
                                         <input type="hidden" name="id" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
                                         <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20">Sonlandır</button>
                                     </form>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                                 <form method="post" action="/girisler/sil" class="inline contract-delete-form">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
@@ -168,11 +175,18 @@ elseif ($borcGet === 'no_debt') $activeFilterTags[] = 'Borcu olmayanlar';
                             <td class="px-4 py-3 text-right">
                                 <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?collectPay=1" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 mr-1">Ödeme Al</a>
                                 <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 mr-1">Detay</a>
-                                <?php if (!empty($c['is_active'])): ?>
-                                    <form method="post" action="/girisler/sonlandir" class="inline" onsubmit="return confirm('Bu sözleşmeyi sonlandırmak istediğinize emin misiniz?');">
+                                <?php if (!empty($c['is_active'])):
+                                    $hasUnpaidDesktop = (($debt['overdue'] ?? 0) + ($debt['pending'] ?? 0)) > 0;
+                                ?>
+                                    <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>/cikis-belgesi" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 mr-1">Çıkış</a>
+                                    <?php if ($hasUnpaidDesktop): ?>
+                                        <a href="/girisler/<?= htmlspecialchars($c['id'] ?? '') ?>?collectPay=1" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100" title="Sonlandırmak için önce borçları tahsil edin">Borç tahsil</a>
+                                    <?php else: ?>
+                                    <form method="post" action="/girisler/sonlandir" class="inline" onsubmit="return confirm('Borç yok. Sözleşmeyi sonlandırmak istediğinize emin misiniz?');">
                                         <input type="hidden" name="id" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
                                         <button type="submit" class="inline-flex items-center px-2 py-1 rounded-lg text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100">Sonlandır</button>
                                     </form>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                                 <form method="post" action="/girisler/sil" class="inline ml-1 contract-delete-form">
                                     <input type="hidden" name="ids[]" value="<?= htmlspecialchars($c['id'] ?? '') ?>">
@@ -460,17 +474,15 @@ require __DIR__ . '/../partials/page_filter_modal.php';
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($personnel)): ?>
-                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
-                        <div class="flex items-center justify-between gap-2 mb-3">
-                            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                                <i class="bi bi-people-fill text-emerald-600"></i> Saha Personeli
-                            </h4>
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Saha Personeli</label>
                         <?php
                         $personnelList = $personnel;
                         $selectedPersonnelIds = [];
                         $pickerId = 'newSale_personnel_picker';
+                        $pickerStyle = 'minimal';
                         require __DIR__ . '/../partials/personnel_grouped_picker.php';
+                        unset($pickerStyle);
                         ?>
                     </div>
                     <?php endif; ?>

@@ -1044,6 +1044,19 @@ if (!function_exists('aggregateDebtSummaries')) {
  * @param list<array<string, mixed>>|null $payments
  * @return array{summary: array{total: float, overdue: float, future: float, due_this_month: float, paid: float, contract_total: float, period_count: int}, by_contract: array<string, array<string, mixed>>}
  */
+/** Tek sözleşmenin ödenmemiş toplam borcu (gelecek vadeler dahil). */
+if (!function_exists('contractUnpaidDebtTotal')) {
+    function contractUnpaidDebtTotal(PDO $pdo, array $contract): float
+    {
+        $id = (string) ($contract['id'] ?? '');
+        if ($id === '') {
+            return 0.0;
+        }
+        $summary = computeDebtsForContracts($pdo, [$contract])['by_contract'][$id] ?? [];
+        return (float) ($summary['total'] ?? 0);
+    }
+}
+
 if (!function_exists('computeDebtsForContracts')) {
     function computeDebtsForContracts(PDO $pdo, array $contracts, ?array $payments = null, ?array $monthlyPricesMap = null): array
     {

@@ -485,7 +485,7 @@ class PaymentsController
         if ($hesapAdi === '') {
             $hesapAdi = 'Belirtilmedi';
         }
-        $defaultCustomer = "Sayın {musteri_adi},\n\n{tutar} tutarındaki ödemeniz alınmıştır.\n\nTeşekkür ederiz.";
+        $defaultCustomer = "Sayın {musteri_adi},\n\n{tutar} tutarındaki ödemeniz alınmıştır.\nSözleşme: {sozlesme_no}\nÖdeme tarihi: {odeme_tarihi}\nÖdeme yöntemi: {odeme_yontemi}\n\nTeşekkür ederiz.";
         $defaultAdmin = "Ödeme bildirimi:\n\n{musteri_adi} müşterisi adına {tutar} tutarında ödeme alındı.\nSözleşme: {sozlesme_no}\nÖdeme tarihi: {odeme_tarihi}\nÖdeme yöntemi: {odeme_yontemi}\nHesap: {hesap_adi}";
         $tplCustomer = !empty(trim($mail['payment_received_template'] ?? '')) ? $mail['payment_received_template'] : $defaultCustomer;
         $tplAdmin = !empty(trim($mail['admin_payment_received_template'] ?? '')) ? $mail['admin_payment_received_template'] : $defaultAdmin;

@@ -950,12 +950,9 @@ class ContractsController
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
             $this->jsonSignatureResponse(['ok' => false, 'error' => 'Yetkisiz.'], 403);
         }
-        if (empty($contract['customer_signature_url']) || empty($contract['company_signature_url'])) {
-            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Müşteri ve firma imzaları tamamlanmadan gönderilemez.'], 422);
-        }
         $customerEmail = trim($contract['customer_email'] ?? '');
         if ($customerEmail === '' || !filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
-            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Müşteri e-posta adresi geçerli değil.'], 422);
+            $this->jsonSignatureResponse(['ok' => false, 'error' => 'Müşteri e-posta adresi geçerli değil. Müşteri kaydına e-posta ekleyin.'], 422);
         }
         $companyId = $contract['company_id'] ?? $companyId;
         $mail = $companyId ? Company::getMailSettings($this->pdo, $companyId) : null;
@@ -972,18 +969,31 @@ class ContractsController
         $customerName = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
         $sozlesmeNo = (string) ($contract['contract_number'] ?? '');
         $companyName = trim((string) ($company['name'] ?? $appName));
-        $bodyPlain = "Sayın " . ($customerName !== '' ? $customerName : 'Müşterimiz') . ",\n\n"
-            . $sozlesmeNo . " numaralı depolama sözleşmeniz imzalanmıştır. Ekte imzalı PDF belgesini bulabilirsiniz.\n\n"
-            . "İyi günler dileriz.\n" . $companyName;
+        $bothSigned = !empty($contract['customer_signature_url']) && !empty($contract['company_signature_url']);
+        $greeting = 'Sayın ' . ($customerName !== '' ? $customerName : 'Müşterimiz') . ",\n\n";
+        if ($bothSigned) {
+            $bodyPlain = $greeting
+                . $sozlesmeNo . " numaralı depolama sözleşmeniz imzalanmıştır. Ekte imzalı PDF belgesini bulabilirsiniz.\n\n"
+                . "İyi günler dileriz.\n" . $companyName;
+            $title = 'İmzalı Sözleşme';
+            $actionTitle = 'İmzalı sözleşme gönderildi';
+            $subject = $appName . ' – İmzalı Sözleşme (' . $sozlesmeNo . ')';
+        } else {
+            $bodyPlain = $greeting
+                . $sozlesmeNo . " numaralı depolama sözleşme belgeniz ektedir.\n\n"
+                . "İyi günler dileriz.\n" . $companyName;
+            $title = 'Sözleşme Belgesi';
+            $actionTitle = 'Sözleşme e-posta ile gönderildi';
+            $subject = $appName . ' – Sözleşme (' . $sozlesmeNo . ')';
+        }
         $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         $prepared = MailService::prepareEmailBodies(
             $appName,
-            'İmzalı Sözleşme',
+            $title,
             $bodyPlain,
             'Sözleşme No: ' . $sozlesmeNo,
-            ['actor_name' => $actorName, 'acted_at' => date('Y-m-d H:i:s'), 'action_title' => 'İmzalı sözleşme gönderildi']
+            ['actor_name' => $actorName, 'acted_at' => date('Y-m-d H:i:s'), 'action_title' => $actionTitle]
         );
-        $subject = $appName . ' – İmzalı Sözleşme (' . $sozlesmeNo . ')';
         $result = MailService::sendSmtp(
             $mail,
             $customerEmail,
@@ -995,7 +1005,10 @@ class ContractsController
         if (!$result['success']) {
             $this->jsonSignatureResponse(['ok' => false, 'error' => $result['error'] ?? 'E-posta gönderilemedi.'], 500);
         }
-        $this->jsonSignatureResponse(['ok' => true, 'message' => 'Sözleşme müşteriye e-posta ile gönderildi.']);
+        $this->jsonSignatureResponse([
+            'ok' => true,
+            'message' => 'Sözleşme ' . $customerEmail . ' adresine e-posta ile gönderildi.',
+        ]);
     }
 
     /** @param array<string, mixed> $payload */
@@ -1422,19 +1435,39 @@ class ContractsController
             exit;
         }
         $id = trim($_POST['id'] ?? '');
+        $redirect = $this->safeContractRedirect($_POST['redirect'] ?? '', $id);
         $contract = $id ? Contract::findOne($this->pdo, $id) : null;
         if (!$contract) {
             Auth::setSession('flash_error', 'Sözleşme bulunamadı.');
-            header('Location: /girisler');
+            header('Location: ' . $redirect);
             exit;
         }
         $user = Auth::user();
         $companyId = Company::getCompanyIdForUser($this->pdo, $user);
         if ($companyId && ($contract['company_id'] ?? '') !== $companyId) {
             Auth::setSession('flash_error', 'Yetkisiz.');
-            header('Location: /girisler');
+            header('Location: ' . $redirect);
             exit;
         }
+        if (empty($contract['is_active'])) {
+            Auth::setSession('flash_error', 'Bu sözleşme zaten sonlandırılmış.');
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $unpaidDebt = contractUnpaidDebtTotal($this->pdo, $contract);
+        $hasExitDocument = !empty($contract['exit_document_at']);
+        if ($unpaidDebt > 0.009) {
+            Auth::setSession(
+                'flash_error',
+                'Sözleşme sonlandırılamaz. Ödenmemiş borç: ' . number_format($unpaidDebt, 2, ',', '.') . ' ₺. '
+                . 'Önce tüm borçları tahsil edin'
+                . ($hasExitDocument ? '.' : ', ardından çıkış belgesi oluşturup sonlandırın.')
+            );
+            header('Location: /girisler/' . $id . '?collectPay=1');
+            exit;
+        }
+
         Contract::setActive($this->pdo, $id, 0);
         $roomId = $contract['room_id'] ?? null;
         if ($roomId) {
@@ -1454,11 +1487,11 @@ class ContractsController
             ['contract_id' => $id, 'actor_name' => $actorName, 'warehouse_id' => $whId]
         );
         Auth::setSession('flash_success', 'Sözleşme sonlandırıldı.');
-        header('Location: /girisler');
+        header('Location: ' . $redirect);
         exit;
     }
 
-    /** Çıkış belgesi yazdır */
+    /** Çıkış belgesi yazdır — önce tüm borçlar tahsil edilmiş olmalı */
     public function exitDocumentPrint(array $params): void
     {
         Auth::requireStaff();
@@ -1480,11 +1513,41 @@ class ContractsController
             header('Location: /girisler');
             exit;
         }
+
+        $unpaidDebt = contractUnpaidDebtTotal($this->pdo, $contract);
+        if ($unpaidDebt > 0.009) {
+            Auth::setSession(
+                'flash_error',
+                'Çıkış belgesi oluşturulamaz. Önce tüm borçlar tahsil edilmelidir. Kalan borç: '
+                . number_format($unpaidDebt, 2, ',', '.') . ' ₺.'
+            );
+            header('Location: /girisler/' . $id . '?collectPay=1');
+            exit;
+        }
+
+        if (!empty($contract['is_active'])) {
+            Contract::markExitDocumentCreated($this->pdo, $id);
+            $contract = Contract::findOne($this->pdo, $id) ?? $contract;
+        }
+
         $company = !empty($contract['company_id']) ? Company::findOne($this->pdo, $contract['company_id']) : null;
         $customerName = trim(($contract['customer_first_name'] ?? '') . ' ' . ($contract['customer_last_name'] ?? ''));
         $contractPayments = Payment::findByContractId($this->pdo, $id);
+        $canTerminate = !empty($contract['is_active']) && $unpaidDebt <= 0.009;
         $pageTitle = 'Çıkış belgesi: ' . ($contract['contract_number'] ?? '');
         require __DIR__ . '/../../views/contracts/exit_document.php';
+    }
+
+    private function safeContractRedirect(string $redirect, string $contractId): string
+    {
+        $redirect = trim($redirect);
+        if ($redirect !== '' && preg_match('#^/girisler(/[a-f0-9\-]+)?(\?.*)?$#i', $redirect)) {
+            return $redirect;
+        }
+        if ($contractId !== '') {
+            return '/girisler/' . $contractId;
+        }
+        return '/girisler';
     }
 
     public function delete(): void
@@ -1662,7 +1725,7 @@ class ContractsController
         $baslangicTarihi = !empty($contract['start_date']) ? date('d.m.Y', strtotime($contract['start_date'])) : '';
         $bitisTarihi = !empty($contract['end_date']) ? date('d.m.Y', strtotime($contract['end_date'])) : '';
         $aylikUcret = number_format((float) ($contract['monthly_price'] ?? $contract['room_monthly_price'] ?? 0), 2, ',', '.') . ' ₺';
-        $defaultCustomer = "Sayın {musteri_adi},\n\nSözleşmeniz oluşturuldu. Sözleşme No: {sozlesme_no}\n\nİyi günler dileriz.";
+        $defaultCustomer = "Sayın {musteri_adi},\n\nSözleşmeniz oluşturuldu.\nSözleşme No: {sozlesme_no}\nDepo: {depo_adi}\nOda: {oda_no}\nBaşlangıç: {baslangic_tarihi} – Bitiş: {bitis_tarihi}\nAylık ücret: {aylik_ucret}\n\nİyi günler dileriz.";
         $defaultAdmin = "Yeni sözleşme bildirimi:\n\n{sozlesme_tarihi} tarihinde {sozlesme_no} numaralı sözleşme oluşturuldu.\nMüşteri: {musteri_adi}\nDepo: {depo_adi}\nOda: {oda_no}\nBaşlangıç: {baslangic_tarihi} – Bitiş: {bitis_tarihi}\nAylık ücret: {aylik_ucret}";
         $tplCustomer = !empty(trim($mail['contract_created_template'] ?? '')) ? $mail['contract_created_template'] : $defaultCustomer;
         $tplAdmin = !empty(trim($mail['admin_contract_created_template'] ?? '')) ? $mail['admin_contract_created_template'] : $defaultAdmin;

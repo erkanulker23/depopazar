@@ -1058,6 +1058,7 @@ class CustomersController
         if (!$reused) {
             $actorName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
             Notification::createForCompany($this->pdo, $companyId, 'customer', 'Müşteri eklendi', $name . ' müşterisi eklendi.', ['customer_id' => $customer['id'], 'actor_name' => $actorName]);
+            $this->sendCustomerWelcomeEmail($companyId, $customer, $name, $actorName);
         }
         if ($redirectTo === 'new_sale') {
             Auth::setSession('flash_success', $reused
@@ -1071,6 +1072,40 @@ class CustomersController
             Auth::setSession('flash_success', $reused ? 'Bu müşteri zaten kayıtlı.' : 'Müşteri eklendi.');
         }
         $this->redirectAfterCreate($redirectTo, $customer);
+    }
+
+    /** Yeni müşteri kaydı için hoş geldin e-postası. */
+    private function sendCustomerWelcomeEmail(string $companyId, array $customer, string $customerName, string $actorName): void
+    {
+        $email = trim($customer['email'] ?? '');
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+        $mail = Company::getMailSettings($this->pdo, $companyId);
+        if (!$mail || empty($mail['smtp_host']) || empty($mail['is_active'])) {
+            return;
+        }
+        if (array_key_exists('notify_customer_on_welcome', $mail) && empty($mail['notify_customer_on_welcome'])) {
+            return;
+        }
+        $config = require defined('APP_ROOT') ? APP_ROOT . '/config/config.php' : __DIR__ . '/../../config/config.php';
+        $appName = $config['app_name'] ?? 'Depo ve Nakliye Takip';
+        $defaultTpl = "Sayın {musteri_adi},\n\nSistemimize hoş geldiniz. Kaydınız oluşturulmuştur.\n\nİyi günler dileriz.";
+        $tpl = !empty(trim($mail['welcome_template'] ?? '')) ? $mail['welcome_template'] : $defaultTpl;
+        $bodyPlain = str_replace('{musteri_adi}', $customerName, $tpl);
+        MailService::sendTemplated(
+            $mail,
+            $email,
+            $appName . ' – Hoş Geldiniz',
+            'Hoş Geldiniz',
+            $bodyPlain,
+            $customerName,
+            [
+                'actor_name' => $actorName,
+                'acted_at' => date('Y-m-d H:i:s'),
+                'action_title' => 'Müşteri kaydı',
+            ]
+        );
     }
 
     private function redirectAfterCreate(string $redirectTo, ?array $customer): void
