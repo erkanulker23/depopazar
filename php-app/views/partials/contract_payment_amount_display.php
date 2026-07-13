@@ -6,22 +6,23 @@
 $grossAmount = (float) ($grossAmount ?? 0);
 $company = $company ?? null;
 $compact = $compact ?? false;
-$breakdown = contractVatBreakdown($grossAmount, $contract, $company);
 $includesVat = contractPriceIncludesVat($contract);
 $rate = contractVatRate($contract, $company);
 ?>
 <span class="contract-amount-display block min-w-0 max-w-full">
     <span class="block font-medium leading-snug break-words"><?= fmtPrice($grossAmount) ?></span>
-    <span class="block text-xs text-gray-500 dark:text-gray-400 leading-snug">(Tahsil · KDV Dahil)</span>
-    <?php if ($grossAmount > 0 && $rate > 0): ?>
-        <span class="block text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-snug break-words">
-            <?php if ($compact): ?>
-                Net <?= fmtPrice($breakdown['net']) ?>
-            <?php elseif (!$includesVat): ?>
-                Girilen fiyat KDV hariç · Net: <?= fmtPrice($breakdown['net']) ?> · KDV: <?= fmtPrice($breakdown['vat']) ?>
-            <?php else: ?>
-                Net: <?= fmtPrice($breakdown['net']) ?> · KDV (%<?= htmlspecialchars(rtrim(rtrim(number_format($rate, 2, ',', '.'), '0'), ',')) ?>): <?= fmtPrice($breakdown['vat']) ?>
-            <?php endif; ?>
-        </span>
+    <?php if (!$includesVat): ?>
+        <span class="block text-xs text-gray-500 dark:text-gray-400 leading-snug">(Tahsil · KDV Dahil)</span>
+        <?php if ($grossAmount > 0 && $rate > 0):
+            $breakdown = contractVatBreakdown($grossAmount, $contract, $company);
+        ?>
+            <span class="block text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-snug break-words">
+                <?php if ($compact): ?>
+                    Net <?= fmtPrice($breakdown['net']) ?>
+                <?php else: ?>
+                    Girilen fiyat KDV hariç · Net: <?= fmtPrice($breakdown['net']) ?> · KDV: <?= fmtPrice($breakdown['vat']) ?>
+                <?php endif; ?>
+            </span>
+        <?php endif; ?>
     <?php endif; ?>
 </span>

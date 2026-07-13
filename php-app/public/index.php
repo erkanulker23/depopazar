@@ -51,6 +51,7 @@ $router->post('/odalar/sil', fn() => (new RoomsController($pdo))->delete());
 $router->get('/musteri/genel-bakis', fn() => PlaceholderController::page('Müşteri Paneli', 'Hoş geldiniz.'));
 
 $router->get('/musteriler', fn() => (new CustomersController($pdo))->index());
+$router->get('/musteriler/depodan-ayrilanlar', fn() => (new CustomersController($pdo))->departed());
 $router->get('/musteriler/excel-disari-aktar', fn() => (new CustomersController($pdo))->exportCsv());
 $router->get('/musteriler/excel-sablon', fn() => (new CustomersController($pdo))->downloadTemplate());
 $router->get('/musteriler/excel-ice-aktar', fn() => (new CustomersController($pdo))->importForm());

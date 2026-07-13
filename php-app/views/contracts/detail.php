@@ -237,6 +237,9 @@ if ($hasContractOverdue) {
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Kampanya</td><td class="border border-gray-300 px-3 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-medium"><?= htmlspecialchars(ContractCampaign::label($contract['campaign_code'])) ?></span></td></tr>
         <?php endif; ?>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Aylık Ücret</td><td class="border border-gray-300 px-3 py-2"><?php $enteredPrice = $contract['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td></tr>
+        <?php if (!contractPriceIncludesVat($contract)): ?>
+        <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">KDV</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(contractVatStatusLabel($contract)) ?> · %<?= htmlspecialchars(rtrim(rtrim(number_format(contractVatRate($contract, $company ?? null), 2, ',', '.'), '0'), ',')) ?></td></tr>
+        <?php endif; ?>
         <?php if (!empty($contract['stored_items_condition'])): ?>
         <tr><td class="border border-gray-300 px-3 py-2 font-medium bg-gray-100">Ürün Durumu</td><td class="border border-gray-300 px-3 py-2"><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><span class="text-xs text-gray-600 mt-1 block">Hasar notu: <?= nl2br(htmlspecialchars($contract['stored_items_condition_note'])) ?></span><?php endif; ?></td></tr>
         <?php endif; ?>
@@ -257,7 +260,9 @@ if ($hasContractOverdue) {
     </div>
     <?php endif; ?>
     <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Ödeme Takvimi</h2>
+    <?php if (!contractPriceIncludesVat($contract)): ?>
     <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Tutarlar tahsil edilecek KDV dahil tutarlardır. <?= htmlspecialchars(contractVatStatusLabel($contract)) ?> · %<?= htmlspecialchars(rtrim(rtrim(number_format(contractVatRate($contract, $company ?? null), 2, ',', '.'), '0'), ',')) ?></p>
+    <?php endif; ?>
     <div class="table-scroll overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
     <table class="min-w-full border border-gray-300 text-sm">
         <thead class="bg-gray-100"><tr><th class="border border-gray-300 px-3 py-2 text-left font-bold">Vade</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Tutar</th><th class="border border-gray-300 px-3 py-2 text-left font-bold">Durum</th></tr></thead>
@@ -344,10 +349,12 @@ if ($hasContractOverdue) {
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Aylık Fiyat</dt>
                     <dd class="mt-1 text-gray-900 dark:text-white"><?php $enteredPrice = $contract['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></dd>
                 </div>
+                <?php if (!contractPriceIncludesVat($contract)): ?>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">KDV</dt>
                     <dd class="mt-1 text-gray-900 dark:text-white"><?= htmlspecialchars(contractVatStatusLabel($contract)) ?> · %<?= htmlspecialchars(rtrim(rtrim(number_format(contractVatRate($contract, $company ?? null), 2, ',', '.'), '0'), ',')) ?></dd>
                 </div>
+                <?php endif; ?>
                 <div>
                     <dt class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sözleşmeyi Yapan</dt>
                     <dd class="mt-1 text-gray-900 dark:text-white"><?= htmlspecialchars(trim(($contract['sold_by_first_name'] ?? '') . ' ' . ($contract['sold_by_last_name'] ?? '')) ?: '-') ?></dd>
@@ -500,7 +507,7 @@ if ($hasContractOverdue) {
                     </button>
                 </div>
             </div>
-            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz. Tutarlar <strong class="font-medium text-gray-600 dark:text-gray-300">tahsil (KDV dahil)</strong> tutarıdır — sözleşme fiyatı <?= htmlspecialchars(contractVatStatusLabel($contract)) ?> (%<?= htmlspecialchars(rtrim(rtrim(number_format(contractVatRate($contract, $company ?? null), 2, ',', '.'), '0'), ',')) ?>). Vadesi gelmemiş tüm ayları tek seferde güncellemek için <strong class="font-medium text-gray-600 dark:text-gray-300">Fiyatları toplu güncelle</strong> düğmesini kullanın; ödenmiş aylar değişmez.</p>
+            <p class="px-4 pt-3 pb-0 text-xs text-gray-500 dark:text-gray-400 no-print">Ödenmemiş tutarlara dokunarak ay bazında düzenleyebilirsiniz.<?php if (!contractPriceIncludesVat($contract)): ?> Tutarlar <strong class="font-medium text-gray-600 dark:text-gray-300">tahsil (KDV dahil)</strong> tutarıdır — sözleşme fiyatı <?= htmlspecialchars(contractVatStatusLabel($contract)) ?> (%<?= htmlspecialchars(rtrim(rtrim(number_format(contractVatRate($contract, $company ?? null), 2, ',', '.'), '0'), ',')) ?>).<?php endif; ?> Vadesi gelmemiş tüm ayları tek seferde güncellemek için <strong class="font-medium text-gray-600 dark:text-gray-300">Fiyatları toplu güncelle</strong> düğmesini kullanın; ödenmiş aylar değişmez.</p>
             <?php if (empty($payments)): ?>
                 <div class="p-6 text-center text-gray-500 dark:text-gray-400">Bu sözleşmeye ait ödeme kaydı yok.</div>
             <?php else: ?>
@@ -601,8 +608,9 @@ if ($hasContractOverdue) {
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <i class="bi bi-calendar-month text-emerald-600"></i> Aylık Fiyatlar
                 </h2>
+                <?php if (!$monthlyIncludesVat): ?>
                 <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold <?= $monthlyIncludesVat ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' ?>">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                         <?= htmlspecialchars(contractVatStatusLabel($contract)) ?>
                     </span>
                     <?php if ($monthlyVatRate > 0): ?>
@@ -610,12 +618,9 @@ if ($hasContractOverdue) {
                     <?php endif; ?>
                 </div>
                 <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                    <?php if ($monthlyIncludesVat): ?>
-                        Tüm aylar KDV dahil; listelenen tutarlar tahsil fiyatıdır.
-                    <?php else: ?>
-                        Sözleşme fiyatı KDV hariç girilir; listelenen tutarlar tahsil (KDV dahil) fiyatıdır.
-                    <?php endif; ?>
+                    Sözleşme fiyatı KDV hariç girilir; listelenen tutarlar tahsil (KDV dahil) fiyatıdır.
                 </p>
+                <?php endif; ?>
             </div>
             <?php if (empty($monthlyPrices)): ?>
                 <div class="p-4 text-sm text-gray-500 dark:text-gray-400">Kayıt yok.</div>
@@ -1093,15 +1098,17 @@ document.querySelectorAll('.contract-collect-pay-btn').forEach(function(btn) {
 
     function renderPaymentAmountCellHtml(gross) {
         gross = parseFloat(gross) || 0;
-        if (typeof ContractVat === 'undefined') {
-            return '<span class="contract-amount-display block min-w-0 max-w-full"><span class="block font-medium leading-snug">' + gross.toFixed(2).replace('.', ',') + ' ₺</span></span>';
-        }
-        var bd = ContractVat.breakdownFromGross(gross, contractVatSettings.rate, contractVatSettings.includesVat);
+        var money = (typeof ContractVat !== 'undefined')
+            ? ContractVat.formatMoney(gross)
+            : (gross.toFixed(2).replace('.', ',') + ' ₺');
         var html = '<span class="contract-amount-display block min-w-0 max-w-full">'
-            + '<span class="block font-medium leading-snug break-words">' + ContractVat.formatMoney(gross) + '</span>'
-            + '<span class="block text-xs text-gray-500 dark:text-gray-400 leading-snug">(Tahsil · KDV Dahil)</span>';
-        if (gross > 0 && contractVatSettings.rate > 0) {
-            html += '<span class="block text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-snug break-words">Net ' + ContractVat.formatMoney(bd.net) + '</span>';
+            + '<span class="block font-medium leading-snug break-words">' + money + '</span>';
+        if (!contractVatSettings.includesVat && typeof ContractVat !== 'undefined') {
+            var bd = ContractVat.breakdownFromGross(gross, contractVatSettings.rate, false);
+            html += '<span class="block text-xs text-gray-500 dark:text-gray-400 leading-snug">(Tahsil · KDV Dahil)</span>';
+            if (gross > 0 && contractVatSettings.rate > 0) {
+                html += '<span class="block text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-snug break-words">Net ' + ContractVat.formatMoney(bd.net) + '</span>';
+            }
         }
         html += '</span>';
         return html;

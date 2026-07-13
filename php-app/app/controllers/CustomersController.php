@@ -63,6 +63,39 @@ class CustomersController
         require __DIR__ . '/../../views/customers/index.php';
     }
 
+    /** Depodan ayrılmış (çıkışı yapılmış) müşteriler listesi */
+    public function departed(): void
+    {
+        Auth::requireStaff();
+        $user = Auth::user();
+        $companyId = Company::getCompanyIdForUser($this->pdo, $user);
+        $search = isset($_GET['q']) ? trim($_GET['q']) : null;
+        $perPage = 50;
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $offset = ($page - 1) * $perPage;
+
+        if ($companyId) {
+            $customersTotal = Customer::countDeparted($this->pdo, $companyId, $search);
+            $customers = Customer::findDeparted($this->pdo, $companyId, $search, $perPage, $offset);
+        } elseif (($user['role'] ?? '') === 'super_admin') {
+            $customersTotal = Customer::countDeparted($this->pdo, null, $search);
+            $customers = Customer::findDeparted($this->pdo, null, $search, $perPage, $offset);
+        } else {
+            $customersTotal = 0;
+            $customers = [];
+        }
+
+        $totalPages = $customersTotal > 0 ? (int) ceil($customersTotal / $perPage) : 1;
+        if ($page > $totalPages && $customersTotal > 0) {
+            $params = array_filter(['q' => $search !== null && $search !== '' ? $search : null, 'page' => $totalPages]);
+            header('Location: /musteriler/depodan-ayrilanlar' . ($params !== [] ? '?' . http_build_query($params) : ''));
+            exit;
+        }
+
+        ['success' => $flashSuccess, 'error' => $flashError] = Auth::consumeFlash();
+        require __DIR__ . '/../../views/customers/departed.php';
+    }
+
     public function bulkDelete(): void
     {
         Auth::requireStaff();

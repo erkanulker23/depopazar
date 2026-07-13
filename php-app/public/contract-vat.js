@@ -42,23 +42,16 @@
     }
 
     function monthlyPriceHint(entered, rate, includesVat) {
-        if (entered <= 0) return '';
+        if (entered <= 0 || includesVat) return '';
         var gross = grossFromEntered(entered, rate, includesVat);
         var bd = breakdownFromGross(gross, rate, includesVat);
-        var label = statusLabel(includesVat);
-        if (includesVat) {
-            return label + ' · Net: ' + formatMoney(bd.net) + ' · KDV: ' + formatMoney(bd.vat);
-        }
-        return label + ' · Tahsil: ' + formatMoney(gross) + ' (KDV: ' + formatMoney(bd.vat) + ')';
+        return statusLabel(includesVat) + ' · Tahsil: ' + formatMoney(gross) + ' (KDV: ' + formatMoney(bd.vat) + ')';
     }
 
     function paymentAmountHint(gross, rate, includesVat) {
-        if (gross <= 0) return '';
+        if (gross <= 0 || includesVat) return '';
         var bd = breakdownFromGross(gross, rate, includesVat);
-        if (!includesVat) {
-            return 'Tahsil (KDV Dahil) · Girilen fiyat KDV hariç · Net: ' + formatMoney(bd.net) + ' · KDV: ' + formatMoney(bd.vat);
-        }
-        return 'Tahsil (KDV Dahil) · Net: ' + formatMoney(bd.net) + ' · KDV: ' + formatMoney(bd.vat);
+        return 'Tahsil (KDV Dahil) · Girilen fiyat KDV hariç · Net: ' + formatMoney(bd.net) + ' · KDV: ' + formatMoney(bd.vat);
     }
 
     function readVatSettings(prefix) {
@@ -90,8 +83,13 @@
         });
         var noteEl = document.getElementById(prefix + '_monthly_prices_vat_note');
         if (noteEl) {
-            noteEl.textContent = 'Aylık fiyatlar ' + statusLabel(settings.includesVat) + ' olarak girilir.'
-                + (settings.includesVat ? '' : ' Ödeme takviminde KDV eklenmiş tahsil tutarı oluşur.');
+            if (settings.includesVat) {
+                noteEl.textContent = '';
+                noteEl.classList.add('hidden');
+            } else {
+                noteEl.textContent = 'Aylık fiyatlar KDV Hariç olarak girilir. Ödeme takviminde KDV eklenmiş tahsil tutarı oluşur.';
+                noteEl.classList.remove('hidden');
+            }
         }
     }
 

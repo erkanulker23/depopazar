@@ -87,7 +87,9 @@ $depotWebsite = trim((string) ($warehouse['website'] ?? ''));
         <tr><td class="label">Depo / Oda</td><td><?= htmlspecialchars($contract['warehouse_name'] ?? '') ?> / <?= htmlspecialchars($contract['room_number'] ?? '') ?></td></tr>
         <tr><td class="label">Başlangıç – Bitiş</td><td><?= date('d.m.Y', strtotime($contract['start_date'] ?? '')) ?> – <?= date('d.m.Y', strtotime($contract['end_date'] ?? '')) ?></td></tr>
         <tr><td class="label">Aylık Ücret</td><td><?php $enteredPrice = $contract['monthly_price'] ?? 0; require __DIR__ . '/../partials/contract_price_display.php'; ?></td></tr>
+        <?php if (!contractPriceIncludesVat($contract)): ?>
         <tr><td class="label">KDV</td><td><?= htmlspecialchars(contractVatStatusLabel($contract)) ?> · %<?= htmlspecialchars(rtrim(rtrim(number_format(contractVatRate($contract, $company ?? null), 2, ',', '.'), '0'), ',')) ?></td></tr>
+        <?php endif; ?>
         <tr><td class="label">Sözleşmeyi Yapan</td><td><?= htmlspecialchars($soldByName) ?></td></tr>
         <?php if (!empty($contract['stored_items_condition'])): ?>
         <tr><td class="label">Ürün Durumu</td><td><?= htmlspecialchars(storedItemsConditionLabel($contract['stored_items_condition'] ?? null)) ?><?php if (($contract['stored_items_condition'] ?? '') === 'hasarli' && !empty($contract['stored_items_condition_note'])): ?><br><?= htmlspecialchars($contract['stored_items_condition_note']) ?><?php endif; ?></td></tr>
@@ -120,8 +122,6 @@ $depotWebsite = trim((string) ($warehouse['website'] ?? ''));
     <h2>Ödeme Takvimi</h2>
     <?php if (!contractPriceIncludesVat($contract)): ?>
     <p class="muted">Ödeme tutarları KDV dahil tahsil edilecek tutarlardır. Girilen aylık fiyatlar KDV hariçtir.</p>
-    <?php else: ?>
-    <p class="muted">Ödeme tutarları KDV dahil tutarlardır.</p>
     <?php endif; ?>
     <table class="data">
         <thead><tr><th>Vade</th><th>Tutar</th><th>Durum</th></tr></thead>

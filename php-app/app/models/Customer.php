@@ -121,6 +121,124 @@ class Customer
         return (int) $stmt->fetchColumn();
     }
 
+    /**
+     * Depodan ayrılan müşteriler: en az bir sonlandırılmış sözleşmesi var,
+     * aktif (terminated_at NULL) sözleşmesi yok.
+     */
+    public static function findDeparted(PDO $pdo, ?string $companyId = null, ?string $search = null, ?int $limit = null, int $offset = 0): array
+    {
+        $params = [];
+        $sql = 'SELECT c.*,
+                last_exit.contract_id AS last_contract_id,
+                last_exit.contract_number AS last_contract_number,
+                last_exit.terminated_at AS last_terminated_at,
+                last_exit.warehouse_name AS last_warehouse_name,
+                last_exit.room_number AS last_room_number,
+                last_exit.room_id AS last_room_id
+            FROM customers c
+            INNER JOIN (
+                SELECT co.customer_id,
+                       co.id AS contract_id,
+                       co.contract_number,
+                       co.terminated_at,
+                       w.name AS warehouse_name,
+                       r.room_number,
+                       r.id AS room_id
+                FROM contracts co
+                INNER JOIN rooms r ON r.id = co.room_id AND r.deleted_at IS NULL
+                INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                WHERE co.deleted_at IS NULL
+                  AND co.terminated_at IS NOT NULL
+                  AND co.id = (
+                      SELECT co3.id FROM contracts co3
+                      WHERE co3.customer_id = co.customer_id
+                        AND co3.deleted_at IS NULL
+                        AND co3.terminated_at IS NOT NULL
+                      ORDER BY co3.terminated_at DESC, co3.id DESC
+                      LIMIT 1
+                  )';
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ?';
+            $params[] = $companyId;
+        }
+        $sql .= '
+            ) last_exit ON last_exit.customer_id = c.id
+            WHERE c.deleted_at IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM contracts co2
+                  WHERE co2.customer_id = c.id
+                    AND co2.deleted_at IS NULL
+                    AND co2.terminated_at IS NULL
+              )';
+        if ($companyId) {
+            $sql .= ' AND c.company_id = ?';
+            $params[] = $companyId;
+        }
+        if ($search !== null && $search !== '') {
+            appendTurkishLikeClause($sql, $params, [
+                'c.first_name',
+                'c.last_name',
+                "CONCAT(c.first_name, ' ', c.last_name)",
+                'c.email',
+                'c.phone',
+                'c.phone_2',
+                'last_exit.contract_number',
+                'last_exit.warehouse_name',
+                'last_exit.room_number',
+            ], $search);
+        }
+        $sql .= ' ORDER BY last_exit.terminated_at DESC, c.last_name, c.first_name';
+        if ($limit !== null) {
+            $sql .= ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function countDeparted(PDO $pdo, ?string $companyId = null, ?string $search = null): int
+    {
+        $params = [];
+        $sql = 'SELECT COUNT(*) FROM customers c
+            WHERE c.deleted_at IS NULL
+              AND EXISTS (
+                  SELECT 1 FROM contracts co
+                  INNER JOIN rooms r ON r.id = co.room_id AND r.deleted_at IS NULL
+                  INNER JOIN warehouses w ON w.id = r.warehouse_id AND w.deleted_at IS NULL
+                  WHERE co.customer_id = c.id
+                    AND co.deleted_at IS NULL
+                    AND co.terminated_at IS NOT NULL';
+        if ($companyId) {
+            $sql .= ' AND w.company_id = ?';
+            $params[] = $companyId;
+        }
+        $sql .= '
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM contracts co2
+                  WHERE co2.customer_id = c.id
+                    AND co2.deleted_at IS NULL
+                    AND co2.terminated_at IS NULL
+              )';
+        if ($companyId) {
+            $sql .= ' AND c.company_id = ?';
+            $params[] = $companyId;
+        }
+        if ($search !== null && $search !== '') {
+            appendTurkishLikeClause($sql, $params, [
+                'c.first_name',
+                'c.last_name',
+                "CONCAT(c.first_name, ' ', c.last_name)",
+                'c.email',
+                'c.phone',
+                'c.phone_2',
+            ], $search);
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
     /** borc GET: overdue = vadesi geçmiş, unpaid = ödenmemiş (tüm bekleyen) */
     private static function normalizeDebtFilter(?string $debtFilter): ?string
     {
