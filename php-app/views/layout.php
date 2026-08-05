@@ -269,17 +269,18 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 min-height: 100%;
                 scroll-padding-bottom: var(--mobile-nav-height);
                 overscroll-behavior-y: none;
+                background-color: var(--mobile-page-bg);
             }
             body {
                 overflow-x: hidden;
                 max-width: 100vw;
-                min-height: 0;
-                min-height: -webkit-fill-available;
+                min-height: 100%;
                 background-color: var(--mobile-page-bg) !important;
                 overscroll-behavior-y: none;
+                position: relative;
             }
             body.min-h-screen {
-                min-height: -webkit-fill-available !important;
+                min-height: 100% !important;
             }
             #appShell,
             body > .flex.min-h-screen {
@@ -628,36 +629,27 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         #mobileBottomNavHost {
             display: none;
         }
-        #mobileBottomNav {
-            padding-bottom: max(0.5rem, var(--safe-bottom));
-        }
         @media (max-width: 767px) {
             #mobileBottomNavHost {
                 display: block;
                 position: fixed !important;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                width: 100%;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
                 max-width: 100vw;
+                margin: 0;
+                padding: 0;
                 z-index: 9990;
                 pointer-events: none;
-                padding: 0;
-                margin: 0;
-                transform: translate3d(0, 0, 0);
-                -webkit-transform: translate3d(0, 0, 0);
-                will-change: bottom, left, width;
+                transform: none !important;
+                -webkit-transform: none !important;
             }
             #mobileBottomNav {
-                position: relative !important;
-                left: auto;
-                right: auto;
-                bottom: auto;
+                position: relative;
                 width: 100%;
-                max-width: 100vw;
-                z-index: 1;
                 margin: 0;
-                padding-top: 0.625rem;
+                padding-top: 0.5rem;
                 padding-left: max(0.5rem, var(--safe-left));
                 padding-right: max(0.5rem, var(--safe-right));
                 padding-bottom: max(0.5rem, var(--safe-bottom));
@@ -667,10 +659,6 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
                 border-top: 1px solid rgb(229 231 235);
                 box-shadow: 0 -8px 32px rgba(0,0,0,.08);
                 pointer-events: auto;
-                transform: translate3d(0, 0, 0);
-                -webkit-transform: translate3d(0, 0, 0);
-                backface-visibility: hidden;
-                -webkit-backface-visibility: hidden;
             }
             #mobileBottomNav .mobile-nav-bar {
                 display: grid;
@@ -1055,50 +1043,37 @@ $companyLogoUrl = publicUploadHref($_SESSION['company_logo_url'] ?? null);
         var nav = document.getElementById('mobileBottomNav');
         if (!host || !nav) return;
         function isMobile() { return window.matchMedia('(max-width: 767px)').matches; }
+        function clearInlinePosition() {
+            host.style.bottom = '';
+            host.style.left = '';
+            host.style.right = '';
+            host.style.width = '';
+            host.style.transform = '';
+        }
         function pinMobileNav() {
-            if (!isMobile()) return;
+            if (!isMobile()) {
+                clearInlinePosition();
+                return;
+            }
             if (host.parentNode !== document.body) {
                 document.body.appendChild(host);
             }
-        }
-        function syncMobileNavViewport() {
-            if (!isMobile()) {
-                host.style.bottom = '';
-                host.style.left = '';
-                host.style.width = '';
-                return;
-            }
-            if (window.visualViewport) {
-                var vv = window.visualViewport;
-                var bottomGap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-                host.style.bottom = bottomGap + 'px';
-                host.style.left = vv.offsetLeft + 'px';
-                host.style.width = vv.width + 'px';
-            } else {
-                host.style.bottom = '0';
-                host.style.left = '0';
-                host.style.width = '100%';
-            }
+            clearInlinePosition();
         }
         function syncMobileNavHeight() {
             if (!isMobile() || !nav) return;
-            syncMobileNavViewport();
-            var h = Math.ceil(host.getBoundingClientRect().height);
+            pinMobileNav();
+            var h = Math.ceil(nav.getBoundingClientRect().height);
             if (h > 0 && h <= 160) {
                 document.documentElement.style.setProperty('--mobile-nav-height', h + 'px');
             }
         }
         pinMobileNav();
         syncMobileNavHeight();
-        window.addEventListener('resize', function() { pinMobileNav(); syncMobileNavHeight(); });
+        window.addEventListener('resize', syncMobileNavHeight);
         window.addEventListener('orientationchange', function() {
-            setTimeout(function() { pinMobileNav(); syncMobileNavHeight(); }, 120);
+            setTimeout(syncMobileNavHeight, 150);
         });
-        window.addEventListener('scroll', syncMobileNavViewport, { passive: true });
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', syncMobileNavHeight);
-            window.visualViewport.addEventListener('scroll', syncMobileNavViewport);
-        }
         if (typeof ResizeObserver !== 'undefined') {
             try {
                 var ro = new ResizeObserver(syncMobileNavHeight);
